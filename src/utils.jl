@@ -5,11 +5,9 @@ closer_default(ps::ParseState) = search(ps.ws.val, '\n')!=0 ||
 closer_ws_no_newline(ps) = !(Tokens.begin_ops < ps.nt.kind < Tokens.end_ops) &&
                           search(ps.ws.val, '\n')==0
 
-closer_no_ops(ps) = closer_default(ps) || isoperator(ps.nt) 
+# closer_no_ops(ps) = closer_default(ps) || isoperator(ps.nt) 
 
-# closer_no_ops(ps, p) = ps->closer_default(ps) || (isoperator(ps.nt) && precedence(ps.nt)>p) 
-closer_no_ops(ps, p) = ps->closer_default(ps) || (isoperator(ps.nt) && precedence(ps.nt)>p) 
-
+closer_no_ops(p) = ps->closer_default(ps) || (isoperator(ps.nt) && precedence(ps.nt)<=p)
 
 
 isinstance(t::Token) = Tokens.begin_literal < t.kind < Tokens.end_literal || 
@@ -75,3 +73,4 @@ precedence(op::Token) = op.kind < Tokens.end_assignments ? 1 :
                        
 precedence(x) = 0
 
+LtoR(op::Operator) = op.precedence in [5,12,13]

@@ -58,56 +58,53 @@ facts("operators") do
     for str in strs
         @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
     end
-    # for str1 in strs
-    #     for str2 in strs
-    #         str = "$str1 + $str2"
-    #         @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
-    #     end
-    # end
+    for str1 in strs
+        for str2 in strs
+            str = "$str1 + $str2"
+            @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+        end
+    end
 end
 
 
 facts("operators") do
-    randop() = rand(["+","-","*","/","^"])
-    for n = 2:4
-        for i = 1:20
+    randop() = rand(["+","-","*","/","^","|>","→",">>","<<",])
+    for n = 2:10
+        for i = 1:50
             str = join([["$i $(randop()) " for i = 1:n-1];"$n"])
             @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
         end
     end
 end
 
-if false
-@benchmark Base.parse("1 + 2 - 3 * 4")
-@benchmark parse("1 + 2 - 3 * 4")
-end
+#=
 
+assignment
+conditional
+lazyor : rtol
+lazyand : rtol 
+arrow : rtol
+comparison : chain
+pipe : ltor
+colon : ltor
+plus : chain
+bits : ltor
+times : chain
+rational : ltor
+power : ltor
+decl : ltor
+dots
+    =#
 
-parse("1 / 2 ^ 3 ^ 4") |> Expr
-Base.parse("1 / 2 ^ 3 ^ 4")
+parse("a + b || c") |> Expr 
+Base.parse("a + b || c")
+parse("a → b → c") |> Expr
+Base.parse("a → b → c")
+Base.parse("a / b / c")
 
+str = "1 - 2 → 3 + 4 |> 5 || 6 << 7 * 8 << 9 - 10"
+str = "1 - 2 → 3 + 4 |> 5 || 6 "
 
-args = [:+, :^ ,:*]
-
-ret = Expr(:call, args[1], 1, 2)
-lastcall = ret
-    lastcall.args[end] = Expr(:call, args[2], lastcall.args[end], 3)
-    lastcall = lastcall.args[end]
-
-    lastcall.args[end] = Expr(:call, args[3], lastcall.args[end], 4)
-    lastcall = lastcall.args[end]
-
-    llastcall = copy(lastcall)
-    empty!(lastcall.args)
-    push!(lastcall.args, args[3])
-    push!(lastcall.args, llastcall)
-    push!(lastcall.args, 4)
-
-
-
-
-
-ret = :(1/2^3)
-lastcall = ret.args[3]
-ret.args[3].args[end] = :(3^4)
-ret
+str = "a::B::C"
+Base.parse(str)
+parse(str) |> Expr 

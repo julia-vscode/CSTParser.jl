@@ -25,6 +25,12 @@ type Operator <: Expression
 end
 precedence(op::Operator) = op.precedence
 
+
+type Parentheses <: Expression
+    loc::Tuple{Int,Int}
+    args::Vector{Expression}
+end
+
 # kws not handled
 type FunctionCall <: Expression
     name::Expression
@@ -57,7 +63,14 @@ end
 Expr(x::Identifier) = x.val
 Expr(x::Literal) = Base.parse(x.val)
 Expr(x::Operator) = Symbol(x.val)
-Expr(x::FunctionCall) = Expr(:call, Expr(x.name), Expr.(x.args)...)
+function Expr(x::FunctionCall)
+    if x.name.val in ["||", "&&", "::"]
+        return Expr(Symbol(x.name.val), Expr.(x.args)...)
+    end
+
+    return Expr(:call, Expr(x.name), Expr.(x.args)...)
+end
+
 Expr{T<:Expression}(x::Vector{T}) = Expr(:block, Expr.(x)...)
 
 function Expr(x::FunctionDef) 

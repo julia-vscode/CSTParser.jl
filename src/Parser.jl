@@ -11,7 +11,6 @@ export ParseState
 include("parsestate.jl")
 include("spec.jl")
 
-
 function parse_expression(ps::ParseState, closer = closer_default)
     next(ps)
     ret = nothing
@@ -28,54 +27,30 @@ function parse_expression(ps::ParseState, closer = closer_default)
         end
     elseif ps.t.kind == Tokens.LPAREN
         ret = parse_expression(ps, ps->ps.nt.kind==Tokens.RPAREN)
+        @assert ps.nt.kind == Tokens.RPAREN
+        next(ps)
     elseif ps.t.kind == Tokens.IDENTIFIER &&
                         ps.nt.kind == Tokens.LPAREN
         ret = parse_function(ps)
     elseif Tokens.begin_literal < ps.t.kind < Tokens.end_literal
-        if Tokens.begin_ops < ps.nt.kind < Tokens.end_ops
             ret = Literal(ps)
-        end
     elseif ps.t.kind == Tokens.IDENTIFIER
-        if Tokens.begin_ops < ps.nt.kind < Tokens.end_ops
-            ret = Identifier(ps)
-        end
+        ret = Identifier(ps)
     end
 
-    if isbinaryop(ps.nt)
-        op = Operator(next(ps))
-        nexta = parse_expression(ps, closer_no_ops)
-        ret = FunctionCall(op, [ret, nexta])
-        lastcall = ret
-        last_op_precedence = precedence(op)
-        while isbinaryop(ps.nt)
-            next(ps)
-            op = Operator(ps)
-            nexta = parse_expression(ps, closer_no_ops)
-            if precedence(op) <= last_op_precedence 
-                if lastcall.name.val==op.val && ischainable(op)
-                    push!(lastcall.args, nexta)
-                else
-                    ret = FunctionCall(op,[ret, nexta])
-                    lastcall = ret
-                end
-            else
-                if lastcall.name.val==op.val && ischainable(op)
-                    push!(lastcall.args, nexta)
-                else
-                    lastcall.args[end] = FunctionCall(op, [lastcall.args[end], nexta])
-                    lastcall = lastcall.args[end]
-                end
-            end
-            last_op_precedence = precedence(op)
+    while isbinaryop(ps.nt) && !closer(ps)
+        next(ps)
+        op = Operator(ps)
+        nextarg = parse_expression(ps, closer_no_ops(precedence(op)-LtoR(op)))
+        if ret isa FunctionCall && op.val == ret.name.val && op.val in ["+", "*"]
+            push!(ret.args, nextarg)
+        else
+            ret = FunctionCall(op,[ret, nextarg])
         end
     end
 
     return ret
 end
-
-
-
-
 
 
 function parse_function(ps::ParseState, def=false)
