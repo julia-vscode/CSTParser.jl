@@ -77,8 +77,46 @@ facts("operators") do
     end
 end
 
-#=
+facts("function definitions") do
+    strs =  ["f(x) = x"
+            "function f end"
+            """function f(x)
+                g(x) = x
+                return g(x)
+            end"""]
+    for str in strs
+        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+    end
+end
 
+
+facts("misc reserved words") do
+    strs =  ["const x = 3*5"
+            "global i"
+            """local i = x"""]
+    for str in strs
+        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+    end
+end
+
+facts("type annotations") do
+    strs =  ["x::Int"
+             "x::Vector{Int}"
+             "Vector{Int}"
+             "f(x::Int)"
+             "f(x::Vector{Int})"
+             "f(x::Vector{Vector{Int}})"
+             """type a 
+                c::Vector{Int}
+             end"""]
+    for str in strs
+        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+    end
+end
+
+
+
+#=
 assignment
 conditional
 lazyor : rtol
@@ -96,15 +134,4 @@ decl : ltor
 dots
     =#
 
-parse("a + b || c") |> Expr 
-Base.parse("a + b || c")
-parse("a → b → c") |> Expr
-Base.parse("a → b → c")
-Base.parse("a / b / c")
-
-str = "1 - 2 → 3 + 4 |> 5 || 6 << 7 * 8 << 9 - 10"
-str = "1 - 2 → 3 + 4 |> 5 || 6 "
-
-str = "a::B::C"
-Base.parse(str)
-parse(str) |> Expr 
+# f(g(x) = x) should fail

@@ -1,83 +1,126 @@
-import Base.Expr
-
 abstract Expression
-    
-type Identifier <: Expression
+
+abstract INSTANCE <: Expression
+function INSTANCE(ps::ParseState)
+    if isidentifier(ps.t)
+        return IDENTIFIER(ps)
+    elseif isliteral(ps.t)
+        return LITERAL(ps)
+    else
+        error("not instance at $(ps.l.token_start_row):$(ps.l.token_startpos)")
+    end
+end
+
+type IDENTIFIER <: INSTANCE
     val::Symbol
     ws::String
     loc::Tuple{Int,Int}
-    Identifier(ps::ParseState) = new(Symbol(ps.t.val), ps.ws.val, (ps.t.startbyte, ps.t.endbyte))
+    IDENTIFIER(ps::ParseState) = new(Symbol(ps.t.val), ps.ws.val, (ps.t.startbyte, ps.t.endbyte))
 end
 
-type Literal <: Expression
+type LITERAL <: INSTANCE
     val::String
     ws::String
     loc::Tuple{Int,Int}
-    Literal(ps::ParseState) = new(ps.t.val, ps.ws.val, (ps.t.startbyte, ps.t.endbyte))
+    LITERAL(ps::ParseState) = new(ps.t.val, ps.ws.val, (ps.t.startbyte, ps.t.endbyte))
 end
 
-type Operator <: Expression
+type OPERATOR <: Expression
     val::String
     ws::String
     loc::Tuple{Int,Int}
     precedence::Int
-    Operator(ps::ParseState) = new(ps.t.val, ps.ws.val, (ps.t.startbyte, ps.t.endbyte), precedence(ps.t))
+    OPERATOR(ps::ParseState) = new(ps.t.val, ps.ws.val, (ps.t.startbyte, ps.t.endbyte), precedence(ps.t))
 end
-precedence(op::Operator) = op.precedence
 
+
+type CURLY <: Expression
+    name::IDENTIFIER
+    args::Vector{Expression}
+end
 
 type Parentheses <: Expression
     loc::Tuple{Int,Int}
     args::Vector{Expression}
 end
 
+type BLOCK <: Expression
+    oneliner::Bool
+    args::Vector{Expression}
+end
+BLOCK() = BLOCK(false,[])
+
+
+
+type SYNTAXCALL <: Expression
+    name::OPERATOR
+    args::Vector{Expression}
+end
+
+
 # kws not handled
-type FunctionCall <: Expression
+type CALL <: Expression
     name::Expression
     args::Vector{Expression}
 end
-precedence(fc::FunctionCall) = fc.name isa Operator ? fc.name.precedence : 0
 
-type FunctionDef <: Expression
+
+
+type FUNCTION{T} <: Expression
     oneliner::Bool
-    fcall::FunctionCall
-    body::Vector{Expression}
+    signature::Expression
+    body::T
 end
 
-type typealiasDef <: Expression
-    name::Identifier
+
+
+type RETURN{T<:Expression} <:Expression
+    ws::String
+    arg::T
+end
+
+
+
+
+
+
+abstract DATATYPE <: Expression
+
+type TYPEALIAS <: DATATYPE
+    name::IDENTIFIER
     body::Expression
 end
 
-type bitstypeDef <: Expression
+
+type BITSTYPE <: DATATYPE
     bits::Expression
     name::Expression
 end
 
 
-
-
-
-
-# Conversion
-Expr(x::Identifier) = x.val
-Expr(x::Literal) = Base.parse(x.val)
-Expr(x::Operator) = Symbol(x.val)
-function Expr(x::FunctionCall)
-    if x.name.val in ["||", "&&", "::"]
-        return Expr(Symbol(x.name.val), Expr.(x.args)...)
-    end
-
-    return Expr(:call, Expr(x.name), Expr.(x.args)...)
+type TYPE <: DATATYPE
+    name::IDENTIFIER
+    fields::BLOCK
 end
 
-Expr{T<:Expression}(x::Vector{T}) = Expr(:block, Expr.(x)...)
 
-function Expr(x::FunctionDef) 
-    if x.oneliner
-        return Expr(:(=), Expr(x.fcall), Expr(x.body))
-    end
+type IMMUTABLE <: DATATYPE
+    name::IDENTIFIER
+    fields::BLOCK
 end
-Expr(x::typealiasDef) = Expr(:typealias, Expr(x.name), Expr(x.body))
-Expr(x::bitstypeDef) = Expr(:bitstype, Expr(x.bits), Expr(x.name))
+
+
+
+
+
+type CONST <: Expression
+    decl::Expression
+end
+type GLOBAL <: Expression
+    decl::Expression
+end
+type LOCAL <: Expression
+    decl::Expression
+end
+
 

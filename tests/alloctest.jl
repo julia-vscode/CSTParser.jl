@@ -22,9 +22,11 @@ for str1 in strs
 end
 
 randop() = rand(["+","-","*","/","^","|>","→",">>","<<",])
-for n = 2:10
-    for i = 1:50
-        str = join([["$i $(randop()) " for i = 1:n-1];"$n"])
-        Parser.parse(str)
-    end
+Profile.clear()
+
+
+n = 25
+str = join([["$i $(randop()) " for i = 1:n-1];"$n"])
+for i = 1:50
+    Parser.parse(str)
 end
