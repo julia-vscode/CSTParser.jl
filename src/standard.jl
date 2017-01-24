@@ -1,16 +1,11 @@
-module Parser
-global debug = true
+module Standard
+using ..Parser
 using Tokenize
-import Base: next
 import Tokenize.Tokens
 import Tokenize.Tokens: Token, iskeyword, isliteral, isoperator
 import Tokenize.Lexers: Lexer, peekchar, iswhitespace
 
-export ParseState
 
-include("parsestate.jl")
-include("spec.jl")
-include("standard.jl")
 
 
 function parse_expression(ps::ParseState, closer = closer_default)
@@ -21,9 +16,9 @@ function parse_expression(ps::ParseState, closer = closer_default)
         ret = parse_resword(ps, Val{ps.t.kind})
     elseif closer(ps)
         if ps.t.kind == Tokens.IDENTIFIER
-            return Identifier(ps)
+            return Symbol(ps.t.val)
         elseif Tokens.begin_literal < ps.t.kind < Tokens.end_literal
-            return Literal(ps)
+            return (ps.t.val)
         else
             error("closer -> $(ps.t) not handled")
         end
@@ -32,22 +27,24 @@ function parse_expression(ps::ParseState, closer = closer_default)
         @assert ps.nt.kind == Tokens.RPAREN
         next(ps)
     elseif ps.t.kind == Tokens.IDENTIFIER &&
-                        ps.nt.kind == Tokens.LPAREN
+           ps.nt.kind == Tokens.LPAREN
         ret = parse_function(ps)
     elseif Tokens.begin_literal < ps.t.kind < Tokens.end_literal
-            ret = Literal(ps)
+            ret = (ps.t.val)
     elseif ps.t.kind == Tokens.IDENTIFIER
-        ret = Identifier(ps)
+        ret = Symbol(ps.t.val)
     end
 
     while isbinaryop(ps.nt) && !closer(ps)
         next(ps)
-        op = Operator(ps)
+        op = ps.t
         nextarg = parse_expression(ps, closer_no_ops(precedence(op)-LtoR(op)))
-        if ret isa FunctionCall && op.val == ret.name.val && op.val in ["+", "*"]
+        if ret isa Expr && 
+            ret.head == :call &&
+            Symbol(op.val) == ret.args[1] && op.val in ["+", "*"]
             push!(ret.args, nextarg)
         else
-            ret = FunctionCall(op,[ret, nextarg])
+            ret = Expr(:call, Symbol(op.val), ret, nextarg)
         end
     end
 
@@ -56,10 +53,10 @@ end
 
 
 function parse_function(ps::ParseState, def=false)
-    fname = Identifier(ps)
+    fname = Symbol(ps.t.val)
     @assert next(ps).t.kind==Tokens.LPAREN
     args = parse_argument_list(ps)
-    fcall = FunctionCall(fname, args)
+    fcall = Expr(:call, fname, args...)
     if def
         next(ps)
         parse_block(ps)
@@ -67,7 +64,7 @@ function parse_function(ps::ParseState, def=false)
         def = true
         next(ps)
         expr = parse_expression(ps)
-        ret = FunctionDef(true, fcall, [expr])
+        ret = Expr(:(=), fcall, expr)
     else
         ret = fcall
     end
@@ -115,7 +112,7 @@ end
 function parse_resword(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
     bits = parse_expression(ps, closer_ws_no_newline)
     decl = parse_expression(ps)
-    return bitstypeDef(bits, decl)
+    return Expr(:bitstype, bits, decl)
 end
 
 function parse_resword(ps::ParseState, ::Type{Val{Tokens.IMMUTABLE}})
@@ -129,17 +126,13 @@ end
 function parse_resword(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
     decl = parse_expression(ps, closer_ws_no_newline)
     def = parse_expression(ps)
-    return typealiasDef(decl, def)
+    return Expr(:typealias, decl, def)
 end
 
 function parse(str::String) 
-    ps = Parser.ParseState(str)
+    ps = ParseState(str)
     return parse_expression(ps)
 end
 
-ischainable(op::Operator) = op.val == "+" || op.val == "*" || op.val == "~"
-LtoR(op::Operator) = op.precedence in [5,12,13]
-
 include("utils.jl")
-
 end

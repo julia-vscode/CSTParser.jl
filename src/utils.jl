@@ -2,10 +2,8 @@ closer_default(ps::ParseState) = search(ps.ws.val, '\n')!=0 ||
                                  ps.nt.kind == Tokens.SEMICOLON ||
                                  ps.nt.kind == Tokens.ENDMARKER
 
-closer_ws_no_newline(ps) = !(Tokens.begin_ops < ps.nt.kind < Tokens.end_ops) &&
+closer_ws_no_newline(ps::ParseState) = !(Tokens.begin_ops < ps.nt.kind < Tokens.end_ops) &&
                           search(ps.ws.val, '\n')==0
-
-# closer_no_ops(ps) = closer_default(ps) || isoperator(ps.nt) 
 
 closer_no_ops(p) = ps->closer_default(ps) || (isoperator(ps.nt) && precedence(ps.nt)<=p)
 
@@ -54,7 +52,7 @@ istimes(t::Token) = Tokens.begin_times < t.kind < Tokens.end_times
 
 ispower(t::Token) = Tokens.begin_power < t.kind < Tokens.end_power
 
-ischainable(op::Operator) = op.val == "+" || op.val == "*" || op.val == "~"
+
 
 precedence(op::Token) = op.kind < Tokens.end_assignments ? 1 :
                        op.kind < Tokens.end_conditional ? 2 :
@@ -73,4 +71,4 @@ precedence(op::Token) = op.kind < Tokens.end_assignments ? 1 :
                        
 precedence(x) = 0
 
-LtoR(op::Operator) = op.precedence in [5,12,13]
+LtoR(t::Token) = precedence(t) in [5,12,13]
