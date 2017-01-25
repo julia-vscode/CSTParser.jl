@@ -1,0 +1,1 @@
+span(t::Tokens.Token) = t.endbyte-t.startbyte

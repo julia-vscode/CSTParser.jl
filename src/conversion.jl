@@ -35,7 +35,6 @@ function Expr(x::FUNCTION)
         return Expr(:function, Expr(x.signature), Expr(x.body))
     end
 end
-Expr(x::RETURN) = Expr(:return, Expr(x.arg))
 Expr(x::TYPEALIAS) = Expr(:typealias, Expr(x.name), Expr(x.body))
 Expr(x::BITSTYPE) = Expr(:bitstype, Expr(x.bits), Expr(x.name))
 Expr(x::TYPE) = Expr(:type, true, Expr(x.name), Expr(x.fields))
@@ -44,6 +43,10 @@ Expr(x::IMMUTABLE) = Expr(:type, false, Expr(x.name), Expr(x.fields))
 Expr(x::CONST) = Expr(:const, Expr(x.decl))
 Expr(x::GLOBAL) = Expr(:global, Expr(x.decl))
 Expr(x::LOCAL) = Expr(:local, Expr(x.decl))
+Expr(x::RETURN) = Expr(:return, Expr(x.decl))
 
 
 Expr(x::CURLY) = Expr(:curly, Expr(x.name), Expr.(x.args)...)
+
+Expr(x::MODULE) = Expr(:module, true, Expr(x.name), Expr(x.body))
+Expr(x::BAREMODULE) = Expr(:module, false, Expr(x.name), Expr(x.body))

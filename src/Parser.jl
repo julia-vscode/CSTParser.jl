@@ -12,7 +12,7 @@ include("parsestate.jl")
 include("spec.jl")
 include("conversion.jl")
 include("precedence.jl")
-
+include("positional.jl")
 
 function parse_expression(ps::ParseState, closer = closer_default)
     next(ps)
@@ -45,7 +45,9 @@ function parse_expression(ps::ParseState, closer = closer_default)
             ret = IDENTIFIER(ps)
         end
     elseif Tokens.begin_literal < ps.t.kind < Tokens.end_literal
-            ret = LITERAL(ps)
+        ret = LITERAL(ps)
+    else
+        error("Expression started with $(ps.t.val)")
     end
 
     while !closer(ps)
@@ -100,7 +102,7 @@ function parse_call(ps::ParseState)
     if ps.nt.kind == Tokens.EQ
         next(ps)
         body = parse_expression(ps)
-        body = body isa BLOCK ? body : BLOCK(true, [body])
+        body = body isa BLOCK ? body : BLOCK(0, true, [body])
         return FUNCTION(true, fcall, body)
     end
 
@@ -115,6 +117,7 @@ function parse_argument_list(ps::ParseState)
     args = Any[]
     while !closer(ps)
         next(ps)
+        closer(ps) && break
         a = parse_expression(ps, delim)
         push!(args, a)
         if !delim(ps)
@@ -124,8 +127,6 @@ function parse_argument_list(ps::ParseState)
     next(ps)
     return args
 end
-
-parse_resword(ps::ParseState, ::Type{Val{Tokens.RETURN}}) = RETURN(ps.ws.val, parse_expression(ps))
 
 
 
@@ -151,10 +152,13 @@ end
 
 
 function parse_resword(ps::ParseState, ::Type{Val{Tokens.BEGIN}})
-    ret = BLOCK(false, [])
+    start = ps.t.startbyte
+    args = []
     while ps.nt.kind!==Tokens.END
-        push!(ret.args, parse_expression(ps))
+        push!(args, parse_expression(ps))
     end
+    ret = BLOCK(ps.t.endbyte-start, false, args)
+    next(ps)
     return ret
 end
 
@@ -166,50 +170,75 @@ function parse_resword(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
 end
 
 function parse_resword(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
-    bits = parse_expression(ps, closer_ws_no_newline)
+    ps.ws_delim = true
+    bits = parse_expression(ps)
+    ps.ws_delim = false
     decl = parse_expression(ps)
     return BITSTYPE(bits, decl)
 end
 
 function parse_resword(ps::ParseState, ::Type{Val{Tokens.IMMUTABLE}})
+    start = ps.t.startbyte
     name = parse_expression(ps)
     fields = parse_resword(ps, Val{Tokens.BEGIN})
-    return IMMUTABLE(name, fields)
+    return IMMUTABLE(ps.t.endbyte-start, name, fields)
 end
 
 function parse_resword(ps::ParseState, ::Type{Val{Tokens.TYPE}})
+    start = ps.t.startbyte
     name = parse_expression(ps)
     fields = parse_resword(ps, Val{Tokens.BEGIN})
-    return TYPE(name, fields)
+    return TYPE(ps.t.endbyte-start, name, fields)
 end
 
 function parse_resword(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
-    decl = parse_expression(ps, closer_ws_no_newline)
+    ps.ws_delim = true
+    decl = parse_expression(ps)
+    ps.ws_delim = false
     def = parse_expression(ps)
     return TYPEALIAS(decl, def)
 end
 
 
 
-
+# These are all identical and can be replaced by one type.
 function parse_resword(ps::ParseState, ::Type{Val{Tokens.CONST}})
+    start = ps.t.startbyte
     decl = parse_expression(ps)
-    return CONST(decl)
+    return CONST(ps.t.endbyte-start, decl)
 end
 
 function parse_resword(ps::ParseState, ::Type{Val{Tokens.GLOBAL}})
+    start = ps.t.startbyte
     decl = parse_expression(ps)
-    return GLOBAL(decl)
+    return GLOBAL(ps.t.endbyte-start, decl)
 end
 
 function parse_resword(ps::ParseState, ::Type{Val{Tokens.LOCAL}})
+    start = ps.t.startbyte
     decl = parse_expression(ps)
-    return LOCAL(decl)
+    return LOCAL(ps.t.endbyte-start, decl)
 end
 
+function parse_resword(ps::ParseState, ::Type{Val{Tokens.RETURN}}) 
+    start = ps.t.startbyte
+    decl = parse_expression(ps)
+    return RETURN(ps.t.endbyte-start, decl)
+end
 
+function parse_resword(ps::ParseState, ::Type{Val{Tokens.MODULE}})
+    start = ps.t.startbyte
+    name = parse_expression(ps, ps->true)
+    body = parse_resword(ps, Val{Tokens.BEGIN})
+    return MODULE(ps.t.endbyte-start, false, name, body)
+end
 
-
+function parse_resword(ps::ParseState, ::Type{Val{Tokens.BAREMODULE}})
+    start = ps.t.startbyte
+    name = parse_expression(ps, ps->true)
+    body = parse_resword(ps, Val{Tokens.BEGIN})
+    return MODULE(ps.t.endbyte-start, true, name, body)
+end
 
 
 function parse(str::String) 
@@ -218,12 +247,8 @@ function parse(str::String)
 end
 
 
-
-
-
-
 ischainable(op::OPERATOR) = op.val == "+" || op.val == "*" || op.val == "~"
-LtoR(op::OPERATOR) = op.precedence in [5,12,13]
+LtoR(op::OPERATOR) = op.precedence in [1,2,3,4,5,13]
 
 include("utils.jl")
 

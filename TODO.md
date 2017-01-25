@@ -1,5 +1,13 @@
 # To do list
 
+Operators
++ parse colon/range
++ parse dot access
++ parse arrows
++ ? syntax
++ assignment, give error if incorrect lhs and return block on rhs
+
+
 ## Lexer errors
 #### use '^' instead of '**'
 #### invalid numeric constant "$number"
@@ -41,48 +49,61 @@ if conflicts with reserved words
 
 
 ## Reserved word
+#### TRUE/FALSE
+These become an `instance`.
 
-#### ABSTRACT
-inited
-#### TYPE
-inited
-#### BITSTYPE
-inited
-#### IMMUTABLE
-inited
-#### TYPEALIAS
-inited
-#### FUNCTION
-inited
-#### RETURN
-inited
-#### BEGIN
-inited
-
-#### BEGINWHILE
-#### IF
-#### FOR
-#### TRY
 #### BREAK
+This becomes an `instance`.
 #### CONTINUE
-#### GLOBAL
-#### MACRO
-#### QUOTE
-#### LET
-#### LOCAL
+This becomes an `instance`.
+
+### Prefix keywords
 #### CONST
-#### DO
-#### MODULE
-#### BAREMODULE
-#### USING
-#### IMPORT
+`Prefix`
 #### EXPORT
+`Prefix`
+#### GLOBAL
+`Prefix`
+#### IMPORT
+`Prefix`
 #### IMPORTALL
-#### END
-#### FALSE
-#### TRUE
+`Prefix`
+#### LOCAL
+`Prefix`
+#### RETURN
+`Prefix`
+#### USING
+`Prefix`
+
+
+### Single line definitions
+#### ABSTRACT
+#### BITSTYPE
+#### IMMUTABLE
+#### TYPEALIAS
+
+
+### `end` blocks
+#### BAREMODULE
+#### BEGIN
+#### BEGINWHILE
+#### DO
+#### FOR
+#### FUNCTION
+#### LET
+#### MACRO
+#### MODULE
+#### QUOTE
+#### TYPE
+
+#### IF
 #### ELSE
 #### ELSEIF
+
+
+#### END
+
+#### TRY
 #### CATCH
 #### FINALLY
 

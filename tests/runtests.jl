@@ -16,7 +16,7 @@ function remlineinfo!(x)
     x
 end
 
-testparse(str) = (Parser.parse(str) |> Expr) == remlineinfo!(Base.parse(str))
+
 
 facts("one liner functions") do
     strs = ["f(x) = x"
@@ -74,12 +74,11 @@ end
 
 
 facts("operators") do
-    randop() = rand(["+","-","*","/","^","|>","→",">>","<<","<"])
-    for n = 2:10
-        for i = 1:50
-            str = join([["$i $(randop()) " for i = 1:n-1];"$n"])
-            @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
-        end
+    randop() = rand(["→", "<", "==", "<|", "|>", "+", "-", ">>", "<<", "*", "/", "^", "↑"])
+    n = 20
+    for iter = 1:250
+        str = join([["$i $(randop()) " for i = 1:n-1];"$n"])
+        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
     end
 end
 
@@ -121,24 +120,34 @@ facts("type annotations") do
     end
 end
 
+# *** indicates Expr(op,....) rather than :call
+precedence_list = [
+#= RtoL       =#   #"=", "+=", # a=(b+=c) ***
+#= RtoL       =#   #"?", # a?b:(c?d:e) *** (:if)
+#= RtoL    X  =#   "||", # a||(b||c) ***
+#= RtoL    X  =#   "&&", # a&&(b&&c) ***
+#= RtoL    X  =#   #"-->", "→", # a-->(b→c) *** for --> only
+#= chain   X  =#  "<","==", # :< and >: as head for 2 arg versions
+#= LtoR    X  =#   "<|", "|>", # (a|>b)|>c
+#= LtoR       =#   #":","..", # 3 arg version -> head=:(:), a,b,c
+#= LtoR    X  =#   "+","-", # (a+b)-c
+#= LtoR    X  =#   "<<",">>", # (a>>b)>>c
+#= LtoR    X  =#   "*", "/", # (a*b)/c
+#= LtoR    X  =#   "//", # (a//b)//c
+#= RtoL    X  =#   "^","↑", # a^(b^c)
+#= LtoR    X  =#   "::"] # (a::b)::c ***
+#= LtoR       =#  # "."] # (a.b).c ***
 
 
-#=
-assignment
-conditional
-lazyor : rtol
-lazyand : rtol 
-arrow : rtol
-comparison : chain
-pipe : ltor
-colon : ltor
-plus : chain
-bits : ltor
-times : chain
-rational : ltor
-power : ltor
-decl : ltor
-dots
-    =#
+facts("operators") do
+    randop() = rand(precedence_list)
+    for n = 2:10
+        for i = 1:50
+            str = join([["$i $(randop()) " for i = 1:n-1];"$n"])
+            @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+        end
+    end
+end
 
-# f(g(x) = x) should fail
+
+

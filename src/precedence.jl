@@ -17,5 +17,3 @@ precedence(op::OPERATOR) = op.precedence
 precedence(fc::CALL) = fc.name isa OPERATOR ? fc.name.precedence : 0
 
 precedence(x) = 0
-
-LtoR(t::Token) = precedence(t) in [5, 12, 13]

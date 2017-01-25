@@ -1,37 +1,48 @@
 abstract Expression
 
 abstract INSTANCE <: Expression
+
 function INSTANCE(ps::ParseState)
     if isidentifier(ps.t)
         return IDENTIFIER(ps)
     elseif isliteral(ps.t)
         return LITERAL(ps)
+    elseif ps.t.kind in [Tokens.TRUE, Tokens.FALSE]
+        return BOOL(ps)
     else
         error("not instance at $(ps.l.token_start_row):$(ps.l.token_startpos)")
     end
 end
 
 type IDENTIFIER <: INSTANCE
+    span::Int
     val::Symbol
     ws::String
-    loc::Tuple{Int,Int}
-    IDENTIFIER(ps::ParseState) = new(Symbol(ps.t.val), ps.ws.val, (ps.t.startbyte, ps.t.endbyte))
+    IDENTIFIER(ps::ParseState) = new(span(ps.t), Symbol(ps.t.val), ps.ws.val)
 end
 
 type LITERAL <: INSTANCE
+    span::Int
     val::String
     ws::String
-    loc::Tuple{Int,Int}
-    LITERAL(ps::ParseState) = new(ps.t.val, ps.ws.val, (ps.t.startbyte, ps.t.endbyte))
+    LITERAL(ps::ParseState) = new(span(ps.t), ps.t.val, ps.ws.val)
 end
 
+type BOOL <: INSTANCE
+    span::Int
+    val::Bool
+    ws::String
+    BOOL(ps::ParseState) = new(span(ps.t), ps.t.kind==Tokens.True, ps.ws.val)
+end
+
+
 type OPERATOR <: Expression
+    span::Int
     val::String
     ws::String
-    loc::Tuple{Int,Int}
     precedence::Int
 end
-OPERATOR(ps::ParseState) = OPERATOR(ps.t.val, ps.ws.val, (ps.t.startbyte, ps.t.endbyte), precedence(ps.t))
+OPERATOR(ps::ParseState) = OPERATOR(span(ps.t), ps.t.val, ps.ws.val, precedence(ps.t))
 
 
 type CURLY <: Expression
@@ -45,10 +56,11 @@ type Parentheses <: Expression
 end
 
 type BLOCK <: Expression
+    span::Int
     oneliner::Bool
     args::Vector{Expression}
 end
-BLOCK() = BLOCK(false,[])
+BLOCK() = BLOCK(0, false, [])
 
 
 
@@ -76,14 +88,18 @@ type FUNCTION{T} <: Expression
     body::T
 end
 
-
-
-type RETURN{T<:Expression} <:Expression
-    ws::String
-    arg::T
+type MODULE{T} <: Expression
+    span::Int
+    bare::Bool
+    name::Expression
+    body::T
 end
 
-
+type BAREMODULE{T} <: Expression
+    bare::Bool
+    name::Expression
+    body::T
+end
 
 
 
@@ -91,7 +107,7 @@ end
 abstract DATATYPE <: Expression
 
 type TYPEALIAS <: DATATYPE
-    name::IDENTIFIER
+    name::Expression
     body::Expression
 end
 
@@ -103,7 +119,8 @@ end
 
 
 type TYPE <: DATATYPE
-    name::IDENTIFIER
+    span::Int
+    name::Expression
     fields::BLOCK
 end
 
@@ -118,13 +135,20 @@ end
 
 
 type CONST <: Expression
+    span::Int
     decl::Expression
 end
 type GLOBAL <: Expression
+    span::Int
     decl::Expression
 end
 type LOCAL <: Expression
+    span::Int
     decl::Expression
 end
 
+type RETURN <:Expression
+    span::Int
+    decl::Expression
+end
 

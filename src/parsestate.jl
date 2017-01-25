@@ -7,10 +7,10 @@ type ParseState
     lws::Token
     ws::Token
     nws::Token
-    mode
+    ws_delim::Bool
 end
 function ParseState(str::String)
-    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), [:toplevel]))
+    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), false))
 end
 
 function Base.show(io::IO, ps::ParseState)
