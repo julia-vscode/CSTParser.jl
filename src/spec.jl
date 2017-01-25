@@ -30,8 +30,8 @@ type OPERATOR <: Expression
     ws::String
     loc::Tuple{Int,Int}
     precedence::Int
-    OPERATOR(ps::ParseState) = new(ps.t.val, ps.ws.val, (ps.t.startbyte, ps.t.endbyte), precedence(ps.t))
 end
+OPERATOR(ps::ParseState) = OPERATOR(ps.t.val, ps.ws.val, (ps.t.startbyte, ps.t.endbyte), precedence(ps.t))
 
 
 type CURLY <: Expression
@@ -54,6 +54,10 @@ BLOCK() = BLOCK(false,[])
 
 type SYNTAXCALL <: Expression
     name::OPERATOR
+    args::Vector{Expression}
+end
+
+type COMPARISON <: Expression
     args::Vector{Expression}
 end
 

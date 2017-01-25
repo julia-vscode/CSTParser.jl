@@ -26,6 +26,7 @@ function parse_expression(ps::ParseState, closer = closer_default)
         elseif Tokens.begin_literal < ps.t.kind < Tokens.end_literal
             return LITERAL(ps)
         else
+            println(ps.t)
             error("closer -> $(ps.t) not handled")
         end
     elseif ps.t.kind == Tokens.LPAREN
@@ -34,6 +35,9 @@ function parse_expression(ps::ParseState, closer = closer_default)
         next(ps)
     elseif ps.t.kind == Tokens.IDENTIFIER 
         if ps.nt.kind == Tokens.LPAREN
+            if ps.ws.val!=""
+                throw(ParseError("space before \"(\" not allowed in \"f (\""))
+            end
             ret = parse_call(ps)
         elseif ps.nt.kind == Tokens.LBRACE
             ret = parse_curly(ps)
@@ -42,11 +46,9 @@ function parse_expression(ps::ParseState, closer = closer_default)
         end
     elseif Tokens.begin_literal < ps.t.kind < Tokens.end_literal
             ret = LITERAL(ps)
-    elseif ps.t.kind == Tokens.IDENTIFIER
-        ret = IDENTIFIER(ps)
     end
 
-    while isbinaryop(ps.nt) && !closer(ps)
+    while !closer(ps)
         next(ps)
         op = OPERATOR(ps)
         nextarg = parse_expression(ps, closer_no_ops(precedence(op)-LtoR(op)))
@@ -54,6 +56,13 @@ function parse_expression(ps::ParseState, closer = closer_default)
             push!(ret.args, nextarg)
         elseif op.precedence==1
             ret = SYNTAXCALL(op, [ret, nextarg])
+        elseif op.precedence==6
+            if ret isa COMPARISON
+                push!(ret.args, op)
+                push!(ret.args, nextarg)
+            else
+                ret = COMPARISON([ret, op, nextarg])
+            end
         else
             ret = CALL(op, [ret, nextarg])
         end
@@ -72,7 +81,9 @@ function parse_resword(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     next(ps)
     if ps.nt.kind==Tokens.END
         @assert isidentifier(ps.t)
-        return FUNCTION(false, IDENTIFIER(ps), BLOCK())
+        fname = IDENTIFIER(ps)
+        next(ps)
+        return FUNCTION(false, fname, BLOCK())
     end
     fcall = parse_call(ps)
     # fcall = parse_expression(ps, ps->closer_default(ps) || ps.nws!="")

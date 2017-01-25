@@ -6,6 +6,18 @@ Expr(x::OPERATOR) = Symbol(x.val)
 Expr{T<:Expression}(x::Vector{T}) = Expr(:block, Expr.(x)...)
 Expr(x::BLOCK) = Expr(:block, Expr.(x.args)...)
 Expr(x::SYNTAXCALL) = Expr(Symbol(x.name.val), Expr.(x.args)...)
+function Expr(x::COMPARISON)
+    if length(x.args)==3
+        if x.args[2] in ["<:", ">:"]
+            return Expr(Expr(x.args[2]), Expr(x.args[1], Expr(x.args[3])))
+        else
+            return Expr(:call, Expr(x.args[2]), Expr(x.args[1]), Expr(x.args[3]))
+        end
+    else
+        return Expr(:comparison, Expr.(x.args)...)
+    end
+end
+
 function Expr(x::CALL)
     if x.name.val in ["||", "&&", "::"]
         return Expr(Symbol(x.name.val), Expr.(x.args)...)

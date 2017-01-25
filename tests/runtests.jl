@@ -28,6 +28,12 @@ facts("one liner functions") do
     end
 end
 
+facts("should fail to parse") do
+    strs = ["f (x) = x"]
+    for str in strs
+        @fact (try Parser.parse(str) |> Expr catch e e.msg end) --> (try remlineinfo!(Base.parse(str)) catch e e.msg end)
+    end
+end
 
 facts("type defs") do
     strs = ["bitstype a b"
@@ -68,7 +74,7 @@ end
 
 
 facts("operators") do
-    randop() = rand(["+","-","*","/","^","|>","→",">>","<<",])
+    randop() = rand(["+","-","*","/","^","|>","→",">>","<<","<"])
     for n = 2:10
         for i = 1:50
             str = join([["$i $(randop()) " for i = 1:n-1];"$n"])
@@ -105,6 +111,7 @@ facts("type annotations") do
              "Vector{Int}"
              "f(x::Int)"
              "f(x::Vector{Int})"
+             "f(x::Vector{Vector{Int}})"
              "f(x::Vector{Vector{Int}})"
              """type a 
                 c::Vector{Int}
