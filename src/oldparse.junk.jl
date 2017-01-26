@@ -89,3 +89,34 @@ end
 
 # Expr(x::MODULE) = Expr(:module, true, Expr(x.name), Expr(x.body))
 # Expr(x::BAREMODULE) = Expr(:module, false, Expr(x.name), Expr(x.body))
+
+function parse_resword(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
+    @assert ps.t.kind == Tokens.FUNCTION
+    next(ps)
+    if ps.nt.kind==Tokens.END
+        @assert isidentifier(ps.t)
+        fname = INSTANCE(ps)
+        next(ps)
+        return FUNCTION(false, fname, BLOCK())
+    end
+    fcall = parse_call(ps)
+    # fcall = parse_expression(ps, ps->closer_default(ps) || ps.nws!="")
+    body = parse_resword(ps, Val{Tokens.BEGIN})
+    return FUNCTION(false, fcall, body)
+end
+
+function parse_call(ps::ParseState)
+    fname = INSTANCE(ps)
+    @assert ps.nt.kind==Tokens.LPAREN
+    args = parse_argument_list(ps)
+    fcall = CALL(fname, args)
+
+    if ps.nt.kind == Tokens.EQ
+        next(ps)
+        body = parse_expression(ps)
+        body = body isa BLOCK ? body : BLOCK(0, true, [body])
+        return FUNCTION(true, fcall, body)
+    end
+
+    return fcall
+end

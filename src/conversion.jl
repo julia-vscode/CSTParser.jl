@@ -19,11 +19,11 @@ function Expr(x::COMPARISON)
 end
 
 function Expr(x::CALL)
-    if x.name.val in ["||", "&&", "::"]
+    if x.name isa OPERATOR && x.name.val in ["||", "&&", "::"]
         return Expr(Symbol(x.name.val), Expr.(x.args)...)
+    else
+        return Expr(:call, Expr(x.name), Expr.(x.args)...)
     end
-
-    return Expr(:call, Expr(x.name), Expr.(x.args)...)
 end
 
 function Expr(x::FUNCTION) 
@@ -46,8 +46,10 @@ Expr(x::KEYWORD_BLOCK{2}) = Expr(Symbol(x.opener.val), Expr.(x.args)...)
 function Expr(x::KEYWORD_BLOCK{3})
     if x.opener.val in ["type", "module"]
         return Expr(Symbol(x.opener.val), true, Expr(x.args[1]), Expr(x.args[2]))
-    elseif x.opener.val in ["immutable", "baremodule"]
-        return Expr(Symbol(x.opener.val), false, Expr(x.args[1]), Expr(x.args[2]))
+    elseif x.opener.val == "immutable"
+        return Expr(:immutable, false, Expr(x.args[1]), Expr(x.args[2]))
+    elseif x.opener.val == "baremodule"
+        return Expr(:module, false, Expr(x.args[1]), Expr(x.args[2]))
     else
         return Expr(Symbol(x.opener.val), Expr(x.args[1]), Expr(x.args[2]))
     end

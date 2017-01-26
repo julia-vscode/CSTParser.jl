@@ -128,7 +128,7 @@ facts("type annotations") do
              "f(x::Vector{Int})"
              "f(x::Vector{Vector{Int}})"
              "f(x::Vector{Vector{Int}})"
-             """type a 
+             """type a <: Int
                 c::Vector{Int}
              end"""]
     for str in strs
