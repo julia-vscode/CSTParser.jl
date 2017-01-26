@@ -35,17 +35,6 @@ facts("should fail to parse") do
     end
 end
 
-facts("type defs") do
-    strs = ["bitstype a b"
-            "bitstype 32 Char"
-            "bitstype 32 32"
-            "typealias a b"]
-    for str in strs
-        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
-    end
-end
-
-
 
 facts("operators") do
     strs =  ["1 + 2 - 3"
@@ -83,11 +72,38 @@ facts("operators") do
 end
 
 facts("function definitions") do
-    strs =  ["f(x) = x"
-            "function f end"
+    strs =  ["function f end"
+            """function f(x) x end"""
             """function f(x)
-                g(x) = x
-                return g(x)
+                x
+            end"""]
+    for str in strs
+        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+    end
+end
+
+facts("type definitions") do
+    strs =  ["abstract name"
+            "abstract name <: other"
+            "abstract f(x+1)"
+            "bitstype 64 Int"
+            "bitstype 4*16 Int"
+            "bitstype 4*16 f(x)"
+            "typealias name fsd"
+            "type a end"
+            """type a
+                arg1
+            end"""
+            """type a <: other
+                arg1::Int
+                arg2::Int
+            end"""
+            """type a{t}
+                arg1::t
+            end"""
+            """type a{t}
+                arg1::t
+                a(args) = new(args)
             end"""]
     for str in strs
         @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))

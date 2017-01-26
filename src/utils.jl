@@ -16,8 +16,17 @@ closer_no_ops(p) = ps->closer_default(ps) || (isoperator(ps.nt) && precedence(ps
 
 isidentifier(t::Token) = t.kind == Tokens.IDENTIFIER
 
-isinstance(t::Token) = Tokens.begin_literal < t.kind < Tokens.end_literal || 
-                       t.kind == Tokens.IDENTIFIER
+isliteral(t::Token) = Tokens.begin_literal < t.kind < Tokens.end_literal
+
+isbool(t::Token) = t.kind in [Tokens.TRUE, Tokens.FALSE]
+
+iskw(t::Token) = Tokens.iskeyword(t.kind)
+
+isinstance(t::Token) = isidentifier(t) ||
+                       isliteral(t) ||
+                       isbool(t) || 
+                       iskw(t)
+
 
 
 isoperator(t::Token) = Tokens.begin_ops < t.kind < Tokens.end_ops

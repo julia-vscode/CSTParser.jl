@@ -1,15 +1,15 @@
 import Base.Expr
 
-Expr(x::IDENTIFIER) = x.val
-Expr(x::LITERAL) = Base.parse(x.val)
+Expr(x::INSTANCE{IDENTIFIER}) = Symbol(x.val)
+Expr(x::INSTANCE{LITERAL}) = Base.parse(x.val)
 Expr(x::OPERATOR) = Symbol(x.val)
 Expr{T<:Expression}(x::Vector{T}) = Expr(:block, Expr.(x)...)
 Expr(x::BLOCK) = Expr(:block, Expr.(x.args)...)
 Expr(x::SYNTAXCALL) = Expr(Symbol(x.name.val), Expr.(x.args)...)
 function Expr(x::COMPARISON)
     if length(x.args)==3
-        if x.args[2] in ["<:", ">:"]
-            return Expr(Expr(x.args[2]), Expr(x.args[1], Expr(x.args[3])))
+        if x.args[2].val in ["<:", ">:"]
+            return Expr(Expr(x.args[2]), Expr(x.args[1]), Expr(x.args[3]))
         else
             return Expr(:call, Expr(x.args[2]), Expr(x.args[1]), Expr(x.args[3]))
         end
@@ -35,18 +35,20 @@ function Expr(x::FUNCTION)
         return Expr(:function, Expr(x.signature), Expr(x.body))
     end
 end
-Expr(x::TYPEALIAS) = Expr(:typealias, Expr(x.name), Expr(x.body))
-Expr(x::BITSTYPE) = Expr(:bitstype, Expr(x.bits), Expr(x.name))
-Expr(x::TYPE) = Expr(:type, true, Expr(x.name), Expr(x.fields))
-Expr(x::IMMUTABLE) = Expr(:type, false, Expr(x.name), Expr(x.fields))
-
-Expr(x::CONST) = Expr(:const, Expr(x.decl))
-Expr(x::GLOBAL) = Expr(:global, Expr(x.decl))
-Expr(x::LOCAL) = Expr(:local, Expr(x.decl))
-Expr(x::RETURN) = Expr(:return, Expr(x.decl))
 
 
 Expr(x::CURLY) = Expr(:curly, Expr(x.name), Expr.(x.args)...)
 
-Expr(x::MODULE) = Expr(:module, true, Expr(x.name), Expr(x.body))
-Expr(x::BAREMODULE) = Expr(:module, false, Expr(x.name), Expr(x.body))
+
+
+Expr(x::KEYWORD_BLOCK{1}) = Expr(Symbol(x.opener.val), Expr(x.args[1]))    
+Expr(x::KEYWORD_BLOCK{2}) = Expr(Symbol(x.opener.val), Expr.(x.args)...)
+function Expr(x::KEYWORD_BLOCK{3})
+    if x.opener.val in ["type", "module"]
+        return Expr(Symbol(x.opener.val), true, Expr(x.args[1]), Expr(x.args[2]))
+    elseif x.opener.val in ["immutable", "baremodule"]
+        return Expr(Symbol(x.opener.val), false, Expr(x.args[1]), Expr(x.args[2]))
+    else
+        return Expr(Symbol(x.opener.val), Expr(x.args[1]), Expr(x.args[2]))
+    end
+end

@@ -19,12 +19,18 @@ function parse_expression(ps::ParseState, closer = closer_default)
     ret = nothing
     
     if Tokens.begin_keywords < ps.t.kind < Tokens.end_keywords 
-        ret = parse_resword(ps, Val{ps.t.kind})
+        if Tokens.begin_1arg_kw < ps.t.kind < Tokens.end_2arg_kw
+            ret = parse_kw_syntax(ps, ps.t.kind)
+        elseif Tokens.begin_3arg_kw < ps.t.kind < Tokens.end_3arg_kw 
+            ret = parse_kw_syntax(ps, ps.t.kind)
+        else
+            ret = parse_resword(ps, Val{ps.t.kind})
+        end
     elseif closer(ps)
         if ps.t.kind == Tokens.IDENTIFIER
-            return IDENTIFIER(ps)
+            return INSTANCE(ps)
         elseif Tokens.begin_literal < ps.t.kind < Tokens.end_literal
-            return LITERAL(ps)
+            return INSTANCE(ps)
         else
             println(ps.t)
             error("closer -> $(ps.t) not handled")
@@ -42,10 +48,10 @@ function parse_expression(ps::ParseState, closer = closer_default)
         elseif ps.nt.kind == Tokens.LBRACE
             ret = parse_curly(ps)
         else
-            ret = IDENTIFIER(ps)
+            ret = INSTANCE(ps)
         end
     elseif Tokens.begin_literal < ps.t.kind < Tokens.end_literal
-        ret = LITERAL(ps)
+        ret = INSTANCE(ps)
     else
         error("Expression started with $(ps.t.val)")
     end
@@ -83,7 +89,7 @@ function parse_resword(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     next(ps)
     if ps.nt.kind==Tokens.END
         @assert isidentifier(ps.t)
-        fname = IDENTIFIER(ps)
+        fname = INSTANCE(ps)
         next(ps)
         return FUNCTION(false, fname, BLOCK())
     end
@@ -94,7 +100,7 @@ function parse_resword(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
 end
 
 function parse_call(ps::ParseState)
-    fname = IDENTIFIER(ps)
+    fname = INSTANCE(ps)
     @assert ps.nt.kind==Tokens.LPAREN
     args = parse_argument_list(ps)
     fcall = CALL(fname, args)
@@ -155,89 +161,46 @@ function parse_resword(ps::ParseState, ::Type{Val{Tokens.BEGIN}})
     start = ps.t.startbyte
     args = []
     while ps.nt.kind!==Tokens.END
-        push!(args, parse_expression(ps))
+        push!(args, parse_expression(ps,ps->closer_default(ps) || ps.nt.kind==Tokens.END))
     end
     ret = BLOCK(ps.t.endbyte-start, false, args)
     next(ps)
     return ret
 end
 
-# Type Declarations
 
-function parse_resword(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
-    next(ps)
-    decl = parse_expression
-end
-
-function parse_resword(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
-    ps.ws_delim = true
-    bits = parse_expression(ps)
-    ps.ws_delim = false
-    decl = parse_expression(ps)
-    return BITSTYPE(bits, decl)
-end
-
-function parse_resword(ps::ParseState, ::Type{Val{Tokens.IMMUTABLE}})
-    start = ps.t.startbyte
-    name = parse_expression(ps)
-    fields = parse_resword(ps, Val{Tokens.BEGIN})
-    return IMMUTABLE(ps.t.endbyte-start, name, fields)
-end
-
-function parse_resword(ps::ParseState, ::Type{Val{Tokens.TYPE}})
-    start = ps.t.startbyte
-    name = parse_expression(ps)
-    fields = parse_resword(ps, Val{Tokens.BEGIN})
-    return TYPE(ps.t.endbyte-start, name, fields)
-end
-
-function parse_resword(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
-    ps.ws_delim = true
-    decl = parse_expression(ps)
-    ps.ws_delim = false
-    def = parse_expression(ps)
-    return TYPEALIAS(decl, def)
-end
 
 
 
 # These are all identical and can be replaced by one type.
-function parse_resword(ps::ParseState, ::Type{Val{Tokens.CONST}})
-    start = ps.t.startbyte
-    decl = parse_expression(ps)
-    return CONST(ps.t.endbyte-start, decl)
-end
 
-function parse_resword(ps::ParseState, ::Type{Val{Tokens.GLOBAL}})
-    start = ps.t.startbyte
-    decl = parse_expression(ps)
-    return GLOBAL(ps.t.endbyte-start, decl)
-end
-
-function parse_resword(ps::ParseState, ::Type{Val{Tokens.LOCAL}})
-    start = ps.t.startbyte
-    decl = parse_expression(ps)
-    return LOCAL(ps.t.endbyte-start, decl)
-end
-
-function parse_resword(ps::ParseState, ::Type{Val{Tokens.RETURN}}) 
-    start = ps.t.startbyte
-    decl = parse_expression(ps)
-    return RETURN(ps.t.endbyte-start, decl)
-end
-
-function parse_resword(ps::ParseState, ::Type{Val{Tokens.MODULE}})
-    start = ps.t.startbyte
-    name = parse_expression(ps, ps->true)
-    body = parse_resword(ps, Val{Tokens.BEGIN})
-    return MODULE(ps.t.endbyte-start, false, name, body)
-end
-
-function parse_resword(ps::ParseState, ::Type{Val{Tokens.BAREMODULE}})
-    start = ps.t.startbyte
-    name = parse_expression(ps, ps->true)
-    body = parse_resword(ps, Val{Tokens.BEGIN})
-    return MODULE(ps.t.endbyte-start, true, name, body)
+function parse_kw_syntax(ps::ParseState, tk::Tokens.Kind) 
+    if Tokens.begin_0arg_kw < tk < Tokens.end_0arg_kw
+        start = ps.t.startbyte
+        kw = INSTANCE(ps)
+        return KEYWORD_BLOCK{0}(ps.t.endbyte-start, kw, [], nothing)
+    elseif Tokens.begin_1arg_kw < tk < Tokens.end_1arg_kw
+        start = ps.t.startbyte
+        kw = INSTANCE(ps)
+        arg1 = parse_expression(ps)
+        return KEYWORD_BLOCK{1}(ps.t.endbyte-start, kw, [arg1], nothing)
+    elseif Tokens.begin_2arg_kw < tk < Tokens.end_2arg_kw
+        start = ps.t.startbyte
+        kw = INSTANCE(ps)
+        ps.ws_delim = true
+        arg1 = parse_expression(ps)
+        ps.ws_delim = false
+        arg2 = parse_expression(ps)
+        return KEYWORD_BLOCK{2}(ps.t.endbyte-start, kw, [arg1, arg2], nothing)
+    elseif Tokens.begin_3arg_kw < tk < Tokens.end_3arg_kw
+        start = ps.t.startbyte
+        kw = INSTANCE(ps)
+        arg1 = parse_expression(ps,ps->closer_default(ps) || ps.nt.kind==Tokens.END)
+        arg2 = parse_resword(ps, Val{Tokens.BEGIN})
+        return KEYWORD_BLOCK{3}(ps.t.endbyte-start, kw, [arg1, arg2], INSTANCE(ps))
+    else
+        error()
+    end
 end
 
 

@@ -1,38 +1,24 @@
 abstract Expression
 
-abstract INSTANCE <: Expression
+abstract IDENTIFIER <: Expression
+abstract LITERAL <: Expression
+abstract BOOL <: Expression
+abstract KEYWORD <: Expression
 
-function INSTANCE(ps::ParseState)
-    if isidentifier(ps.t)
-        return IDENTIFIER(ps)
-    elseif isliteral(ps.t)
-        return LITERAL(ps)
-    elseif ps.t.kind in [Tokens.TRUE, Tokens.FALSE]
-        return BOOL(ps)
-    else
-        error("not instance at $(ps.l.token_start_row):$(ps.l.token_startpos)")
-    end
-end
-
-type IDENTIFIER <: INSTANCE
-    span::Int
-    val::Symbol
-    ws::String
-    IDENTIFIER(ps::ParseState) = new(span(ps.t), Symbol(ps.t.val), ps.ws.val)
-end
-
-type LITERAL <: INSTANCE
+type INSTANCE{T} <: Expression
     span::Int
     val::String
     ws::String
-    LITERAL(ps::ParseState) = new(span(ps.t), ps.t.val, ps.ws.val)
 end
 
-type BOOL <: INSTANCE
-    span::Int
-    val::Bool
-    ws::String
-    BOOL(ps::ParseState) = new(span(ps.t), ps.t.kind==Tokens.True, ps.ws.val)
+function INSTANCE(ps::ParseState)
+    t = isidentifier(ps.t) ? IDENTIFIER : 
+        isliteral(ps.t) ? LITERAL :
+        isbool(ps.t) ? BOOL : 
+        iskw(ps.t) ? KEYWORD :
+        error("Couldn't make an INSTANCE from $(ps.t.val)")
+
+    return INSTANCE{t}(span(ps.t), Symbol(ps.t.val), ps.ws.val)
 end
 
 
@@ -46,7 +32,7 @@ OPERATOR(ps::ParseState) = OPERATOR(span(ps.t), ps.t.val, ps.ws.val, precedence(
 
 
 type CURLY <: Expression
-    name::IDENTIFIER
+    name::INSTANCE
     args::Vector{Expression}
 end
 
@@ -126,7 +112,7 @@ end
 
 
 type IMMUTABLE <: DATATYPE
-    name::IDENTIFIER
+    name::Expression
     fields::BLOCK
 end
 
@@ -152,3 +138,9 @@ type RETURN <:Expression
     decl::Expression
 end
 
+type KEYWORD_BLOCK{Nargs} <: Expression
+    span::Int
+    opener::INSTANCE{KEYWORD}
+    args::Vector{Expression}
+    closer
+end
