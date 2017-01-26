@@ -114,7 +114,7 @@ function parse_argument_list(ps::ParseState)
     closer = ps->ps.nt.kind==Tokens.RPAREN
     delim = ps->ps.nt.kind in [Tokens.COMMA, Tokens.RPAREN]
     
-    args = Any[]
+    args = Expression[]
     while !closer(ps)
         next(ps)
         closer(ps) && break

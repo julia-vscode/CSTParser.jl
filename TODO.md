@@ -79,7 +79,6 @@ This becomes an `instance`.
 ### Single line definitions
 #### ABSTRACT
 #### BITSTYPE
-#### IMMUTABLE
 #### TYPEALIAS
 
 
@@ -90,6 +89,7 @@ This becomes an `instance`.
 #### DO
 #### FOR
 #### FUNCTION
+#### IMMUTABLE
 #### LET
 #### MACRO
 #### MODULE
