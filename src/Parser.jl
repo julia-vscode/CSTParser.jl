@@ -13,24 +13,18 @@ include("spec.jl")
 include("conversion.jl")
 include("precedence.jl")
 include("positional.jl")
+include("display.jl")
 
 function parse_expression(ps::ParseState, closer = closer_default)
+    start = ps.t.startbyte
     next(ps)
     ret = nothing
     
     if Tokens.begin_keywords < ps.t.kind < Tokens.end_keywords 
-        if Tokens.begin_0arg_kw < ps.t.kind < Tokens.end_2arg_kw ||
-            Tokens.begin_3arg_kw < ps.t.kind < Tokens.end_3arg_kw 
+        if Tokens.begin_0arg_kw < ps.t.kind < Tokens.end_3arg_kw
             ret = parse_kw_syntax(ps)
         else
             ret = parse_resword(ps, Val{ps.t.kind})
-        end
-    elseif closer(ps)
-        if isinstance(ps.t)
-            return INSTANCE(ps)
-        else
-            println(ps.t)
-            error("closer -> $(ps.t) not handled")
         end
     elseif ps.t.kind == Tokens.LPAREN
         ret = parse_expression(ps, ps->ps.nt.kind==Tokens.RPAREN)
@@ -59,17 +53,19 @@ function parse_expression(ps::ParseState, closer = closer_default)
                     ret = COMPARISON([ret, op, nextarg])
                 end
             else
-                ret = CALL(op, [ret, nextarg])
+                ret = CALL(0, op, [ret, nextarg])
             end
         elseif ps.nt.kind==Tokens.LPAREN
             if isempty(ps.ws.val)
+                start = ps.t.startbyte
                 args = parse_argument_list(ps)
-                ret = CALL(ret, args)
+                ret = CALL((ps.t.endbyte-start)+ret.span, ret, args)
                 if ps.nt.kind==Tokens.EQ
                     next(ps)
                     body = parse_expression(ps)
                     body = body isa BLOCK ? body : BLOCK(0, true, [body])
-                    ret = FUNCTION(true, ret, body)
+                    # ret = FUNCTION(true, ret, body)
+                    ret = KEYWORD_BLOCK{3}(ps.t.endbyte-start, INSTANCE{KEYWORD}(0, "function",""), [ret, body], nothing)
                 end
             else
                 error("space before \"(\" not allowed in \"$(Expr(ret)) (\"")
@@ -149,7 +145,7 @@ function parse_list(ps::ParseState, )
 end
 
 
-function parse_resword(ps::ParseState, ::Type{Val{Tokens.BEGIN}})
+function parse_block(ps::ParseState)
     start = ps.t.startbyte
     args = []
     while ps.nt.kind!==Tokens.END
@@ -160,11 +156,6 @@ function parse_resword(ps::ParseState, ::Type{Val{Tokens.BEGIN}})
     return ret
 end
 
-
-
-
-
-# These are all identical and can be replaced by one type.
 
 function parse_kw_syntax(ps::ParseState) 
     if Tokens.begin_0arg_kw < ps.t.kind < Tokens.end_0arg_kw
@@ -188,12 +179,12 @@ function parse_kw_syntax(ps::ParseState)
         start = ps.t.startbyte
         kw = INSTANCE(ps)
         arg1 = parse_expression(ps,ps->closer_default(ps) || ps.nt.kind==Tokens.END || (!isempty(ps.ws.val) && !isoperator(ps.nt)))
-        arg2 = parse_resword(ps, Val{Tokens.BEGIN})
+        arg2 = parse_block(ps)
         return KEYWORD_BLOCK{3}(ps.t.endbyte-start, kw, [arg1, arg2], INSTANCE(ps))
     elseif ps.t.kind==Tokens.BEGIN || ps.t.kind==Tokens.QUOTE
         start = ps.t.startbyte
         kw = INSTANCE(ps)
-        arg1 = parse_resword(ps, Val{Tokens.BEGIN})
+        arg1 = parse_block(ps)
         return KEYWORD_BLOCK{3}(ps.t.endbyte-start, kw, [arg1], INSTANCE(ps))
     else
         error()

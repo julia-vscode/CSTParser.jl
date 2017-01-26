@@ -1,6 +1,4 @@
 module ModuleName
-
-# comment
 const a = 16
 typealias MyInt Int
 bitstype a*4 SomeType
@@ -10,10 +8,10 @@ f(x) = x
 function f end
 
 function f(x::Int{T})
-    begin
-        begin
-            begin
-            end
+    while true
+        f(x)
+        while true
+            break
         end
     end
 

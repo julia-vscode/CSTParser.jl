@@ -120,3 +120,81 @@ function parse_call(ps::ParseState)
 
     return fcall
 end
+
+type CONST <: Expression
+    span::Int
+    decl::Expression
+end
+type GLOBAL <: Expression
+    span::Int
+    decl::Expression
+end
+type LOCAL <: Expression
+    span::Int
+    decl::Expression
+end
+
+type RETURN <:Expression
+    span::Int
+    decl::Expression
+end
+
+
+abstract DATATYPE <: Expression
+
+type TYPEALIAS <: DATATYPE
+    name::Expression
+    body::Expression
+end
+
+
+type BITSTYPE <: DATATYPE
+    bits::Expression
+    name::Expression
+end
+
+
+type TYPE <: DATATYPE
+    span::Int
+    name::Expression
+    fields::BLOCK
+end
+
+
+type IMMUTABLE <: DATATYPE
+    name::Expression
+    fields::BLOCK
+end
+
+
+
+type MODULE{T} <: Expression
+    span::Int
+    bare::Bool
+    name::Expression
+    body::T
+end
+
+type BAREMODULE{T} <: Expression
+    bare::Bool
+    name::Expression
+    body::T
+end
+
+
+type FUNCTION{T} <: Expression
+    oneliner::Bool
+    signature::Expression
+    body::T
+end
+
+
+# function Expr(x::FUNCTION) 
+#     if x.oneliner
+#         return Expr(:(=), Expr(x.signature), Expr(x.body))
+#     elseif isempty(x.body.args)
+#         return Expr(:function, Expr(x.signature))
+#     else
+#         return Expr(:function, Expr(x.signature), Expr(x.body))
+#     end
+# end

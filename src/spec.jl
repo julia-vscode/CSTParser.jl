@@ -36,11 +36,6 @@ type CURLY <: Expression
     args::Vector{Expression}
 end
 
-type Parentheses <: Expression
-    loc::Tuple{Int,Int}
-    args::Vector{Expression}
-end
-
 type BLOCK <: Expression
     span::Int
     oneliner::Bool
@@ -59,83 +54,10 @@ type COMPARISON <: Expression
     args::Vector{Expression}
 end
 
-
-# kws not handled
 type CALL <: Expression
+    span::Int
     name::Expression
     args::Vector{Expression}
-end
-
-
-
-type FUNCTION{T} <: Expression
-    oneliner::Bool
-    signature::Expression
-    body::T
-end
-
-type MODULE{T} <: Expression
-    span::Int
-    bare::Bool
-    name::Expression
-    body::T
-end
-
-type BAREMODULE{T} <: Expression
-    bare::Bool
-    name::Expression
-    body::T
-end
-
-
-
-
-abstract DATATYPE <: Expression
-
-type TYPEALIAS <: DATATYPE
-    name::Expression
-    body::Expression
-end
-
-
-type BITSTYPE <: DATATYPE
-    bits::Expression
-    name::Expression
-end
-
-
-type TYPE <: DATATYPE
-    span::Int
-    name::Expression
-    fields::BLOCK
-end
-
-
-type IMMUTABLE <: DATATYPE
-    name::Expression
-    fields::BLOCK
-end
-
-
-
-
-
-type CONST <: Expression
-    span::Int
-    decl::Expression
-end
-type GLOBAL <: Expression
-    span::Int
-    decl::Expression
-end
-type LOCAL <: Expression
-    span::Int
-    decl::Expression
-end
-
-type RETURN <:Expression
-    span::Int
-    decl::Expression
 end
 
 type KEYWORD_BLOCK{Nargs} <: Expression

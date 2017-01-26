@@ -6,6 +6,8 @@ Operators
 + parse arrows
 + ? syntax
 + assignment, give error if incorrect lhs and return block on rhs
++ try/if blocks
++ unary ops
 
 
 ## Lexer errors
