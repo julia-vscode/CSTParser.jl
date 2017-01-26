@@ -9,6 +9,21 @@ Operators
 + try/if blocks
 + unary ops
 + handle ';'
+Unhandled 'head's
++ ccall
++ comprehension
++ generator
++ kw
++ parameters
++ ref
++ stdcall
++ string
++ toplevel
++ tuple
++ typed_comprehension
++ typed_vcat
++ vcat
++ vect
 
 
 ## Lexer errors

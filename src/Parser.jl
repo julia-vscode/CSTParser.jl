@@ -44,7 +44,7 @@ function parse_expression(ps::ParseState, closer = closer_default)
             if ret isa CALL && op.val == ret.name.val && op.val in ["+", "*"]
                 push!(ret.args, nextarg)
             elseif op.precedence==1
-                ret = SYNTAXCALL(op, [ret, nextarg])
+                ret = CALL(0, op, [ret, nextarg])
             elseif op.precedence==6
                 if ret isa COMPARISON
                     push!(ret.args, op)

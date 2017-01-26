@@ -18,7 +18,7 @@ function INSTANCE(ps::ParseState)
         iskw(ps.t) ? KEYWORD :
         error("Couldn't make an INSTANCE from $(ps.t.val)")
 
-    return INSTANCE{t}(span(ps.t), Symbol(ps.t.val), ps.ws.val)
+    return INSTANCE{t}(span(ps.t), (ps.t.val), ps.ws.val)
 end
 
 
@@ -42,13 +42,6 @@ type BLOCK <: Expression
     args::Vector{Expression}
 end
 BLOCK() = BLOCK(0, false, [])
-
-
-
-type SYNTAXCALL <: Expression
-    name::OPERATOR
-    args::Vector{Expression}
-end
 
 type COMPARISON <: Expression
     args::Vector{Expression}

@@ -166,11 +166,7 @@ facts("operators") do
 end
 
 
-
-
-
-facts("positional information") do
-    str = """
+const examplemodule = """
 module ModuleName
 const a = 16
 typealias MyInt Int
@@ -184,7 +180,7 @@ function f(x::Int{T})
     while true
         f(x)
         while true
-            break
+            x+=a*b/4^(1+2+3+4-5-6-7-9)⋅(a*b*c*d*e)
         end
     end
 
@@ -201,9 +197,12 @@ end
 
 end
 """
-ex = Parser.parse(str)
-@fact span(ex) --> 305
-@fact spanws(ex) --> 306
+if false
+facts("positional information") do
+    
+ex = Parser.parse(examplemodule)
+@fact span(ex) --> 338
+@fact spanws(ex) --> 339
 @fact span(ex.opener) --> 6
 @fact spanws(ex.opener) --> 7
 @fact span(ex.args[1]) --> 10
@@ -211,3 +210,26 @@ ex = Parser.parse(str)
 @fact span(ex.args[2].args[1]) --> 12
 @fact spanws(ex.args[2].args[1]) --> 13
 end
+end
+function timetest(n)
+    for i =1:n
+        parse(examplemodule)
+    end
+end
+
+timetest(1)
+@timev timetest(10000)
+
+# 2.206071 seconds (10.30 M allocations: 536.347 MB, 4.75% gc time)
+# elapsed time (ns): 2206071486
+# gc time (ns):      104783729
+# bytes allocated:   562400160
+# pool allocs:       1030000
+# GC pauses:         24
+
+# 2.026004 seconds (9.81 M allocations: 521.393 MB, 5.73% gc time)
+# elapsed time (ns): 2026003893
+# gc time (ns):      116163373
+# bytes allocated:   546720160
+# pool allocs:       9810004
+# GC pauses:         24

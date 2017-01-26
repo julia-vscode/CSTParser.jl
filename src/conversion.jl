@@ -5,7 +5,6 @@ Expr(x::INSTANCE{LITERAL}) = Base.parse(x.val)
 Expr(x::OPERATOR) = Symbol(x.val)
 Expr{T<:Expression}(x::Vector{T}) = Expr(:block, Expr.(x)...)
 Expr(x::BLOCK) = Expr(:block, Expr.(x.args)...)
-Expr(x::SYNTAXCALL) = Expr(Symbol(x.name.val), Expr.(x.args)...)
 
 function Expr(x::COMPARISON)
     if length(x.args)==3
@@ -20,7 +19,9 @@ function Expr(x::COMPARISON)
 end
 
 function Expr(x::CALL)
-    if x.name isa OPERATOR && x.name.val in ["||", "&&", "::"]
+    if x.name isa OPERATOR && x.name.precedence == 1
+        return Expr(Symbol(x.name.val), Expr.(x.args)...)
+    elseif x.name isa OPERATOR && x.name.val in ["||", "&&", "::"]
         return Expr(Symbol(x.name.val), Expr.(x.args)...)
     else
         return Expr(:call, Expr(x.name), Expr.(x.args)...)
