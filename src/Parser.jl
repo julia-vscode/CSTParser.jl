@@ -43,8 +43,12 @@ function parse_expression(ps::ParseState, closer = closer_default)
             nextarg = parse_expression(ps, closer_no_ops(precedence(op)-LtoR(op)))
             if ret isa CALL && op.val == ret.name.val && op.val in ["+", "*"]
                 push!(ret.args, nextarg)
-            elseif op.precedence==1
-                ret = CALL(0, op, [ret, nextarg])
+            elseif op.val == ":"
+                if ret isa CALL && ret.name.val == ":" && length(ret.args)==2
+                    push!(ret.args, nextarg)
+                else
+                    ret = CALL(0, op, [ret, nextarg])
+                end
             elseif op.precedence==6
                 if ret isa COMPARISON
                     push!(ret.args, op)
