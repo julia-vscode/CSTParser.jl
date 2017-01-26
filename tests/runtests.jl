@@ -167,3 +167,47 @@ end
 
 
 
+
+
+facts("positional information") do
+    str = """
+module ModuleName
+const a = 16
+typealias MyInt Int
+bitstype a*4 SomeType
+
+f(x) = x
+
+function f end
+
+function f(x::Int{T})
+    while true
+        f(x)
+        while true
+            break
+        end
+    end
+
+    return x<4
+end
+
+type T <: Int
+    a::Int
+    b::Vector
+end
+
+baremodule SubModuleName
+end
+
+end
+"""
+ex = Parser.parse(str)
+@fact span(ex) --> 305
+@fact spanws(ex) --> 306
+@fact span(ex.opener) --> 6
+@fact spanws(ex.opener) --> 7
+@fact span(ex.args[1]) --> 10
+@fact spanws(ex.args[1]) --> 11
+@fact span(ex.args[2].args[1]) --> 12
+@fact spanws(ex.args[2].args[1]) --> 13
+end
