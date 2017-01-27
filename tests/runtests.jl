@@ -2,7 +2,7 @@ using FactCheck
 
 include("/home/zac/github/Parser/src/Parser.jl")
 for n in names(Parser, true, true)
-    if !isdefined(Parser, n)
+    if !isdefined(Main, n)
         eval(:(import Parser.$n))
     end
 end
@@ -185,51 +185,8 @@ facts("failing things") do
 end
 
 
-const examplemodule = """
-module ModuleName
-const a = 16
-typealias MyInt Int
-bitstype a*4 SomeType
 
-f(x) = x
 
-function f end
-
-function f(x::Int{T})
-    while true
-        f(x)
-        while true
-            x+=a*b/4^(1+2+3+4-5-6-7-9)⋅(a*b*c*d*e)
-        end
-    end
-
-    return x<4
-end
-
-type T <: Int
-    a::Int
-    b::Vector
-end
-
-baremodule SubModuleName
-end
-
-end
-"""
-if false
-facts("positional information") do
-    
-ex = Parser.parse(examplemodule)
-@fact span(ex) --> 338
-@fact spanws(ex) --> 339
-@fact span(ex.opener) --> 6
-@fact spanws(ex.opener) --> 7
-@fact span(ex.args[1]) --> 10
-@fact spanws(ex.args[1]) --> 11
-@fact span(ex.args[2].args[1]) --> 12
-@fact spanws(ex.args[2].args[1]) --> 13
-end
-end
 function timetest(n)
     for i =1:n
         Parser.parse(examplemodule)
@@ -252,6 +209,7 @@ timetest(1)
 # 2.02s/430mb
 # 2.02s/430mb
 # 2.02s/414mb
+# 1.96s/414mb
 # @timev timetest2(10000)
 
 

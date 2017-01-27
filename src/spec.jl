@@ -4,6 +4,7 @@ abstract IDENTIFIER <: Expression
 abstract LITERAL <: Expression
 abstract BOOL <: Expression
 abstract KEYWORD <: Expression
+# abstract OPERATOR{precedence} <: Expression
 
 type INSTANCE{T} <: Expression
     span::Int
