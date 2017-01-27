@@ -13,7 +13,7 @@ precedence(op::Token) = op.kind < Tokens.end_assignments ? 1 :
                        op.kind < Tokens.end_power ? 13 :
                        op.kind < Tokens.end_decl ? 14 : 15
 
-precedence(op::OPERATOR) = op.precedence
-precedence(fc::CALL) = fc.name isa OPERATOR ? fc.name.precedence : 0
+
+precedence(fc::CALL) = fc.prec
 
 precedence(x) = 0

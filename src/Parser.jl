@@ -34,17 +34,18 @@ function parse_expression(ps::ParseState, closer = closer_default)
     while !closer(ps)
         if isoperator(ps.nt)
             next(ps)
-            op = OPERATOR(ps)
-            nextarg = parse_expression(ps, closer_no_ops(precedence(op)-LtoR(op)))
+            op = INSTANCE(ps)
+            op_prec = precedence(ps.t)
+            nextarg = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
             if ret isa CALL && op.val == ret.name.val && (op.val == "+" || op.val == "*")
                 push!(ret.args, nextarg)
             elseif op.val == ":"
                 if ret isa CALL && ret.name.val == ":" && length(ret.args)==2
                     push!(ret.args, nextarg)
                 else
-                    ret = CALL(0, op, [ret, nextarg])
+                    ret = CALL(0, op, [ret, nextarg], op_prec)
                 end
-            elseif op.precedence==6
+            elseif op_prec == 6
                 if ret isa COMPARISON
                     push!(ret.args, op)
                     push!(ret.args, nextarg)
@@ -52,13 +53,13 @@ function parse_expression(ps::ParseState, closer = closer_default)
                     ret = COMPARISON(0, [ret, op, nextarg])
                 end
             else
-                ret = CALL(0, op, [ret, nextarg])
+                ret = CALL(0, op, [ret, nextarg],op_prec)
             end
         elseif ps.nt.kind==Tokens.LPAREN
             if isempty(ps.ws.val)
                 start = ps.t.startbyte
                 args = parse_list(ps)
-                ret = CALL((ps.t.endbyte-start)+ret.span, ret, args)
+                ret = CALL((ps.t.endbyte-start)+ret.span, ret, args, precedence(ret))
                 if ps.nt.kind==Tokens.EQ
                     next(ps)
                     body = parse_expression(ps)
@@ -158,8 +159,8 @@ function parse(str::String)
 end
 
 
-ischainable(op::OPERATOR) = op.val == "+" || op.val == "*" || op.val == "~"
-LtoR(op::OPERATOR) = 1 ≤ op.precedence ≤ 5 || op.precedence == 13
+ischainable(t::Token) = t.val == "+" || t.val == "*" || t.val == "~"
+LtoR(prec::Int) = 1 ≤ prec ≤ 5 || prec == 13
 
 
 include("utils.jl")

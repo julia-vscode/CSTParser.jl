@@ -2,7 +2,7 @@ import Base.Expr
 
 Expr(x::INSTANCE{IDENTIFIER}) = Symbol(x.val)
 Expr(x::INSTANCE{LITERAL}) = Base.parse(x.val)
-Expr(x::OPERATOR) = Symbol(x.val)
+Expr(x::INSTANCE{OPERATOR}) = Symbol(x.val)
 Expr{T<:Expression}(x::Vector{T}) = Expr(:block, Expr.(x)...)
 Expr(x::BLOCK) = Expr(:block, Expr.(x.args)...)
 
@@ -19,13 +19,13 @@ function Expr(x::COMPARISON)
 end
 
 function Expr(x::CALL)
-    if x.name isa OPERATOR && x.name.precedence == 1
+    if x.prec == 1
         return Expr(Symbol(x.name.val), Expr.(x.args)...)
-    elseif x.name isa OPERATOR && x.name.val in ["||", "&&", "::"]
+    elseif x.name isa INSTANCE && x.name.val in ["||", "&&", "::"]
         return Expr(Symbol(x.name.val), Expr.(x.args)...)
-    elseif x.name isa OPERATOR && x.name.val == ":"
+    elseif x.name isa INSTANCE && x.name.val == ":"
         return Expr(:(:), Expr.(x.args)...)
-    elseif x.name isa OPERATOR && x.name.val == "."
+    elseif x.name isa INSTANCE && x.name.val == "."
         if x.args[2] isa INSTANCE{IDENTIFIER}
             return Expr(:(.), Expr(x.args[1]), QuoteNode(Expr(x.args[2])))
         else

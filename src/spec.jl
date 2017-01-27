@@ -4,7 +4,7 @@ abstract IDENTIFIER <: Expression
 abstract LITERAL <: Expression
 abstract BOOL <: Expression
 abstract KEYWORD <: Expression
-# abstract OPERATOR{precedence} <: Expression
+abstract OPERATOR <: Expression
 
 type INSTANCE{T} <: Expression
     span::Int
@@ -17,19 +17,11 @@ function INSTANCE(ps::ParseState)
         isliteral(ps.t) ? LITERAL :
         isbool(ps.t) ? BOOL : 
         iskw(ps.t) ? KEYWORD :
+        isoperator(ps.t) ? OPERATOR :
         error("Couldn't make an INSTANCE from $(ps.t.val)")
 
     return INSTANCE{t}(span(ps.t), (ps.t.val), ps.ws.val)
 end
-
-
-type OPERATOR <: Expression
-    span::Int
-    val::String
-    ws::String
-    precedence::Int
-end
-OPERATOR(ps::ParseState) = OPERATOR(span(ps.t), ps.t.val, ps.ws.val, precedence(ps.t))
 
 
 type CURLY <: Expression
@@ -54,6 +46,7 @@ type CALL <: Expression
     span::Int
     name::Expression
     args::Vector{Expression}
+    prec::Int
 end
 
 type KEYWORD_BLOCK{Nargs} <: Expression
