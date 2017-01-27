@@ -232,7 +232,7 @@ end
 end
 function timetest(n)
     for i =1:n
-        parse(examplemodule)
+        Parser.parse(examplemodule)
     end
 end
 
@@ -242,14 +242,17 @@ function timetest2(n)
     end
 end
 
+# using BenchmarkTools
+
 timetest(1)
 @timev timetest(10000)
 
 
-
-# 2.501966 seconds (13.68 M allocations: 734.871 MB, 5.75% gc time)
-# elapsed time (ns): 2501966467
-# gc time (ns):      143987960
-# bytes allocated:   770568480
-# pool allocs:       13680128
-# GC pauses:         34
+if false
+    using ProfileView, BenchmarkTools
+    @benchmark timetest(10)
+    Profile.clear()
+    Profile.init(delay=0.0001)
+    @profile timetest(4000)
+    ProfileView.view()
+end

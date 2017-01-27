@@ -56,13 +56,12 @@ function parse_expression(ps::ParseState, closer = closer_default)
         elseif ps.nt.kind==Tokens.LPAREN
             if isempty(ps.ws.val)
                 start = ps.t.startbyte
-                args = parse_argument_list(ps)
+                args = parse_list(ps)
                 ret = CALL((ps.t.endbyte-start)+ret.span, ret, args)
                 if ps.nt.kind==Tokens.EQ
                     next(ps)
                     body = parse_expression(ps)
                     body = body isa BLOCK ? body : BLOCK(0, true, [body])
-                    # ret = FUNCTION(true, ret, body)
                     ret = KEYWORD_BLOCK{3}(ps.t.endbyte-start, INSTANCE{KEYWORD}(0, "function",""), [ret, body], nothing)
                 end
             else
@@ -70,9 +69,10 @@ function parse_expression(ps::ParseState, closer = closer_default)
             end
         elseif ps.nt.kind==Tokens.LBRACE
             if isempty(ps.ws.val)
-               ret = parse_curly(ps)
+               args = parse_list(ps)
+               ret = CURLY(ret, args)
             else
-                error("space before \"(\" not allowed in \"$(Expr(ret)) {\"")
+                error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
             end
         end
     end
@@ -80,12 +80,15 @@ function parse_expression(ps::ParseState, closer = closer_default)
     return ret
 end
 
+function parse_list(ps::ParseState)
+    if ps.nt.kind == Tokens.LPAREN
+        closer = ps->ps.nt.kind==Tokens.RPAREN
+        delim = ps->ps.nt.kind in [Tokens.COMMA, Tokens.RPAREN]
+    elseif ps.nt.kind == Tokens.LBRACE
+        closer = ps->ps.nt.kind==Tokens.RBRACE
+        delim = ps->ps.nt.kind in [Tokens.COMMA, Tokens.RBRACE]
+    end
 
-function parse_argument_list(ps::ParseState)
-    @assert ps.nt.kind==Tokens.LPAREN "parse_argument_list called without ps.t=='('"
-    closer = ps->ps.nt.kind==Tokens.RPAREN
-    delim = ps->ps.nt.kind in [Tokens.COMMA, Tokens.RPAREN]
-    
     args = Expression[]
     while !closer(ps)
         next(ps)
@@ -98,48 +101,6 @@ function parse_argument_list(ps::ParseState)
     end
     next(ps)
     return args
-end
-
-
-function parse_curly(ps::ParseState)
-    name = INSTANCE(ps)
-    @assert ps.nt.kind==Tokens.LBRACE "parse_argument_list called without ps.t=='{'"
-    
-    closer = ps->ps.nt.kind==Tokens.RBRACE
-    delim = ps->ps.nt.kind in [Tokens.COMMA, Tokens.RBRACE]
-    
-    args = Any[]
-    while !closer(ps)
-        next(ps)
-        a = parse_expression(ps, delim)
-        push!(args, a)
-        if !delim(ps)
-            error()
-        end
-    end
-    next(ps)
-    return CURLY(name, args)
-end
-
-
-function parse_list(ps::ParseState, )
-    name = INSTANCE(ps)
-    @assert ps.nt.kind==Tokens.LBRACE "parse_argument_list called without ps.t=='{'"
-    
-    closer = ps->ps.nt.kind==Tokens.RBRACE
-    delim = ps->ps.nt.kind in [Tokens.COMMA, Tokens.RBRACE]
-    
-    args = Any[]
-    while !closer(ps)
-        next(ps)
-        a = parse_expression(ps, delim)
-        push!(args, a)
-        if !delim(ps)
-            error()
-        end
-    end
-    next(ps)
-    return CURLY(name, args)
 end
 
 
