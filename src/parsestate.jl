@@ -1,3 +1,5 @@
+const empty_whitespace = Token()
+
 type ParseState
     l::Lexer
     done::Bool
@@ -23,6 +25,7 @@ end
 peekchar(ps::ParseState) = peekchar(ps.l)
 
 function next(ps::ParseState)
+    global empty_whitespace
     ps.lt = ps.t
     ps.t = ps.nt
     ps.lws = ps.ws
@@ -31,7 +34,7 @@ function next(ps::ParseState)
     if iswhitespace(peekchar(ps.l))
         ps.nws, ps.done = next(ps.l, ps.done)
     else
-        ps.nws = Token()
+        ps.nws = empty_whitespace
     end
     return ps
 end

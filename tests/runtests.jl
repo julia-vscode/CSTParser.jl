@@ -246,11 +246,18 @@ end
 
 timetest(1)
 @timev timetest(10000)
+# 2.74s/722mb
+# 2.02s/493mb
+# 2.02s/475mb
+# 2.02s/430mb
+# 2.02s/430mb
+# 2.02s/414mb
+# @timev timetest2(10000)
 
 
 if false
-    using ProfileView, BenchmarkTools
-    @benchmark timetest(10)
+#     using ProfileView, BenchmarkTools
+#     @benchmark timetest(10)
     Profile.clear()
     Profile.init(delay=0.0001)
     @profile timetest(4000)

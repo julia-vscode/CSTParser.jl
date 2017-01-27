@@ -1,5 +1,5 @@
 span(t::Tokens.Token) = t.endbyte-t.startbyte
-span(x::Expression) = x.span
+
 
 spanws(x::INSTANCE) = span(x)+length(closer(x).ws)
 spanws(x::KEYWORD_BLOCK) = span(x)+length(closer(x).ws)

@@ -1,5 +1,6 @@
 module Parser
 global debug = true
+global allocop = 0
 using Tokenize
 import Base: next
 import Tokenize.Tokens
@@ -35,7 +36,7 @@ function parse_expression(ps::ParseState, closer = closer_default)
             next(ps)
             op = OPERATOR(ps)
             nextarg = parse_expression(ps, closer_no_ops(precedence(op)-LtoR(op)))
-            if ret isa CALL && op.val == ret.name.val && op.val in ["+", "*"]
+            if ret isa CALL && op.val == ret.name.val && (op.val == "+" || op.val == "*")
                 push!(ret.args, nextarg)
             elseif op.val == ":"
                 if ret isa CALL && ret.name.val == ":" && length(ret.args)==2
@@ -48,7 +49,7 @@ function parse_expression(ps::ParseState, closer = closer_default)
                     push!(ret.args, op)
                     push!(ret.args, nextarg)
                 else
-                    ret = COMPARISON([ret, op, nextarg])
+                    ret = COMPARISON(0, [ret, op, nextarg])
                 end
             else
                 ret = CALL(0, op, [ret, nextarg])
@@ -70,7 +71,7 @@ function parse_expression(ps::ParseState, closer = closer_default)
         elseif ps.nt.kind==Tokens.LBRACE
             if isempty(ps.ws.val)
                args = parse_list(ps)
-               ret = CURLY(ret, args)
+               ret = CURLY(0, ret, args)
             else
                 error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
             end
@@ -83,10 +84,10 @@ end
 function parse_list(ps::ParseState)
     if ps.nt.kind == Tokens.LPAREN
         closer = ps->ps.nt.kind==Tokens.RPAREN
-        delim = ps->ps.nt.kind in [Tokens.COMMA, Tokens.RPAREN]
+        delim = ps-> ps.nt.kind == Tokens.COMMA|| ps.nt.kind == Tokens.RPAREN
     elseif ps.nt.kind == Tokens.LBRACE
         closer = ps->ps.nt.kind==Tokens.RBRACE
-        delim = ps->ps.nt.kind in [Tokens.COMMA, Tokens.RBRACE]
+        delim = ps-> ps.nt.kind == Tokens.COMMA || ps.nt.kind == Tokens.RBRACE
     end
 
     args = Expression[]
@@ -106,11 +107,11 @@ end
 
 function parse_block(ps::ParseState)
     start = ps.t.startbyte
-    args = []
+    ret = BLOCK(0, false, [])
     while ps.nt.kind!==Tokens.END
-        push!(args, parse_expression(ps,ps->closer_default(ps) || ps.nt.kind==Tokens.END))
+        push!(ret.args, parse_expression(ps,ps->closer_default(ps) || ps.nt.kind==Tokens.END))
     end
-    ret = BLOCK(ps.t.endbyte-start, false, args)
+    ret.span = ps.t.endbyte-start
     next(ps)
     return ret
 end
@@ -158,7 +159,8 @@ end
 
 
 ischainable(op::OPERATOR) = op.val == "+" || op.val == "*" || op.val == "~"
-LtoR(op::OPERATOR) = op.precedence in [1,2,3,4,5,13]
+LtoR(op::OPERATOR) = 1 ≤ op.precedence ≤ 5 || op.precedence == 13
+
 
 include("utils.jl")
 

@@ -32,6 +32,7 @@ OPERATOR(ps::ParseState) = OPERATOR(span(ps.t), ps.t.val, ps.ws.val, precedence(
 
 
 type CURLY <: Expression
+    span::Int
     name::INSTANCE
     args::Vector{Expression}
 end
@@ -44,6 +45,7 @@ end
 BLOCK() = BLOCK(0, false, [])
 
 type COMPARISON <: Expression
+    span::Int
     args::Vector{Expression}
 end
 

@@ -18,7 +18,7 @@ isidentifier(t::Token) = t.kind == Tokens.IDENTIFIER
 
 isliteral(t::Token) = Tokens.begin_literal < t.kind < Tokens.end_literal
 
-isbool(t::Token) = t.kind in [Tokens.TRUE, Tokens.FALSE]
+isbool(t::Token) =  Tokens.TRUE ≤ t.kind ≤ Tokens.FALSE
 
 iskw(t::Token) = Tokens.iskeyword(t.kind)
 
