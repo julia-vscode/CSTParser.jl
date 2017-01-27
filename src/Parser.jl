@@ -18,17 +18,11 @@ include("display.jl")
 function parse_expression(ps::ParseState, closer = closer_default)
     start = ps.t.startbyte
     next(ps)
-    ret = nothing
     
     if Tokens.begin_keywords < ps.t.kind < Tokens.end_keywords 
-        if Tokens.begin_0arg_kw < ps.t.kind < Tokens.end_3arg_kw
-            ret = parse_kw_syntax(ps)
-        else
-            ret = parse_resword(ps, Val{ps.t.kind})
-        end
+        ret = parse_kw_syntax(ps)
     elseif ps.t.kind == Tokens.LPAREN
         ret = parse_expression(ps, ps->ps.nt.kind==Tokens.RPAREN)
-        @assert ps.nt.kind == Tokens.RPAREN
         next(ps)
     elseif isinstance(ps.t)
         ret = INSTANCE(ps)

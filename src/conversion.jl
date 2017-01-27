@@ -23,6 +23,14 @@ function Expr(x::CALL)
         return Expr(Symbol(x.name.val), Expr.(x.args)...)
     elseif x.name isa OPERATOR && x.name.val in ["||", "&&", "::"]
         return Expr(Symbol(x.name.val), Expr.(x.args)...)
+    elseif x.name isa OPERATOR && x.name.val == ":"
+        return Expr(:(:), Expr.(x.args)...)
+    elseif x.name isa OPERATOR && x.name.val == "."
+        if x.args[2] isa INSTANCE{IDENTIFIER}
+            return Expr(:(.), Expr(x.args[1]), QuoteNode(Expr(x.args[2])))
+        else
+            return Expr(:(.), Expr(x.args[1]), Expr(x.args[2]))
+        end
     else
         return Expr(:call, Expr(x.name), Expr.(x.args)...)
     end

@@ -2,7 +2,9 @@ using FactCheck
 
 include("/home/zac/github/Parser/src/Parser.jl")
 for n in names(Parser, true, true)
-    eval(:(import Parser.$n))
+    if !isdefined(Parser, n)
+        eval(:(import Parser.$n))
+    end
 end
 
 function remlineinfo!(x)
@@ -72,8 +74,7 @@ facts("operators") do
 end
 
 facts("function definitions") do
-    strs =  ["function f end"
-            """function f(x) x end"""
+    strs =  ["""function f(x) x end"""
             """function f(x)
                 x
             end"""]
@@ -145,7 +146,7 @@ precedence_list = [
 #= RtoL    X  =#   #"-->", "→", # a-->(b→c) *** for --> only
 #= chain   X  =#  "<","==", # :< and >: as head for 2 arg versions
 #= LtoR    X  =#   "<|", "|>", # (a|>b)|>c
-#= LtoR       =#   #":","..", # 3 arg version -> head=:(:), a,b,c
+#= LtoR       =#   ":",#"..", # 3 arg version -> head=:(:), a,b,c
 #= LtoR    X  =#   "+","-", # (a+b)-c
 #= LtoR    X  =#   "<<",">>", # (a>>b)>>c
 #= LtoR    X  =#   "*", "/", # (a*b)/c
@@ -162,6 +163,24 @@ facts("operators") do
             str = join([["$i $(randop()) " for i = 1:n-1];"$n"])
             @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
         end
+    end
+end
+
+facts("dot access") do
+    strs = ["a.b"
+            "a.b.c"
+            "(a(b)).c"]
+    for str in strs
+        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+    end
+end
+
+facts("failing things") do
+    strs = ["function f end"
+            "(a).(b).(c)"
+            "(a).b.(c)"]
+    for str in strs
+        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
     end
 end
 
@@ -217,19 +236,20 @@ function timetest(n)
     end
 end
 
+function timetest2(n)
+    for i =1:n
+        Base.parse(examplemodule)
+    end
+end
+
 timetest(1)
 @timev timetest(10000)
 
-# 2.206071 seconds (10.30 M allocations: 536.347 MB, 4.75% gc time)
-# elapsed time (ns): 2206071486
-# gc time (ns):      104783729
-# bytes allocated:   562400160
-# pool allocs:       1030000
-# GC pauses:         24
 
-# 2.026004 seconds (9.81 M allocations: 521.393 MB, 5.73% gc time)
-# elapsed time (ns): 2026003893
-# gc time (ns):      116163373
-# bytes allocated:   546720160
-# pool allocs:       9810004
-# GC pauses:         24
+
+# 2.501966 seconds (13.68 M allocations: 734.871 MB, 5.75% gc time)
+# elapsed time (ns): 2501966467
+# gc time (ns):      143987960
+# bytes allocated:   770568480
+# pool allocs:       13680128
+# GC pauses:         34
