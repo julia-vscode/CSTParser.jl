@@ -7,6 +7,15 @@ for n in names(Parser, true, true)
     end
 end
 
+str = "f(a,b,cd)"
+x = Parser.parse(str)
+
+facts("positional information") do
+    @fact span(x) --> 9
+    @fact span(opener(x)) --> 1
+    @fact span(closer(x)) --> 2
+end
+
 str = """
 module ModuleName
 

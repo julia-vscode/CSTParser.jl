@@ -30,6 +30,20 @@ type CURLY <: Expression
     args::Vector{Expression}
 end
 
+abstract ARGUMENT <: Expression
+abstract CURLY <: Expression
+abstract VECTOR <: Expression
+abstract MATRIX <: Expression
+abstract COMPREHENSION <: Expression
+abstract GENERATOR <: Expression
+    
+type LIST{t} <: Expression
+    span::Int
+    opener::INSTANCE
+    args::Vector{Expression}
+    closer::INSTANCE
+end
+
 type BLOCK <: Expression
     span::Int
     oneliner::Bool
@@ -43,7 +57,7 @@ type COMPARISON <: Expression
 end
 
 type CALL <: Expression
-    span::Int
+    span::Intz
     name::Expression
     args::Vector{Expression}
     prec::Int

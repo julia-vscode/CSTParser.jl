@@ -71,8 +71,9 @@ function parse_expression(ps::ParseState, closer = closer_default)
             end
         elseif ps.nt.kind==Tokens.LBRACE
             if isempty(ps.ws.val)
-               args = parse_list(ps)
-               ret = CURLY(0, ret, args)
+                start = ps.t.startbyte
+                args = parse_list(ps)
+                ret = CURLY(0, ret, args)
             else
                 error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
             end
