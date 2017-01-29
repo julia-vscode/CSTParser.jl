@@ -51,17 +51,13 @@ type CALL <: Expression
     prec::Int
 end
 
-type BINARY{T} <: OPERATOR
-    span::Int
-    op::INSTANCE
-    arg1::Expression
-    arg2::Expression
-end
-
 type CHAIN{T} <: OPERATOR
     span::Int
     args::Vector{Expression}
 end
+
+typealias ASSIGNMENT BINARY{1}
+typealias COMPARISON CHAIN{6}
 
 type KEYWORD_BLOCK{Nargs} <: Expression
     span::Int

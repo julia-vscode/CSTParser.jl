@@ -10,6 +10,29 @@ function Expr{T}(x::CHAIN{T})
     Expr(:call, Symbol(x.args[2].val), [Expr(x.args[i]) for i = 1:2:length(x.args)]...)
 end
 
+Expr(x::CHAIN{1}) = Expr(Symbol(x.args[2].val), Expr(x.args[1]), Expr(x.args[3]))
+Expr(x::CHAIN{3}) =  Expr(:(||), Expr(x.args[1]), Expr(x.args[3]))
+Expr(x::CHAIN{4}) =  Expr(:(&&), Expr(x.args[1]), Expr(x.args[3]))
+function Expr(x::CHAIN{8})
+    if x.args[2].val == ":"
+        if length(x.args) == 3
+            Expr(:(:), Expr(x.args[1]), Expr(x.args[3]))
+        else
+            Expr(:(:), Expr(x.args[1]), Expr(x.args[3]), Expr(x.args[5]))
+        end
+    else
+        Expr(Symbol(x.args[2].val), Expr(x.args[1]), Expr(x.args[3]))
+    end
+end
+Expr(x::CHAIN{14}) =  Expr(:(::), Expr(x.args[1]), Expr(x.args[3]))
+function Expr(x::CHAIN{15}) 
+    if x.args[3] isa INSTANCE{IDENTIFIER}
+        return Expr(:(.), Expr(x.args[1]), QuoteNode(Expr(x.args[3])))
+    else
+        return Expr(:(.), Expr(x.args[3]), Expr(x.args[3]))
+    end
+end
+
 function Expr(x::CHAIN{6})
     if length(x.args)==3
         if x.args[2].val in ["<:", ">:"]
@@ -21,6 +44,8 @@ function Expr(x::CHAIN{6})
         return Expr(:comparison, Expr.(x.args)...)
     end
 end
+
+
 
 function Expr{T}(x::BINARY{T})
     if T == 1
