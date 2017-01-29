@@ -6,7 +6,11 @@ Expr(x::INSTANCE{OPERATOR}) = Symbol(x.val)
 Expr{T<:Expression}(x::Vector{T}) = Expr(:block, Expr.(x)...)
 Expr(x::BLOCK) = Expr(:block, Expr.(x.args)...)
 
-function Expr(x::COMPARISON)
+function Expr{T}(x::CHAIN{T})
+    Expr(:call, Symbol(x.args[2].val), [Expr(x.args[i]) for i = 1:2:length(x.args)]...)
+end
+
+function Expr(x::CHAIN{6})
     if length(x.args)==3
         if x.args[2].val in ["<:", ">:"]
             return Expr(Expr(x.args[2]), Expr(x.args[1]), Expr(x.args[3]))
@@ -15,6 +19,28 @@ function Expr(x::COMPARISON)
         end
     else
         return Expr(:comparison, Expr.(x.args)...)
+    end
+end
+
+function Expr{T}(x::BINARY{T})
+    if T == 1
+        return Expr(Symbol(x.op.val), Expr(x.arg1), Expr(x.arg2))
+    elseif T == 3
+        return Expr(:(||), Expr(x.arg1), Expr(x.arg2))
+    elseif T == 4
+        return Expr(:(&&), Expr(x.arg1), Expr(x.arg2))
+    elseif T == 14
+        return Expr(:(::), Expr(x.arg1), Expr(x.arg2))
+    elseif x.op.val == ":"
+        return Expr(:(:), Expr(x.arg1), Expr(x.arg2))
+    elseif x.op.val == "."
+        if x.arg2 isa INSTANCE{IDENTIFIER}
+            return Expr(:(.), Expr(x.arg1), QuoteNode(Expr(x.arg2)))
+        else
+            return Expr(:(.), Expr(x.arg1), Expr(x.arg2))
+        end
+    else
+        return Expr(:call, Symbol(x.op.val), Expr(x.arg1), Expr(x.arg2))
     end
 end
 

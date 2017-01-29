@@ -15,7 +15,6 @@ end
 function INSTANCE(ps::ParseState)
     t = isidentifier(ps.t) ? IDENTIFIER : 
         isliteral(ps.t) ? LITERAL :
-        isbool(ps.t) ? BOOL : 
         iskw(ps.t) ? KEYWORD :
         isoperator(ps.t) ? OPERATOR :
         error("Couldn't make an INSTANCE from $(ps.t.val)")
@@ -30,12 +29,6 @@ type CURLY <: Expression
     args::Vector{Expression}
 end
 
-abstract ARGUMENT <: Expression
-abstract CURLY <: Expression
-abstract VECTOR <: Expression
-abstract MATRIX <: Expression
-abstract COMPREHENSION <: Expression
-abstract GENERATOR <: Expression
     
 type LIST{t} <: Expression
     span::Int
@@ -51,16 +44,23 @@ type BLOCK <: Expression
 end
 BLOCK() = BLOCK(0, false, [])
 
-type COMPARISON <: Expression
-    span::Int
-    args::Vector{Expression}
-end
-
 type CALL <: Expression
-    span::Intz
+    span::Int
     name::Expression
     args::Vector{Expression}
     prec::Int
+end
+
+type BINARY{T} <: OPERATOR
+    span::Int
+    op::INSTANCE
+    arg1::Expression
+    arg2::Expression
+end
+
+type CHAIN{T} <: OPERATOR
+    span::Int
+    args::Vector{Expression}
 end
 
 type KEYWORD_BLOCK{Nargs} <: Expression

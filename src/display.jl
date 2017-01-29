@@ -1,11 +1,26 @@
 function Base.show(io::IO, x::INSTANCE,indent=0)
     println(io, "⊢","-"^indent, "($(x.val))")
 end
+
 function Base.show(io::IO, x::CALL,indent=0) 
     println(io, "⊢","-"^indent, x.name isa INSTANCE ? x.name.val : "call")
     for a in x.args
         show(io, a, indent+1)
     end 
+end
+
+function Base.show(io::IO, x::CHAIN, indent=0) 
+    println(io, "⊢","-"^indent, x.args[2].val)
+    for i = 1:2:length(x.args)
+        show(io, x.args[i], indent+1)
+    end 
+end
+
+
+function Base.show{T}(io::IO, x::BINARY{T}, indent=0) 
+    println(io, "⊢","-"^indent, x.op.val)
+    show(io, x.arg1, indent+1)
+    show(io, x.arg2, indent+1)
 end
 
 function Base.show(io::IO, x::KEYWORD_BLOCK{0},indent=0)

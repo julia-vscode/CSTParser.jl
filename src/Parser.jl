@@ -37,7 +37,10 @@ function parse_expression(ps::ParseState, closer = closer_default)
             op = INSTANCE(ps)
             op_prec = precedence(ps.t)
             nextarg = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
-            if ret isa CALL && op.val == ret.name.val && (op.val == "+" || op.val == "*")
+            if ret isa BINARY && ret.op.val == op.val  && (op.val == "+" || op.val == "*")
+                ret = CHAIN{op_prec}(0, [ret.arg1, ret.op, ret.arg2, op, nextarg])
+            elseif ret isa CHAIN && ret.args[2].val == op.val  && (op.val == "+" || op.val == "*")
+                push!(ret.args, op)
                 push!(ret.args, nextarg)
             elseif op.val == ":"
                 if ret isa CALL && ret.name.val == ":" && length(ret.args)==2
@@ -46,14 +49,14 @@ function parse_expression(ps::ParseState, closer = closer_default)
                     ret = CALL(0, op, [ret, nextarg], op_prec)
                 end
             elseif op_prec == 6
-                if ret isa COMPARISON
+                if ret isa CHAIN{6}
                     push!(ret.args, op)
                     push!(ret.args, nextarg)
                 else
-                    ret = COMPARISON(0, [ret, op, nextarg])
+                    ret = CHAIN{6}(0, [ret, op, nextarg])
                 end
             else
-                ret = CALL(0, op, [ret, nextarg],op_prec)
+                ret = BINARY{op_prec}(0, op, ret, nextarg)
             end
         elseif ps.nt.kind==Tokens.LPAREN
             if isempty(ps.ws.val)

@@ -29,7 +29,6 @@ span(t::Tokens.Token) = t.endbyte-t.startbyte
 
 
 
-span(x::COMPARISON) = sum(spanws(a) for a in x.args)-length(x.args[end].ws)
 
 blockstart(x::KEYWORD_BLOCK) = spanws(x.opener)
 
