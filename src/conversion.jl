@@ -13,25 +13,6 @@ end
 Expr(x::CHAIN{1}) = Expr(Symbol(x.args[2].val), Expr(x.args[1]), Expr(x.args[3]))
 Expr(x::CHAIN{3}) =  Expr(:(||), Expr(x.args[1]), Expr(x.args[3]))
 Expr(x::CHAIN{4}) =  Expr(:(&&), Expr(x.args[1]), Expr(x.args[3]))
-function Expr(x::CHAIN{8})
-    if x.args[2].val == ":"
-        if length(x.args) == 3
-            Expr(:(:), Expr(x.args[1]), Expr(x.args[3]))
-        else
-            Expr(:(:), Expr(x.args[1]), Expr(x.args[3]), Expr(x.args[5]))
-        end
-    else
-        Expr(Symbol(x.args[2].val), Expr(x.args[1]), Expr(x.args[3]))
-    end
-end
-Expr(x::CHAIN{14}) =  Expr(:(::), Expr(x.args[1]), Expr(x.args[3]))
-function Expr(x::CHAIN{15}) 
-    if x.args[3] isa INSTANCE{IDENTIFIER}
-        return Expr(:(.), Expr(x.args[1]), QuoteNode(Expr(x.args[3])))
-    else
-        return Expr(:(.), Expr(x.args[3]), Expr(x.args[3]))
-    end
-end
 
 function Expr(x::CHAIN{6})
     if length(x.args)==3
@@ -45,29 +26,30 @@ function Expr(x::CHAIN{6})
     end
 end
 
-
-
-function Expr{T}(x::BINARY{T})
-    if T == 1
-        return Expr(Symbol(x.op.val), Expr(x.arg1), Expr(x.arg2))
-    elseif T == 3
-        return Expr(:(||), Expr(x.arg1), Expr(x.arg2))
-    elseif T == 4
-        return Expr(:(&&), Expr(x.arg1), Expr(x.arg2))
-    elseif T == 14
-        return Expr(:(::), Expr(x.arg1), Expr(x.arg2))
-    elseif x.op.val == ":"
-        return Expr(:(:), Expr(x.arg1), Expr(x.arg2))
-    elseif x.op.val == "."
-        if x.arg2 isa INSTANCE{IDENTIFIER}
-            return Expr(:(.), Expr(x.arg1), QuoteNode(Expr(x.arg2)))
+function Expr(x::CHAIN{8})
+    if x.args[2].val == ":"
+        if length(x.args) == 3
+            Expr(:(:), Expr(x.args[1]), Expr(x.args[3]))
         else
-            return Expr(:(.), Expr(x.arg1), Expr(x.arg2))
+            Expr(:(:), Expr(x.args[1]), Expr(x.args[3]), Expr(x.args[5]))
         end
     else
-        return Expr(:call, Symbol(x.op.val), Expr(x.arg1), Expr(x.arg2))
+        Expr(Symbol(x.args[2].val), Expr(x.args[1]), Expr(x.args[3]))
     end
 end
+
+Expr(x::CHAIN{14}) =  Expr(:(::), Expr(x.args[1]), Expr(x.args[3]))
+
+function Expr(x::CHAIN{15}) 
+    if x.args[3] isa INSTANCE{IDENTIFIER}
+        return Expr(:(.), Expr(x.args[1]), QuoteNode(Expr(x.args[3])))
+    else
+        return Expr(:(.), Expr(x.args[3]), Expr(x.args[3]))
+    end
+end
+
+
+
 
 function Expr(x::CALL)
     if x.prec == 1
@@ -103,7 +85,7 @@ function Expr(x::KEYWORD_BLOCK{3})
     elseif x.opener.val == "baremodule"
         return Expr(:module, false, Expr(x.args[1]), Expr(x.args[2]))
     elseif x.opener.val=="function"
-        if x.opener.span==0
+        if x.opener.start==x.opener.stop==0
             return Expr(:(=), Expr(x.args[1]), Expr(x.args[2]))
         else
             return Expr(Symbol(x.opener.val), Expr(x.args[1]), Expr(x.args[2]))

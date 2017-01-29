@@ -17,12 +17,6 @@ function Base.show(io::IO, x::CHAIN, indent=0)
 end
 
 
-function Base.show{T}(io::IO, x::BINARY{T}, indent=0) 
-    println(io, "⊢","-"^indent, x.op.val)
-    show(io, x.arg1, indent+1)
-    show(io, x.arg2, indent+1)
-end
-
 function Base.show(io::IO, x::KEYWORD_BLOCK{0},indent=0)
     println(io, "⊢","-"^indent, x.opener.val)
 end

@@ -7,7 +7,8 @@ abstract KEYWORD <: Expression
 abstract OPERATOR <: Expression
 
 type INSTANCE{T} <: Expression
-    span::Int
+    start::Int
+    stop::Int
     val::String
     ws::String
 end
@@ -19,48 +20,53 @@ function INSTANCE(ps::ParseState)
         isoperator(ps.t) ? OPERATOR :
         error("Couldn't make an INSTANCE from $(ps.t.val)")
 
-    return INSTANCE{t}(span(ps.t), (ps.t.val), ps.ws.val)
+    return INSTANCE{t}(ps.t.startbyte, ps.t.endbyte, ps.t.val, ps.ws.val)
 end
 
 
 type CURLY <: Expression
-    span::Int
+    start::Int
+    stop::Int
     name::INSTANCE
     args::Vector{Expression}
 end
 
     
 type LIST{t} <: Expression
-    span::Int
+    start::Int
+    stop::Int
     opener::INSTANCE
     args::Vector{Expression}
     closer::INSTANCE
 end
 
 type BLOCK <: Expression
-    span::Int
+    start::Int
+    stop::Int
     oneliner::Bool
     args::Vector{Expression}
 end
-BLOCK() = BLOCK(0, false, [])
+BLOCK() = BLOCK(0, 0, false, [])
 
 type CALL <: Expression
-    span::Int
+    start::Int
+    stop::Int
     name::Expression
     args::Vector{Expression}
     prec::Int
 end
 
 type CHAIN{T} <: OPERATOR
-    span::Int
+    start::Int
+    stop::Int
     args::Vector{Expression}
 end
 
-typealias ASSIGNMENT BINARY{1}
 typealias COMPARISON CHAIN{6}
 
 type KEYWORD_BLOCK{Nargs} <: Expression
-    span::Int
+    start::Int
+    stop::Int
     opener::INSTANCE{KEYWORD}
     args::Vector{Expression}
     closer

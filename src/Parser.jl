@@ -1,6 +1,6 @@
 module Parser
 global debug = true
-global allocop = 0
+
 using Tokenize
 import Base: next
 import Tokenize.Tokens
@@ -40,33 +40,32 @@ function parse_expression(ps::ParseState, closer = closer_default)
             if ret isa CHAIN && ret.args[2].val == op.val  && (op.val == "+" || op.val == "*")
                 push!(ret.args, op)
                 push!(ret.args, nextarg)
+                ret.stop = nextarg.stop
             elseif op.val == ":"
                 if ret isa CHAIN && ret.args[2].val == ":" && length(ret.args)==3
                     push!(ret.args, op)
                     push!(ret.args, nextarg)
+                    ret.stop = nextarg.stop
                 else
-                    ret = CHAIN{op_prec}(0, [ret, op, nextarg])
+                    ret = CHAIN{op_prec}(ret.start, nextarg.stop, [ret, op, nextarg])
                 end
-            elseif op_prec == 6
-                if ret isa CHAIN{6}
-                    push!(ret.args, op)
-                    push!(ret.args, nextarg)
-                else
-                    ret = CHAIN{6}(0, [ret, op, nextarg])
-                end
+            elseif op_prec == 6 && ret isa CHAIN{6}
+                push!(ret.args, op)
+                push!(ret.args, nextarg)
+                ret.stop = nextarg.stop
             else
-                ret = CHAIN{op_prec}(0, [ret, op, nextarg])
+                ret = CHAIN{op_prec}(ret.start, nextarg.stop, [ret, op, nextarg])
             end
         elseif ps.nt.kind==Tokens.LPAREN
             if isempty(ps.ws.val)
                 start = ps.t.startbyte
                 args = parse_list(ps)
-                ret = CALL((ps.t.endbyte-start)+ret.span, ret, args, precedence(ret))
+                ret = CALL(start, ps.t.endbyte, ret, args, precedence(ret))
                 if ps.nt.kind==Tokens.EQ
                     next(ps)
                     body = parse_expression(ps)
-                    body = body isa BLOCK ? body : BLOCK(0, true, [body])
-                    ret = KEYWORD_BLOCK{3}(ps.t.endbyte-start, INSTANCE{KEYWORD}(0, "function",""), [ret, body], nothing)
+                    body = body isa BLOCK ? body : BLOCK(0, 0, true, [body])
+                    ret = KEYWORD_BLOCK{3}(start, ps.t.endbyte, INSTANCE{KEYWORD}(ret.start, body.stop, "function",""), [ret, body], nothing)
                 end
             else
                 error("space before \"(\" not allowed in \"$(Expr(ret)) (\"")
@@ -75,7 +74,7 @@ function parse_expression(ps::ParseState, closer = closer_default)
             if isempty(ps.ws.val)
                 start = ps.t.startbyte
                 args = parse_list(ps)
-                ret = CURLY(0, ret, args)
+                ret = CURLY(start, ps.t.endbyte, ret, args)
             else
                 error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
             end
@@ -110,27 +109,25 @@ end
 
 
 function parse_block(ps::ParseState)
-    start = ps.t.startbyte
-    ret = BLOCK(0, false, [])
+    ret = BLOCK(ps.t.startbyte, 0, false, [])
     while ps.nt.kind!==Tokens.END
         push!(ret.args, parse_expression(ps,ps->closer_default(ps) || ps.nt.kind==Tokens.END))
     end
-    ret.span = ps.t.endbyte-start
     next(ps)
+    ret.stop = ps.t.endbyte
     return ret
 end
 
 
 function parse_kw_syntax(ps::ParseState) 
     if Tokens.begin_0arg_kw < ps.t.kind < Tokens.end_0arg_kw
-        start = ps.t.startbyte
         kw = INSTANCE(ps)
-        return KEYWORD_BLOCK{0}(ps.t.endbyte-start, kw, [], nothing)
+        return KEYWORD_BLOCK{0}(ps.t.startbyte, ps.t.endbyte, kw, [], nothing)
     elseif Tokens.begin_1arg_kw < ps.t.kind < Tokens.end_1arg_kw
         start = ps.t.startbyte
         kw = INSTANCE(ps)
         arg1 = parse_expression(ps)
-        return KEYWORD_BLOCK{1}(ps.t.endbyte-start, kw, [arg1], nothing)
+        return KEYWORD_BLOCK{1}(start, ps.t.endbyte, kw, [arg1], nothing)
     elseif Tokens.begin_2arg_kw < ps.t.kind < Tokens.end_2arg_kw
         start = ps.t.startbyte
         kw = INSTANCE(ps)
@@ -138,18 +135,18 @@ function parse_kw_syntax(ps::ParseState)
         arg1 = parse_expression(ps)
         ps.ws_delim = false
         arg2 = parse_expression(ps)
-        return KEYWORD_BLOCK{2}(ps.t.endbyte-start, kw, [arg1, arg2], nothing)
+        return KEYWORD_BLOCK{2}(start, ps.t.endbyte, kw, [arg1, arg2], nothing)
     elseif Tokens.begin_3arg_kw < ps.t.kind < Tokens.end_3arg_kw
         start = ps.t.startbyte
         kw = INSTANCE(ps)
         arg1 = parse_expression(ps,ps->closer_default(ps) || ps.nt.kind==Tokens.END || (!isempty(ps.ws.val) && !isoperator(ps.nt)))
         arg2 = parse_block(ps)
-        return KEYWORD_BLOCK{3}(ps.t.endbyte-start, kw, [arg1, arg2], INSTANCE(ps))
+        return KEYWORD_BLOCK{3}(start, ps.t.endbyte, kw, [arg1, arg2], INSTANCE(ps))
     elseif ps.t.kind==Tokens.BEGIN || ps.t.kind==Tokens.QUOTE
         start = ps.t.startbyte
         kw = INSTANCE(ps)
         arg1 = parse_block(ps)
-        return KEYWORD_BLOCK{3}(ps.t.endbyte-start, kw, [arg1], INSTANCE(ps))
+        return KEYWORD_BLOCK{3}(start, ps.t.endbyte, kw, [arg1], INSTANCE(ps))
     else
         error()
     end
