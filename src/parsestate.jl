@@ -10,9 +10,10 @@ type ParseState
     ws::Token
     nws::Token
     ws_delim::Bool
+    colon_delim::Bool
 end
 function ParseState(str::String)
-    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), false))
+    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), false, false))
 end
 
 function Base.show(io::IO, ps::ParseState)

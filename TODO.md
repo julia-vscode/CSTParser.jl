@@ -1,13 +1,11 @@
 # To do list
 
 Operators
-+ parse colon/range
 + parse dot access
 + parse arrows
 + ? syntax
 + assignment, give error if incorrect lhs and return block on rhs
 + try/if blocks
-+ unary ops
 + handle ';'
 Unhandled 'head's
 + ccall

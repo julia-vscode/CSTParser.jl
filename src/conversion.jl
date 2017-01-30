@@ -11,6 +11,7 @@ function Expr{T}(x::CHAIN{T})
 end
 
 Expr(x::CHAIN{1}) = Expr(Symbol(x.args[2].val), Expr(x.args[1]), Expr(x.args[3]))
+Expr(x::CHAIN{2}) = Expr(:if, Expr(x.args[1]), Expr(x.args[3]), Expr(x.args[5]))
 Expr(x::CHAIN{3}) =  Expr(:(||), Expr(x.args[1]), Expr(x.args[3]))
 Expr(x::CHAIN{4}) =  Expr(:(&&), Expr(x.args[1]), Expr(x.args[3]))
 
@@ -48,26 +49,10 @@ function Expr(x::CHAIN{15})
     end
 end
 
+Expr(x::CHAIN{20}) =  Expr(:call, Symbol(x.args[1].val), Expr(x.args[2]))
 
+Expr(x::CALL) = Expr(:call, Expr(x.name), Expr.(x.args)...)
 
-
-function Expr(x::CALL)
-    if x.prec == 1
-        return Expr(Symbol(x.name.val), Expr.(x.args)...)
-    elseif x.name isa INSTANCE && x.name.val in ["||", "&&", "::"]
-        return Expr(Symbol(x.name.val), Expr.(x.args)...)
-    elseif x.name isa INSTANCE && x.name.val == ":"
-        return Expr(:(:), Expr.(x.args)...)
-    elseif x.name isa INSTANCE && x.name.val == "."
-        if x.args[2] isa INSTANCE{IDENTIFIER}
-            return Expr(:(.), Expr(x.args[1]), QuoteNode(Expr(x.args[2])))
-        else
-            return Expr(:(.), Expr(x.args[1]), Expr(x.args[2]))
-        end
-    else
-        return Expr(:call, Expr(x.name), Expr.(x.args)...)
-    end
-end
 
 Expr(x::CURLY) = Expr(:curly, Expr(x.name), Expr.(x.args)...)
 

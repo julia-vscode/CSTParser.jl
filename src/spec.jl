@@ -5,6 +5,7 @@ abstract LITERAL <: Expression
 abstract BOOL <: Expression
 abstract KEYWORD <: Expression
 abstract OPERATOR <: Expression
+abstract DELIMINATOR <: Expression
 
 type INSTANCE{T} <: Expression
     start::Int
@@ -23,16 +24,7 @@ function INSTANCE(ps::ParseState)
     return INSTANCE{t}(ps.t.startbyte, ps.t.endbyte, ps.t.val, ps.ws.val)
 end
 
-
-type CURLY <: Expression
-    start::Int
-    stop::Int
-    name::INSTANCE
-    args::Vector{Expression}
-end
-
-    
-type LIST{t} <: Expression
+type LIST <: Expression
     start::Int
     stop::Int
     opener::INSTANCE
@@ -48,21 +40,30 @@ type BLOCK <: Expression
 end
 BLOCK() = BLOCK(0, 0, false, [])
 
-type CALL <: Expression
-    start::Int
-    stop::Int
-    name::Expression
-    args::Vector{Expression}
-    prec::Int
-end
-
 type CHAIN{T} <: OPERATOR
     start::Int
     stop::Int
     args::Vector{Expression}
 end
 
-typealias COMPARISON CHAIN{6}
+type CALL <: Expression
+    start::Int
+    stop::Int
+    open::INSTANCE
+    close::INSTANCE
+    name::Expression
+    args::Vector{Expression}
+end
+
+type CURLY <: Expression
+    start::Int
+    stop::Int
+    open::INSTANCE
+    close::INSTANCE
+    name::INSTANCE
+    args::Vector{Expression}
+end
+
 
 type KEYWORD_BLOCK{Nargs} <: Expression
     start::Int

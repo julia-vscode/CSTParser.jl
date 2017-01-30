@@ -12,7 +12,7 @@ export ParseState
 include("parsestate.jl")
 include("spec.jl")
 include("conversion.jl")
-include("precedence.jl")
+include("operators.jl")
 include("positional.jl")
 include("display.jl")
 
@@ -27,40 +27,20 @@ function parse_expression(ps::ParseState, closer = closer_default)
         next(ps)
     elseif isinstance(ps.t)
         ret = INSTANCE(ps)
+    elseif isunaryop(ps.t)
+        ret = parse_unary(ps)
     else
         error("Expression started with $(ps.t.val)")
     end
 
     while !closer(ps)
         if isoperator(ps.nt)
-            next(ps)
-            op = INSTANCE(ps)
-            op_prec = precedence(ps.t)
-            nextarg = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
-            if ret isa CHAIN && ret.args[2].val == op.val  && (op.val == "+" || op.val == "*")
-                push!(ret.args, op)
-                push!(ret.args, nextarg)
-                ret.stop = nextarg.stop
-            elseif op.val == ":"
-                if ret isa CHAIN && ret.args[2].val == ":" && length(ret.args)==3
-                    push!(ret.args, op)
-                    push!(ret.args, nextarg)
-                    ret.stop = nextarg.stop
-                else
-                    ret = CHAIN{op_prec}(ret.start, nextarg.stop, [ret, op, nextarg])
-                end
-            elseif op_prec == 6 && ret isa CHAIN{6}
-                push!(ret.args, op)
-                push!(ret.args, nextarg)
-                ret.stop = nextarg.stop
-            else
-                ret = CHAIN{op_prec}(ret.start, nextarg.stop, [ret, op, nextarg])
-            end
+            ret = parse_operator(ps, ret)
         elseif ps.nt.kind==Tokens.LPAREN
             if isempty(ps.ws.val)
                 start = ps.t.startbyte
-                args = parse_list(ps)
-                ret = CALL(start, ps.t.endbyte, ret, args, precedence(ret))
+                args, o, c = parse_list(ps)
+                ret = CALL(start, ps.t.endbyte, o, c, ret, args)
                 if ps.nt.kind==Tokens.EQ
                     next(ps)
                     body = parse_expression(ps)
@@ -73,8 +53,8 @@ function parse_expression(ps::ParseState, closer = closer_default)
         elseif ps.nt.kind==Tokens.LBRACE
             if isempty(ps.ws.val)
                 start = ps.t.startbyte
-                args = parse_list(ps)
-                ret = CURLY(start, ps.t.endbyte, ret, args)
+                args, o, c = parse_list(ps)
+                ret = CURLY(start, ps.t.endbyte, o, c, ret, args)
             else
                 error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
             end
@@ -87,11 +67,12 @@ end
 function parse_list(ps::ParseState)
     if ps.nt.kind == Tokens.LPAREN
         closer = ps->ps.nt.kind==Tokens.RPAREN
-        delim = ps-> ps.nt.kind == Tokens.COMMA|| ps.nt.kind == Tokens.RPAREN
+        delim = ps-> ps.nt.kind == Tokens.COMMA || ps.nt.kind == Tokens.RPAREN
     elseif ps.nt.kind == Tokens.LBRACE
         closer = ps->ps.nt.kind==Tokens.RBRACE
         delim = ps-> ps.nt.kind == Tokens.COMMA || ps.nt.kind == Tokens.RBRACE
     end
+    O = INSTANCE{DELIMINATOR}(ps.nt.startbyte, ps.nt.endbyte, ps.nt.val, ps.nws.val)
 
     args = Expression[]
     while !closer(ps)
@@ -104,9 +85,9 @@ function parse_list(ps::ParseState)
         end
     end
     next(ps)
-    return args
+    C = INSTANCE{DELIMINATOR}(ps.t.startbyte, ps.t.endbyte, ps.t.val, ps.ws.val)
+    return args, O, C
 end
-
 
 function parse_block(ps::ParseState)
     ret = BLOCK(ps.t.startbyte, 0, false, [])

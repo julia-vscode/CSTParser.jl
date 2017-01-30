@@ -175,48 +175,26 @@ facts("dot access") do
     end
 end
 
-facts("failing things") do
-    strs = ["function f end"
-            "(a).(b).(c)"
-            "(a).b.(c)"]
+facts("? : syntax") do
+    strs = ["a ? b : c"
+            "a ? b:c : d"
+            "a ? b:c : d:e"]
     for str in strs
         @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
     end
 end
 
-
-
-const examplemodule = """
-module ModuleName
-const a = 16
-typealias MyInt Int
-bitstype a*4 SomeType
-
-f(x) = x
-
-function f end
-
-function f(x::Int{T})
-    while true
-        f(x)
-        while true
-            x+=a*b/4^(1+2+3+4-5-6-7-9)⋅(a*b*c*d*e)
-        end
+facts("failing things") do
+    strs = ["function f end"
+            "(a).(b).(c)"
+            "(a).b.(c)"
+            "a ? b=c:d : e"]
+    for str in strs
+        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
     end
-
-    return x<4
 end
 
-type T <: Int
-    a::Int
-    b::Vector
-end
-
-baremodule SubModuleName
-end
-
-end
-"""
+const examplemodule = readstring("/home/zac/github/Parser/tests/fullspecexample.jl")
 
 function timetest(n)
     for i =1:n

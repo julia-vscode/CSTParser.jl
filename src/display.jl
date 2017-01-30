@@ -16,6 +16,11 @@ function Base.show(io::IO, x::CHAIN, indent=0)
     end 
 end
 
+function Base.show(io::IO, x::CHAIN{20}, indent=0) 
+    println(io, "⊢","-"^indent, x.args[1].val)
+    show(io, x.args[2], indent+1)
+end
+
 
 function Base.show(io::IO, x::KEYWORD_BLOCK{0},indent=0)
     println(io, "⊢","-"^indent, x.opener.val)
