@@ -7,11 +7,17 @@ abstract KEYWORD <: Expression
 abstract OPERATOR <: Expression
 abstract DELIMINATOR <: Expression
 
-type INSTANCE{T} <: Expression
+type LOCATION
     start::Int
     stop::Int
+end
+const emptyloc = LOCATION(-1, -1)
+
+type INSTANCE{T} <: Expression
     val::String
     ws::String
+    loc::LOCATION
+    prec::Int
 end
 
 function INSTANCE(ps::ParseState)
@@ -20,55 +26,31 @@ function INSTANCE(ps::ParseState)
         iskw(ps.t) ? KEYWORD :
         isoperator(ps.t) ? OPERATOR :
         error("Couldn't make an INSTANCE from $(ps.t.val)")
+        prec = precedence(ps.t)
 
-    return INSTANCE{t}(ps.t.startbyte, ps.t.endbyte, ps.t.val, ps.ws.val)
+    return INSTANCE{t}(ps.t.val, ps.ws.val, LOCATION(ps.t.startbyte, ps.t.endbyte), prec)
+end
+INSTANCE(str::String) = INSTANCE{0}(str, "", emptyloc, 0)
+
+type QUOTENODE <: Expression
+    val::Expression
 end
 
-type LIST <: Expression
-    start::Int
-    stop::Int
-    opener::INSTANCE
+# heads
+const BLOCK = INSTANCE("block")
+const CALL = INSTANCE("call")
+const CURLY = INSTANCE("curly")
+const REF = INSTANCE("ref")
+const COMPARISON = INSTANCE("comparison")
+const IF = INSTANCE("if")
+const TUPLE = INSTANCE("tuple")
+const TRUE = INSTANCE{LITERAL}("true", "", emptyloc, 0)
+const FALSE = INSTANCE{LITERAL}("false", "", emptyloc, 0)
+
+type EXPR <: Expression
+    head::Expression
     args::Vector{Expression}
-    closer::INSTANCE
+    loc::LOCATION
 end
 
-type BLOCK <: Expression
-    start::Int
-    stop::Int
-    oneliner::Bool
-    args::Vector{Expression}
-end
-BLOCK() = BLOCK(0, 0, false, [])
-
-type CHAIN{T} <: OPERATOR
-    start::Int
-    stop::Int
-    args::Vector{Expression}
-end
-
-type CALL <: Expression
-    start::Int
-    stop::Int
-    open::INSTANCE
-    close::INSTANCE
-    name::Expression
-    args::Vector{Expression}
-end
-
-type CURLY <: Expression
-    start::Int
-    stop::Int
-    open::INSTANCE
-    close::INSTANCE
-    name::INSTANCE
-    args::Vector{Expression}
-end
-
-
-type KEYWORD_BLOCK{Nargs} <: Expression
-    start::Int
-    stop::Int
-    opener::INSTANCE{KEYWORD}
-    args::Vector{Expression}
-    closer
-end
+EXPR(head, args) = EXPR(head, args, emptyloc)

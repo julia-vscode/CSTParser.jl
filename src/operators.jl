@@ -13,7 +13,8 @@ precedence(op::Int) = op < Tokens.end_assignments ? 1 :
                        op < Tokens.end_power ? 13 :
                        op < Tokens.end_decl ? 14 : 15
 
-precedence(op::Token) = op.kind < Tokens.end_assignments ? 1 :
+precedence(op::Token) = op.kind < Tokens.begin_assignments ? 0 :
+                        op.kind < Tokens.end_assignments ? 1 :
                        op.kind < Tokens.end_conditional ? 2 :
                        op.kind < Tokens.end_lazyor ? 3 :
                        op.kind < Tokens.end_lazyand ? 4 :
@@ -26,7 +27,8 @@ precedence(op::Token) = op.kind < Tokens.end_assignments ? 1 :
                        op.kind < Tokens.end_times ? 11 :
                        op.kind < Tokens.end_rational ? 12 :
                        op.kind < Tokens.end_power ? 13 :
-                       op.kind < Tokens.end_decl ? 14 : 15
+                       op.kind < Tokens.end_decl ? 14 : 
+                       op.kind < Tokens.end_dot ? 15 : 20
 
 precedence(x) = 0
 
@@ -74,44 +76,71 @@ ispower(t::Token) = Tokens.begin_power < t.kind < Tokens.end_power
 function parse_unary(ps::ParseState)
     op = INSTANCE(ps)
     arg = parse_expression(ps, closer_no_ops(20))
-    CHAIN{20}(op.start, arg.stop, [op, arg])
+    EXPR(CALL, [op, arg], LOCATION(op.loc.start, arg.loc.stop))
 end
 
 function parse_operator(ps::ParseState, ret::Expression)
     next(ps)
     op = INSTANCE(ps)
     op_prec = precedence(ps.t)
-    
-    if op_prec == 2 # closes on (ws,:)
-        nextarg = parse_expression(ps, ps->closer_default(ps) || (isoperator(ps.nt) && precedence(ps.nt)<=1) || (isoperator(ps.nt) && ps.nt.val==":"))
-    else
+
+    if ret isa EXPR && ret.head==CALL && ret.args[1].val == op.val  && (op.val == "+" || op.val == "*")
         nextarg = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
-    end
-
-
-    if ret isa CHAIN && ret.args[2].val == op.val  && (op.val == "+" || op.val == "*")
-        push!(ret.args, op)
         push!(ret.args, nextarg)
-        ret.stop = nextarg.stop
-    elseif op.val == ":"
-        if ret isa CHAIN && ret.args[2].val == ":" && length(ret.args)==3
-            push!(ret.args, op)
-            push!(ret.args, nextarg)
-            ret.stop = nextarg.stop
-        else
-            ret = CHAIN{op_prec}(ret.start, nextarg.stop, [ret, op, nextarg])
-        end
-    elseif op_prec == 6 && ret isa CHAIN{6}
-        push!(ret.args, op)
-        push!(ret.args, nextarg)
-        ret.stop = nextarg.stop
-    elseif op_prec == 2
+        ret.loc.stop = nextarg.loc.stop
+        # a ? b : c syntax
+    elseif op_prec == 2 
+        nextarg = parse_expression(ps, ps->closer_default(ps) || (isoperator(ps.nt) && precedence(ps.nt)<=1) || (isoperator(ps.nt) && ps.nt.val==":"))
         op2 = INSTANCE(next(ps))
         nextarg2 = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
-        ret = CHAIN{op_prec}(ret.start, nextarg2.stop, [ret, op, nextarg, op2, nextarg2])
+        ret = EXPR(IF, [ret, nextarg, nextarg2], LOCATION(ret.loc.start, nextarg2.loc.stop))
+        # ranges/colon
+    elseif op.val == ":" 
+        nextarg = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
+        if ret isa EXPR && ret.head.val == ":" && length(ret.args)==2
+            push!(ret.args, nextarg)
+            ret.loc.stop = nextarg.loc.stop
+        else
+            ret = EXPR(op, [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
+        end
+        # comparison
+    elseif op_prec == 6 
+        nextarg = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
+        if ret isa EXPR && ret.head==COMPARISON
+            push!(ret.args, op)
+            push!(ret.args, nextarg)
+            ret.loc.stop = nextarg.loc.stop
+        elseif ret isa EXPR && ret.head == CALL && ret.args[1].prec==6
+            ret = EXPR(COMPARISON, [ret.args[2], ret.args[1], ret.args[3], op, nextarg], LOCATION(ret.args[1].loc.start, nextarg.loc.stop))
+        elseif ret isa EXPR && (ret.head.val == "<:" || ret.head.val == ">:")
+            ret = EXPR(COMPARISON, [ret.args[1], ret.head, ret.args[2], op, nextarg], LOCATION(ret.args[1].loc.start, nextarg.loc.stop))
+        elseif op.val == "<:" || op.val == ">:"
+            ret = EXPR(op, [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
+        else
+            ret = EXPR(CALL, [op, ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
+        end
+        # parse assignment, ||, && or ::
+    elseif op_prec==1 || op_prec==3 || op_prec==4 || op_prec==14 
+        nextarg = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
+        ret = EXPR(op, [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
+        # parse '.'
+    elseif op_prec==15
+        if ps.nt.kind==Tokens.LPAREN
+            start = ps.nt.startbyte
+            args = parse_list(ps)
+            nextarg = EXPR(TUPLE, args, LOCATION(start, ps.t.endbyte))
+        else
+            nextarg = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
+        end
 
+        if nextarg isa INSTANCE
+            ret = EXPR(op, [ret, QUOTENODE(nextarg)], LOCATION(ret.loc.start, nextarg.loc.stop))
+        else
+            ret = EXPR(op, [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
+        end
     else
-        ret = CHAIN{op_prec}(ret.start, nextarg.stop, [ret, op, nextarg])
+        nextarg = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
+        ret = EXPR(CALL, [op, ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
     end
     return ret
 end

@@ -19,6 +19,7 @@ isidentifier(t::Token) = t.kind == Tokens.IDENTIFIER
 isliteral(t::Token) = Tokens.begin_literal < t.kind < Tokens.end_literal
 
 isbool(t::Token) =  Tokens.TRUE ≤ t.kind ≤ Tokens.FALSE
+iscomma(t::Token) =  t.kind == Tokens.COMMA
 
 iskw(t::Token) = Tokens.iskeyword(t.kind)
 

@@ -1,11 +1,9 @@
 # To do list
 
 Operators
-+ parse dot access
++ fix precedence rules for '.' and '? : '
 + parse arrows
-+ ? syntax
 + assignment, give error if incorrect lhs and return block on rhs
-+ try/if blocks
 + handle ';'
 Unhandled 'head's
 + ccall
@@ -13,11 +11,9 @@ Unhandled 'head's
 + generator
 + kw
 + parameters
-+ ref
 + stdcall
 + string
 + toplevel
-+ tuple
 + typed_comprehension
 + typed_vcat
 + vcat

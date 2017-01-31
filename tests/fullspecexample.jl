@@ -12,6 +12,17 @@ function f(x::Int{T})
         f(x)
         while true
             x+=a*b/4^(1+2+3+4-5-6-7-9)⋅(a*b*c*d*e)
+            if x.b.c==4
+                print(x)
+            elseif y==4
+                try 
+                    inv(-3)
+                catch err
+                    error(err)
+                end
+            else
+                d
+            end
         end
     end
 

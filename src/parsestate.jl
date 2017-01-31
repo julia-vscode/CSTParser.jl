@@ -16,6 +16,16 @@ function ParseState(str::String)
     next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), false, false))
 end
 
+macro with_ws_delim(ps, body)
+    quote
+        local tmp1 = $(esc(ps)).ws_delim
+        $(esc(ps)).ws_delim = true
+        out = $(esc(body))
+        $(esc(ps)).ws_delim = tmp1
+        out
+    end
+end
+
 function Base.show(io::IO, ps::ParseState)
     println(io, "ParseState $(ps.done ? "finished " : "")at $(ps.l.current_pos)")
     println(io, "token - (ws)")
