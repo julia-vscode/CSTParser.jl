@@ -1,8 +1,8 @@
 precedence(op::Int) = op < Tokens.end_assignments ? 1 :
                        op < Tokens.end_conditional ? 2 :
-                       op < Tokens.end_lazyor ? 3 :
-                       op < Tokens.end_lazyand ? 4 :
-                       op < Tokens.end_arrow ? 5 :
+                       op < Tokens.end_arrow ? 3 :
+                       op < Tokens.end_lazyor ? 4 :
+                       op < Tokens.end_lazyand ? 5 :
                        op < Tokens.end_comparison ? 6 :
                        op < Tokens.end_pipe ? 7 :
                        op < Tokens.end_colon ? 8 :
@@ -16,9 +16,9 @@ precedence(op::Int) = op < Tokens.end_assignments ? 1 :
 precedence(op::Token) = op.kind < Tokens.begin_assignments ? 0 :
                         op.kind < Tokens.end_assignments ? 1 :
                        op.kind < Tokens.end_conditional ? 2 :
-                       op.kind < Tokens.end_lazyor ? 3 :
-                       op.kind < Tokens.end_lazyand ? 4 :
-                       op.kind < Tokens.end_arrow ? 5 :
+                       op.kind < Tokens.end_arrow ? 3 :
+                       op.kind < Tokens.end_lazyor ? 4 :
+                       op.kind < Tokens.end_lazyand ? 5 :
                        op.kind < Tokens.end_comparison ? 6 :
                        op.kind < Tokens.end_pipe ? 7 :
                        op.kind < Tokens.end_colon ? 8 :
@@ -119,8 +119,8 @@ function parse_operator(ps::ParseState, ret::Expression)
         else
             ret = EXPR(CALL, [op, ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
         end
-        # parse assignment, ||, && or ::
-    elseif op_prec==1 || op_prec==3 || op_prec==4 || op_prec==14 
+        # parse assignment, ||, &&, :: or '-->'
+    elseif op_prec==1 || op_prec==4 || op_prec==5 || op_prec==14 || op.val=="-->"
         nextarg = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
         ret = EXPR(op, [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
         # parse '.'

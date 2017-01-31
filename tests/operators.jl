@@ -29,7 +29,16 @@ function printopchain(io::IO, x::EXPR)
     end
 end
 
-randop() = rand(["→", "<", "==", "<|", "|>", "+", "-", ">>", "<<", "*", "/", "^", "↑", "||", "&&", "<:",">:"])
+randop() = rand(["-->", "→",
+                "||", "&&",
+                 "<", "==", "<:", ">:",
+                 "<|", "|>", 
+                 "+", "-", 
+                 ">>", "<<", 
+                 "*", "/", 
+                 "//",
+                 "^", "↑",
+                 "::"])
 
 
 
@@ -82,7 +91,7 @@ precedence_list = [
 #= RtoL       =#   #"?", # a?b:(c?d:e) *** (:if)
 #= RtoL    X  =#   "||", # a||(b||c) ***
 #= RtoL    X  =#   "&&", # a&&(b&&c) ***
-#= RtoL    X  =#   #"-->", "→", # a-->(b→c) *** for --> only
+#= RtoL    X  =#   "-->", "→", # a-->(b→c) *** for --> only
 #= chain   X  =#  "<","==", # :< and >: as head for 2 arg versions
 #= LtoR    X  =#   "<|", "|>", # (a|>b)|>c
 #= LtoR       =#   ":",#"..", # 3 arg version -> head=:(:), a,b,c

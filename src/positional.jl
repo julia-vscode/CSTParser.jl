@@ -55,10 +55,11 @@ function next(x::EXPR, i)
         end
     elseif (x.head isa INSTANCE && 
         x.head.prec==1 ||
-        x.head.prec==3 ||
         x.head.prec==4 ||
+        x.head.prec==5 ||
         x.head.val=="<:" ||
         x.head.val==">:" ||
+        x.head.val=="-->" ||
         x.head.prec==8 ||
         x.head.prec==14 ||
         x.head.prec==15)
@@ -77,10 +78,11 @@ function length(x::EXPR)
         return length(x.args)
     elseif (x.head isa INSTANCE && 
         x.head.prec==1 ||
-        x.head.prec==3 ||
         x.head.prec==4 ||
+        x.head.prec==5 ||
         x.head.val=="<:" ||
         x.head.val==">:" ||
+        x.head.val=="-->" ||
         x.head.prec==8 ||
         x.head.prec==14 ||
         x.head.prec==15)
