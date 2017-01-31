@@ -2,7 +2,7 @@ module Parser
 global debug = true
 
 using Tokenize
-import Base: next, first, done, length
+import Base: next, start, done, length, first
 import Tokenize.Tokens
 import Tokenize.Tokens: Token, iskeyword, isliteral, isoperator
 import Tokenize.Lexers: Lexer, peekchar, iswhitespace
