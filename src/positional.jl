@@ -15,17 +15,8 @@
 # function spanws end
 
 
-
-
-# import Base: first, last
-
-
-
-
 span{T<:Expression}(x::T) = x.loc.stop-x.loc.start
 
-
-import Base: first, last, start, next, done, length
 
 start(x::INSTANCE) = x
 next(x::INSTANCE) = x

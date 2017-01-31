@@ -1,23 +1,3 @@
-using FactCheck
-
-include("/home/zac/github/Parser/src/Parser.jl")
-for n in names(Parser, true, true)
-    if !isdefined(Main, n)
-        eval(:(import Parser.$n))
-    end
-end
-
-function remlineinfo!(x)
-    if isa(x,Expr)
-        id = find(map(x->isa(x,Expr) && x.head==:line,x.args))
-        deleteat!(x.args,id)
-        for j in x.args
-            remlineinfo!(j)
-        end
-    end
-    x
-end
-
 function printopchain(io::IO, x::EXPR)
     for y in x
         if y isa EXPR
@@ -39,8 +19,6 @@ randop() = rand(["-->", "→",
                  "//",
                  "^", "↑",
                  "::"])
-
-
 
 
 facts("operators") do
@@ -125,5 +103,16 @@ facts("? : syntax") do
     end
 end
 
+facts("dot access") do
+    strs = ["a.b"
+            "a.b.c"
+            "(a(b)).c"
+            "(a).(b).(c)"
+            "(a).b.(c)"
+            "(a).b.(c+d)"]
+    for str in strs
+        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+    end
+end
 
 
