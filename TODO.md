@@ -2,13 +2,10 @@
 
 Operators
 + fix precedence rules for '.' and '? : '
-+ parse arrows
 + assignment, give error if incorrect lhs and return block on rhs
 + handle ';'
 Unhandled 'head's
 + ccall
-+ comprehension
-+ generator
 + kw
 + parameters
 + stdcall

@@ -44,6 +44,8 @@ const REF = INSTANCE("ref")
 const COMPARISON = INSTANCE("comparison")
 const IF = INSTANCE("if")
 const TUPLE = INSTANCE("tuple")
+const GENERATOR = INSTANCE("generator")
+const COMPREHENSION = INSTANCE("comprehension")
 const TRUE = INSTANCE{LITERAL}("true", "", emptyloc, 0)
 const FALSE = INSTANCE{LITERAL}("false", "", emptyloc, 0)
 

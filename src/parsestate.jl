@@ -13,9 +13,10 @@ type ParseState
     nws::Token
     ws_delim::Bool
     colon_delim::Bool
+    in_paren::Bool
 end
 function ParseState(str::String)
-    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), false, false))
+    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), false, false, false))
 end
 
 macro with_ws_delim(ps, body)
@@ -24,6 +25,16 @@ macro with_ws_delim(ps, body)
         $(esc(ps)).ws_delim = true
         out = $(esc(body))
         $(esc(ps)).ws_delim = tmp1
+        out
+    end
+end
+
+macro with_in_paren(ps, body)
+    quote
+        local tmp1 = $(esc(ps)).in_paren
+        $(esc(ps)).in_paren = true
+        out = $(esc(body))
+        $(esc(ps)).in_paren = tmp1
         out
     end
 end

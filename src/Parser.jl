@@ -2,7 +2,7 @@ module Parser
 global debug = true
 
 using Tokenize
-import Base: next, start, done, length, first
+import Base: next, start, done, length, first, last
 import Tokenize.Tokens
 import Tokenize.Tokens: Token, iskeyword, isliteral, isoperator
 import Tokenize.Lexers: Lexer, peekchar, iswhitespace
@@ -22,8 +22,6 @@ function parse_expression(ps::ParseState, closer = closer_default)
         ret = parse_kw_syntax(next(ps))
     elseif ps.nt.kind == Tokens.LPAREN
         ret = parse_expression(next(ps), ps->ps.nt.kind==Tokens.RPAREN)
-        # args = parse_list(ps)
-        # ret = length(args)==1 ? args[1] : EXPR(TUPLE, args, LOCATION(first(args).loc.start, last(args).loc.stop))
         next(ps)
     elseif isinstance(ps.nt)
         ret = INSTANCE(next(ps))
@@ -84,6 +82,22 @@ function parse_expression(ps::ParseState, closer = closer_default)
                 else
                     ret =  EXPR(TUPLE, [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
                 end
+            end
+        elseif ps.nt.kind == Tokens.FOR 
+            @assert length(ps.ws.val)>0
+            next(ps)
+            op = INSTANCE(ps)
+            range = parse_expression(ps, ps-> ps.nt.kind==Tokens.RPAREN || ps.nt.kind==Tokens.RSQUARE)
+            if range.head==CALL && range.args[1] isa INSTANCE && range.args[1].val=="in" || range.args[1].val=="∈"
+                range = EXPR(INSTANCE{OPERATOR}("=", range.args[1].ws, range.args[1].loc, range.args[1].prec), range.args[2:3], range.loc)
+            end
+
+            ret = EXPR(INSTANCE{KEYWORD}("generator", op.ws, op.loc, op.prec), [ret, range])
+            
+            if ps.nt.kind==Tokens.RSQUARE
+                ret = EXPR(COMPREHENSION, ret)
+            elseif ps.nt.kind!=Tokens.RPAREN
+                error("generator/comprehension syntax not followed by ')' or ']'")
             end
         end
     end

@@ -28,21 +28,24 @@ start(x::EXPR) = 1
 function next(x::EXPR, i)
     if x.head==COMPARISON
         return x.args[i], i+1
-    elseif x.head==CALL && x.args[1] isa INSTANCE &&
-        1<=(x.args[1].prec)<=15
-        if x.args[1].val=="+" || x.args[1].val=="*"
-            if isodd(i)
-                return x.args[div(i+1,2)+1], i+1
-            else
-                return x.args[1], i+1
+    elseif x.head==CALL
+        if x.args[1] isa INSTANCE && 1<=(x.args[1].prec)<=15
+            if x.args[1].val=="+" || x.args[1].val=="*"
+                if isodd(i)
+                    return x.args[div(i+1,2)+1], i+1
+                else
+                    return x.args[1], i+1
+                end
             end
-        end
-        if i==1
-            return x.args[2], 2
-        elseif i==2
-            return x.args[1], 3
-        elseif i==3 
-            return x.args[3], 4
+            if i==1
+                return x.args[2], 2
+            elseif i==2
+                return x.args[1], 3
+            elseif i==3 
+                return x.args[3], 4
+            end
+        else
+            return x.args[i], i+1
         end
     elseif (x.head isa INSTANCE && 
         x.head.prec==1 ||
@@ -67,6 +70,13 @@ end
 function length(x::EXPR)
     if x.head==COMPARISON
         return length(x.args)
+    elseif x.head==CALL
+        if x.args[1] isa INSTANCE && 1<=(x.args[1].prec)<=15
+            if x.args[1].val=="+" || x.args[1].val=="*"
+                return length(x.args)*2-3
+            end
+        end
+        return length(x.args)
     elseif (x.head isa INSTANCE && 
         x.head.prec==1 ||
         x.head.prec==4 ||
@@ -78,13 +88,45 @@ function length(x::EXPR)
         x.head.prec==14 ||
         x.head.prec==15)
         return length(x.args)+1
-    elseif x.head==CALL && x.args[1] isa INSTANCE &&
-        1<=(x.args[1].prec)<=15
-        if x.args[1].val=="+" || x.args[1].val=="*"
-            return length(x.args)*2-3
-        end
-        return length(x.args)
     end
 end
 
 done(x::EXPR, i) = i>length(x)
+
+
+
+function first(x::EXPR)
+    if x.head==CALL
+        if x.args[1] isa INSTANCE && 1 <=x.args[1].prec <=15 && length(x.args)>2
+            return x.args[2]
+        else
+            return x.args[1]
+        end
+    elseif x.head==COMPARISON || 
+        (x.head isa INSTANCE && 
+        x.head.prec==1 ||
+        x.head.prec==4 ||
+        x.head.prec==5 ||
+        x.head.val=="<:" ||
+        x.head.val==">:" ||
+        x.head.prec==8 ||
+        x.head.prec==14 ||
+        x.head.prec==15)
+        return x.args[1]
+    end
+end
+
+function last(x::EXPR)
+    if x.head==COMPARISON || 
+        x.head == CALL || (x.head isa INSTANCE && 
+        x.head.prec==1 ||
+        x.head.prec==4 ||
+        x.head.prec==5 ||
+        x.head.val=="<:" ||
+        x.head.val==">:" ||
+        x.head.prec==8 ||
+        x.head.prec==14 ||
+        x.head.prec==15)
+        return last(x.args)
+    end
+end
