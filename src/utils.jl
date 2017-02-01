@@ -6,9 +6,6 @@ closer_default(ps::ParseState) = search(ps.ws.val, '\n')!=0 ||
                                  ps.nt.kind == Tokens.RSQUARE || 
                                  (ps.ws_delim && !isoperator(ps.t) && isinstance(ps.nt) && length(ps.ws.val)>0)
 
-closer_ws_no_newline(ps::ParseState) = !(Tokens.begin_ops < ps.nt.kind < Tokens.end_ops) &&
-                          search(ps.ws.val, '\n')==0
-
 closer_no_ops(p) = ps->closer_default(ps) || (isoperator(ps.nt) && precedence(ps.nt)<=p)
 
 

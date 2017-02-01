@@ -27,6 +27,7 @@ end
 include("operators.jl")
 include("functions.jl")
 include("types.jl")
+include("keywords.jl")
 
 
 facts("misc reserved words") do

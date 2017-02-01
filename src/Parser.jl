@@ -28,7 +28,7 @@ function parse_expression(ps::ParseState, closer = closer_default)
     elseif isunaryop(ps.nt)
         ret = parse_unary(next(ps))
     else
-        error("Expression started with $(ps.nt.val)")
+        error("Expression started with $(ps)")
     end
 
     while !closer(ps)
@@ -88,6 +88,11 @@ function parse_expression(ps::ParseState, closer = closer_default)
             elseif ps.nt.kind!=Tokens.RPAREN
                 error("generator/comprehension syntax not followed by ')' or ']'")
             end
+        else
+            for s in stacktrace()
+                println(s)
+            end
+            error("infinite loop $(ps)")
         end
     end
 
@@ -132,14 +137,13 @@ function parse_list(ps::ParseState)
     return args
 end
 
-function parse_block(ps::ParseState)
+function parse_block(ps::ParseState, ret = EXPR(BLOCK, [], LOCATION(0, 0)))
     start = ps.t.startbyte
-    ret = EXPR(BLOCK, [], LOCATION(0, 0))
     while ps.nt.kind!==Tokens.END
         push!(ret.args, parse_expression(ps,ps->closer_default(ps) || ps.nt.kind==Tokens.END))
     end
-    next(ps)
-    ret.loc = LOCATION(isempty(ret.args) ? ps.t.startbyte : first(ret.args).loc.start, ps.t.endbyte)
+    # next(ps)
+    ret.loc = LOCATION(isempty(ret.args) ? ps.nt.startbyte : first(ret.args).loc.start, ps.nt.endbyte)
     return ret
 end
 
