@@ -13,6 +13,17 @@ function remlineinfo!(x)
     x
 end
 
+function printEXPR(io::IO, x::EXPR)
+    for y in x
+        if y isa EXPR
+            printEXPR(io,y)
+        else
+            print(io,y.val)
+            print(io,y.ws)
+        end
+    end
+end
+
 include("operators.jl")
 include("functions.jl")
 include("types.jl")

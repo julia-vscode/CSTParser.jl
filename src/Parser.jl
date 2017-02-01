@@ -36,18 +36,7 @@ function parse_expression(ps::ParseState, closer = closer_default)
             ret = parse_operator(ps, ret)
         elseif ps.nt.kind==Tokens.LPAREN
             if isempty(ps.ws.val)
-                start = ps.t.startbyte
-                args = parse_list(ps)
-                ret = EXPR(CALL, [ret, args...], LOCATION(ret.loc.start, ps.t.endbyte))
-                if ps.nt.kind==Tokens.EQ
-                    next(ps)
-                    op = INSTANCE(ps)
-                    body = parse_expression(ps)
-                    if !(body isa EXPR) || body.head!= BLOCK
-                        body = EXPR(BLOCK, [body], LOCATION(body.loc.start, body.loc.stop))
-                    end
-                    ret = EXPR(op, [ret, body], LOCATION(ret.loc.start, body.loc.stop))
-                end
+                ret = parse_call(ps, ret)
             else
                 error("space before \"(\" not allowed in \"$(Expr(ret)) (\"")
             end
@@ -102,6 +91,21 @@ function parse_expression(ps::ParseState, closer = closer_default)
         end
     end
 
+    return ret
+end
+
+function parse_call(ps::ParseState, ret)
+    args = parse_list(ps)
+    ret = EXPR(CALL, [ret, args...], LOCATION(ret.loc.start, ps.t.endbyte))
+    if ps.nt.kind==Tokens.EQ
+        next(ps)
+        op = INSTANCE(ps)
+        body = parse_expression(ps)
+        if !(body isa EXPR) || body.head!= BLOCK
+            body = EXPR(BLOCK, [body], LOCATION(body.loc.start, body.loc.stop))
+        end
+        ret = EXPR(op, [ret, body], LOCATION(ret.loc.start, body.loc.stop))
+    end
     return ret
 end
 

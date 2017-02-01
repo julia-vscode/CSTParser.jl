@@ -18,10 +18,10 @@
 span{T<:Expression}(x::T) = x.loc.stop-x.loc.start
 
 
-start(x::INSTANCE) = x
-next(x::INSTANCE) = x
+start(x::INSTANCE) = 1
+next(x::INSTANCE, i) = x, i+1
 length(x::INSTANCE) = 1
-done(x::INSTANCE) = x
+done(x::INSTANCE, i) = i>1
 
 start(x::EXPR) = 1
 

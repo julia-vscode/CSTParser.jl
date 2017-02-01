@@ -47,7 +47,7 @@ end
 function parse_if(ps::ParseState)
     kw = INSTANCE(ps)
     kw.val = "if"
-    cond = parse_expression(ps)
+    cond = parse_expression(ps, ps-> closer_default(ps) || ps.nt.kind==Tokens.END)
     ifblock = EXPR(BLOCK, [], LOCATION(0, 0))
     while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.ELSE && ps.nt.kind!==Tokens.ELSEIF
         push!(ifblock.args, parse_expression(ps,ps->closer_default(ps) || ps.nt.kind==Tokens.END || ps.nt.kind==Tokens.ELSEIF || ps.nt.kind==Tokens.ELSE))

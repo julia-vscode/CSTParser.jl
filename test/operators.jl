@@ -1,14 +1,3 @@
-function printopchain(io::IO, x::EXPR)
-    for y in x
-        if y isa EXPR
-            printopchain(io,y)
-        else
-            print(io,y.val)
-            print(io,y.ws)
-        end
-    end
-end
-
 randop() = rand(["-->", "→",
                 "||", "&&",
                  "<", "==", "<:", ">:",
@@ -39,7 +28,7 @@ facts("operators") do
         x = Parser.parse(str)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
         @fact x.loc.stop --> endof(str)
-        @fact sprint(printopchain, x) --> str
+        @fact sprint(printEXPR, x) --> str
     end
     for str1 in strs
         for str2 in strs
@@ -47,7 +36,7 @@ facts("operators") do
             x = Parser.parse(str)
             @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
             @fact x.loc.stop --> endof(str)
-            @fact sprint(printopchain, x) --> str
+            @fact sprint(printEXPR, x) --> str
         end
     end
 end
@@ -59,7 +48,7 @@ facts("operators") do
         x = Parser.parse(str)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
         @fact x.loc.stop --> endof(str)
-        @fact sprint(printopchain, x) --> str
+        @fact sprint(printEXPR, x) --> str
     end
 end
 

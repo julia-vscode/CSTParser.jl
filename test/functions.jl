@@ -1,3 +1,20 @@
+facts("function calls") do
+    strs = ["f(x)"
+            "f(x,y)"
+            "f(g(x))"
+            "f((x,y))"
+            "f((x,y), z)"
+            "f(z, (x,y), z)"
+            "f{a}(x)"
+            "f{a<:T}(x::T)"]
+    for str in strs
+        x = Parser.parse(str)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        @fact x.loc.stop --> endof(str)
+    end
+end
+
+
 facts("one liner functions") do
     strs = ["f(x) = x"
             "f(x) = g(x)"
