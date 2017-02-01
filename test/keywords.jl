@@ -44,3 +44,4 @@ facts("if blocks") do
         @fact x.loc.stop --> endof(str)
     end
 end
+

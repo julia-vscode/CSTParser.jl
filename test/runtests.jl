@@ -49,7 +49,6 @@ facts("tuples") do
     end
 end
 
-
 facts("failing things") do
     strs = ["function f end"
             "(a,b = c,d)"
@@ -58,6 +57,18 @@ facts("failing things") do
         @pending (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
     end
 end
+
+facts("generators") do
+    strs = ["(y for y in X)"
+            "((y) for y in X)"
+            "(y,x for y in X)"
+            "((y,x) for y in X)"]
+    for str in strs
+        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+    end
+end
+
+
 
 const examplemodule = readstring("fullspecexample.jl")
 

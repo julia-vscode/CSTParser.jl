@@ -21,7 +21,7 @@ function parse_expression(ps::ParseState, closer = closer_default)
     if Tokens.begin_keywords < ps.nt.kind < Tokens.end_keywords 
         ret = parse_kw_syntax(next(ps))
     elseif ps.nt.kind == Tokens.LPAREN
-        ret = parse_expression(next(ps), ps->ps.nt.kind==Tokens.RPAREN)
+        ret = parse_expression(next(ps))
         next(ps)
     elseif isinstance(ps.nt)
         ret = INSTANCE(next(ps))
@@ -50,7 +50,7 @@ function parse_expression(ps::ParseState, closer = closer_default)
         elseif ps.nt.kind==Tokens.LSQUARE
             if isempty(ps.ws.val)
                 next(ps)
-                arg = parse_expression(ps, ps-> ps.nt.kind==Tokens.RSQUARE)
+                arg = parse_expression(ps)
                 @assert ps.nt.kind==Tokens.RSQUARE
                 next(ps)
                 ret = EXPR(REF, [ret, arg], LOCATION(ret.loc.start, ps.t.endbyte))
@@ -73,21 +73,7 @@ function parse_expression(ps::ParseState, closer = closer_default)
                 end
             end
         elseif ps.nt.kind == Tokens.FOR 
-            @assert length(ps.ws.val)>0
-            next(ps)
-            op = INSTANCE(ps)
-            range = parse_expression(ps, ps-> ps.nt.kind==Tokens.RPAREN || ps.nt.kind==Tokens.RSQUARE)
-            if range.head==CALL && range.args[1] isa INSTANCE && range.args[1].val=="in" || range.args[1].val=="∈"
-                range = EXPR(INSTANCE{OPERATOR}("=", range.args[1].ws, range.args[1].loc, range.args[1].prec), range.args[2:3], range.loc)
-            end
-
-            ret = EXPR(INSTANCE{KEYWORD}("generator", op.ws, op.loc, op.prec), [ret, range])
-            
-            if ps.nt.kind==Tokens.RSQUARE
-                ret = EXPR(COMPREHENSION, ret)
-            elseif ps.nt.kind!=Tokens.RPAREN
-                error("generator/comprehension syntax not followed by ')' or ']'")
-            end
+            ret = parse_generator(ps, ret)
         else
             for s in stacktrace()
                 println(s)
@@ -137,12 +123,36 @@ function parse_list(ps::ParseState)
     return args
 end
 
+function parse_generator(ps::ParseState, ret)
+    @assert length(ps.ws.val)>0
+    next(ps)
+    op = INSTANCE(ps)
+    range = parse_expression(ps)
+    if range.head==CALL && range.args[1] isa INSTANCE && range.args[1].val=="in" || range.args[1].val=="∈"
+        range = EXPR(INSTANCE{OPERATOR}("=", range.args[1].ws, range.args[1].loc, range.args[1].prec), range.args[2:3], range.loc)
+    end
+
+    ret = EXPR(INSTANCE{KEYWORD}("generator", op.ws, op.loc, op.prec), [ret, range])
+    if !(ps.nt.kind==Tokens.RPAREN || ps.nt.kind==Tokens.RSQUARE)
+        error("generator/comprehension syntax not followed by ')' or ']'")
+    end
+    return ret
+end
+
+
+"""
+    parseblocks(ps, ret = EXPR(BLOCK,...))
+
+Parses an array of expressions (stored in ret) until 'end' is the next token. 
+Returns `ps` the token before the closing `end`, the calling function is 
+assumed to handle the closer.
+"""
 function parse_block(ps::ParseState, ret = EXPR(BLOCK, [], LOCATION(0, 0)))
     start = ps.t.startbyte
     while ps.nt.kind!==Tokens.END
         push!(ret.args, parse_expression(ps,ps->closer_default(ps) || ps.nt.kind==Tokens.END))
     end
-    # next(ps)
+    @assert ps.nt.kind==Tokens.END
     ret.loc = LOCATION(isempty(ret.args) ? ps.nt.startbyte : first(ret.args).loc.start, ps.nt.endbyte)
     return ret
 end

@@ -85,7 +85,7 @@ function parse_try(ps::ParseState)
     end
     next(ps)
     if ps.t.kind==Tokens.CATCH
-        caught = parse_expression(ps, ps-> closer_default(ps))
+        caught = parse_expression(ps)
         catchblock = parse_block(ps)
         if !(caught isa INSTANCE)
             unshift!(catchblock.args, caught)
