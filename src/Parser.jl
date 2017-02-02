@@ -53,6 +53,9 @@ function parse_expression(ps::ParseState)
 
     while !closer(ps)
         if isoperator(ps.nt)
+            if ps.formatcheck && isassignment(ps.nt) && ps.ws.val==""
+                push!(ps.hints, "add space at $(ps.nt.startbyte)")
+            end
             ret = parse_operator(ps, ret)
         elseif ps.nt.kind==Tokens.LPAREN
             if isempty(ps.ws.val)
@@ -182,20 +185,20 @@ end
 
 
 function parse(str::String, cont = false)
-    if isfile(str)
-        ps = Parser.ParseState(readstring(str))
-    else
+    # if isfile(str)
+    #     ps = Parser.ParseState(readstring(str))
+    # else
         ps = Parser.ParseState(str)
-    end
-    if cont
-        ret = EXPR(BLOCK, [], LOCATION(0,0))
-        while ps.nt.kind!=Tokens.ENDMARKER
-            push!(ret.args, parse_expression(ps))
-        end
-        ret.loc.stop = ps.t.endbyte
-    else 
+    # end
+    # if cont
+    #     ret = EXPR(BLOCK, [], LOCATION(0,0))
+    #     while ps.nt.kind!=Tokens.ENDMARKER
+    #         push!(ret.args, parse_expression(ps))
+    #     end
+    #     ret.loc.stop = ps.t.endbyte
+    # else 
         ret = parse_expression(ps)
-    end
+    # end
     return ret
 end
 

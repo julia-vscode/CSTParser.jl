@@ -127,6 +127,9 @@ function parse_operator(ps::ParseState, ret::Expression)
         end
         # parse assignment, ||, &&, :: or '-->'
     elseif op_prec==1 || op_prec==4 || op_prec==5 || op_prec==14 || op.val=="-->"
+        if ps.formatcheck && op_prec==1 && ps.ws.val==""
+            push!(ps.hints, "add space at $(ps.nt.startbyte)")
+        end
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         ret = EXPR(op, [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
         # parse '.'

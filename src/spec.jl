@@ -27,8 +27,16 @@ function INSTANCE(ps::ParseState)
         isoperator(ps.t) ? OPERATOR :
         error("Couldn't make an INSTANCE from $(ps.t.val)")
         prec = precedence(ps.t)
+    loc = LOCATION(ps.t.startbyte, ps.t.endbyte)
+    if t==IDENTIFIER
+        if ps.t.val in keys(ps.ids)
+            push!(ps.ids[ps.t.val], loc)
+        else
+            ps.ids[ps.t.val] = [loc]
+        end
+    end
 
-    return INSTANCE{t}(ps.t.val, ps.ws.val, LOCATION(ps.t.startbyte, ps.t.endbyte), prec)
+    return INSTANCE{t}(ps.t.val, ps.ws.val, loc, prec)
 end
 INSTANCE(str::String) = INSTANCE{0}(str, "", emptyloc, 0)
 

@@ -30,13 +30,13 @@ type ParseState
     lws::Token
     ws::Token
     nws::Token
-    ws_delim::Bool
-    colon_delim::Bool
-    in_paren::Bool
+    formatcheck::Bool
+    ids::Dict{String,Any}
+    hints::Vector{Any}
     closer::Closer
 end
 function ParseState(str::String)
-    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), false, false, false, Closer()))
+    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), true, Dict(), [], Closer()))
 end
 
 function Base.show(io::IO, ps::ParseState)

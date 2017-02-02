@@ -1,11 +1,16 @@
 module ModuleName
 const a = 16
+abstract MyAbstract
 typealias MyInt Int
 bitstype a*4 SomeType
 
+type MyType <: MyAbstract
+    a::Int
+    b::Vector{someType}
+end
+
 f(x) = x
 
-function f end
 
 function f(x::Int{T})
     while true
@@ -18,10 +23,10 @@ function f(x::Int{T})
                 try 
                     inv(-3)
                 catch err
-                    error(err)
+                    error(err, a,b)
                 end
             else
-                d
+                d ="d"
             end
         end
     end
@@ -29,10 +34,7 @@ function f(x::Int{T})
     return x<4
 end
 
-type T <: Int
-    a::Int
-    b::Vector
-end
+
 
 baremodule SubModuleName
 end
