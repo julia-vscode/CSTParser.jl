@@ -139,6 +139,13 @@ function parse_list(ps::ParseState)
     return args
 end
 
+
+"""
+    parse_generator(ps)
+
+Having hit `for` not at the beginning of an expression return a generator. 
+Comprehensions are parsed as SQUAREs containing a generator.
+"""
 function parse_generator(ps::ParseState, ret)
     @assert length(ps.ws.val)>0
     next(ps)
@@ -174,9 +181,22 @@ function parse_block(ps::ParseState, ret = EXPR(BLOCK, [], LOCATION(0, 0)))
 end
 
 
-function parse(str::String) 
-    ps = Parser.ParseState(str)
-    return parse_expression(ps)
+function parse(str::String, cont = false)
+    if isfile(str)
+        ps = Parser.ParseState(readstring(str))
+    else
+        ps = Parser.ParseState(str)
+    end
+    if cont
+        ret = EXPR(BLOCK, [], LOCATION(0,0))
+        while ps.nt.kind!=Tokens.ENDMARKER
+            push!(ret.args, parse_expression(ps))
+        end
+        ret.loc.stop = ps.t.endbyte
+    else 
+        ret = parse_expression(ps)
+    end
+    return ret
 end
 
 

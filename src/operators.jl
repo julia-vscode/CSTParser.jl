@@ -73,6 +73,12 @@ istimes(t::Token) = Tokens.begin_times < t.kind < Tokens.end_times
 
 ispower(t::Token) = Tokens.begin_power < t.kind < Tokens.end_power
 
+
+"""
+    parse_unary(ps)
+
+Having hit a unary operator at the start of an expression return a call.
+"""
 function parse_unary(ps::ParseState)
     op = INSTANCE(ps)
     arg = parse_expression(ps)
@@ -138,6 +144,8 @@ function parse_operator(ps::ParseState, ret::Expression)
         else
             ret = EXPR(op, [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
         end
+    elseif op.val=="..." || op.val=="'"
+        ret = EXPR(op, [ret],LOCATION(ret.loc.start, op.loc.stop))
     else
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         ret = EXPR(CALL, [op, ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
