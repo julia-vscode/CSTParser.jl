@@ -1,6 +1,25 @@
-import Tokenize.Lexers: peekchar, prevchar, readchar, iswhitespace, emit, emit_error, backup!, accept_batch
+import Tokenize.Lexers: peekchar, prevchar, readchar, iswhitespace, emit, emit_error, backup!, accept_batch, eof
 
 const empty_whitespace = Token()
+
+type Closer
+    newline::Bool
+    semicolon::Bool
+    eof::Bool
+    tuple::Bool
+    comma::Bool
+    paren::Bool
+    brace::Bool
+    square::Bool
+    block::Bool
+    ifelse::Bool
+    ifop::Bool
+    trycatch::Bool
+    ws::Bool
+    precedence::Int
+end
+
+Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, 0)
 
 type ParseState
     l::Lexer
@@ -14,29 +33,10 @@ type ParseState
     ws_delim::Bool
     colon_delim::Bool
     in_paren::Bool
+    closer::Closer
 end
 function ParseState(str::String)
-    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), false, false, false))
-end
-
-macro with_ws_delim(ps, body)
-    quote
-        local tmp1 = $(esc(ps)).ws_delim
-        $(esc(ps)).ws_delim = true
-        out = $(esc(body))
-        $(esc(ps)).ws_delim = tmp1
-        out
-    end
-end
-
-macro with_in_paren(ps, body)
-    quote
-        local tmp1 = $(esc(ps)).in_paren
-        $(esc(ps)).in_paren = true
-        out = $(esc(body))
-        $(esc(ps)).in_paren = tmp1
-        out
-    end
+    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), false, false, false, Closer()))
 end
 
 function Base.show(io::IO, ps::ParseState)

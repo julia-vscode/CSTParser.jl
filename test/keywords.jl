@@ -37,11 +37,18 @@ facts("if blocks") do
                 f(2)
             else
                 f(3)
+            end"""
+            """try
+                f(1)
+            catch err
+                error(err)
             end"""]
     for str in strs
-        x = Parser.parse(str)
+        ps = Parser.ParseState(str)
+        x = Parser.parse_expression(ps)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
         @fact x.loc.stop --> endof(str)
+        @fact ps.t.kind --> Tokenize.Tokens.END
     end
 end
 

@@ -75,7 +75,7 @@ ispower(t::Token) = Tokens.begin_power < t.kind < Tokens.end_power
 
 function parse_unary(ps::ParseState)
     op = INSTANCE(ps)
-    arg = parse_expression(ps, closer_no_ops(20))
+    arg = parse_expression(ps)
     EXPR(CALL, [op, arg], LOCATION(op.loc.start, arg.loc.stop))
 end
 
@@ -85,18 +85,18 @@ function parse_operator(ps::ParseState, ret::Expression)
     op_prec = precedence(ps.t)
 
     if ret isa EXPR && ret.head==CALL && ret.args[1].val == op.val  && (op.val == "+" || op.val == "*")
-        nextarg = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
+        nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         push!(ret.args, nextarg)
         ret.loc.stop = nextarg.loc.stop
         # a ? b : c syntax
     elseif op_prec == 2 
-        nextarg = parse_expression(ps, ps->closer_default(ps) || (isoperator(ps.nt) && precedence(ps.nt)<=1) || (isoperator(ps.nt) && ps.nt.val==":"))
+        nextarg = @closer ps ifop parse_expression(ps)
         op2 = INSTANCE(next(ps))
-        nextarg2 = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
+        nextarg2 = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         ret = EXPR(IF, [ret, nextarg, nextarg2], LOCATION(ret.loc.start, nextarg2.loc.stop))
         # ranges/colon
     elseif op.val == ":" 
-        nextarg = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
+        nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         if ret isa EXPR && ret.head.val == ":" && length(ret.args)==2
             push!(ret.args, nextarg)
             ret.loc.stop = nextarg.loc.stop
@@ -105,7 +105,7 @@ function parse_operator(ps::ParseState, ret::Expression)
         end
         # comparison
     elseif op_prec == 6 
-        nextarg = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
+        nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         if ret isa EXPR && ret.head==COMPARISON
             push!(ret.args, op)
             push!(ret.args, nextarg)
@@ -121,16 +121,16 @@ function parse_operator(ps::ParseState, ret::Expression)
         end
         # parse assignment, ||, &&, :: or '-->'
     elseif op_prec==1 || op_prec==4 || op_prec==5 || op_prec==14 || op.val=="-->"
-        nextarg = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
+        nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         ret = EXPR(op, [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
         # parse '.'
     elseif op_prec==15
         if ps.nt.kind==Tokens.LPAREN
             start = ps.nt.startbyte
-            args = parse_list(ps)
+            args = @closer ps paren parse_list(ps)
             nextarg = EXPR(TUPLE, args, LOCATION(start, ps.t.endbyte))
         else
-            nextarg = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
+            nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         end
 
         if nextarg isa INSTANCE
@@ -139,7 +139,7 @@ function parse_operator(ps::ParseState, ret::Expression)
             ret = EXPR(op, [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
         end
     else
-        nextarg = parse_expression(ps, closer_no_ops(op_prec-LtoR(op_prec)))
+        nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         ret = EXPR(CALL, [op, ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
     end
     return ret

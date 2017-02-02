@@ -11,13 +11,13 @@ function parse_kw_syntax(ps::ParseState)
     elseif Tokens.begin_2arg_kw < ps.t.kind < Tokens.end_2arg_kw
         start = ps.t.startbyte
         kw = INSTANCE(ps)
-        arg1 = @with_ws_delim ps parse_expression(ps) 
+        arg1 = @closer ps ws parse_expression(ps) 
         arg2 = parse_expression(ps)
         return EXPR(kw, [arg1, arg2], LOCATION(kw.loc.start, arg2.loc.stop))
     elseif Tokens.begin_3arg_kw < ps.t.kind < Tokens.end_3arg_kw
         start = ps.t.startbyte
         kw = INSTANCE(ps)
-        arg = parse_expression(ps,ps->closer_default(ps) || ps.nt.kind==Tokens.END || (!isempty(ps.ws.val) && !isoperator(ps.nt)))
+        arg = @closer ps block @closer ps ws parse_expression(ps)
         block = parse_block(ps)
         next(ps)
         if kw.val=="type"
@@ -42,27 +42,27 @@ function parse_kw_syntax(ps::ParseState)
     elseif ps.t.kind==Tokens.TRY
         parse_try(ps)
     else
-        error()
+        error(ps)
     end
 end
 
-function parse_if(ps::ParseState)
+function parse_if(ps::ParseState, nested = false)
     kw = INSTANCE(ps)
     kw.val = "if"
-    cond = @with_ws_delim ps parse_expression(ps, ps-> closer_default(ps) || ps.nt.kind==Tokens.END)
+    cond = @closer ps ws @closer ps block parse_expression(ps)
     if ps.nt.kind==Tokens.END
         next(ps)
         return EXPR(kw, [cond, EXPR(BLOCK, [], LOCATION(0, 0))], LOCATION(kw.loc.start, ps.t.endbyte))
     end
     ifblock = EXPR(BLOCK, [], LOCATION(0, 0))
     while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.ELSE && ps.nt.kind!==Tokens.ELSEIF
-        push!(ifblock.args, parse_expression(ps,ps->closer_default(ps) || ps.nt.kind==Tokens.END || ps.nt.kind==Tokens.ELSEIF || ps.nt.kind==Tokens.ELSE))
+        push!(ifblock.args, @closer ps ifelse parse_expression(ps))
     end
 
     elseblock = EXPR(BLOCK, [], LOCATION(ps.nt.startbyte, 0))
     if ps.nt.kind==Tokens.ELSEIF
         next(ps)
-        push!(elseblock.args, parse_if(ps))
+        push!(elseblock.args, parse_if(ps, true))
     end
     if ps.nt.kind==Tokens.ELSE
         next(ps)
@@ -71,7 +71,7 @@ function parse_if(ps::ParseState)
     
     elseblock.loc.stop = ps.nt.endbyte
     ret = isempty(elseblock.args) ? EXPR(kw, [cond, ifblock], LOCATION(kw.loc.start, ps.nt.endbyte)) : EXPR(kw, [cond, ifblock, elseblock], LOCATION(kw.loc.start, ps.nt.endbyte))
-    next(ps)
+    !nested && next(ps)
     return ret
 end
 
@@ -81,7 +81,7 @@ function parse_try(ps::ParseState)
     
     tryblock = EXPR(BLOCK, [], LOCATION(0, 0))
     while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.CATCH 
-        push!(tryblock.args, parse_expression(ps,ps->closer_default(ps) || ps.nt.kind==Tokens.END || ps.nt.kind==Tokens.CATCH))
+        push!(tryblock.args, @closer ps trycatch parse_expression(ps))
     end
     next(ps)
     if ps.t.kind==Tokens.CATCH
@@ -95,5 +95,6 @@ function parse_try(ps::ParseState)
         caught = FALSE
         catchblock = EXPR(BLOCK, [], LOCATION(0, 0))
     end
+    next(ps)
     return EXPR(kw, [tryblock, caught ,catchblock], LOCATION(kw.loc.start, ps.t.endbyte))
 end

@@ -88,14 +88,7 @@ end
 
 timetest(1)
 @timev timetest(10000)
-# 2.74s/722mb
-# 2.02s/493mb
-# 2.02s/475mb
-# 2.02s/430mb
-# 2.02s/430mb
-# 2.02s/414mb
-# 1.96s/414mb
-# @timev timetest2(10000)
+@timev timetest2(1000)
 
 
 if false

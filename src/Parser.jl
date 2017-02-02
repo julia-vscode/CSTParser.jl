@@ -10,6 +10,7 @@ import Tokenize.Lexers: Lexer, peekchar, iswhitespace
 export ParseState
 
 include("parsestate.jl")
+include("utils.jl")
 include("spec.jl")
 include("conversion.jl")
 include("operators.jl")
@@ -17,43 +18,63 @@ include("keywords.jl")
 include("positional.jl")
 include("display.jl")
 
-function parse_expression(ps::ParseState, closer = closer_default)
+function parse_expression(ps::ParseState)
     if Tokens.begin_keywords < ps.nt.kind < Tokens.end_keywords 
         ret = parse_kw_syntax(next(ps))
     elseif ps.nt.kind == Tokens.LPAREN
-        ret = parse_expression(next(ps))
+        ret = @default ps @closer ps paren parse_expression(next(ps))
+        next(ps)
+    elseif ps.nt.kind == Tokens.LSQUARE
+        start = ps.nt.startbyte
+        ret = @default ps @closer ps square parse_expression(next(ps))
+        if ret isa EXPR && ret.head==TUPLE && ret.loc.start==start
+            ret = EXPR(VECT, ret.args, LOCATION(start, ps.nt.endbyte))
+        else
+            ret = EXPR(VECT, [ret], LOCATION(start, ps.nt.endbyte))
+        end
         next(ps)
     elseif isinstance(ps.nt)
         ret = INSTANCE(next(ps))
     elseif isunaryop(ps.nt)
         ret = parse_unary(next(ps))
+    elseif ps.nt.kind==Tokens.AT_SIGN
+        start = ps.nt.startbyte
+        next(ps)
+        ret = EXPR(MACROCALL, [INSTANCE(next(ps))], LOCATION(start, 0))
+        isempty(ps.ws.val) && error("invalid macro name")
+        while !closer(ps)
+            a = @closer ps ws parse_expression(ps)
+            push!(ret.args, a)
+        end
     else
         error("Expression started with $(ps)")
     end
+
 
     while !closer(ps)
         if isoperator(ps.nt)
             ret = parse_operator(ps, ret)
         elseif ps.nt.kind==Tokens.LPAREN
             if isempty(ps.ws.val)
-                ret = parse_call(ps, ret)
+                ret = @default ps @closer ps paren parse_call(ps, ret)
             else
                 error("space before \"(\" not allowed in \"$(Expr(ret)) (\"")
             end
         elseif ps.nt.kind==Tokens.LBRACE
             if isempty(ps.ws.val)
-                args = parse_list(ps)
+                args = @closer ps brace parse_list(ps)
                 ret = EXPR(CURLY, [ret, args...], LOCATION(ret.loc.start, ps.t.endbyte))
             else
                 error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
             end
         elseif ps.nt.kind==Tokens.LSQUARE
             if isempty(ps.ws.val)
+                start = ps.nt.startbyte
                 next(ps)
-                arg = parse_expression(ps)
+                arg = @default ps @closer ps square parse_expression(ps)
                 @assert ps.nt.kind==Tokens.RSQUARE
                 next(ps)
-                ret = EXPR(REF, [ret, arg], LOCATION(ret.loc.start, ps.t.endbyte))
+                ret = EXPR(REF, [ret, arg], LOCATION(start, ps.t.endbyte))
             else
                 error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
             end
@@ -64,7 +85,7 @@ function parse_expression(ps::ParseState, closer = closer_default)
                     ret =  EXPR(TUPLE, [ret], LOCATION(ret.loc.start, ps.t.endbyte))
                 end
             else
-                nextarg = parse_expression(ps, ps->closer_default(ps) || iscomma(ps.nt) || isassignment(ps.nt))
+                nextarg = @closer ps tuple parse_expression(ps)
                 if ret isa EXPR && ret.head==TUPLE
                     push!(ret.args, nextarg)
                     ret.loc.stop = nextarg.loc.stop
@@ -86,7 +107,7 @@ function parse_expression(ps::ParseState, closer = closer_default)
 end
 
 function parse_call(ps::ParseState, ret)
-    args = parse_list(ps)
+    args = @closer ps paren parse_list(ps)
     ret = EXPR(CALL, [ret, args...], LOCATION(ret.loc.start, ps.t.endbyte))
     if ps.nt.kind==Tokens.EQ
         next(ps)
@@ -100,24 +121,19 @@ function parse_call(ps::ParseState, ret)
     return ret
 end
 
-function parse_list(ps::ParseState)
-    if ps.nt.kind == Tokens.LPAREN
-        closer = ps->ps.nt.kind==Tokens.RPAREN
-        delim = ps-> ps.nt.kind == Tokens.COMMA || ps.nt.kind == Tokens.RPAREN
-    elseif ps.nt.kind == Tokens.LBRACE
-        closer = ps->ps.nt.kind==Tokens.RBRACE
-        delim = ps-> ps.nt.kind == Tokens.COMMA || ps.nt.kind == Tokens.RBRACE
-    end
+"""
+    parse_list(ps)
 
+Parses a list of comma seperated expressions finishing when the parent state
+of `ps.closer` is met.
+"""
+function parse_list(ps::ParseState)
     args = Expression[]
     while !closer(ps)
         next(ps)
         closer(ps) && break
-        a = parse_expression(ps, delim)
+        a = @closer ps comma parse_expression(ps)
         push!(args, a)
-        if !delim(ps)
-            error()
-        end
     end
     next(ps)
     return args
@@ -150,7 +166,7 @@ assumed to handle the closer.
 function parse_block(ps::ParseState, ret = EXPR(BLOCK, [], LOCATION(0, 0)))
     start = ps.t.startbyte
     while ps.nt.kind!==Tokens.END
-        push!(ret.args, parse_expression(ps,ps->closer_default(ps) || ps.nt.kind==Tokens.END))
+        push!(ret.args, @closer ps block parse_expression(ps))
     end
     @assert ps.nt.kind==Tokens.END
     ret.loc = LOCATION(isempty(ret.args) ? ps.nt.startbyte : first(ret.args).loc.start, ps.nt.endbyte)
@@ -168,6 +184,6 @@ ischainable(t::Token) = t.val == "+" || t.val == "*" || t.val == "~"
 LtoR(prec::Int) = 1 ≤ prec ≤ 5 || prec == 13
 
 
-include("utils.jl")
+
 
 end
