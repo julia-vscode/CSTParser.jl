@@ -65,7 +65,9 @@ function parse_expression(ps::ParseState)
             end
         elseif ps.nt.kind==Tokens.LBRACE
             if isempty(ps.ws.val)
+                next(ps)
                 args = @closer ps brace parse_list(ps)
+                next(ps)
                 ret = EXPR(CURLY, [ret, args...], LOCATION(ret.loc.start, ps.t.endbyte))
             else
                 error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
@@ -113,7 +115,9 @@ function parse_expression(ps::ParseState)
 end
 
 function parse_call(ps::ParseState, ret)
+    next(ps)
     args = @closer ps paren parse_list(ps)
+    next(ps)
     ret = EXPR(CALL, [ret, args...], LOCATION(ret.loc.start, ps.t.endbyte))
     if ps.nt.kind==Tokens.EQ
         next(ps)
@@ -131,17 +135,16 @@ end
     parse_list(ps)
 
 Parses a list of comma seperated expressions finishing when the parent state
-of `ps.closer` is met.
+of `ps.closer` is met. Expects to start at the first item and ends on the last
+item so surrounding punctuation must be handled externally.
 """
 function parse_list(ps::ParseState)
     args = Expression[]
     while !closer(ps)
-        next(ps)
-        closer(ps) && break
         a = @closer ps comma parse_expression(ps)
         push!(args, a)
+        ps.nt.kind==Tokens.COMMA && next(ps)
     end
-    next(ps)
     return args
 end
 

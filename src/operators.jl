@@ -136,7 +136,9 @@ function parse_operator(ps::ParseState, ret::Expression)
     elseif op_prec==15
         if ps.nt.kind==Tokens.LPAREN
             start = ps.nt.startbyte
+            next(ps)
             args = @closer ps paren parse_list(ps)
+            next(ps)
             nextarg = EXPR(TUPLE, args, LOCATION(start, ps.t.endbyte))
         else
             nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)

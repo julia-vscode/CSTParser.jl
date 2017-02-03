@@ -112,6 +112,7 @@ function parse_imports(ps::ParseState)
         return EXPR(kw, M, LOCATION(kw.loc.start, last(M).loc.stop))
     else
         @assert ps.nt.kind == Tokens.COLON
+        next(ps)
         args = parse_list(ps)
         if length(args)==1
             push!(M, first(args))
