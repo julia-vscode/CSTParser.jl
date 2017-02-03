@@ -26,7 +26,7 @@ function f(x::Int{T})
                     error(err, a,b)
                 end
             else
-                d ="d"
+                d =("d" ,3)
             end
         end
     end

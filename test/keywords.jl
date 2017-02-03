@@ -52,3 +52,29 @@ facts("if blocks") do
     end
 end
 
+
+
+facts("import statements") do
+    strs = ["import ModA"
+            "import ModA.subModA"
+            "import ModA.subModA: a"
+            "import ModA.subModA: a, b, c"]
+    for str in strs
+        ps = Parser.ParseState(str)
+        x = Parser.parse_expression(ps)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        @fact x.loc.stop --> endof(str)
+    end
+end
+
+facts("export statements") do
+    strs = ["export ModA"
+            "export a, b, c"]
+    for str in strs
+        ps = Parser.ParseState(str)
+        x = Parser.parse_expression(ps)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        @fact x.loc.stop --> endof(str)
+    end
+end
+

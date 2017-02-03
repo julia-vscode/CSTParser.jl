@@ -8,6 +8,7 @@ type Closer
     eof::Bool
     tuple::Bool
     comma::Bool
+    dot::Bool
     paren::Bool
     brace::Bool
     square::Bool
@@ -19,7 +20,7 @@ type Closer
     precedence::Int
 end
 
-Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, 0)
+Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, 0)
 
 type ParseState
     l::Lexer

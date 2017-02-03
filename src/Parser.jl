@@ -41,7 +41,7 @@ function parse_expression(ps::ParseState)
         start = ps.nt.startbyte
         next(ps)
         ret = EXPR(MACROCALL, [INSTANCE(next(ps))], LOCATION(start, 0))
-        isempty(ps.ws.val) && error("invalid macro name")
+        isempty(ps.ws.val) && !closer(ps) && error("invalid macro name")
         while !closer(ps)
             a = @closer ps ws parse_expression(ps)
             push!(ret.args, a)
@@ -82,6 +82,9 @@ function parse_expression(ps::ParseState)
                 error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
             end
         elseif ps.nt.kind == Tokens.COMMA
+            if ps.formatcheck && ps.ws.val!=""
+                push!(ps.hints, "remove whitespace at $(ps.nt.startbyte)")
+            end
             next(ps)
             if isassignment(ps.nt)
                 if ret isa EXPR && ret.head!=TUPLE
