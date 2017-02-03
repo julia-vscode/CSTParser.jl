@@ -37,6 +37,8 @@ function parse_expression(ps::ParseState)
         ret = INSTANCE(next(ps))
     elseif isunaryop(ps.nt)
         ret = parse_unary(next(ps))
+    elseif ps.nt.kind==Tokens.DECLARATION
+        ret = emptyinstance
     elseif ps.nt.kind==Tokens.AT_SIGN
         start = ps.nt.startbyte
         next(ps)

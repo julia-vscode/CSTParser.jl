@@ -102,7 +102,11 @@ function parse_operator(ps::ParseState, ret::Expression)
         ret = EXPR(IF, [ret, nextarg, nextarg2], LOCATION(ret.loc.start, nextarg2.loc.stop))
         # ranges/colon
     elseif op.val == ":" 
-        nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
+        if ps.nt.kind == Tokens.END
+            nextarg = INSTANCE(next(ps))
+        else
+            nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
+        end
         if ret isa EXPR && ret.head.val == ":" && length(ret.args)==2
             push!(ret.args, nextarg)
             ret.loc.stop = nextarg.loc.stop
@@ -126,12 +130,19 @@ function parse_operator(ps::ParseState, ret::Expression)
             ret = EXPR(CALL, [op, ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
         end
         # parse assignment, ||, &&, :: or '-->'
-    elseif op_prec==1 || op_prec==4 || op_prec==5 || op_prec==14 || op.val=="-->"
+    elseif op_prec==1 || op_prec==4 || op_prec==5 || op.val=="-->"
         if ps.formatcheck && op_prec==1 && ps.ws.val==""
             push!(ps.hints, "add space at $(ps.nt.startbyte)")
         end
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         ret = EXPR(op, [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
+        # parse '::'
+    elseif op_prec==14
+        if ps.formatcheck && op_prec==1 && ps.ws.val==""
+            push!(ps.hints, "add space at $(ps.nt.startbyte)")
+        end
+        nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
+        ret = EXPR(op, ret == emptyinstance ? [nextarg] : [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
         # parse '.'
     elseif op_prec==15
         if ps.nt.kind==Tokens.LPAREN

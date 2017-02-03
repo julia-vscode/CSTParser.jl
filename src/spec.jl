@@ -45,6 +45,7 @@ type QUOTENODE <: Expression
 end
 
 # heads
+const emptyinstance = INSTANCE("")
 const BLOCK = INSTANCE("block")
 const CALL = INSTANCE("call")
 const CURLY = INSTANCE("curly")

@@ -1,4 +1,3 @@
-
 function parse_kw_syntax(ps::ParseState) 
     if ps.t.kind==Tokens.BEGIN || ps.t.kind==Tokens.QUOTE   
         kw = INSTANCE(ps)
