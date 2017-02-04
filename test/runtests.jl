@@ -24,6 +24,17 @@ function printEXPR(io::IO, x::EXPR)
     end
 end
 
+function checksize(x)
+    if x isa EXPR
+        cnt = 0
+        for a in x
+            checksize(a)
+            cnt+=span(a)
+        end
+        @assert cnt==span(x) "$x"
+    end
+end
+
 include("operators.jl")
 include("functions.jl")
 include("types.jl")

@@ -15,7 +15,8 @@
 # function spanws end
 
 
-span{T<:Expression}(x::T) = x.loc.stop-x.loc.start
+span{T<:Expression}(x::T) = x.loc.stop-x.loc.start+length(x.ws)
+span_no_ws{T<:Expression}(x::T) = x.loc.stop-x.loc.start
 
 
 start(x::INSTANCE) = 1

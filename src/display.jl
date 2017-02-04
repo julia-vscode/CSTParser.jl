@@ -1,5 +1,5 @@
 function Base.show(io::IO, x::INSTANCE,indent=0)
-    println(io, " "^indent, " $(x.val)","    [",x.loc.stop-x.loc.start,"]")
+    println(io, " "^indent, " $(x.val)","    [",span(x),"]")
 end
 
 function Base.show(io::IO, x::QUOTENODE,indent=0)

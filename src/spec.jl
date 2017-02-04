@@ -46,6 +46,7 @@ end
 
 # heads
 const emptyinstance = INSTANCE("")
+const NOTHING = INSTANCE("nothing")
 const BLOCK = INSTANCE("block")
 const CALL = INSTANCE("call")
 const CURLY = INSTANCE("curly")

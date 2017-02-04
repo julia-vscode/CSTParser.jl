@@ -12,6 +12,14 @@ function parse_kw_syntax(ps::ParseState)
         return parse_imports(ps)
     elseif ps.t.kind==Tokens.EXPORT
         return parse_export(ps)
+    elseif ps.t.kind==Tokens.RETURN
+        kw = INSTANCE(ps)
+        if closer(ps)
+            return  EXPR(kw, [NOTHING], LOCATION(kw.loc.start, kw.loc.stop))
+        else
+            arg = parse_expression(ps)
+            return  EXPR(kw, [arg], LOCATION(kw.loc.start, arg.loc.stop))
+        end
     elseif Tokens.begin_0arg_kw < ps.t.kind < Tokens.end_0arg_kw
         kw = INSTANCE(ps)
         return EXPR(kw, [], LOCATION(kw.loc.start, kw.loc.stop))
