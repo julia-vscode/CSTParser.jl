@@ -104,4 +104,12 @@ facts("dot access") do
     end
 end
 
+facts("unary") do
+    ops = ["+", "-", "!", "~", "&", "::", "<:", ">:", "¬", "√", "∛", "∜"]
+    for op in ops
+        str = "$op b" 
+        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+    end
+end
+
 

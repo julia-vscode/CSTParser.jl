@@ -125,7 +125,7 @@ function parse_imports(ps::ParseState)
             push!(M, first(args))
             return EXPR(kw, M, LOCATION(kw.loc.start, last(args).loc.stop))
         else
-            ret = EXPR(INSTANCE{KEYWORD}("toplevel", kw.ws, kw.loc, 0), [], LOCATION(kw.loc.start, last(args).loc.stop))
+            ret = EXPR(INSTANCE{KEYWORD}("toplevel", kw.ws, kw.loc), [], LOCATION(kw.loc.start, last(args).loc.stop))
             for a in args
                 push!(ret.args, EXPR(kw, vcat(M, a), a.loc))
             end

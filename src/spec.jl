@@ -4,7 +4,7 @@ abstract IDENTIFIER <: Expression
 abstract LITERAL <: Expression
 abstract BOOL <: Expression
 abstract KEYWORD <: Expression
-abstract OPERATOR <: Expression
+abstract OPERATOR{P} <: Expression
 abstract DELIMINATOR <: Expression
 
 type LOCATION
@@ -17,16 +17,14 @@ type INSTANCE{T} <: Expression
     val::String
     ws::String
     loc::LOCATION
-    prec::Int
 end
 
 function INSTANCE(ps::ParseState)
     t = isidentifier(ps.t) ? IDENTIFIER : 
         isliteral(ps.t) ? LITERAL :
         iskw(ps.t) ? KEYWORD :
-        isoperator(ps.t) ? OPERATOR :
+        isoperator(ps.t) ? OPERATOR{precedence(ps.t)} :
         error("Couldn't make an INSTANCE from $(ps.t.val)")
-        prec = precedence(ps.t)
     loc = LOCATION(ps.t.startbyte, ps.t.endbyte)
     if t==IDENTIFIER
         if ps.t.val in keys(ps.ids)
@@ -36,9 +34,9 @@ function INSTANCE(ps::ParseState)
         end
     end
 
-    return INSTANCE{t}(ps.t.val, ps.ws.val, loc, prec)
+    return INSTANCE{t}(ps.t.val, ps.ws.val, loc)
 end
-INSTANCE(str::String) = INSTANCE{0}(str, "", emptyloc, 0)
+INSTANCE(str::String) = INSTANCE{0}(str, "", emptyloc)
 
 type QUOTENODE <: Expression
     val::Expression
@@ -58,8 +56,8 @@ const VECT = INSTANCE("vect")
 const MACROCALL = INSTANCE("macrocall")
 const GENERATOR = INSTANCE("generator")
 const COMPREHENSION = INSTANCE("comprehension")
-const TRUE = INSTANCE{LITERAL}("true", "", emptyloc, 0)
-const FALSE = INSTANCE{LITERAL}("false", "", emptyloc, 0)
+const TRUE = INSTANCE{LITERAL}("true", "", emptyloc)
+const FALSE = INSTANCE{LITERAL}("false", "", emptyloc)
 
 type EXPR <: Expression
     head::Expression

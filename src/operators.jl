@@ -40,16 +40,19 @@ isunaryop(t::Token) = t.kind == Tokens.PLUS ||
                       t.kind == Tokens.APPROX ||
                       t.kind == Tokens.ISSUBTYPE ||
                       t.kind == Tokens.NOT_SIGN ||
+                      t.kind == Tokens.AND ||
                       t.kind == Tokens.GREATER_COLON ||
                       t.kind == Tokens.SQUARE_ROOT ||
                       t.kind == Tokens.CUBE_ROOT ||
-                      t.kind == Tokens.QUAD_ROOT
+                      t.kind == Tokens.QUAD_ROOT ||
+                      t.kind == Tokens.DECLARATION
 
 isunaryandbinaryop(t::Token) = t.kind == Tokens.PLUS ||
                                t.kind == Tokens.MINUS ||
                                t.kind == Tokens.EX_OR ||
                                t.kind == Tokens.AND ||
-                               t.kind == Tokens.APPROX
+                               t.kind == Tokens.APPROX ||
+                               t.kind == Tokens.DECLARATION
 
 isbinaryop(t::Token) = isoperator(t) && 
                     !(t.kind == Tokens.SQUARE_ROOT || 
@@ -74,6 +77,38 @@ istimes(t::Token) = Tokens.begin_times < t.kind < Tokens.end_times
 ispower(t::Token) = Tokens.begin_power < t.kind < Tokens.end_power
 
 
+function issyntaxcall(op::String)
+    sizeof(op)<=4 && (
+    op == "=" ||
+    op == "+=" ||
+    op == "-=" ||
+    op == "*=" ||
+    op == "/=" ||
+    op == "//=" ||
+    op == "|=" ||
+    op == "^=" ||
+    op == "=" ||
+    op == "%=" ||
+    op == "<<=" ||
+    op == ">>=" ||
+    op == ">>>=" ||
+    op == "\\=" ||
+    op == "&=" ||
+    op == ":=" ||
+    op == "=>" ||
+    op == "\$=" ||
+    op == "||" ||
+    op == "&&" ||
+    op == "<:" ||
+    op == ">:" ||
+    op == "-->" ||
+    op == ":" ||
+    op == "&" ||
+    op == ".." ||
+    op == "::" ||
+    op == ".")
+end
+
 """
     parse_unary(ps)
 
@@ -82,7 +117,11 @@ Having hit a unary operator at the start of an expression return a call.
 function parse_unary(ps::ParseState)
     op = INSTANCE(ps)
     arg = parse_expression(ps)
-    EXPR(CALL, [op, arg], LOCATION(op.loc.start, arg.loc.stop))
+    if issyntaxcall(op.val) && !(op.val=="<:" || op.val==">:")
+        return EXPR(op, [arg], LOCATION(op.loc.start, arg.loc.stop))
+    else
+        return EXPR(CALL, [op, arg], LOCATION(op.loc.start, arg.loc.stop))
+    end
 end
 
 function parse_operator(ps::ParseState, ret::Expression)
@@ -120,7 +159,8 @@ function parse_operator(ps::ParseState, ret::Expression)
             push!(ret.args, op)
             push!(ret.args, nextarg)
             ret.loc.stop = nextarg.loc.stop
-        elseif ret isa EXPR && ret.head == CALL && ret.args[1].prec==6
+        # elseif ret isa EXPR && ret.head == CALL && ret.args[1].prec==6
+        elseif ret isa EXPR && ret.head == CALL && ret.args[1] isa INSTANCE{OPERATOR{6}}
             ret = EXPR(COMPARISON, [ret.args[2], ret.args[1], ret.args[3], op, nextarg], LOCATION(ret.args[1].loc.start, nextarg.loc.stop))
         elseif ret isa EXPR && (ret.head.val == "<:" || ret.head.val == ">:")
             ret = EXPR(COMPARISON, [ret.args[1], ret.head, ret.args[2], op, nextarg], LOCATION(ret.args[1].loc.start, nextarg.loc.stop))

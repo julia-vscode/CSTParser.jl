@@ -37,8 +37,6 @@ function parse_expression(ps::ParseState)
         ret = INSTANCE(next(ps))
     elseif isunaryop(ps.nt)
         ret = parse_unary(next(ps))
-    elseif ps.nt.kind==Tokens.DECLARATION
-        ret = emptyinstance
     elseif ps.nt.kind==Tokens.AT_SIGN
         start = ps.nt.startbyte
         next(ps)
@@ -163,10 +161,10 @@ function parse_generator(ps::ParseState, ret)
     op = INSTANCE(ps)
     range = parse_expression(ps)
     if range.head==CALL && range.args[1] isa INSTANCE && range.args[1].val=="in" || range.args[1].val=="∈"
-        range = EXPR(INSTANCE{OPERATOR}("=", range.args[1].ws, range.args[1].loc, range.args[1].prec), range.args[2:3], range.loc)
+        range = EXPR(INSTANCE{OPERATOR}("=", range.args[1].ws, range.args[1].loc), range.args[2:3], range.loc)
     end
 
-    ret = EXPR(INSTANCE{KEYWORD}("generator", op.ws, op.loc, op.prec), [ret, range])
+    ret = EXPR(INSTANCE{KEYWORD}("generator", op.ws, op.loc), [ret, range])
     if !(ps.nt.kind==Tokens.RPAREN || ps.nt.kind==Tokens.RSQUARE)
         error("generator/comprehension syntax not followed by ')' or ']'")
     end
