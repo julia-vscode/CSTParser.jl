@@ -16,7 +16,7 @@ const emptyloc = LOCATION(-1, -1)
 type INSTANCE{T} <: Expression
     val::String
     ws::String
-    loc::LOCATION
+    span::Int
 end
 
 function INSTANCE(ps::ParseState)
@@ -34,9 +34,9 @@ function INSTANCE(ps::ParseState)
         end
     end
 
-    return INSTANCE{t}(ps.t.val, ps.ws.val, loc)
+    return INSTANCE{t}(ps.t.val, ps.ws.val, ps.ws.endbyte-ps.t.startbyte)
 end
-INSTANCE(str::String) = INSTANCE{0}(str, "", emptyloc)
+INSTANCE(str::String) = INSTANCE{0}(str, "", 0)
 
 type QUOTENODE <: Expression
     val::Expression
@@ -56,13 +56,13 @@ const VECT = INSTANCE("vect")
 const MACROCALL = INSTANCE("macrocall")
 const GENERATOR = INSTANCE("generator")
 const COMPREHENSION = INSTANCE("comprehension")
-const TRUE = INSTANCE{LITERAL}("true", "", emptyloc)
-const FALSE = INSTANCE{LITERAL}("false", "", emptyloc)
+const TRUE = INSTANCE{LITERAL}("true", "", 0)
+const FALSE = INSTANCE{LITERAL}("false", "", 0)
 
 type EXPR <: Expression
     head::Expression
     args::Vector{Expression}
-    loc::LOCATION
+    span::Int
 end
 
-EXPR(head, args) = EXPR(head, args, emptyloc)
+EXPR(head, args) = EXPR(head, args, 0)

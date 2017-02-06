@@ -118,9 +118,9 @@ function parse_unary(ps::ParseState)
     op = INSTANCE(ps)
     arg = parse_expression(ps)
     if issyntaxcall(op.val) && !(op.val=="<:" || op.val==">:")
-        return EXPR(op, [arg], LOCATION(op.loc.start, arg.loc.stop))
+        return EXPR(op, [arg], op.span + arg.span)
     else
-        return EXPR(CALL, [op, arg], LOCATION(op.loc.start, arg.loc.stop))
+        return EXPR(CALL, [op, arg], op.span + arg.span)
     end
 end
 
@@ -132,15 +132,17 @@ function parse_operator(ps::ParseState, ret::Expression)
     if ret isa EXPR && ret.head==CALL && ret.args[1].val == op.val  && (op.val == "+" || op.val == "*")
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         push!(ret.args, nextarg)
-        ret.loc.stop = nextarg.loc.stop
+        ret.span += nextarg.span + op.span
         # a ? b : c syntax
-    elseif op_prec == 2 
+    elseif op_prec == 2
+        start = ps.t.startbyte
         nextarg = @closer ps ifop parse_expression(ps)
         op2 = INSTANCE(next(ps))
         nextarg2 = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        ret = EXPR(IF, [ret, nextarg, nextarg2], LOCATION(ret.loc.start, nextarg2.loc.stop))
+        ret = EXPR(IF, [ret, nextarg, nextarg2], ret.span + ps.t.endbyte - start)
         # ranges/colon
     elseif op.val == ":" 
+        start = ps.t.startbyte
         if ps.nt.kind == Tokens.END
             nextarg = INSTANCE(next(ps))
         else
@@ -148,9 +150,9 @@ function parse_operator(ps::ParseState, ret::Expression)
         end
         if ret isa EXPR && ret.head.val == ":" && length(ret.args)==2
             push!(ret.args, nextarg)
-            ret.loc.stop = nextarg.loc.stop
+            ret.span += ps.t.endbyte-start
         else
-            ret = EXPR(op, [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
+            ret = EXPR(op, [ret, nextarg], ret.span + ps.t.endbyte - start)
         end
         # comparison
     elseif op_prec == 6 
@@ -158,16 +160,15 @@ function parse_operator(ps::ParseState, ret::Expression)
         if ret isa EXPR && ret.head==COMPARISON
             push!(ret.args, op)
             push!(ret.args, nextarg)
-            ret.loc.stop = nextarg.loc.stop
-        # elseif ret isa EXPR && ret.head == CALL && ret.args[1].prec==6
+            ret.span += op.span + nextarg.span
         elseif ret isa EXPR && ret.head == CALL && ret.args[1] isa INSTANCE{OPERATOR{6}}
-            ret = EXPR(COMPARISON, [ret.args[2], ret.args[1], ret.args[3], op, nextarg], LOCATION(ret.args[1].loc.start, nextarg.loc.stop))
+            ret = EXPR(COMPARISON, [ret.args[2], ret.args[1], ret.args[3], op, nextarg], ret.args[2].span + ret.args[1].span + ret.args[3].span + op.span + nextarg.span)
         elseif ret isa EXPR && (ret.head.val == "<:" || ret.head.val == ">:")
-            ret = EXPR(COMPARISON, [ret.args[1], ret.head, ret.args[2], op, nextarg], LOCATION(ret.args[1].loc.start, nextarg.loc.stop))
+            ret = EXPR(COMPARISON, [ret.args[1], ret.head, ret.args[2], op, nextarg], ret.args[1].span + ret.head.span + ret.args[2].span + op.span + nextarg.span)
         elseif op.val == "<:" || op.val == ">:"
-            ret = EXPR(op, [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
+            ret = EXPR(op, [ret, nextarg], ret.span + op.span + nextarg.span)
         else
-            ret = EXPR(CALL, [op, ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
+            ret = EXPR(CALL, [op, ret, nextarg], op.span + ret.span + nextarg.span)
         end
         # parse assignment, ||, &&, :: or '-->'
     elseif op_prec==1 || op_prec==4 || op_prec==5 || op.val=="-->"
@@ -175,14 +176,14 @@ function parse_operator(ps::ParseState, ret::Expression)
             push!(ps.hints, "add space at $(ps.nt.startbyte)")
         end
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        ret = EXPR(op, [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
+        ret = EXPR(op, [ret, nextarg], op.span + ret.span + nextarg.span)
         # parse '::'
     elseif op_prec==14
         if ps.formatcheck && op_prec==1 && ps.ws.val==""
             push!(ps.hints, "add space at $(ps.nt.startbyte)")
         end
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        ret = EXPR(op, ret == emptyinstance ? [nextarg] : [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
+        ret = EXPR(op, [ret, nextarg], op.span + ret.span + nextarg.span)
         # parse '.'
     elseif op_prec==15
         if ps.nt.kind==Tokens.LPAREN
@@ -190,21 +191,21 @@ function parse_operator(ps::ParseState, ret::Expression)
             next(ps)
             args = @closer ps paren parse_list(ps)
             next(ps)
-            nextarg = EXPR(TUPLE, args, LOCATION(start, ps.t.endbyte))
+            nextarg = EXPR(TUPLE, args, ps.t.endbyte - start)
         else
             nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         end
 
         if nextarg isa INSTANCE
-            ret = EXPR(op, [ret, QUOTENODE(nextarg)], LOCATION(ret.loc.start, nextarg.loc.stop))
+            ret = EXPR(op, [ret, QUOTENODE(nextarg)], op.span + ret.span + nextarg.span)
         else
-            ret = EXPR(op, [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
+            ret = EXPR(op, [ret, nextarg], op.span + ret.span + nextarg.span)
         end
     elseif op.val=="..." || op.val=="'"
-        ret = EXPR(op, [ret],LOCATION(ret.loc.start, op.loc.stop))
+        ret = EXPR(op, [ret], op.span + ret.span)
     else
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        ret = EXPR(CALL, [op, ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
+        ret = EXPR(CALL, [op, ret, nextarg], op.span + ret.span + nextarg.span)
     end
     return ret
 end

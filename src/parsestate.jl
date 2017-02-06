@@ -60,7 +60,7 @@ function next(ps::ParseState)
         readchar(ps.l)
         ps.nws = lex_ws_comment(ps.l)
     else
-        ps.nws = Parser.empty_whitespace
+        ps.nws = Token(Tokens.WHITESPACE, (0, 0), (0, 0), ps.nt.endbyte, ps.nt.endbyte, "")
     end
     return ps
 end

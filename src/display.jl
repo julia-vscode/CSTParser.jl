@@ -1,5 +1,5 @@
 function Base.show(io::IO, x::INSTANCE,indent=0)
-    println(io, " "^indent, " $(x.val)","    [",span(x),"]")
+    println(io, " "^indent, " $(x.val)","    [",x.span,"]")
 end
 
 function Base.show(io::IO, x::QUOTENODE,indent=0)
@@ -16,7 +16,7 @@ function Base.show(io::IO, x::EXPR,indent=0)
     else
         name = string(x.head.val)
     end
-    println(io, " "^indent, "↘ ", name,"    [",x.loc.stop-x.loc.start,"]")
+    println(io, " "^indent, "↘ ", name,"    [", x.span, "]")
     for a in x.args[(1+(x.head==CALL)):end]
         show(io, a, indent+1)
     end 

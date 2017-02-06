@@ -27,10 +27,10 @@ function parse_expression(ps::ParseState)
     elseif ps.nt.kind == Tokens.LSQUARE
         start = ps.nt.startbyte
         ret = @default ps @closer ps square parse_expression(next(ps))
-        if ret isa EXPR && ret.head==TUPLE && ret.loc.start==start
-            ret = EXPR(VECT, ret.args, LOCATION(start, ps.nt.endbyte))
+        if ret isa EXPR && ret.head==TUPLE #&& ret.loc.start==start
+            ret = EXPR(VECT, ret.args, ps.nt.endbyte - start)
         else
-            ret = EXPR(VECT, [ret], LOCATION(start, ps.nt.endbyte))
+            ret = EXPR(VECT, [ret], ps.nt.endbyte - start)
         end
         next(ps)
     elseif isinstance(ps.nt)
@@ -38,14 +38,7 @@ function parse_expression(ps::ParseState)
     elseif isunaryop(ps.nt)
         ret = parse_unary(next(ps))
     elseif ps.nt.kind==Tokens.AT_SIGN
-        start = ps.nt.startbyte
-        next(ps)
-        ret = EXPR(MACROCALL, [INSTANCE(next(ps))], LOCATION(start, 0))
-        isempty(ps.ws.val) && !closer(ps) && error("invalid macro name")
-        while !closer(ps)
-            a = @closer ps ws parse_expression(ps)
-            push!(ret.args, a)
-        end
+        ret = parse_macrocall(next(ps))
     else
         error("Expression started with $(ps)")
     end
@@ -66,9 +59,10 @@ function parse_expression(ps::ParseState)
         elseif ps.nt.kind==Tokens.LBRACE
             if isempty(ps.ws.val)
                 next(ps)
+                start = ps.t.startbyte
                 args = @closer ps brace parse_list(ps)
                 next(ps)
-                ret = EXPR(CURLY, [ret, args...], LOCATION(ret.loc.start, ps.t.endbyte))
+                ret = EXPR(CURLY, [ret, args...], ps.t.endbyte - start)
             else
                 error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
             end
@@ -79,7 +73,7 @@ function parse_expression(ps::ParseState)
                 arg = @default ps @closer ps square parse_expression(ps)
                 @assert ps.nt.kind==Tokens.RSQUARE
                 next(ps)
-                ret = EXPR(REF, [ret, arg], LOCATION(start, ps.t.endbyte))
+                ret = EXPR(REF, [ret, arg], ps.t.endbyte - start)
             else
                 error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
             end
@@ -88,17 +82,18 @@ function parse_expression(ps::ParseState)
                 push!(ps.hints, "remove whitespace at $(ps.nt.startbyte)")
             end
             next(ps)
+            start = ps.nt.startbyte
             if isassignment(ps.nt)
                 if ret isa EXPR && ret.head!=TUPLE
-                    ret =  EXPR(TUPLE, [ret], LOCATION(ret.loc.start, ps.t.endbyte))
+                    ret =  EXPR(TUPLE, [ret], ps.t.endbyte - start)
                 end
             else
                 nextarg = @closer ps tuple parse_expression(ps)
                 if ret isa EXPR && ret.head==TUPLE
                     push!(ret.args, nextarg)
-                    ret.loc.stop = nextarg.loc.stop
+                    ret.span += ps.t.endbyte-start
                 else
-                    ret =  EXPR(TUPLE, [ret, nextarg], LOCATION(ret.loc.start, nextarg.loc.stop))
+                    ret =  EXPR(TUPLE, [ret, nextarg], ret.span+ps.t.endbyte-start)
                 end
             end
         elseif ps.nt.kind == Tokens.FOR 
@@ -115,18 +110,20 @@ function parse_expression(ps::ParseState)
 end
 
 function parse_call(ps::ParseState, ret)
+    start = ps.nt.startbyte
     next(ps)
     args = @closer ps paren parse_list(ps)
     next(ps)
-    ret = EXPR(CALL, [ret, args...], LOCATION(ret.loc.start, ps.t.endbyte))
+    ret = EXPR(CALL, [ret, args...], ret.span + ps.t.endbyte - start)
     if ps.nt.kind==Tokens.EQ
+        start = ps.nt.startbyte
         next(ps)
         op = INSTANCE(ps)
         body = parse_expression(ps)
         if !(body isa EXPR) || body.head!= BLOCK
-            body = EXPR(BLOCK, [body], LOCATION(body.loc.start, body.loc.stop))
+            body = EXPR(BLOCK, [body], 0)
         end
-        ret = EXPR(op, [ret, body], LOCATION(ret.loc.start, body.loc.stop))
+        ret = EXPR(op, [ret, body], ps.t.endbyte - start)
     end
     return ret
 end
@@ -161,16 +158,29 @@ function parse_generator(ps::ParseState, ret)
     op = INSTANCE(ps)
     range = parse_expression(ps)
     if range.head==CALL && range.args[1] isa INSTANCE && range.args[1].val=="in" || range.args[1].val=="∈"
-        range = EXPR(INSTANCE{OPERATOR}("=", range.args[1].ws, range.args[1].loc), range.args[2:3], range.loc)
+        range = EXPR(INSTANCE{OPERATOR}("=", range.args[1].ws, range.args[1].span), range.args[2:3], range.span)
     end
 
-    ret = EXPR(INSTANCE{KEYWORD}("generator", op.ws, op.loc), [ret, range])
+    ret = EXPR(INSTANCE{KEYWORD}("generator", op.ws, op.span), [ret, range])
     if !(ps.nt.kind==Tokens.RPAREN || ps.nt.kind==Tokens.RSQUARE)
         error("generator/comprehension syntax not followed by ')' or ']'")
     end
     return ret
 end
 
+
+
+function parse_macrocall(ps::ParseState)
+    start = ps.t.startbyte
+    ret = EXPR(MACROCALL, [INSTANCE(next(ps))], -start)
+    isempty(ps.ws.val) && !closer(ps) && error("invalid macro name")
+    while !closer(ps)
+        a = @closer ps ws parse_expression(ps)
+        push!(ret.args, a)
+    end
+    ret.span+=ps.t.endbyte
+    return ret
+end
 
 """
     parseblocks(ps, ret = EXPR(BLOCK,...))
@@ -179,32 +189,20 @@ Parses an array of expressions (stored in ret) until 'end' is the next token.
 Returns `ps` the token before the closing `end`, the calling function is 
 assumed to handle the closer.
 """
-function parse_block(ps::ParseState, ret = EXPR(BLOCK, [], LOCATION(0, 0)))
+function parse_block(ps::ParseState, ret = EXPR(BLOCK, [], 0))
     start = ps.t.startbyte
     while ps.nt.kind!==Tokens.END
         push!(ret.args, @closer ps block parse_expression(ps))
     end
     @assert ps.nt.kind==Tokens.END
-    ret.loc = LOCATION(isempty(ret.args) ? ps.nt.startbyte : first(ret.args).loc.start, ps.nt.endbyte)
+    ret.span = ps.nt.endbyte - start
     return ret
 end
 
 
 function parse(str::String, cont = false)
-    # if isfile(str)
-    #     ps = Parser.ParseState(readstring(str))
-    # else
-        ps = Parser.ParseState(str)
-    # end
-    # if cont
-    #     ret = EXPR(BLOCK, [], LOCATION(0,0))
-    #     while ps.nt.kind!=Tokens.ENDMARKER
-    #         push!(ret.args, parse_expression(ps))
-    #     end
-    #     ret.loc.stop = ps.t.endbyte
-    # else 
-        ret = parse_expression(ps)
-    # end
+    ps = Parser.ParseState(str)
+    ret = parse_expression(ps)
     return ret
 end
 

@@ -27,7 +27,7 @@ facts("operators") do
     for str in strs
         x = Parser.parse(str)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-        @fact x.loc.stop --> endof(str)
+        @fact x.span --> endof(str)
         @fact sprint(printEXPR, x) --> str
     end
     for str1 in strs
@@ -35,7 +35,7 @@ facts("operators") do
             str = "$str1 $(randop()) $str2"
             x = Parser.parse(str)
             @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-            @fact x.loc.stop --> endof(str)
+            @fact x.span --> endof(str)
             @fact sprint(printEXPR, x) --> str
         end
     end
@@ -47,7 +47,7 @@ facts("operators") do
         str = join([["$i $(randop()) " for i = 1:n-1];"$n"])
         x = Parser.parse(str)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-        @fact x.loc.stop --> endof(str)
+        @fact x.span --> endof(str)
         @fact sprint(printEXPR, x) --> str
     end
 end
@@ -78,7 +78,7 @@ facts("operators") do
             str = join([["x$(randop())" for i = 1:n-1];"x"])
             x = Parser.parse(str)
             @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-            @fact x.loc.stop --> endof(str)
+            @fact x.span --> endof(str)
         end
     end
 end
