@@ -4,68 +4,69 @@ abstract IDENTIFIER <: Expression
 abstract LITERAL <: Expression
 abstract BOOL <: Expression
 abstract KEYWORD <: Expression
-abstract OPERATOR <: Expression
+abstract OPERATOR{P} <: Expression
+abstract PUNCTUATION <: Expression
+
+type LOCATION
+    start::Int
+    stop::Int
+end
+const emptyloc = LOCATION(-1, -1)
 
 type INSTANCE{T} <: Expression
-    span::Int
     val::String
     ws::String
+    span::Int
 end
 
 function INSTANCE(ps::ParseState)
     t = isidentifier(ps.t) ? IDENTIFIER : 
         isliteral(ps.t) ? LITERAL :
-        isbool(ps.t) ? BOOL : 
         iskw(ps.t) ? KEYWORD :
-        isoperator(ps.t) ? OPERATOR :
-        error("Couldn't make an INSTANCE from $(ps.t.val)")
+        isoperator(ps.t) ? OPERATOR{precedence(ps.t)} :
+        ispunctuation(ps.t) ? PUNCTUATION :
+        error("Couldn't make an INSTANCE from $(ps)")
+    loc = LOCATION(ps.t.startbyte, ps.t.endbyte)
+    if t==IDENTIFIER
+        if ps.t.val in keys(ps.ids)
+            push!(ps.ids[ps.t.val], loc)
+        else
+            ps.ids[ps.t.val] = [loc]
+        end
+    end
 
-    return INSTANCE{t}(span(ps.t), (ps.t.val), ps.ws.val)
+    return INSTANCE{t}(ps.t.val, ps.ws.val, ps.ws.endbyte-ps.t.startbyte)
 end
+INSTANCE(str::String) = INSTANCE{0}(str, "", 0)
 
-
-type CURLY <: Expression
+type QUOTENODE <: Expression
+    val::Expression
     span::Int
-    name::INSTANCE
-    args::Vector{Expression}
 end
 
-abstract ARGUMENT <: Expression
-abstract CURLY <: Expression
-abstract VECTOR <: Expression
-abstract MATRIX <: Expression
-abstract COMPREHENSION <: Expression
-abstract GENERATOR <: Expression
-    
-type LIST{t} <: Expression
+# heads
+const emptyinstance = INSTANCE("")
+const NOTHING = INSTANCE("nothing")
+const BLOCK = INSTANCE("block")
+const CALL = INSTANCE("call")
+const CURLY = INSTANCE("curly")
+const REF = INSTANCE("ref")
+const COMPARISON = INSTANCE("comparison")
+const IF = INSTANCE("if")
+const TUPLE = INSTANCE("tuple")
+const VECT = INSTANCE("vect")
+const MACROCALL = INSTANCE("macrocall")
+const GENERATOR = INSTANCE("generator")
+const COMPREHENSION = INSTANCE("comprehension")
+const TRUE = INSTANCE{LITERAL}("true", "", 0)
+const FALSE = INSTANCE{LITERAL}("false", "", 0)
+
+type EXPR <: Expression
+    head::Expression
+    args::Vector{Expression}
     span::Int
-    opener::INSTANCE
-    args::Vector{Expression}
-    closer::INSTANCE
+    punctuation::Vector{Expression}
 end
 
-type BLOCK <: Expression
-    span::Int
-    oneliner::Bool
-    args::Vector{Expression}
-end
-BLOCK() = BLOCK(0, false, [])
-
-type COMPARISON <: Expression
-    span::Int
-    args::Vector{Expression}
-end
-
-type CALL <: Expression
-    span::Intz
-    name::Expression
-    args::Vector{Expression}
-    prec::Int
-end
-
-type KEYWORD_BLOCK{Nargs} <: Expression
-    span::Int
-    opener::INSTANCE{KEYWORD}
-    args::Vector{Expression}
-    closer
-end
+EXPR(head, args) = EXPR(head, args, 0)
+EXPR(head, args, span::Int) = EXPR(head, args, span, [])

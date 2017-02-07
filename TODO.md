@@ -1,25 +1,16 @@
 # To do list
 
 Operators
-+ parse colon/range
-+ parse dot access
-+ parse arrows
-+ ? syntax
++ fix precedence rules for '.' and '? : '
 + assignment, give error if incorrect lhs and return block on rhs
-+ try/if blocks
-+ unary ops
 + handle ';'
 Unhandled 'head's
 + ccall
-+ comprehension
-+ generator
 + kw
 + parameters
-+ ref
 + stdcall
 + string
 + toplevel
-+ tuple
 + typed_comprehension
 + typed_vcat
 + vcat
