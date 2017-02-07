@@ -9,8 +9,7 @@ randop() = rand(["-->", "→",
                  "^", "↑",
                  "::"])
 
-
-facts("operators") do
+facts("operators simple") do
     strs =  ["1 + 2 - 3"
              "1 * 2 / 3"
              "1 + 2 * 3"
@@ -27,16 +26,18 @@ facts("operators") do
     for str in strs
         x = Parser.parse(str)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-        @fact x.loc.stop --> endof(str)
+        @fact x.span --> endof(str)
         @fact sprint(printEXPR, x) --> str
+        @fact checkspan(x) --> true
     end
     for str1 in strs
         for str2 in strs
             str = "$str1 $(randop()) $str2"
             x = Parser.parse(str)
             @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-            @fact x.loc.stop --> endof(str)
+            @fact x.span --> endof(str)
             @fact sprint(printEXPR, x) --> str
+            @fact checkspan(x) --> true
         end
     end
 end
@@ -47,8 +48,9 @@ facts("operators") do
         str = join([["$i $(randop()) " for i = 1:n-1];"$n"])
         x = Parser.parse(str)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-        @fact x.loc.stop --> endof(str)
+        @fact x.span --> endof(str)
         @fact sprint(printEXPR, x) --> str
+        @fact checkspan(x) --> true
     end
 end
 
@@ -78,7 +80,8 @@ facts("operators") do
             str = join([["x$(randop())" for i = 1:n-1];"x"])
             x = Parser.parse(str)
             @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-            @fact x.loc.stop --> endof(str)
+            @fact x.span --> endof(str)
+            @fact checkspan(x) --> true
         end
     end
 end
@@ -88,7 +91,9 @@ facts("? : syntax") do
             "a ? b:c : d"
             "a ? b:c : d:e"]
     for str in strs
-        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+        x = Parser.parse(str)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        @fact checkspan(x) --> true
     end
 end
 
@@ -100,7 +105,19 @@ facts("dot access") do
             "(a).b.(c)"
             "(a).b.(c+d)"]
     for str in strs
-        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+        x = Parser.parse(str)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        # @fact checkspan(x) --> true
+    end
+end
+
+facts("unary") do
+    ops = ["+", "-", "!", "~", "&", "::", "<:", ">:", "¬", "√", "∛", "∜"]
+    for op in ops
+        str = "$op b" 
+        x = Parser.parse(str)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        @fact checkspan(x) --> true
     end
 end
 

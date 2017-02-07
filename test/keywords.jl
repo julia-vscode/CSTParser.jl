@@ -9,11 +9,6 @@ facts("if blocks") do
                 f(1)
                 f(2)
             end"""
-            # """if true
-            #     f(1)
-            #     f(2)
-            # else
-            # end"""
             """if true
                 f(1)
                 f(2)
@@ -37,7 +32,19 @@ facts("if blocks") do
                 f(2)
             else
                 f(3)
-            end"""
+            end"""]
+    for str in strs
+        ps = Parser.ParseState(str)
+        x = Parser.parse_expression(ps)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        @fact x.span --> endof(str)
+        @fact ps.t.kind --> Tokenize.Tokens.END "span mismatch for $str"
+        @fact checkspan(x) --> true "span mismatch for $str"
+    end
+end
+
+facts("try blocks") do
+    strs = ["try f(1) end"
             """try
                 f(1)
             catch err
@@ -47,8 +54,9 @@ facts("if blocks") do
         ps = Parser.ParseState(str)
         x = Parser.parse_expression(ps)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-        @fact x.loc.stop --> endof(str)
-        @fact ps.t.kind --> Tokenize.Tokens.END
+        @fact x.span --> endof(str)
+        @fact ps.t.kind --> Tokenize.Tokens.END "span mismatch for $str"
+        @fact checkspan(x) --> true "span mismatch for $str"
     end
 end
 
@@ -63,7 +71,8 @@ facts("import statements") do
         ps = Parser.ParseState(str)
         x = Parser.parse_expression(ps)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-        @fact x.loc.stop --> endof(str)
+        @fact x.span --> endof(str)
+        @fact checkspan(x) --> true "span mismatch for $str"
     end
 end
 
@@ -74,7 +83,8 @@ facts("export statements") do
         ps = Parser.ParseState(str)
         x = Parser.parse_expression(ps)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-        @fact x.loc.stop --> endof(str)
+        @fact x.span --> endof(str)
+        @fact checkspan(x) --> true "span mismatch for $str"
     end
 end
 

@@ -28,6 +28,8 @@ facts("type definitions") do
                 c::Vector{Int}
              end"""]
     for str in strs
-        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+        x = Parser.parse(str)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        @fact checkspan(x) --> true "span mismatch for $str"
     end
 end

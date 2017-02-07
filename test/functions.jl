@@ -10,7 +10,8 @@ facts("function calls") do
     for str in strs
         x = Parser.parse(str)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-        @fact x.loc.stop --> endof(str)
+        @fact x.span --> endof(str)
+        @fact checkspan(x) --> true
     end
 end
 
@@ -23,7 +24,8 @@ facts("one liner functions") do
     for str in strs
         x = Parser.parse(str)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-        @fact x.loc.stop --> endof(str)
+        @fact x.span --> endof(str)
+        @fact checkspan(x) --> true
     end
 end
 
@@ -46,6 +48,7 @@ facts("function definitions") do
     for str in strs
         x = Parser.parse(str)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-        @fact x.loc.stop --> endof(str)
+        @fact x.span --> endof(str)
+        @fact checkspan(x) --> true
     end
 end
