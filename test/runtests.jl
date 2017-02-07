@@ -24,15 +24,15 @@ function printEXPR(io::IO, x::EXPR)
     end
 end
 
-function checksize(x)
+function checkspan(x)
     if x isa EXPR
         cnt = 0
         for a in x
-            checksize(a)
-            cnt+=span(a)
+            checkspan(a)
         end
-        @assert cnt==span(x) "$x"
+        @assert x.span == sum(a.span for a in x)
     end
+    true
 end
 
 include("operators.jl")
@@ -101,12 +101,9 @@ timetest(1)
 @timev timetest(10000)
 @timev timetest2(1000)
 
+facts("fullspec") do
+    x = Parser.parse(examplemodule)
+    sizeof(examplemodule)
+    @fact x.span --> sizeof(examplemodule)
 
-if false
-#     using ProfileView, BenchmarkTools
-#     @benchmark timetest(10)
-    Profile.clear()
-    Profile.init(delay=0.0001)
-    @profile timetest(1000)
-    ProfileView.view()
 end

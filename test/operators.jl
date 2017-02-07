@@ -9,8 +9,7 @@ randop() = rand(["-->", "→",
                  "^", "↑",
                  "::"])
 
-
-facts("operators") do
+facts("operators simple") do
     strs =  ["1 + 2 - 3"
              "1 * 2 / 3"
              "1 + 2 * 3"
@@ -29,6 +28,7 @@ facts("operators") do
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
         @fact x.span --> endof(str)
         @fact sprint(printEXPR, x) --> str
+        @fact checkspan(x) --> true
     end
     for str1 in strs
         for str2 in strs
@@ -37,6 +37,7 @@ facts("operators") do
             @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
             @fact x.span --> endof(str)
             @fact sprint(printEXPR, x) --> str
+            @fact checkspan(x) --> true
         end
     end
 end
@@ -49,6 +50,7 @@ facts("operators") do
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
         @fact x.span --> endof(str)
         @fact sprint(printEXPR, x) --> str
+        @fact checkspan(x) --> true
     end
 end
 
@@ -79,6 +81,7 @@ facts("operators") do
             x = Parser.parse(str)
             @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
             @fact x.span --> endof(str)
+            @fact checkspan(x) --> true
         end
     end
 end
@@ -88,7 +91,9 @@ facts("? : syntax") do
             "a ? b:c : d"
             "a ? b:c : d:e"]
     for str in strs
-        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+        x = Parser.parse(str)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        @fact checkspan(x) --> true
     end
 end
 
@@ -100,7 +105,9 @@ facts("dot access") do
             "(a).b.(c)"
             "(a).b.(c+d)"]
     for str in strs
-        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+        x = Parser.parse(str)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        # @fact checkspan(x) --> true
     end
 end
 
@@ -108,7 +115,9 @@ facts("unary") do
     ops = ["+", "-", "!", "~", "&", "::", "<:", ">:", "¬", "√", "∛", "∜"]
     for op in ops
         str = "$op b" 
-        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+        x = Parser.parse(str)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        @fact checkspan(x) --> true
     end
 end
 

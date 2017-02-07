@@ -134,4 +134,7 @@ isinstance(t::Token) = isidentifier(t) ||
                        iskw(t)
 
 
+ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
+                          t.kind == Tokens.END ||
+                          Tokens.LSQUARE ≤ t.kind ≤ Tokens.RPAREN
 

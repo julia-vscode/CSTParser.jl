@@ -11,6 +11,7 @@ facts("function calls") do
         x = Parser.parse(str)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
         @fact x.span --> endof(str)
+        @fact checkspan(x) --> true
     end
 end
 
@@ -24,6 +25,7 @@ facts("one liner functions") do
         x = Parser.parse(str)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
         @fact x.span --> endof(str)
+        @fact checkspan(x) --> true
     end
 end
 
@@ -47,5 +49,6 @@ facts("function definitions") do
         x = Parser.parse(str)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
         @fact x.span --> endof(str)
+        @fact checkspan(x) --> true
     end
 end

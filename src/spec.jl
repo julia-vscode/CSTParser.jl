@@ -5,7 +5,7 @@ abstract LITERAL <: Expression
 abstract BOOL <: Expression
 abstract KEYWORD <: Expression
 abstract OPERATOR{P} <: Expression
-abstract DELIMINATOR <: Expression
+abstract PUNCTUATION <: Expression
 
 type LOCATION
     start::Int
@@ -24,6 +24,7 @@ function INSTANCE(ps::ParseState)
         isliteral(ps.t) ? LITERAL :
         iskw(ps.t) ? KEYWORD :
         isoperator(ps.t) ? OPERATOR{precedence(ps.t)} :
+        ispunctuation(ps.t) ? PUNCTUATION :
         error("Couldn't make an INSTANCE from $(ps.t.val)")
     loc = LOCATION(ps.t.startbyte, ps.t.endbyte)
     if t==IDENTIFIER
@@ -40,6 +41,7 @@ INSTANCE(str::String) = INSTANCE{0}(str, "", 0)
 
 type QUOTENODE <: Expression
     val::Expression
+    span::Int
 end
 
 # heads
@@ -63,6 +65,8 @@ type EXPR <: Expression
     head::Expression
     args::Vector{Expression}
     span::Int
+    punctuation::Vector{Expression}
 end
 
 EXPR(head, args) = EXPR(head, args, 0)
+EXPR(head, args, span::Int) = EXPR(head, args, span, [])

@@ -47,7 +47,7 @@ facts("if blocks") do
         ps = Parser.ParseState(str)
         x = Parser.parse_expression(ps)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-        @fact x.loc.stop --> endof(str)
+        @fact x.span --> endof(str)
         @fact ps.t.kind --> Tokenize.Tokens.END
     end
 end
@@ -63,7 +63,8 @@ facts("import statements") do
         ps = Parser.ParseState(str)
         x = Parser.parse_expression(ps)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-        @fact x.loc.stop --> endof(str)
+        @fact x.span --> endof(str)
+        @fact checkspan(x) --> true
     end
 end
 
@@ -74,7 +75,8 @@ facts("export statements") do
         ps = Parser.ParseState(str)
         x = Parser.parse_expression(ps)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-        @fact x.loc.stop --> endof(str)
+        @fact x.span --> endof(str)
+        @fact checkspan(x) --> true
     end
 end
 
