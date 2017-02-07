@@ -11,7 +11,7 @@ function closer(ps::ParseState)
     (ps.closer.block && ps.nt.kind==Tokens.END) ||
     (ps.closer.ifelse && ps.nt.kind==Tokens.ELSEIF || ps.nt.kind==Tokens.ELSE) ||
     (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt)<=1 || ps.nt.val==":")) ||
-    (ps.closer.trycatch && ps.nt.kind==Tokens.CATCH) ||
+    (ps.closer.trycatch && ps.nt.kind==Tokens.CATCH || ps.nt.kind==Tokens.END) ||
     (ps.closer.ws && (!isempty(ps.ws.val) && !isoperator(ps.nt)))
 
 end
@@ -91,7 +91,7 @@ macro default(ps, body)
         $(esc(ps)).closer.paren = false
         $(esc(ps)).closer.brace = false
         $(esc(ps)).closer.square = false
-        $(esc(ps)).closer.block = false
+        # $(esc(ps)).closer.block = false
         $(esc(ps)).closer.ifelse = false
         $(esc(ps)).closer.ifop = false
         $(esc(ps)).closer.trycatch = false

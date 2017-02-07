@@ -56,7 +56,7 @@ function parse_kw_syntax(ps::ParseState)
     end
 end
 
-function parse_if(ps::ParseState, nested = false)
+function parse_if(ps::ParseState, nested = false, puncs = [])
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     kw.val = "if"
@@ -64,7 +64,7 @@ function parse_if(ps::ParseState, nested = false)
 
     if ps.nt.kind==Tokens.END
         next(ps)
-        return EXPR(kw, [cond, EXPR(BLOCK, [], 0)], ps.ws.endbyte - start)
+        return EXPR(kw, [cond, EXPR(BLOCK, [], 0)], ps.ws.endbyte - start, [INSTANCE(ps)])
     end
 
     ifblock = EXPR(BLOCK, [], -ps.t.startbyte)
@@ -76,18 +76,21 @@ function parse_if(ps::ParseState, nested = false)
     elseblock = EXPR(BLOCK, [], -ps.nt.startbyte)
     if ps.nt.kind==Tokens.ELSEIF
         next(ps)
-        push!(elseblock.args, parse_if(ps, true))
+        push!(puncs, INSTANCE(ps))
+        push!(elseblock.args, parse_if(ps, true, puncs))
     end
     if ps.nt.kind==Tokens.ELSE
         next(ps)
+        push!(puncs, INSTANCE(ps))
         parse_block(ps, elseblock)
     end
     elseblock.span += ps.nt.endbyte
 
     !nested && next(ps)
+    !nested && push!(puncs, INSTANCE(ps))
     ret = isempty(elseblock.args) ? 
-        EXPR(kw, [cond, ifblock], ps.ws.endbyte - start) : 
-        EXPR(kw, [cond, ifblock, elseblock], ps.ws.endbyte - start)
+        EXPR(kw, [cond, ifblock], ps.ws.endbyte - start, puncs) : 
+        EXPR(kw, [cond, ifblock, elseblock], ps.ws.endbyte - start, puncs)
     return ret
 end
 
@@ -95,13 +98,16 @@ end
 function parse_try(ps::ParseState)
     start = ps.t.startbyte
     kw = INSTANCE(ps)
-    tryblock = EXPR(BLOCK, [], 0)
+    tryblock = EXPR(BLOCK, [], -ps.ws.endbyte)
     while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.CATCH 
         push!(tryblock.args, @closer ps trycatch parse_expression(ps))
     end
+    tryblock.span += ps.ws.endbyte
 
+    puncs = INSTANCE[]
     next(ps)
     if ps.t.kind==Tokens.CATCH
+        push!(puncs, INSTANCE(ps))
         caught = parse_expression(ps)
         catchblock = parse_block(ps)
         if !(caught isa INSTANCE)
@@ -112,8 +118,9 @@ function parse_try(ps::ParseState)
         caught = FALSE
         catchblock = EXPR(BLOCK, [], 0)
     end
-    next(ps)
-    return EXPR(kw, [tryblock, caught ,catchblock], ps.ws.endbyte - start)
+    ps.t.kind != Tokens.END && next(ps)
+    push!(puncs, INSTANCE(ps))
+    return EXPR(kw, [tryblock, caught ,catchblock], ps.ws.endbyte - start, puncs)
 end
 
 function parse_imports(ps::ParseState)

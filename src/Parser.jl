@@ -33,7 +33,7 @@ function parse_expression(ps::ParseState)
     elseif ps.nt.kind == Tokens.LSQUARE
         start = ps.nt.startbyte
         ret = @default ps @closer ps square parse_expression(next(ps))
-        if ret isa EXPR && ret.head==TUPLE #&& ret.loc.start==start
+        if ret isa EXPR && ret.head==TUPLE
             ret = EXPR(VECT, ret.args, ps.nt.endbyte - start)
         else
             ret = EXPR(VECT, [ret], ps.nt.endbyte - start)
@@ -67,7 +67,7 @@ function parse_expression(ps::ParseState)
                 puncs = [INSTANCE(ps)]
                 args = @closer ps brace parse_list(ps, puncs)
                 push!(puncs, INSTANCE(next(ps)))
-                ret = EXPR(CURLY, [ret, args...], ret.span + ps.t.endbyte - start, puncs)
+                ret = EXPR(CURLY, [ret, args...], ret.span + ps.ws.endbyte - start, puncs)
             else
                 error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
             end
@@ -90,6 +90,11 @@ function parse_expression(ps::ParseState)
         else
             for s in stacktrace()
                 println(s)
+            end
+            for f in fieldnames(ps.closer)
+                if getfield(ps.closer, f)==true
+                    println(f, ": true")
+                end
             end
             error("infinite loop $(ps)")
         end

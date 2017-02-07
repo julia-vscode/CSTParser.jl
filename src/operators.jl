@@ -138,14 +138,12 @@ function parse_operator(ps::ParseState, ret::Expression)
         push!(ret.args, nextarg)
         ret.span += nextarg.span + op.span
         push!(ret.punctuation, op)
-        # a ? b : c syntax
     elseif op_prec == 2
         start = ps.t.startbyte
         nextarg = @closer ps ifop parse_expression(ps)
         op2 = INSTANCE(next(ps))
         nextarg2 = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         ret = EXPR(IF, [ret, nextarg, nextarg2], ret.span + ps.t.endbyte - start, [op, op2])
-        # ranges/colon
     elseif op.val == ":" 
         start = ps.t.startbyte
         if ps.nt.kind == Tokens.END
@@ -160,7 +158,6 @@ function parse_operator(ps::ParseState, ret::Expression)
         else
             ret = EXPR(op, [ret, nextarg], ret.span + ps.t.endbyte - start)
         end
-        # comparison
     elseif op_prec == 6 
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         if ret isa EXPR && ret.head==COMPARISON
@@ -188,14 +185,12 @@ function parse_operator(ps::ParseState, ret::Expression)
     elseif op_prec==4 || op_prec==5 || op.val=="-->"
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         ret = EXPR(op, [ret, nextarg], op.span + ret.span + nextarg.span)
-        # parse '::'
     elseif op_prec==14
         if ps.formatcheck && op_prec==1 && ps.ws.val==""
             push!(ps.hints, "add space at $(ps.nt.startbyte)")
         end
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         ret = EXPR(op, [ret, nextarg], op.span + ret.span + nextarg.span)
-        # parse '.'
     elseif op_prec==15
         if ps.nt.kind==Tokens.LPAREN
             start = ps.nt.startbyte

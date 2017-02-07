@@ -69,7 +69,20 @@ function start(x::EXPR)
         elseif x.head.val == "macro"
             return Iterator{:module}(1, 4)
         elseif x.head.val == "do"
+        elseif x.head.val == "if"
+            if length(x.args) == 2
+                return Iterator{:if}(1, 4)
+            elseif x.punctuation[end-1].val=="else"
+                return Iterator{:if}(1, 4 + (length(x.punctuation)-2)*3 + 2)
+            else
+                return Iterator{:if}(1, 4 + (length(x.punctuation)-1)*3)
+            end
         elseif x.head.val == "try"
+            if isempty(x.args[3].args)
+                return Iterator{:try}(1, 3)
+            else
+                return Iterator{:try}(1, 5 + (x.args[2]!=FALSE))
+            end
         end
     elseif x.head.val == "curly"
         return Iterator{:curly}(1, length(x.args)*2)
@@ -231,6 +244,35 @@ function next(x::EXPR, s::Iterator{:type})
     end
 end
 
+function next(x::EXPR, s::Iterator{:abstract})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:bitstype})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    elseif s.i == 3
+        return x.args[2], +s
+    end
+end
+
+
+function next(x::EXPR, s::Iterator{:typealias})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    elseif s.i == 3
+        return x.args[2], +s
+    end
+end
+
 function next(x::EXPR, s::Iterator{:while})
     if s.i == 1
         return x.head, +s
@@ -288,5 +330,94 @@ function next(x::EXPR, s::Iterator{:export})
         return x.punctuation[div(s.i-1, 2)], +s
     else
         return x.args[div(s.i, 2)], +s
+    end
+end
+
+
+function next(x::EXPR, s::Iterator{:const})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:local})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:global})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    end
+end
+
+
+function next(x::EXPR, s::Iterator{:try})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    elseif s.i == s.n
+        return last(x.punctuation), +s
+    elseif s.i == 3
+        return first(x.punctuation), +s
+    elseif s.i == 4
+        if x.args[2] != FALSE
+            return x.args[2], +s
+        else
+            return x.args[3], +s
+        end
+    else
+        return x.args[3], +s
+    end
+end
+
+
+function next(x::EXPR, s::Iterator{:if})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    elseif s.i == 3
+        return x.args[2], +s
+    elseif s.i == 4
+        return x.punctuation[1], +s
+    elseif s.i == s.n
+        return last(x.punctuation), +s
+    else
+        haselse = x.punctuation[end-1].val=="else"
+        nesteds = length(x.punctuation)-1-haselse
+        if haselse && s.i == s.n-1
+            n = div(s.i-2, 3)
+            y = x
+            for i = 1:n
+                y = y.args[3].args[1]
+            end
+            return y, +s
+        end
+        if mod(s.i-1, 3) == 0
+            return x.punctuation[div(s.i-1, 3)], +s
+        elseif mod(s.i-2, 3) == 0
+            n = div(s.i-2, 3)
+            y = x
+            for i = 1:n
+                y = y.args[3].args[1]
+            end
+            return y.args[1], +s
+        else
+            n = div(s.i-2, 3)
+            y = x
+            for i = 1:n
+                y = y.args[3].args[1]
+            end
+            return y.args[2], +s
+        end
     end
 end

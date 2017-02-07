@@ -30,7 +30,7 @@ function checkspan(x)
         for a in x
             checkspan(a)
         end
-        @assert x.span == sum(a.span for a in x)
+        @assert x.span == (length(x) == 0 ? 0 : sum(a.span for a in x))
     end
     true
 end
@@ -46,7 +46,10 @@ facts("misc reserved words") do
             "global i"
             """local i = x"""]
     for str in strs
-        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+        x = Parser.parse(str)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        @fact sizeof(str) --> x.span
+        @fact checkspan(x) --> true
     end
 end
 
@@ -56,7 +59,10 @@ facts("tuples") do
             "a,b = c,d"
             "(a,b) = (c,d)"]
     for str in strs
-        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+        x = Parser.parse(str)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        @fact sizeof(str) --> x.span
+        @fact checkspan(x) --> true
     end
 end
 
@@ -65,7 +71,8 @@ facts("failing things") do
             "(a,b = c,d)"
             "a ? b=c:d : e"]
     for str in strs
-        @pending (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+        x = Parser.parse(str)
+        @pending (x |> Expr) --> remlineinfo!(Base.parse(str))
     end
 end
 
@@ -75,7 +82,9 @@ facts("generators") do
             "(y,x for y in X)"
             "((y,x) for y in X)"]
     for str in strs
-        @fact (Parser.parse(str) |> Expr) --> remlineinfo!(Base.parse(str))
+        x = Parser.parse(str)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        @fact checkspan(x) --> true
     end
 end
 
