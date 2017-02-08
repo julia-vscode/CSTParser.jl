@@ -1,229 +1,475 @@
-# """
-#     span(x)
 
-# Returns the number of bytes between the first and last character of 
-# the expression.
-# """
-# function span end
-# """
-#     span(x)
-
-# Returns the number of bytes between the first character of the 
-# expression and the last character of any whitespace trailing behind 
-# the last character of the expression.
-# """
-# function spanws end
-
-
-
+type Iterator{T}
+    i::Int
+    n::Int
+end
++{T}(s::Iterator{T}) = (s.i+=1;s)
 
 start(x::INSTANCE) = 1
 next(x::INSTANCE, i) = x, i+1
 length(x::INSTANCE) = 1
 done(x::INSTANCE, i) = i>1
 
-start(x::EXPR) = 1
 
-function next(x::EXPR, i)
-    if x.head==COMPARISON
-        return x.args[i], i+1
-    elseif x.head==CALL
-        return _next_call(x, i)
-    elseif x.head.val == "module" || x.head.val == "type" || x.head.val == "while" || x.head.val == "function"
-        return _next_function(x, i)
-    elseif x.head.val == "block"
-        return x.args[i], i+1
-    elseif x.head.val == "const" || x.head.val == "abstract" 
-        return _next_const_abstract(x, i)
-    elseif x.head.val == "typealias" || x.head.val == "bitstype" 
-        return _next_bitstype_typealias(x, i)
-    elseif x.head.val == "curly"
-        return _next_curly(x, i)
-    elseif x.head.val == "if" && x.head.span==0
-        return _next_ifop(x, i)
-    elseif issyntaxcall(x.head.val)
-        return _next_syntaxcall(x, i)
-    end
-end
+"""
+    start(x::EXPR)
 
-function length(x::EXPR)
-    if x.head==COMPARISON
-        return length(x.args)
-    elseif x.head == CALL
-        if x.args[1] isa INSTANCE{IDENTIFIER} || (x.args[1].head.val == "curly")
-            return length(x.args)*2
-        elseif x.args[1] isa INSTANCE
-            if x.args[1].val=="+" || x.args[1].val=="*"
-                return max(2, length(x.args)*2-3)
+Creates an interator state for `EXPR`s. One can then iterator through all
+ elements of an expression as they are ordered in the original code including 
+punctuation.
+"""
+function start(x::EXPR)
+    if x.head == CALL
+        if x.args[1] isa INSTANCE{IDENTIFIER} || (x.args[1] isa EXPR && x.args[1].head.val == "curly") # normal call
+            return Iterator{:call}(1, length(x.args)*2)
+        elseif x.args[1] isa INSTANCE # op calls
+            if x.args[1].val=="+" || x.args[1].val=="*" # chained ops
+                return Iterator{:opchain}(1, max(2, length(x.args)*2-3))
+            else
+                return Iterator{:op}(1, length(x.args) + length(x.punctuation))
             end
         end
-        return length(x.args) + length(x.punctuation)
     elseif issyntaxcall(x.head.val)
         if x.head.val ==":"
-            return length(x.args) == 2 ? 3 : 5
+            return Iterator{:(:)}(1, length(x.args) == 2 ? 3 : 5)
         end
-        return length(x.args)+1
-    elseif x.head.val == "abstract" || x.head.val == "local" || x.head.val == "global" || x.head.val == "return" || x.head.val == "const"
-        return 2
-    elseif x.head.val == "export"
-        return length(x.args)*2
-    elseif x.head.val == "bitstype" || x.head.val == "typealias" 
-        return 3
+        return Iterator{:syntaxcall}(1, length(x.args) + 1)
+    elseif x.head == COMPARISON
+        return Iterator{:comparison}(1, length(x.args))
+    elseif x.head.val == "if" && x.head.span == 0
+        return Iterator{:?}(1, 5)
     elseif x.head.val == "block"
-        return length(x.args)
-    elseif x.head.val == "module" || x.head.val == "type" || x.head.val == "while" || x.head.val == "function" || x.head.val == "macro" || x.head.val == "for"
-        return 4
-    elseif x.head.val == "import" || x.head.val == "importall" || x.head.val == "using"
-    elseif x.head.val == "if"
-        if x.head.span==0
-            return 5
-        else
-            return 2 + length(x.args)
-        end
-    elseif x.head.val == "try"
-        if isempty(x.args[3].args)
-            return 3
-        else
-            return 6
-        end
-    elseif x.head.val == "curly"
-        return length(x.args)*2
-    elseif x.head.val == "tuple"
-        return length(x.args) + length(x.punctuation)
-    end
-end
-
-done(x::EXPR, i) = i>length(x)
-
-type Iterator{T}
-    i::Int
-    n::Int
-end
-
-
-
-
-
-function _next_module(x::EXPR, i)
-    if i == 1
-        return x.head, 2
-    elseif i == 2
-        return x.args[2], 3
-    elseif i == 3
-        return x.args[3], 4
-    elseif i ==4
-        return x.punctuation[1], 5
-    end
-end
-
-function _next_function(x::EXPR, i)
-    if i == 1
-        return x.head, 2
-    elseif i == 2
-        return x.args[1], 3
-    elseif i == 3
-        return x.args[2], 4
-    elseif i ==4
-        return x.punctuation[1], 5
-    end
-end
-
-function _next_bitstype_typealias(x::EXPR, i)
-    if i == 1
-        return x.head, 2
-    elseif i == 2
-        return x.args[1], 3
-    elseif i == 3
-        return x.args[2], 4
-    end
-end
-
-function _next_const_abstract(x::EXPR, i)
-    if i == 1
-        return x.head, 2
-    elseif i == 2
-        return x.args[1], 3
-    end
-end
-
-
-
-function _next_syntaxcall(x::EXPR, i)
-    if x.head.val == ":"
-        if i == 1
-            return x.args[1], 2
-        elseif i == 2
-            return x.head, 3
-        elseif i == 3
-            return x.args[2], 4
-        elseif i == 4
-            return x.punctuation[1], 5
-        elseif i == 5 
-            return x.args[3], 6
-        end
-    else
-        if i==1
-            return x.args[1], 2
-        elseif i==2
-            return x.head, 3
-        elseif i==3 
-            return x.args[2], 4
-        end
-    end
-end
-
-function _next_curly(x::EXPR, i)
-    if i==1
-        return x.args[1], 2
-    elseif i==2
-        return x.punctuation[1], 3
-    elseif i==length(x) 
-        return last(x.punctuation), i+1
-    elseif isodd(i)
-        return x.args[div(i+1, 2)], i+1
-    else
-        return x.punctuation[div(i, 2)], i+1
-    end
-end
-
-
-function _next_call(x::EXPR, i)
-    if x.args[1] isa INSTANCE{IDENTIFIER} || (x.args[1].head.val == "curly")
-        if isodd(i)
-            return x.args[div(i+1, 2)], i+1
-        else
-            return x.punctuation[div(i, 2)], i+1
-        end
-    elseif x.args[1] isa INSTANCE
-        if x.args[1].val=="+" || x.args[1].val=="*"
-            if isodd(i)
-                return x.args[div(i+1,2)+1], i+1
+        return Iterator{Symbol(x.head.val)}(1, length(x.args) + length(x.punctuation))
+    elseif x.head isa INSTANCE{KEYWORD}
+        if x.head.val == "break" || x.head.val == "continue"
+            return Iterator{Symbol(x.head.val)}(1, 1)
+        elseif x.head.val == "abstract" || x.head.val == "const" || x.head.val == "global" || x.head.val == "local" || x.head.val == "return"
+            return Iterator{Symbol(x.head.val)}(1, 2)
+        elseif x.head.val == "import" || x.head.val == "importall" || x.head.val == "using"
+            return Iterator{:imports}(1, 1 + length(x.args) + length(x.punctuation)) 
+        elseif x.head.val == "toplevel"
+            @assert length(x.args) > 1
+            cnt = 1
+            while x.args[1].args[cnt] == x.args[2].args[cnt]
+                cnt+=1
+            end
+            return Iterator{:toplevel}(1, (cnt - 1 + length(x.args))*2)
+        elseif x.head.val == "export"
+            return Iterator{:export}(1, length(x.args)*2)
+        elseif x.head.val == "bitstype" || x.head.val == "typealias"
+            return Iterator{Symbol(x.head.val)}(1, 3)
+        elseif x.head.val == "module"
+            return Iterator{:module}(1, 4)
+        elseif x.head.val == "type"
+            return Iterator{:type}(1, 4)
+        elseif x.head.val == "for"
+            return Iterator{:for}(1, 4)
+        elseif x.head.val == "while"
+            return Iterator{:while}(1, 4)
+        elseif x.head.val == "function"
+            return Iterator{:function}(1, 4)
+        elseif x.head.val == "macro"
+            return Iterator{:module}(1, 4)
+        elseif x.head.val == "generator"
+            return Iterator{:generator}(1, 3)
+        elseif x.head.val == "do"
+        elseif x.head.val == "if"
+            if length(x.args) == 2
+                return Iterator{:if}(1, 4)
+            elseif x.punctuation[end-1].val=="else"
+                return Iterator{:if}(1, 4 + (length(x.punctuation)-2)*3 + 2)
             else
-                return x.args[1], i+1
+                return Iterator{:if}(1, 4 + (length(x.punctuation)-1)*3)
+            end
+        elseif x.head.val == "try"
+            if isempty(x.args[3].args)
+                return Iterator{:try}(1, 3)
+            else
+                return Iterator{:try}(1, 5 + (x.args[2]!=FALSE))
             end
         end
-        if i==1
-            return x.args[2], 2
-        elseif i==2
-            return x.args[1], 3
-        elseif i==3 
-            return x.args[3], 4
+    elseif x.head.val == "curly"
+        return Iterator{:curly}(1, length(x.args)*2)
+    elseif x.head.val == "tuple"
+        if first(x.punctuation).val == "("
+            return Iterator{:tuple}(1, length(x.args) + length(x.punctuation))
+        else
+            return Iterator{:tuplenoparen}(1, length(x.args) + length(x.punctuation))
         end
-    else
-        return x.args[i], i+1
     end
 end
 
-function _next_ifop(x::EXPR, i)
-    if i == 1
-        return x.args[1], 2
-    elseif i == 2 
-        return x.punctuation[1], 3
-    elseif i == 3
-        return x.args[2], 4
-    elseif i == 4 
-        return x.punctuation[2], 5
-    elseif i == 5
-        return x.args[3], 6
+done(x::EXPR, s::Iterator) = s.i > s.n
+length(x::EXPR) = start(x).n
+
+function next(x::EXPR, s::Iterator{:call})
+    if isodd(s.i)
+        return x.args[div(s.i+1, 2)], +s
+    else
+        return x.punctuation[div(s.i, 2)], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:opchain})
+    if isodd(s.i)
+        return x.args[div(s.i+1,2)+1], +s
+    elseif s.i == 2
+        return x.args[1], +s
+    else 
+        return x.punctuation[div(s.i, 2)-1], +s
+    end
+end
+
+
+function next(x::EXPR, s::Iterator{:op})
+    if length(x.args) == 2
+        if s.i==1
+            return x.args[1], +s
+        elseif s.i==2
+            return x.args[2], +s
+        end
+    else
+        if s.i==1
+            return x.args[2], +s
+        elseif s.i==2
+            return x.args[1], +s
+        elseif s.i==3 
+            return x.args[3], +s
+        end
+    end
+end
+
+function next(x::EXPR, s::Iterator{:(:)})
+    if s.i == 1
+        return x.args[1], +s
+    elseif s.i == 2
+        return x.head, +s
+    elseif s.i == 3
+        return x.args[2], +s
+    elseif s.i == 4
+        return x.punctuation[1], +s
+    elseif s.i == 5 
+        return x.args[3], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:syntaxcall})
+    if s.i==1
+        return x.args[1], +s
+    elseif s.i==2
+        return x.head, +s
+    elseif s.i==3 
+        return x.args[2], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:?})
+    if s.i == 1
+        return x.args[1], +s
+    elseif s.i == 2 
+        return x.punctuation[1], +s
+    elseif s.i == 3
+        return x.args[2], +s
+    elseif s.i == 4 
+        return x.punctuation[2], +s
+    elseif s.i == 5
+        return x.args[3], +s
     end 
+end
+
+function next(x::EXPR, s::Iterator{:comparison})
+    return x.args[s.i], +s
+end
+
+function next(x::EXPR, s::Iterator{:generator})
+    if s.i == 1
+        return x.args[1], +s
+    elseif s.i == 2 
+        return x.head, +s
+    else
+        return x.args[s.i-1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:tuple})
+    if isodd(s.i)
+        return x.punctuation[div(s.i+1, 2)], +s
+    else
+        return x.args[div(s.i, 2)], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:tuplenoparen})
+    if isodd(s.i)
+        return x.args[div(s.i+1, 2)], +s
+    else
+        return x.punctuation[div(s.i, 2)], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:curly})
+    if s.i==1
+        return x.args[1], +s
+    elseif s.i==2
+        return x.punctuation[1], +s
+    elseif s.i==s.n
+        return last(x.punctuation), +s
+    elseif isodd(s.i)
+        return x.args[div(s.i+1, 2)], +s
+    else
+        return x.punctuation[div(s.i, 2)], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:block})
+    if length(x.punctuation)==2
+        if s.i == 1
+            return x.punctuation[1], +s
+        elseif s.i == s.n
+            return x.punctuation[2], +s
+        else
+            return x.args[s.i-1], +s
+        end
+    end
+
+    return x.args[s.i], +s
+end
+
+
+
+
+# KEYWORDS
+
+function next(x::EXPR, s::Iterator{:function})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    elseif s.i == 3
+        return x.args[2], +s
+    elseif s.i == 4
+        return x.punctuation[1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:module})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[2], +s
+    elseif s.i == 3
+        return x.args[3], +s
+    elseif s.i == 4
+        return x.punctuation[1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:type})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[2], +s
+    elseif s.i == 3
+        return x.args[3], +s
+    elseif s.i == 4
+        return x.punctuation[1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:abstract})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:bitstype})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    elseif s.i == 3
+        return x.args[2], +s
+    end
+end
+
+
+function next(x::EXPR, s::Iterator{:typealias})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    elseif s.i == 3
+        return x.args[2], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:while})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    elseif s.i == 3
+        return x.args[2], +s
+    elseif s.i == 4
+        return x.punctuation[1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:for})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    elseif s.i == 3
+        return x.args[2], +s
+    elseif s.i == 4
+        return x.punctuation[1], +s
+    end
+end
+
+
+function next(x::EXPR, s::Iterator{:imports})
+    if s.i == 1
+        return x.head, +s
+    elseif isodd(s.i)
+        return x.punctuation[div(s.i-1, 2)], +s
+    else
+        return x.args[div(s.i, 2)], +s
+    end
+end
+
+
+function next(x::EXPR, s::Iterator{:toplevel})
+    if s.i == 1
+        return x.args[1].head, +s
+    elseif isodd(s.i)
+        return x.punctuation[div(s.i-1, 2)], +s
+    else
+        if s.i <= div(s.n, 2)
+            return x.args[1].args[div(s.i, 2)], +s
+        else
+            # this needs to be fixed for `import A: a, b.c`
+            return last(x.args[div(s.i-div(s.n, 2)+1, 2)].args), +s
+        end
+    end
+end
+
+function next(x::EXPR, s::Iterator{:export})
+    if s.i == 1
+        return x.head, +s
+    elseif isodd(s.i)
+        return x.punctuation[div(s.i-1, 2)], +s
+    else
+        return x.args[div(s.i, 2)], +s
+    end
+end
+
+
+function next(x::EXPR, s::Iterator{:const})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:global})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:local})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:return})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:break})
+    if s.i == 1
+        return x.head, +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:continue})
+    if s.i == 1
+        return x.head, +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:try})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    elseif s.i == s.n
+        return last(x.punctuation), +s
+    elseif s.i == 3
+        return first(x.punctuation), +s
+    elseif s.i == 4
+        if x.args[2] != FALSE
+            return x.args[2], +s
+        else
+            return x.args[3], +s
+        end
+    else
+        return x.args[3], +s
+    end
+end
+
+
+function next(x::EXPR, s::Iterator{:if})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    elseif s.i == 3
+        return x.args[2], +s
+    elseif s.i == 4
+        return x.punctuation[1], +s
+    elseif s.i == s.n
+        return last(x.punctuation), +s
+    else
+        haselse = x.punctuation[end-1].val=="else"
+        nesteds = length(x.punctuation)-1-haselse
+        if haselse && s.i == s.n-1
+            n = div(s.i-2, 3)-1
+            y = x
+            for i = 1:n
+                y = y.args[3].args[1]
+            end
+            return y.args[3], +s
+        end
+        if mod(s.i-1, 3) == 0
+            return x.punctuation[div(s.i-1, 3)], +s
+        elseif mod(s.i-2, 3) == 0
+            n = div(s.i-2, 3)
+            y = x
+            for i = 1:n
+                y = y.args[3].args[1]
+            end
+            return y.args[1], +s
+        else
+            n = div(s.i-2, 3)
+            y = x
+            for i = 1:n
+                y = y.args[3].args[1]
+            end
+            return y.args[2], +s
+        end
+    end
 end

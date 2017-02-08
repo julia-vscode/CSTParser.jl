@@ -3,6 +3,7 @@
 Operators
 + assignment, give error if incorrect lhs and return block on rhs
 + handle ';'
++ multi ranges e.g. for i = 1:4, j = 2:4
 Unhandled 'head's
 + ccall
 + kw

@@ -15,13 +15,14 @@ include("spec.jl")
 include("conversion.jl")
 include("operators.jl")
 include("keywords.jl")
-include("positional2.jl")
+include("positional.jl")
 include("display.jl")
 
 function parse_expression(ps::ParseState)
     if Tokens.begin_keywords < ps.nt.kind < Tokens.end_keywords 
         ret = parse_kw_syntax(next(ps))
     elseif ps.nt.kind == Tokens.LPAREN
+        start = ps.nt.startbyte
         openparen = INSTANCE(next(ps))
         ret = @default ps @closer ps paren parse_expression(ps)
         closeparen = INSTANCE(next(ps))
@@ -29,6 +30,8 @@ function parse_expression(ps::ParseState)
             unshift!(ret.punctuation, openparen)
             push!(ret.punctuation, closeparen)
             ret.span += openparen.span + closeparen.span
+        else
+            ret = EXPR(BLOCK,[ret], ps.ws.endbyte - start, [openparen, closeparen])
         end
     elseif ps.nt.kind == Tokens.LSQUARE
         start = ps.nt.startbyte
@@ -148,15 +151,13 @@ Having hit `for` not at the beginning of an expression return a generator.
 Comprehensions are parsed as SQUAREs containing a generator.
 """
 function parse_generator(ps::ParseState, ret)
+    start = ps.nt.startbyte
     @assert length(ps.ws.val)>0
     next(ps)
     op = INSTANCE(ps)
     range = parse_expression(ps)
-    if range.head==CALL && range.args[1] isa INSTANCE && range.args[1].val=="in" || range.args[1].val=="∈"
-        range = EXPR(INSTANCE{OPERATOR}("=", range.args[1].ws, range.args[1].span), range.args[2:3], range.span)
-    end
 
-    ret = EXPR(INSTANCE{KEYWORD}("generator", op.ws, op.span), [ret, range])
+    ret = EXPR(INSTANCE{KEYWORD}("generator", op.ws, op.span), [ret, range], ret.span + ps.ws.endbyte - start)
     if !(ps.nt.kind==Tokens.RPAREN || ps.nt.kind==Tokens.RSQUARE)
         error("generator/comprehension syntax not followed by ')' or ']'")
     end
@@ -214,9 +215,9 @@ function parse_comma(ps::ParseState, ret)
         if ret isa EXPR && ret.head==TUPLE
             push!(ret.args, nextarg)
             push!(ret.punctuation, op)
-            ret.span += ps.t.endbyte-start
+            ret.span += ps.ws.endbyte-start
         else
-            ret =  EXPR(TUPLE, [ret, nextarg], ret.span+ps.t.endbyte-start, [op])
+            ret =  EXPR(TUPLE, [ret, nextarg], ret.span+ps.ws.endbyte-start, [op])
         end
     end
     return ret

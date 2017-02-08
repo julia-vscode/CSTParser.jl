@@ -1,7 +1,6 @@
 function closer(ps::ParseState)
     (ps.closer.newline && search(ps.ws.val, '\n')!=0) ||
     (isoperator(ps.nt) && precedence(ps.nt)<=ps.closer.precedence) ||
-    (ps.closer.semicolon && ps.nt.kind==Tokens.SEMICOLON) ||
     (ps.closer.eof && ps.nt.kind==Tokens.ENDMARKER) ||
     (ps.closer.tuple && (iscomma(ps.nt) || isassignment(ps.nt))) ||
     (ps.closer.comma && iscomma(ps.nt)) ||
@@ -70,7 +69,6 @@ Parses the next expression using default closure rules.
 macro default(ps, body)
     quote
         local tmp1 = $(esc(ps)).closer.newline
-        local tmp2 = $(esc(ps)).closer.semicolon
         local tmp3 = $(esc(ps)).closer.eof
         local tmp4 = $(esc(ps)).closer.tuple
         local tmp5 = $(esc(ps)).closer.comma
@@ -84,7 +82,6 @@ macro default(ps, body)
         local tmp13 = $(esc(ps)).closer.ws
         local tmp14 = $(esc(ps)).closer.precedence
         $(esc(ps)).closer.newline = true
-        $(esc(ps)).closer.semicolon = true
         $(esc(ps)).closer.eof = true
         $(esc(ps)).closer.tuple = false
         $(esc(ps)).closer.comma = false
@@ -101,7 +98,6 @@ macro default(ps, body)
         out = $(esc(body))
         
         $(esc(ps)).closer.newline = tmp1
-        $(esc(ps)).closer.semicolon = tmp2
         $(esc(ps)).closer.eof = tmp3
         $(esc(ps)).closer.tuple = tmp4
         $(esc(ps)).closer.comma = tmp5

@@ -4,7 +4,6 @@ const empty_whitespace = Token()
 
 type Closer
     newline::Bool
-    semicolon::Bool
     eof::Bool
     tuple::Bool
     comma::Bool
@@ -20,7 +19,7 @@ type Closer
     precedence::Int
 end
 
-Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, 0)
+Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, 0)
 
 type ParseState
     l::Lexer

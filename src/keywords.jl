@@ -23,6 +23,7 @@ function parse_kw_syntax(ps::ParseState)
         end
     elseif ps.t.kind == Tokens.MODULE || ps.t.kind == Tokens.BAREMODULE
         kw = INSTANCE(ps)
+        kw.val = "module"
         arg = @closer ps block @closer ps ws parse_expression(ps)
         block = parse_block(ps)
         next(ps)
@@ -150,14 +151,28 @@ function parse_imports(ps::ParseState)
     else
         @assert ps.nt.kind == Tokens.COLON
         push!(puncs, INSTANCE(next(ps)))
-        args = parse_list(ps, puncs)
+        # args = parse_list(ps, puncs)
+        args = Vector{INSTANCE}[]
+        while ps.nt.kind == Tokens.IDENTIFIER
+            a = INSTANCE[INSTANCE(next(ps))]
+            while ps.nt.kind == Tokens.DOT
+                push!(puncs, INSTANCE(next(ps)))
+                push!(a, INSTANCE(next(ps)))
+            end
+            if ps.nt.kind == Tokens.COMMA || closer(ps)
+                push!(args, a)
+                !closer(ps) && push!(puncs, INSTANCE(next(ps)))
+            else
+                break
+            end
+        end
         if length(args)==1
-            push!(M, first(args))
+            push!(M, first(args)...)
             ret = EXPR(kw, M, ps.ws.endbyte - start, puncs)
         else
             ret = EXPR(INSTANCE{KEYWORD}("toplevel", kw.ws, kw.span), [], ps.ws.endbyte - start, puncs)
             for a in args
-                push!(ret.args, EXPR(kw, vcat(M, a), a.span))
+                push!(ret.args, EXPR(kw, vcat(M, a), sum(y.span for y in a) + length(a) - 1))
             end
         end
     end

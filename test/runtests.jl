@@ -30,7 +30,7 @@ function checkspan(x)
         for a in x
             checkspan(a)
         end
-        @assert x.span == (length(x) == 0 ? 0 : sum(a.span for a in x))
+        @assert x.span == (length(x) == 0 ? 0 : sum(a.span for a in x)) "$(x.head.val)  $(x.span)  $(sum(a.span for a in x))"
     end
     true
 end
@@ -107,8 +107,7 @@ end
 # using BenchmarkTools
 
 timetest(1)
-@timev timetest(10000)
-@timev timetest2(1000)
+println(signif((@elapsed timetest2(500))/(@elapsed timetest(500)),3), "x speedup")
 
 facts("fullspec") do
     x = Parser.parse(examplemodule)
