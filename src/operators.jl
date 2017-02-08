@@ -154,9 +154,9 @@ function parse_operator(ps::ParseState, ret::Expression)
         if ret isa EXPR && ret.head.val == ":" && length(ret.args)==2
             push!(ret.punctuation, op)
             push!(ret.args, nextarg)
-            ret.span += ps.t.endbyte-start
+            ret.span += ps.ws.endbyte-start
         else
-            ret = EXPR(op, [ret, nextarg], ret.span + ps.t.endbyte - start)
+            ret = EXPR(op, [ret, nextarg], ret.span + ps.ws.endbyte - start)
         end
     elseif op_prec == 6 
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)

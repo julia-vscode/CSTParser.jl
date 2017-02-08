@@ -1,7 +1,6 @@
 # To do list
 
 Operators
-+ fix precedence rules for '.' and '? : '
 + assignment, give error if incorrect lhs and return block on rhs
 + handle ';'
 Unhandled 'head's
@@ -10,7 +9,6 @@ Unhandled 'head's
 + parameters
 + stdcall
 + string
-+ toplevel
 + typed_comprehension
 + typed_vcat
 + vcat
@@ -57,64 +55,170 @@ if conflicts with reserved words
 
 
 
-## Reserved word
-#### TRUE/FALSE
-These become an `instance`.
+## Keywords
+---
+#### `true`, `false`, `break`, `continue`
+- These all become symbols. 
+- Linting for the latter two requires `for`/`while` context.
 
-#### BREAK
-This becomes an `instance`.
-#### CONTINUE
-This becomes an `instance`.
-
-### Prefix keywords
-#### CONST
-`Prefix`
-#### EXPORT
-`Prefix`
-#### GLOBAL
-`Prefix`
-#### IMPORT
-`Prefix`
-#### IMPORTALL
-`Prefix`
-#### LOCAL
-`Prefix`
-#### RETURN
-`Prefix`
-#### USING
-`Prefix`
+parse | iterable | test | lint 
+--- | --- | --- | ---
+y | y | y | 
 
 
-### Single line definitions
-#### ABSTRACT
-#### BITSTYPE
-#### TYPEALIAS
+---
+#### `const`, `global`, `local`, `return`
+- These become keyword blocks with 1 argument.
+- Linting for `return` require `function` context.
+
+parse | iterable | test | lint 
+--- | --- | --- | ---
+y | y | y | 
+
+---
+#### `import`, `importall`, `using`
+- These all parse in the same way. Several forms: 
+1. `import a`
+2. `import a.b`
+3. `import a, b, c`
+4. `import a, b.c`
+5. `import a: b`
+6. `import a: b, c`
+7. `import a: b, c.d`
+- Cases with a colon and only one seperating comma are parsed as though the colon is a dot.
+- Other cases with a colon parse as a `toplevel` expression with as many arguments as there are comma seperated expressions after the colon. All of these arguments are dot seperated lists of symbols which share the first `n` symbols in their names where `n` is the number of pre-colon symbols.
+- Punctuation is stored `[(.) (:) (,)]`
+
+parse | iterable | test | lint 
+--- | --- | --- | ---
+~ | ~ | ~ | 
+
+---
+#### `export`
+- Parses to a comma seperated list of symbols.
+
+parse | iterable | test | lint 
+--- | --- | --- | ---
+y | y | y | 
 
 
-### `end` blocks
-#### BAREMODULE
-#### BEGIN
-#### BEGINWHILE
-#### DO
-#### FOR
-#### FUNCTION
-#### IMMUTABLE
-#### LET
-#### MACRO
-#### MODULE
-#### QUOTE
-#### TYPE
+---
+#### `abstract`
+- Parses as a keyword block with one argument.
 
-#### IF
-#### ELSE
-#### ELSEIF
+parse | iterable | test | lint 
+--- | --- | --- | ---
+y | y | y | 
 
 
-#### END
+---
+#### `bitstype`, `typealias`
+- Parses as a keyword block with two arguments.
 
-#### TRY
-#### CATCH
-#### FINALLY
+parse | iterable | test | lint 
+--- | --- | --- | ---
+y | y | y | 
+
+
+---
+#### `module`, `baremodule`
+- Parse as keyword blocks 
+
+parse | iterable | test | lint 
+--- | --- | --- | ---
+y | y |  | 
+
+
+---
+#### `begin`
+- Parses as a keyword block with `n` arguments.
+- When used for storage in another keyword block the head has 0 span and 
+punctuation (the closing end) is not stored.
+
+parse | iterable | test | lint 
+--- | --- | --- | ---
+y | y |  | 
+
+
+---
+#### `quote`
+- Parses as a keyword block containing a `block` expression.
+
+parse | iterable | test | lint 
+--- | --- | --- | ---
+y |  |  | 
+
+
+---
+#### `for`, `while`
+- Parsed as keyword block with 2 arguments.
+- Punctuation: `end`.
+
+parse | iterable | test | lint 
+--- | --- | --- | ---
+y |  |  | 
+
+
+---
+#### `type`, `immutable`
+- Parsed as keyword, name, block and `end`.
+- 
+- Punctuation: `end`.
+
+parse | iterable | test | lint 
+--- | --- | --- | ---
+y | y | y | 
+
+
+---
+#### `function`
+
+parse | iterable | test | lint 
+--- | --- | --- | ---
+ |  |  | 
+
+
+---
+#### `macro`
+
+parse | iterable | test | lint 
+--- | --- | --- | ---
+ |  |  | 
+
+
+---
+#### `do`
+
+parse | iterable | test | lint 
+--- | --- | --- | ---
+ |  |  | 
+
+
+---
+#### `let`
+
+parse | iterable | test | lint 
+--- | --- | --- | ---
+ |  |  | 
+
+
+---
+#### `if`
+
+parse | iterable | test | lint 
+--- | --- | --- | ---
+ |  |  | 
+
+
+----
+#### `try`
+
+parse | iterable | test | lint 
+--- | --- | --- | ---
+ |  |  | 
+
+
+
 
 
 

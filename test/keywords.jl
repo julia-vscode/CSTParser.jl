@@ -66,7 +66,8 @@ facts("import statements") do
     strs = ["import ModA"
             "import ModA.subModA"
             "import ModA.subModA: a"
-            "import ModA.subModA: a, b, c"]
+            "import ModA.subModA: a, b, c"
+            "import ModA.subModA: a, b, c.d"]
     for str in strs
         ps = Parser.ParseState(str)
         x = Parser.parse_expression(ps)

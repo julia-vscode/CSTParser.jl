@@ -41,7 +41,9 @@ function start(x::EXPR)
     elseif x.head.val == "block"
         return Iterator{Symbol(x.head.val)}(1, length(x.args) + length(x.punctuation))
     elseif x.head isa INSTANCE{KEYWORD}
-        if x.head.val == "abstract" || x.head.val == "const" || x.head.val == "global" || x.head.val == "local" || x.head.val == "return"
+        if x.head.val == "break" || x.head.val == "continue"
+            return Iterator{Symbol(x.head.val)}(1, 1)
+        elseif x.head.val == "abstract" || x.head.val == "const" || x.head.val == "global" || x.head.val == "local" || x.head.val == "return"
             return Iterator{Symbol(x.head.val)}(1, 2)
         elseif x.head.val == "import" || x.head.val == "importall" || x.head.val == "using"
             return Iterator{:imports}(1, 1 + length(x.args) + length(x.punctuation)) 
@@ -342,14 +344,6 @@ function next(x::EXPR, s::Iterator{:const})
     end
 end
 
-function next(x::EXPR, s::Iterator{:local})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[1], +s
-    end
-end
-
 function next(x::EXPR, s::Iterator{:global})
     if s.i == 1
         return x.head, +s
@@ -358,6 +352,33 @@ function next(x::EXPR, s::Iterator{:global})
     end
 end
 
+function next(x::EXPR, s::Iterator{:local})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:return})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:break})
+    if s.i == 1
+        return x.head, +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:continue})
+    if s.i == 1
+        return x.head, +s
+    end
+end
 
 function next(x::EXPR, s::Iterator{:try})
     if s.i == 1
@@ -395,12 +416,12 @@ function next(x::EXPR, s::Iterator{:if})
         haselse = x.punctuation[end-1].val=="else"
         nesteds = length(x.punctuation)-1-haselse
         if haselse && s.i == s.n-1
-            n = div(s.i-2, 3)
+            n = div(s.i-2, 3)-1
             y = x
             for i = 1:n
                 y = y.args[3].args[1]
             end
-            return y, +s
+            return y.args[3], +s
         end
         if mod(s.i-1, 3) == 0
             return x.punctuation[div(s.i-1, 3)], +s

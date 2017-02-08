@@ -1,12 +1,36 @@
-facts("type definitions") do
-    strs =  ["abstract name"
+facts("abstract defs") do
+    strs = strs =  ["abstract name"
             "abstract name <: other"
-            "abstract f(x+1)"
-            "bitstype 64 Int"
+            "abstract f(x+1)"]
+    for str in strs
+        x = Parser.parse(str)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        @fact checkspan(x) --> true "span mismatch for $str"
+    end
+end
+
+facts("bitstype defs") do
+    strs =  ["bitstype 64 Int"
             "bitstype 4*16 Int"
-            "bitstype 4*16 f(x)"
-            "typealias name fsd"
-            "type a end"
+            "bitstype 4*16 f(x)"]
+    for str in strs
+        x = Parser.parse(str)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        @fact checkspan(x) --> true "span mismatch for $str"
+    end
+end
+
+facts("typealias defs") do
+    strs =  ["typealias name fsd"]
+    for str in strs
+        x = Parser.parse(str)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        @fact checkspan(x) --> true "span mismatch for $str"
+    end
+end
+
+facts("type definitions") do
+    strs =  ["type a end"
             """type a
                 arg1
             end"""
@@ -21,9 +45,6 @@ facts("type definitions") do
                 arg1::t
                 a(args) = new(args)
             end"""
-            "x::Int"
-             "x::Vector{Int}"
-             "Vector{Int}"
              """type a <: Int
                 c::Vector{Int}
              end"""]

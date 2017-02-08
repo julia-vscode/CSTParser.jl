@@ -4,7 +4,7 @@ function parse_kw_syntax(ps::ParseState)
         kw = INSTANCE(ps)
         arg = parse_block(ps)
         next(ps)
-        return EXPR(kw, [arg], ps.ws.endbyte - start)
+        return EXPR(kw, [arg], ps.ws.endbyte - start, [INSTANCE(ps)])
     elseif ps.t.kind==Tokens.IF
         return parse_if(ps)
     elseif ps.t.kind==Tokens.TRY
@@ -67,24 +67,29 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
         return EXPR(kw, [cond, EXPR(BLOCK, [], 0)], ps.ws.endbyte - start, [INSTANCE(ps)])
     end
 
-    ifblock = EXPR(BLOCK, [], -ps.t.startbyte)
+    ifblock = EXPR(BLOCK, [], -ps.nt.startbyte)
     while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.ELSE && ps.nt.kind!==Tokens.ELSEIF
         push!(ifblock.args, @closer ps ifelse parse_expression(ps))
     end
     ifblock.span +=ps.ws.endbyte
 
-    elseblock = EXPR(BLOCK, [], -ps.nt.startbyte)
+    elseblock = EXPR(BLOCK, [], 0)
     if ps.nt.kind==Tokens.ELSEIF
         next(ps)
         push!(puncs, INSTANCE(ps))
+        startelseblock = ps.ws.endbyte
         push!(elseblock.args, parse_if(ps, true, puncs))
+        elseblock.span = ps.ws.endbyte - startelseblock
     end
     if ps.nt.kind==Tokens.ELSE
         next(ps)
         push!(puncs, INSTANCE(ps))
+        startelseblock = ps.ws.endbyte
         parse_block(ps, elseblock)
+        elseblock.span = ps.ws.endbyte - startelseblock
     end
-    elseblock.span += ps.nt.endbyte
+    # elseblock.span += ps.nt.endbyte
+    # elseblock.span = ps.ws.endbyte - startelseblock
 
     !nested && next(ps)
     !nested && push!(puncs, INSTANCE(ps))
