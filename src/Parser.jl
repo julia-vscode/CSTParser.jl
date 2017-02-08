@@ -18,42 +18,50 @@ include("keywords.jl")
 include("positional.jl")
 include("display.jl")
 
+
+"""
+    parse_expression(ps)
+
+Parses an expression until `closer(ps) == true`. Expects to enter the 
+`ParseState` the token before the the beginning of the expression and ends 
+on the last token. 
+
+Acceptable starting tokens are: 
++ A keyword
++ An opening parentheses or brace.
++ An operator.
++ An instance (e.g. identifier, number, etc.)
++ An `@`.
+
+"""
 function parse_expression(ps::ParseState)
-    if Tokens.begin_keywords < ps.nt.kind < Tokens.end_keywords 
-        ret = parse_kw_syntax(next(ps))
-    elseif ps.nt.kind == Tokens.LPAREN
-        start = ps.nt.startbyte
-        openparen = INSTANCE(next(ps))
-        ret = @default ps @closer ps paren parse_expression(ps)
-        closeparen = INSTANCE(next(ps))
-        if ret isa EXPR && ret.head == TUPLE
-            unshift!(ret.punctuation, openparen)
-            push!(ret.punctuation, closeparen)
-            ret.span += openparen.span + closeparen.span
-        else
-            ret = EXPR(BLOCK,[ret], ps.ws.endbyte - start, [openparen, closeparen])
-        end
-    elseif ps.nt.kind == Tokens.LSQUARE
-        start = ps.nt.startbyte
-        ret = @default ps @closer ps square parse_expression(next(ps))
+    next(ps)
+    if Tokens.begin_keywords < ps.t.kind < Tokens.end_keywords 
+        ret = parse_kw_syntax(ps)
+    elseif ps.t.kind == Tokens.LPAREN
+        ret = parse_paren(ps)
+    elseif ps.t.kind == Tokens.LSQUARE
+        start = ps.t.startbyte
+        ret = @default ps @closer ps square parse_expression(ps)
         if ret isa EXPR && ret.head==TUPLE
             ret = EXPR(VECT, ret.args, ps.nt.endbyte - start)
         else
             ret = EXPR(VECT, [ret], ps.nt.endbyte - start)
         end
         next(ps)
-    elseif ps.nt.kind == Tokens.LBRACE
+    elseif ps.t.kind == Tokens.LBRACE
         error("discontinued cell1d syntax")
-    elseif isinstance(ps.nt)
-        ret = INSTANCE(next(ps))
-    elseif isunaryop(ps.nt)
-        ret = parse_unary(next(ps))
-    elseif ps.nt.kind==Tokens.AT_SIGN
-        ret = parse_macrocall(next(ps))
+    elseif isunaryop(ps.t)
+        ret = parse_unary(ps)
+    elseif isinstance(ps.t) || isoperator(ps.t)
+        ret = INSTANCE(ps)
+    elseif ps.t.kind==Tokens.AT_SIGN
+        ret = parse_macrocall(ps)
     else
         error("Expression started with $(ps)")
     end
 
+    # These are the allowed juxtapositions
     while !closer(ps)
         if isoperator(ps.nt)
             ret = parse_operator(ps, ret)
@@ -65,12 +73,7 @@ function parse_expression(ps::ParseState)
             end
         elseif ps.nt.kind==Tokens.LBRACE
             if isempty(ps.ws.val)
-                next(ps)
-                start = ps.t.startbyte
-                puncs = [INSTANCE(ps)]
-                args = @closer ps brace parse_list(ps, puncs)
-                push!(puncs, INSTANCE(next(ps)))
-                ret = EXPR(CURLY, [ret, args...], ret.span + ps.ws.endbyte - start, puncs)
+                ret = parse_curly(ps, ret)
             else
                 error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
             end
@@ -99,7 +102,7 @@ function parse_expression(ps::ParseState)
                     println(f, ": true")
                 end
             end
-            error("infinite loop $(ps)")
+            error("infinite loop at $(ps)")
         end
     end
 
@@ -210,6 +213,8 @@ function parse_comma(ps::ParseState, ret)
         if ret isa EXPR && ret.head!=TUPLE
             ret =  EXPR(TUPLE, [ret], ps.t.endbyte - start, [op])
         end
+    elseif closer(ps)
+        ret = EXPR(TUPLE, [ret], ret.span + op.span, [op])
     else
         nextarg = @closer ps tuple parse_expression(ps)
         if ret isa EXPR && ret.head==TUPLE
@@ -219,6 +224,49 @@ function parse_comma(ps::ParseState, ret)
         else
             ret =  EXPR(TUPLE, [ret, nextarg], ret.span+ps.ws.endbyte-start, [op])
         end
+    end
+    return ret
+end
+
+
+"""
+    parse_curly(ps, ret)
+
+Parses the juxtaposition of `ret` with an opening brace. Parses a comma 
+seperated list.
+"""
+function parse_curly(ps::ParseState, ret)
+    next(ps)
+    start = ps.t.startbyte
+    puncs = [INSTANCE(ps)]
+    args = @closer ps brace parse_list(ps, puncs)
+    push!(puncs, INSTANCE(next(ps)))
+    return EXPR(CURLY, [ret, args...], ret.span + ps.ws.endbyte - start, puncs)
+end
+
+"""
+    parse_curly(ps, ret)
+
+Parses the juxtaposition of `ret` with an opening brace. Parses a comma 
+seperated list.
+"""
+function parse_paren(ps::ParseState)
+    start = ps.t.startbyte
+    openparen = INSTANCE(ps)
+    if ps.nt.kind == Tokens.RPAREN
+        ret = EXPR(TUPLE, [])
+    else
+        ret = @default ps @closer ps paren parse_expression(ps)
+    end
+    closeparen = INSTANCE(next(ps))
+    if ret isa EXPR && ret.head == TUPLE
+        unshift!(ret.punctuation, openparen)
+        push!(ret.punctuation, closeparen)
+        ret.span += openparen.span + closeparen.span
+    elseif ret isa EXPR && ret.head.val == "..."
+        ret = EXPR(TUPLE, [ret], ps.ws.endbyte - start, [openparen, closeparen])
+    else
+        ret = EXPR(BLOCK, [ret], ps.ws.endbyte - start, [openparen, closeparen])
     end
     return ret
 end

@@ -22,3 +22,17 @@ function Base.show(io::IO, x::EXPR,indent=0)
     end 
 end
 
+
+import Base.print
+function print(io::IO, x::EXPR)
+    for a in x
+        print(io, a)
+    end
+end
+
+function print(io::IO, x::INSTANCE)
+    print(io, x.val,x.ws)
+end
+function print(io::IO, x::QUOTENODE)
+    print(io, x.val)
+end

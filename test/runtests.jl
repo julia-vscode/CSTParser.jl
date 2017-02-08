@@ -35,6 +35,14 @@ function checkspan(x)
     true
 end
 
+function testfind(str)
+    x = Parser.parse(str)
+    for i = 1:sizeof(str)
+        find(x, i)
+    end
+end
+
+
 include("operators.jl")
 include("functions.jl")
 include("types.jl")
@@ -54,9 +62,18 @@ facts("misc reserved words") do
 end
 
 facts("tuples") do
-    strs = ["a,b"
-            "a,b,c"
-            "a,b = c,d"
+    strs = ["1,",
+            "1,2",
+            "1,2,3",
+            "()",
+            "(==)",
+            "(1)",
+            "(1,)",
+            "(1,2)",
+            "(a,b,c)",
+            "(a...)",
+            "((a,b)...)",
+            "a,b = c,d",
             "(a,b) = (c,d)"]
     for str in strs
         x = Parser.parse(str)

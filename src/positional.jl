@@ -473,3 +473,20 @@ function next(x::EXPR, s::Iterator{:if})
         end
     end
 end
+
+
+function Base.find(x::EXPR, n)
+    i = 0
+    @assert n <= x.span
+    for a in x
+        if n > i+a.span
+            i+=a.span
+        else
+            return find(a, n-i)
+        end
+    end
+end
+
+function Base.find(x::Union{QUOTENODE,INSTANCE}, n)
+    return x
+end
