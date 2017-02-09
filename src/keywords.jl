@@ -59,7 +59,6 @@ end
 function parse_if(ps::ParseState, nested = false, puncs = [])
     start = ps.t.startbyte
     kw = INSTANCE(ps)
-    kw.val = "if"
     cond = @closer ps ws @closer ps block parse_expression(ps)
 
     if ps.nt.kind==Tokens.END

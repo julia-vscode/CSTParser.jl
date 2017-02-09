@@ -42,6 +42,8 @@ function start(x::EXPR)
         return Iterator{:?}(1, 5)
     elseif x.head == BLOCK
         return Iterator{:block}(1, length(x.args) + length(x.punctuation))
+    elseif x.head == GENERATOR
+        return Iterator{:generator}(1, 3)
     elseif x.head == TOPLEVEL
         @assert length(x.args) > 1
         cnt = 1
@@ -49,6 +51,14 @@ function start(x::EXPR)
             cnt+=1
         end
         return Iterator{:toplevel}(1, (cnt - 1 + length(x.args))*2)
+    elseif x.head == CURLY
+        return Iterator{:curly}(1, length(x.args)*2)
+    elseif x.head == TUPLE
+        if first(x.punctuation) isa INSTANCE{PUNCTUATION,Tokens.LPAREN}
+            return Iterator{:tuple}(1, length(x.args) + length(x.punctuation))
+        else
+            return Iterator{:tuplenoparen}(1, length(x.args) + length(x.punctuation))
+        end
     elseif x.head isa INSTANCE{KEYWORD}
         if x.head isa INSTANCE{KEYWORD,Tokens.BREAK}
             return Iterator{:break}(1, 1)
@@ -93,10 +103,8 @@ function start(x::EXPR)
             return Iterator{:function}(1, 4)
         elseif x.head isa INSTANCE{KEYWORD,Tokens.MACRO}
             return Iterator{:module}(1, 4)
-        elseif x.head.val == "generator"
-            return Iterator{:generator}(1, 3)
         elseif x.head isa INSTANCE{KEYWORD,Tokens.DO}
-        elseif x.head.val == "if"
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.IF}
             if length(x.args) == 2
                 return Iterator{:if}(1, 4)
             elseif x.punctuation[end-1] isa INSTANCE{KEYWORD,Tokens.ELSE}
@@ -110,14 +118,6 @@ function start(x::EXPR)
             else
                 return Iterator{:try}(1, 5 + (x.args[2]!=FALSE))
             end
-        end
-    elseif x.head.val == "curly"
-        return Iterator{:curly}(1, length(x.args)*2)
-    elseif x.head.val == "tuple"
-        if first(x.punctuation) isa INSTANCE{PUNCTUATION,Tokens.LPAREN}
-            return Iterator{:tuple}(1, length(x.args) + length(x.punctuation))
-        else
-            return Iterator{:tuplenoparen}(1, length(x.args) + length(x.punctuation))
         end
     end
 end
@@ -208,7 +208,7 @@ function next(x::EXPR, s::Iterator{:generator})
     if s.i == 1
         return x.args[1], +s
     elseif s.i == 2 
-        return x.head, +s
+        return x.punctuation[1], +s
     else
         return x.args[s.i-1], +s
     end

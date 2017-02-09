@@ -14,6 +14,8 @@ function Expr(x::EXPR)
         return Expr(x.args[1])
     elseif x.head isa INSTANCE{KEYWORD,Tokens.BEGIN}
         return Expr(x.args[1])
+    elseif x.head isa INSTANCE{KEYWORD,Tokens.ELSEIF}
+        return Expr(:if, Expr.(x.args)...)
     elseif x.head.val == "generator"
         return Expr(:generator, Expr(x.args[1]), fixranges.(x.args[2:end])...)
     elseif x.head == MACROCALL

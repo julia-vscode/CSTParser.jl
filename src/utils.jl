@@ -9,9 +9,9 @@ function closer(ps::ParseState)
     (ps.closer.square && ps.nt.kind==Tokens.RSQUARE) ||
     (ps.closer.block && ps.nt.kind==Tokens.END) ||
     (ps.closer.ifelse && ps.nt.kind==Tokens.ELSEIF || ps.nt.kind==Tokens.ELSE) ||
-    (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt)<=1 || ps.nt.val==":")) ||
+    (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt)<=1 || ps.nt.kind==Tokens.COLON)) ||
     (ps.closer.trycatch && ps.nt.kind==Tokens.CATCH || ps.nt.kind==Tokens.END) ||
-    (ps.closer.ws && (!isempty(ps.ws.val) && !isoperator(ps.nt)))
+    (ps.closer.ws && (!isempty(ps.ws) && !isoperator(ps.nt)))
 
 end
 

@@ -25,14 +25,14 @@ function INSTANCE(ps::ParseState)
         isoperator(ps.t) ? OPERATOR{precedence(ps.t)} :
         ispunctuation(ps.t) ? PUNCTUATION :
         error("Couldn't make an INSTANCE from $(ps)")
-    loc = LOCATION(ps.t.startbyte, ps.t.endbyte)
-    if t==IDENTIFIER
-        if ps.t.val in keys(ps.ids)
-            push!(ps.ids[ps.t.val], loc)
-        else
-            ps.ids[ps.t.val] = [loc]
-        end
-    end
+    # loc = LOCATION(ps.t.startbyte, ps.t.endbyte)
+    # if t==IDENTIFIER
+    #     if ps.t.val in keys(ps.ids)
+    #         push!(ps.ids[ps.t.val], loc)
+    #     else
+    #         ps.ids[ps.t.val] = [loc]
+    #     end
+    # end
 
     return INSTANCE{t,ps.t.kind}(ps.t.val, ps.ws.val, ps.ws.endbyte-ps.t.startbyte)
 end
@@ -46,7 +46,7 @@ end
 # heads
 const emptyinstance = INSTANCE("")
 const NOTHING = INSTANCE("nothing")
-const BLOCK = INSTANCE("block")
+const BLOCK = INSTANCE{HEAD,Tokens.KEYWORD}("block", "", 0)
 
 const CALL = INSTANCE{HEAD,Tokens.KEYWORD}("call", "", 0)
 const CURLY = INSTANCE{HEAD,Tokens.KEYWORD}("curly", "", 0)

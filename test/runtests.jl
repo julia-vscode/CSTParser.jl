@@ -13,17 +13,6 @@ function remlineinfo!(x)
     x
 end
 
-function printEXPR(io::IO, x::EXPR)
-    for y in x
-        if y isa EXPR
-            printEXPR(io,y)
-        else
-            print(io,y.val)
-            print(io,y.ws)
-        end
-    end
-end
-
 function checkspan(x)
     if x isa EXPR
         cnt = 0
@@ -78,7 +67,6 @@ facts("tuples") do
     for str in strs
         x = Parser.parse(str)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-        @fact sizeof(str) --> x.span
         @fact checkspan(x) --> true
     end
 end

@@ -80,7 +80,6 @@ facts("operators") do
             str = join([["x$(randop())" for i = 1:n-1];"x"])
             x = Parser.parse(str)
             @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
-            @fact x.span --> endof(str)
             @fact checkspan(x) --> true
         end
     end

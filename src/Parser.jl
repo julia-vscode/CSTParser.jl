@@ -161,7 +161,7 @@ function parse_generator(ps::ParseState, ret)
     op = INSTANCE(ps)
     range = parse_expression(ps)
 
-    ret = EXPR(INSTANCE{KEYWORD,Tokens.KEYWORD}("generator", op.ws, op.span), [ret, range], ret.span + ps.ws.endbyte - start)
+    ret = EXPR(GENERATOR, [ret, range], ret.span + ps.ws.endbyte - start, [op])
     if !(ps.nt.kind==Tokens.RPAREN || ps.nt.kind==Tokens.RSQUARE)
         error("generator/comprehension syntax not followed by ')' or ']'")
     end
