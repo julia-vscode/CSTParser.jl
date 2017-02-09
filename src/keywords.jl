@@ -23,17 +23,16 @@ function parse_kw_syntax(ps::ParseState)
         end
     elseif ps.t.kind == Tokens.MODULE || ps.t.kind == Tokens.BAREMODULE
         kw = INSTANCE(ps)
-        kw.val = "module"
         arg = @closer ps block @closer ps ws parse_expression(ps)
         block = parse_block(ps)
         next(ps)
-        return EXPR(kw, [kw.val=="module" ? TRUE : FALSE, arg, block], ps.ws.endbyte - start, [INSTANCE(ps)])
+        return EXPR(kw, [kw isa INSTANCE{KEYWORD,Tokens.MODULE} ? TRUE : FALSE, arg, block], ps.ws.endbyte - start, [INSTANCE(ps)])
     elseif ps.t.kind == Tokens.TYPE || ps.t.kind == Tokens.IMMUTABLE
         kw = INSTANCE(ps)
         arg = @closer ps block @closer ps ws parse_expression(ps)
         block = parse_block(ps)
         next(ps)
-        return EXPR(kw, [kw.val=="type" ? TRUE : FALSE, arg, block], ps.ws.endbyte - start, [INSTANCE(ps)])
+        return EXPR(kw, [kw isa INSTANCE{KEYWORD,Tokens.TYPE} ? TRUE : FALSE, arg, block], ps.ws.endbyte - start, [INSTANCE(ps)])
     elseif Tokens.begin_0arg_kw < ps.t.kind < Tokens.end_0arg_kw
         kw = INSTANCE(ps)
         return EXPR(kw, [], ps.ws.endbyte - start)
@@ -134,8 +133,8 @@ function parse_imports(ps::ParseState)
     kw = INSTANCE(ps)
     M = INSTANCE[]
     if ps.nt.kind==Tokens.DDOT
-        push!(M, INSTANCE{OPERATOR{15}}(".", "", 1))
-        push!(M, INSTANCE{OPERATOR{15}}(".", "", 1))
+        push!(M, INSTANCE{OPERATOR{15},Tokens.DOT}(".", "", 1))
+        push!(M, INSTANCE{OPERATOR{15},Tokens.DOT}(".", "", 1))
         next(ps)
     end
     @assert ps.nt.kind == Tokens.IDENTIFIER "incomplete import statement"
@@ -170,7 +169,7 @@ function parse_imports(ps::ParseState)
             push!(M, first(args)...)
             ret = EXPR(kw, M, ps.ws.endbyte - start, puncs)
         else
-            ret = EXPR(INSTANCE{KEYWORD}("toplevel", kw.ws, kw.span), [], ps.ws.endbyte - start, puncs)
+            ret = EXPR(INSTANCE{KEYWORD,Tokens.KEYWORD}("toplevel", kw.ws, kw.span), [], ps.ws.endbyte - start, puncs)
             for a in args
                 push!(ret.args, EXPR(kw, vcat(M, a), sum(y.span for y in a) + length(a) - 1))
             end

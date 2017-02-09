@@ -11,9 +11,8 @@ type LOCATION
     start::Int
     stop::Int
 end
-const emptyloc = LOCATION(-1, -1)
 
-type INSTANCE{T} <: Expression
+type INSTANCE{T,K} <: Expression
     val::String
     ws::String
     span::Int
@@ -35,9 +34,9 @@ function INSTANCE(ps::ParseState)
         end
     end
 
-    return INSTANCE{t}(ps.t.val, ps.ws.val, ps.ws.endbyte-ps.t.startbyte)
+    return INSTANCE{t,ps.t.kind}(ps.t.val, ps.ws.val, ps.ws.endbyte-ps.t.startbyte)
 end
-INSTANCE(str::String) = INSTANCE{0}(str, "", 0)
+INSTANCE(str::String) = INSTANCE{0,Tokens.ERROR}(str, "", 0)
 
 type QUOTENODE <: Expression
     val::Expression
@@ -58,8 +57,8 @@ const VECT = INSTANCE("vect")
 const MACROCALL = INSTANCE("macrocall")
 const GENERATOR = INSTANCE("generator")
 const COMPREHENSION = INSTANCE("comprehension")
-const TRUE = INSTANCE{LITERAL}("true", "", 0)
-const FALSE = INSTANCE{LITERAL}("false", "", 0)
+const TRUE = INSTANCE{LITERAL,Tokens.TRUE}("true", "", 0)
+const FALSE = INSTANCE{LITERAL,Tokens.FALSE}("false", "", 0)
 
 type EXPR <: Expression
     head::Expression

@@ -111,3 +111,6 @@ function read_comment(l::Lexer)
         end
     end
 end
+
+
+isempty(t::Token) = t.startbyte == t.endbyte

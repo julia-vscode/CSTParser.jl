@@ -2,7 +2,7 @@ module Parser
 global debug = true
 
 using Tokenize
-import Base: next, start, done, length, first, last, +
+import Base: next, start, done, length, first, last, +, isempty
 import Tokenize.Tokens
 import Tokenize.Tokens: Token, iskeyword, isliteral, isoperator
 import Tokenize.Lexers: Lexer, peekchar, iswhitespace
@@ -66,19 +66,19 @@ function parse_expression(ps::ParseState)
         if isoperator(ps.nt)
             ret = parse_operator(ps, ret)
         elseif ps.nt.kind==Tokens.LPAREN
-            if isempty(ps.ws.val)
+            if isempty(ps.ws)
                 ret = @default ps @closer ps paren parse_call(ps, ret)
             else
                 error("space before \"(\" not allowed in \"$(Expr(ret)) (\"")
             end
         elseif ps.nt.kind==Tokens.LBRACE
-            if isempty(ps.ws.val)
+            if isempty(ps.ws)
                 ret = parse_curly(ps, ret)
             else
                 error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
             end
         elseif ps.nt.kind==Tokens.LSQUARE
-            if isempty(ps.ws.val)
+            if isempty(ps.ws)
                 next(ps)
                 start = ps.t.startbyte
                 opener = INSTANCE(ps)
@@ -118,7 +118,7 @@ Parses a function call. Expects to start before the opening parentheses and is p
 function parse_call(ps::ParseState, ret)
     start = ps.nt.startbyte
     
-    puncs = [INSTANCE(next(ps))]
+    puncs = INSTANCE[INSTANCE(next(ps))]
     args = @closer ps paren parse_list(ps, puncs)
     push!(puncs, INSTANCE(next(ps)))
 
@@ -155,12 +155,13 @@ Comprehensions are parsed as SQUAREs containing a generator.
 """
 function parse_generator(ps::ParseState, ret)
     start = ps.nt.startbyte
-    @assert length(ps.ws.val)>0
+    
+    @assert !isempty(ps.ws)
     next(ps)
     op = INSTANCE(ps)
     range = parse_expression(ps)
 
-    ret = EXPR(INSTANCE{KEYWORD}("generator", op.ws, op.span), [ret, range], ret.span + ps.ws.endbyte - start)
+    ret = EXPR(INSTANCE{KEYWORD,Tokens.KEYWORD}("generator", op.ws, op.span), [ret, range], ret.span + ps.ws.endbyte - start)
     if !(ps.nt.kind==Tokens.RPAREN || ps.nt.kind==Tokens.RSQUARE)
         error("generator/comprehension syntax not followed by ')' or ']'")
     end
@@ -176,7 +177,7 @@ Parses a macro call. Expects to start on the `@`.
 function parse_macrocall(ps::ParseState)
     start = ps.t.startbyte
     ret = EXPR(MACROCALL, [INSTANCE(next(ps))], -start)
-    isempty(ps.ws.val) && !closer(ps) && error("invalid macro name")
+    isempty(ps.ws) && !closer(ps) && error("invalid macro name")
     while !closer(ps)
         a = @closer ps ws parse_expression(ps)
         push!(ret.args, a)
@@ -203,7 +204,7 @@ function parse_block(ps::ParseState, ret = EXPR(BLOCK, [], 0))
 end
 
 function parse_comma(ps::ParseState, ret)
-    if ps.formatcheck && ps.ws.val!=""
+    if ps.formatcheck && !isempty(ps.ws)
         push!(ps.hints, "remove whitespace at $(ps.nt.startbyte)")
     end
     next(ps)
@@ -238,7 +239,7 @@ seperated list.
 function parse_curly(ps::ParseState, ret)
     next(ps)
     start = ps.t.startbyte
-    puncs = [INSTANCE(ps)]
+    puncs = INSTANCE[INSTANCE(ps)]
     args = @closer ps brace parse_list(ps, puncs)
     push!(puncs, INSTANCE(next(ps)))
     return EXPR(CURLY, [ret, args...], ret.span + ps.ws.endbyte - start, puncs)
@@ -263,7 +264,7 @@ function parse_paren(ps::ParseState)
         unshift!(ret.punctuation, openparen)
         push!(ret.punctuation, closeparen)
         ret.span += openparen.span + closeparen.span
-    elseif ret isa EXPR && ret.head.val == "..."
+    elseif ret isa EXPR && ret.head isa INSTANCE{OPERATOR{20},Tokens.DDDOT}
         ret = EXPR(TUPLE, [ret], ps.ws.endbyte - start, [openparen, closeparen])
     else
         ret = EXPR(BLOCK, [ret], ps.ws.endbyte - start, [openparen, closeparen])
@@ -279,10 +280,7 @@ function parse(str::String, cont = false)
 end
 
 
-ischainable(t::Token) = t.val == "+" || t.val == "*" || t.val == "~"
+ischainable(t::Token) = t.kind == Tokens.PLUS || t.kind == Tokens.STAR || t.kind == Tokens.APPROX
 LtoR(prec::Int) = 1 ≤ prec ≤ 5 || prec == 13
-
-
-
 
 end
