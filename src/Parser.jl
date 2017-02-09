@@ -176,7 +176,7 @@ Parses a macro call. Expects to start on the `@`.
 """
 function parse_macrocall(ps::ParseState)
     start = ps.t.startbyte
-    ret = EXPR(MACROCALL, [INSTANCE(next(ps))], -start)
+    ret = EXPR(MACROCALL, [INSTANCE(next(ps))], -start, [AT_SIGN])
     isempty(ps.ws) && !closer(ps) && error("invalid macro name")
     while !closer(ps)
         a = @closer ps ws parse_expression(ps)

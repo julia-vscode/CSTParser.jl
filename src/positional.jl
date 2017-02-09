@@ -20,7 +20,7 @@ punctuation.
 """
 function start(x::EXPR)
     if x.head == CALL
-        if x.args[1] isa INSTANCE{IDENTIFIER} || (x.args[1] isa EXPR && x.args[1].head.val == "curly") # normal call
+        if x.args[1] isa INSTANCE{IDENTIFIER} || (x.args[1] isa EXPR && x.args[1].head == CURLY) # normal call
             return Iterator{:call}(1, length(x.args)*2)
         elseif x.args[1] isa INSTANCE # op calls
             if x.args[1] isa INSTANCE{OPERATOR{9},Tokens.PLUS} || x.args[1] isa INSTANCE{OPERATOR{11},Tokens.STAR}
@@ -36,10 +36,19 @@ function start(x::EXPR)
         return Iterator{:syntaxcall}(1, length(x.args) + 1)
     elseif x.head == COMPARISON
         return Iterator{:comparison}(1, length(x.args))
-    elseif x.head.val == "if" && x.head.span == 0
+    elseif x.head == MACROCALL
+        return Iterator{:macrocall}(1, length(x.args) + 1)
+    elseif x.head isa INSTANCE{HEAD,Tokens.IF}
         return Iterator{:?}(1, 5)
-    elseif x.head.val == "block"
+    elseif x.head == BLOCK
         return Iterator{:block}(1, length(x.args) + length(x.punctuation))
+    elseif x.head == TOPLEVEL
+        @assert length(x.args) > 1
+        cnt = 1
+        while x.args[1].args[cnt] == x.args[2].args[cnt]
+            cnt+=1
+        end
+        return Iterator{:toplevel}(1, (cnt - 1 + length(x.args))*2)
     elseif x.head isa INSTANCE{KEYWORD}
         if x.head isa INSTANCE{KEYWORD,Tokens.BREAK}
             return Iterator{:break}(1, 1)
@@ -59,22 +68,22 @@ function start(x::EXPR)
                x.head isa INSTANCE{KEYWORD,Tokens.IMPORTALL} || 
                x.head isa INSTANCE{KEYWORD,Tokens.USING}
             return Iterator{:imports}(1, 1 + length(x.args) + length(x.punctuation)) 
-        elseif x.head.val == "toplevel"
-            @assert length(x.args) > 1
-            cnt = 1
-            while x.args[1].args[cnt] == x.args[2].args[cnt]
-                cnt+=1
-            end
-            return Iterator{:toplevel}(1, (cnt - 1 + length(x.args))*2)
+        
         elseif x.head isa INSTANCE{KEYWORD,Tokens.EXPORT}
             return Iterator{:export}(1, length(x.args)*2)
         elseif x.head isa INSTANCE{KEYWORD,Tokens.BITSTYPE}
             return Iterator{:bitstype}(1, 3)
         elseif x.head isa INSTANCE{KEYWORD,Tokens.TYPEALIAS}
             return Iterator{:typealias}(1, 3)
-        elseif x.head.val == "module"
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.MODULE}
             return Iterator{:module}(1, 4)
-        elseif x.head.val == "type"
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.BEGIN}
+            return Iterator{:begin}(1, 3)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.BAREMODULE}
+            return Iterator{:module}(1, 4)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.TYPE}
+            return Iterator{:type}(1, 4)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.IMMUTABLE}
             return Iterator{:type}(1, 4)
         elseif x.head isa INSTANCE{KEYWORD,Tokens.FOR}
             return Iterator{:for}(1, 4)
@@ -264,6 +273,16 @@ function next(x::EXPR, s::Iterator{:function})
     elseif s.i == 3
         return x.args[2], +s
     elseif s.i == 4
+        return x.punctuation[1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:begin})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[1], +s
+    elseif s.i == 3
         return x.punctuation[1], +s
     end
 end
@@ -505,4 +524,13 @@ end
 
 function Base.find(x::Union{QUOTENODE,INSTANCE}, n)
     return x
+end
+
+
+function next(x::EXPR, s::Iterator{:macrocall})
+    if s.i == 1
+        return x.punctuation[1], +s
+    else
+        return x.args[s.i-1], +s
+    end
 end

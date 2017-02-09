@@ -12,10 +12,14 @@ end
 function Expr(x::EXPR)
     if x.head==BLOCK && length(x.punctuation)==2
         return Expr(x.args[1])
+    elseif x.head isa INSTANCE{KEYWORD,Tokens.BEGIN}
+        return Expr(x.args[1])
     elseif x.head.val == "generator"
         return Expr(:generator, Expr(x.args[1]), fixranges.(x.args[2:end])...)
+    elseif x.head == MACROCALL
+        return Expr(:macrocall, Symbol("@$(x.args[1].val)"), Expr.(x.args[2:end])...)
     end
-    return Expr(Symbol(x.head),Expr.(x.args)...)
+    return Expr(Symbol(x.head), Expr.(x.args)...)
 end
 
 

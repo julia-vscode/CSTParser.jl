@@ -169,7 +169,7 @@ function parse_imports(ps::ParseState)
             push!(M, first(args)...)
             ret = EXPR(kw, M, ps.ws.endbyte - start, puncs)
         else
-            ret = EXPR(INSTANCE{KEYWORD,Tokens.KEYWORD}("toplevel", kw.ws, kw.span), [], ps.ws.endbyte - start, puncs)
+            ret = EXPR(INSTANCE{HEAD,Tokens.KEYWORD}("toplevel", kw.ws, kw.span), [], ps.ws.endbyte - start, puncs)
             for a in args
                 push!(ret.args, EXPR(kw, vcat(M, a), sum(y.span for y in a) + length(a) - 1))
             end

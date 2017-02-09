@@ -105,6 +105,14 @@ facts("generators") do
     end
 end
 
+facts("macros") do
+    strs = ["@time sin(5)"]
+    for str in strs
+        x = Parser.parse(str)
+        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        @fact checkspan(x) --> true
+    end
+end
 
 
 const examplemodule = readstring("fullspecexample.jl")
