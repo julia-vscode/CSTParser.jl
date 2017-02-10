@@ -61,8 +61,7 @@ function next(ps::ParseState)
     ps.T1+= Base.gc_time_ns()-b0
     if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#'
         b0 = Base.gc_time_ns()
-        readchar(ps.l)
-        ps.nws = lex_ws_comment(ps.l)
+        ps.nws = lex_ws_comment(ps.l, readchar(ps.l))
         ps.T2+= Base.gc_time_ns()-b0
     else
         ps.nws = Token(Tokens.begin_delimiters, (0, 0), (0, 0), ps.nt.endbyte, ps.nt.endbyte, "")
@@ -70,8 +69,8 @@ function next(ps::ParseState)
     return ps
 end
 
-function lex_ws_comment(l::Lexer)
-    newline = false
+function lex_ws_comment(l::Lexer, c)
+    newline = c=='\n'
     if prevchar(l)=='#'
         newline = read_comment(l)
     else
