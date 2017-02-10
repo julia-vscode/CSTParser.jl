@@ -65,7 +65,7 @@ function next(ps::ParseState)
         ps.nws = lex_ws_comment(ps.l)
         ps.T2+= Base.gc_time_ns()-b0
     else
-        ps.nws = Token(Tokens.WHITESPACE, (0, 0), (0, 0), ps.nt.endbyte, ps.nt.endbyte, "")
+        ps.nws = Token(Tokens.begin_delimiters, (0, 0), (0, 0), ps.nt.endbyte, ps.nt.endbyte, "")
     end
     return ps
 end
@@ -119,4 +119,4 @@ function read_comment(l::Lexer)
 end
 
 
-isempty(t::Token) = t.startbyte == t.endbyte
+isempty(t::Token) = t.kind == Tokens.begin_delimiters

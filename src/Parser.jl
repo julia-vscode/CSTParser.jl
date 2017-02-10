@@ -44,9 +44,9 @@ function parse_expression(ps::ParseState)
         start = ps.t.startbyte
         ret = @default ps @closer ps square parse_expression(ps)
         if ret isa EXPR && ret.head==TUPLE
-            ret = EXPR(VECT, ret.args, ps.nt.endbyte - start)
+            ret = EXPR(VECT, ret.args, ps.nt.endbyte - start + 1)
         else
-            ret = EXPR(VECT, [ret], ps.nt.endbyte - start)
+            ret = EXPR(VECT, [ret], ps.nt.endbyte - start + 1)
         end
         next(ps)
     elseif ps.t.kind == Tokens.LBRACE
@@ -85,7 +85,7 @@ function parse_expression(ps::ParseState)
                 arg = @default ps @closer ps square parse_expression(ps)
                 @assert ps.nt.kind==Tokens.RSQUARE
                 next(ps)
-                ret = EXPR(REF, [ret, arg], ps.t.endbyte - start, [opener, INSTANCE(ps)])
+                ret = EXPR(REF, [ret, arg], ps.t.endbyte - start + 1, [opener, INSTANCE(ps)])
             else
                 error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
             end
@@ -122,7 +122,7 @@ function parse_call(ps::ParseState, ret)
     args = @closer ps paren parse_list(ps, puncs)
     push!(puncs, INSTANCE(next(ps)))
 
-    ret = EXPR(CALL, [ret, args...], ret.span + ps.ws.endbyte - start, puncs)
+    ret = EXPR(CALL, [ret, args...], ret.span + ps.ws.endbyte - start + 1, puncs)
     return ret
 end
 
@@ -161,7 +161,7 @@ function parse_generator(ps::ParseState, ret)
     op = INSTANCE(ps)
     range = parse_expression(ps)
 
-    ret = EXPR(GENERATOR, [ret, range], ret.span + ps.ws.endbyte - start, [op])
+    ret = EXPR(GENERATOR, [ret, range], ret.span + ps.ws.endbyte - start + 1, [op])
     if !(ps.nt.kind==Tokens.RPAREN || ps.nt.kind==Tokens.RSQUARE)
         error("generator/comprehension syntax not followed by ')' or ']'")
     end
@@ -182,7 +182,7 @@ function parse_macrocall(ps::ParseState)
         a = @closer ps ws parse_expression(ps)
         push!(ret.args, a)
     end
-    ret.span+=ps.t.endbyte
+    ret.span+=ps.t.endbyte + 1
     return ret
 end
 
@@ -199,7 +199,7 @@ function parse_block(ps::ParseState, ret = EXPR(BLOCK, [], 0))
         push!(ret.args, @closer ps block parse_expression(ps))
     end
     @assert ps.nt.kind==Tokens.END
-    ret.span = ps.ws.endbyte - start
+    ret.span = ps.ws.endbyte - start + 1
     return ret
 end
 
@@ -212,7 +212,7 @@ function parse_comma(ps::ParseState, ret)
     start = ps.t.startbyte
     if isassignment(ps.nt)
         if ret isa EXPR && ret.head!=TUPLE
-            ret =  EXPR(TUPLE, [ret], ps.t.endbyte - start, [op])
+            ret =  EXPR(TUPLE, [ret], ps.t.endbyte - start + 1, [op])
         end
     elseif closer(ps)
         ret = EXPR(TUPLE, [ret], ret.span + op.span, [op])
@@ -221,9 +221,9 @@ function parse_comma(ps::ParseState, ret)
         if ret isa EXPR && ret.head==TUPLE
             push!(ret.args, nextarg)
             push!(ret.punctuation, op)
-            ret.span += ps.ws.endbyte-start
+            ret.span += ps.ws.endbyte-start + 1
         else
-            ret =  EXPR(TUPLE, [ret, nextarg], ret.span+ps.ws.endbyte-start, [op])
+            ret =  EXPR(TUPLE, [ret, nextarg], ret.span+ps.ws.endbyte - start + 1, [op])
         end
     end
     return ret
@@ -242,7 +242,7 @@ function parse_curly(ps::ParseState, ret)
     puncs = INSTANCE[INSTANCE(ps)]
     args = @closer ps brace parse_list(ps, puncs)
     push!(puncs, INSTANCE(next(ps)))
-    return EXPR(CURLY, [ret, args...], ret.span + ps.ws.endbyte - start, puncs)
+    return EXPR(CURLY, [ret, args...], ret.span + ps.ws.endbyte - start + 1, puncs)
 end
 
 """
@@ -265,9 +265,9 @@ function parse_paren(ps::ParseState)
         push!(ret.punctuation, closeparen)
         ret.span += openparen.span + closeparen.span
     elseif ret isa EXPR && ret.head isa INSTANCE{OPERATOR{20},Tokens.DDDOT}
-        ret = EXPR(TUPLE, [ret], ps.ws.endbyte - start, [openparen, closeparen])
+        ret = EXPR(TUPLE, [ret], ps.ws.endbyte - start + 1, [openparen, closeparen])
     else
-        ret = EXPR(BLOCK, [ret], ps.ws.endbyte - start, [openparen, closeparen])
+        ret = EXPR(BLOCK, [ret], ps.ws.endbyte - start + 1, [openparen, closeparen])
     end
     return ret
 end

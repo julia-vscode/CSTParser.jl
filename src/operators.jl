@@ -129,7 +129,7 @@ function parse_operator(ps::ParseState, ret::Expression)
         nextarg = @closer ps ifop parse_expression(ps)
         op2 = INSTANCE(next(ps))
         nextarg2 = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        ret = EXPR(IF, [ret, nextarg, nextarg2], ret.span + ps.t.endbyte - start, [op, op2])
+        ret = EXPR(IF, [ret, nextarg, nextarg2], ret.span + ps.t.endbyte - start + 1, [op, op2])
     elseif op isa INSTANCE{OPERATOR{8},Tokens.COLON}
         start = ps.t.startbyte
         if ps.nt.kind == Tokens.END
@@ -140,9 +140,9 @@ function parse_operator(ps::ParseState, ret::Expression)
         if ret isa EXPR && ret.head isa INSTANCE{OPERATOR{8},Tokens.COLON} && length(ret.args)==2
             push!(ret.punctuation, op)
             push!(ret.args, nextarg)
-            ret.span += ps.ws.endbyte-start
+            ret.span += ps.ws.endbyte-start + 1
         else
-            ret = EXPR(op, [ret, nextarg], ret.span + ps.ws.endbyte - start)
+            ret = EXPR(op, [ret, nextarg], ret.span + ps.ws.endbyte - start + 1)
         end
     elseif op_prec == 6 
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
@@ -183,7 +183,7 @@ function parse_operator(ps::ParseState, ret::Expression)
             puncs = INSTANCE[INSTANCE(next(ps))]
             args = @closer ps paren parse_list(ps, puncs)
             push!(puncs, INSTANCE(next(ps)))
-            nextarg = EXPR(TUPLE, args, ps.t.endbyte - start, puncs)
+            nextarg = EXPR(TUPLE, args, ps.t.endbyte - start + 1, puncs)
         else
             nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         end

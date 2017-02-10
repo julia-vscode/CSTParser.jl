@@ -27,7 +27,6 @@ facts("operators simple") do
         x = Parser.parse(str)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
         @fact x.span --> endof(str)
-        @fact sprint(printEXPR, x) --> str
         @fact checkspan(x) --> true
     end
     for str1 in strs
@@ -36,7 +35,6 @@ facts("operators simple") do
             x = Parser.parse(str)
             @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
             @fact x.span --> endof(str)
-            @fact sprint(printEXPR, x) --> str
             @fact checkspan(x) --> true
         end
     end
@@ -49,7 +47,6 @@ facts("operators") do
         x = Parser.parse(str)
         @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
         @fact x.span --> endof(str)
-        @fact sprint(printEXPR, x) --> str
         @fact checkspan(x) --> true
     end
 end
