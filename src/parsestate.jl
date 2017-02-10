@@ -71,21 +71,29 @@ function next(ps::ParseState)
 end
 
 function lex_ws_comment(l::Lexer)
+    newline = false
     if prevchar(l)=='#'
-        read_comment(l)
+        newline = read_comment(l)
     else
-        accept_batch(l, iswhitespace)
+        newline = read_ws(l, newline)
     end
     while iswhitespace(peekchar(l)) || peekchar(l)=='#'
         readchar(l)
         if prevchar(l)=='#'
             read_comment(l)
         else
-            accept_batch(l, iswhitespace)
+            newline = read_ws(l, newline)
         end
     end
 
-    return emit(l, Tokens.WHITESPACE)
+    return emit(l, newline ? Tokens.begin_literal : Tokens.end_literal)
+end
+
+function read_ws(l::Lexer, ok)
+    while iswhitespace(peekchar(l))
+        readchar(l)=='\n' && (ok = true)
+    end
+    return ok
 end
 
 function read_comment(l::Lexer)

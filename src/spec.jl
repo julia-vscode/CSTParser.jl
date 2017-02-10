@@ -25,14 +25,6 @@ function INSTANCE(ps::ParseState)
         isoperator(ps.t) ? OPERATOR{precedence(ps.t)} :
         ispunctuation(ps.t) ? PUNCTUATION :
         error("Couldn't make an INSTANCE from $(ps)")
-    # loc = LOCATION(ps.t.startbyte, ps.t.endbyte)
-    # if t==IDENTIFIER
-    #     if ps.t.val in keys(ps.ids)
-    #         push!(ps.ids[ps.t.val], loc)
-    #     else
-    #         ps.ids[ps.t.val] = [loc]
-    #     end
-    # end
 
     return INSTANCE{t,ps.t.kind}(ps.t.val, ps.ws.val, ps.ws.endbyte-ps.t.startbyte+1)
 end
