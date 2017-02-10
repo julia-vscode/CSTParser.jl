@@ -34,9 +34,11 @@ type ParseState
     ids::Dict{String,Any}
     hints::Vector{Any}
     closer::Closer
+    T1::Int
+    T2::Int
 end
 function ParseState(str::String)
-    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), true, Dict(), [], Closer()))
+    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), true, Dict(), [], Closer(), 0, 0))
 end
 
 function Base.show(io::IO, ps::ParseState)
@@ -54,10 +56,14 @@ function next(ps::ParseState)
     ps.t = ps.nt
     ps.lws = ps.ws
     ps.ws = ps.nws
+    b0 = Base.gc_time_ns()
     ps.nt, ps.done  = next(ps.l, ps.done)
+    ps.T1+= Base.gc_time_ns()-b0
     if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#'
+        b0 = Base.gc_time_ns()
         readchar(ps.l)
         ps.nws = lex_ws_comment(ps.l)
+        ps.T2+= Base.gc_time_ns()-b0
     else
         ps.nws = Token(Tokens.WHITESPACE, (0, 0), (0, 0), ps.nt.endbyte, ps.nt.endbyte, "")
     end
