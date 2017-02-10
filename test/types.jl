@@ -4,7 +4,8 @@ facts("abstract defs") do
             "abstract f(x+1)"]
     for str in strs
         x = Parser.parse(str)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
         @fact checkspan(x) --> true "span mismatch for $str"
     end
 end
@@ -15,7 +16,8 @@ facts("bitstype defs") do
             "bitstype 4*16 f(x)"]
     for str in strs
         x = Parser.parse(str)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
         @fact checkspan(x) --> true "span mismatch for $str"
     end
 end
@@ -24,7 +26,8 @@ facts("typealias defs") do
     strs =  ["typealias name fsd"]
     for str in strs
         x = Parser.parse(str)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
         @fact checkspan(x) --> true "span mismatch for $str"
     end
 end
@@ -50,7 +53,8 @@ facts("type definitions") do
              end"""]
     for str in strs
         x = Parser.parse(str)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
         @fact checkspan(x) --> true "span mismatch for $str"
     end
 end

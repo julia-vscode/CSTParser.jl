@@ -193,7 +193,7 @@ Parses an array of expressions (stored in ret) until 'end' is the next token.
 Returns `ps` the token before the closing `end`, the calling function is 
 assumed to handle the closer.
 """
-function parse_block(ps::ParseState, ret = EXPR(BLOCK, [], 0))
+function parse_block(ps::ParseState, ret::EXPR = EXPR(BLOCK, [], 0))
     start = ps.nt.startbyte
     while ps.nt.kind!==Tokens.END
         push!(ret.args, @closer ps block parse_expression(ps))
@@ -212,10 +212,10 @@ function parse_comma(ps::ParseState, ret)
     start = ps.t.startbyte
     if isassignment(ps.nt)
         if ret isa EXPR && ret.head!=TUPLE
-            ret =  EXPR(TUPLE, [ret], ps.t.endbyte - start + 1, [op])
+            ret =  EXPR(TUPLE, Expression[ret], ps.t.endbyte - start + 1, INSTANCE[op])
         end
     elseif closer(ps)
-        ret = EXPR(TUPLE, [ret], ret.span + op.span, [op])
+        ret = EXPR(TUPLE, Expression[ret], ret.span + op.span, INSTANCE[op])
     else
         nextarg = @closer ps tuple parse_expression(ps)
         if ret isa EXPR && ret.head==TUPLE
@@ -223,7 +223,7 @@ function parse_comma(ps::ParseState, ret)
             push!(ret.punctuation, op)
             ret.span += ps.ws.endbyte-start + 1
         else
-            ret =  EXPR(TUPLE, [ret, nextarg], ret.span+ps.ws.endbyte - start + 1, [op])
+            ret =  EXPR(TUPLE, Expression[ret, nextarg], ret.span+ps.ws.endbyte - start + 1, INSTANCE[op])
         end
     end
     return ret

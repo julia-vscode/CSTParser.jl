@@ -129,7 +129,7 @@ function parse_operator(ps::ParseState, ret::Expression)
         nextarg = @closer ps ifop parse_expression(ps)
         op2 = INSTANCE(next(ps))
         nextarg2 = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        ret = EXPR(IF, [ret, nextarg, nextarg2], ret.span + ps.t.endbyte - start + 1, [op, op2])
+        ret = EXPR(IF, Expression[ret, nextarg, nextarg2], ret.span + ps.t.endbyte - start + 1, INSTANCE[op, op2])
     elseif op isa INSTANCE{OPERATOR{8},Tokens.COLON}
         start = ps.t.startbyte
         if ps.nt.kind == Tokens.END
@@ -142,7 +142,7 @@ function parse_operator(ps::ParseState, ret::Expression)
             push!(ret.args, nextarg)
             ret.span += ps.ws.endbyte-start + 1
         else
-            ret = EXPR(op, [ret, nextarg], ret.span + ps.ws.endbyte - start + 1)
+            ret = EXPR(op, Expression[ret, nextarg], ret.span + ps.ws.endbyte - start + 1)
         end
     elseif op_prec == 6 
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
@@ -151,13 +151,13 @@ function parse_operator(ps::ParseState, ret::Expression)
             push!(ret.args, nextarg)
             ret.span += op.span + nextarg.span
         elseif ret isa EXPR && ret.head == CALL && ret.args[1] isa INSTANCE{OPERATOR{6}}
-            ret = EXPR(COMPARISON, [ret.args[2], ret.args[1], ret.args[3], op, nextarg], ret.args[2].span + ret.args[1].span + ret.args[3].span + op.span + nextarg.span)
+            ret = EXPR(COMPARISON, Expression[ret.args[2], ret.args[1], ret.args[3], op, nextarg], ret.args[2].span + ret.args[1].span + ret.args[3].span + op.span + nextarg.span)
         elseif ret isa EXPR && (ret.head isa INSTANCE{OPERATOR{6},Tokens.ISSUBTYPE} || ret.head isa INSTANCE{OPERATOR{6},Tokens.GREATER_COLON})
-            ret = EXPR(COMPARISON, [ret.args[1], ret.head, ret.args[2], op, nextarg], ret.args[1].span + ret.head.span + ret.args[2].span + op.span + nextarg.span)
+            ret = EXPR(COMPARISON, Expression[ret.args[1], ret.head, ret.args[2], op, nextarg], ret.args[1].span + ret.head.span + ret.args[2].span + op.span + nextarg.span)
         elseif (op isa INSTANCE{OPERATOR{6},Tokens.ISSUBTYPE} || op isa INSTANCE{OPERATOR{6},Tokens.GREATER_COLON})
-            ret = EXPR(op, [ret, nextarg], ret.span + op.span + nextarg.span)
+            ret = EXPR(op, Expression[ret, nextarg], ret.span + op.span + nextarg.span)
         else
-            ret = EXPR(CALL, [op, ret, nextarg], op.span + ret.span + nextarg.span)
+            ret = EXPR(CALL, Expression[op, ret, nextarg], op.span + ret.span + nextarg.span)
         end
     elseif op_prec==1
         if ps.formatcheck && isempty(ps.ws)
@@ -165,18 +165,18 @@ function parse_operator(ps::ParseState, ret::Expression)
         end
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         if ret isa EXPR && ret.head == CALL && !(nextarg isa EXPR && nextarg.head == BLOCK)
-            nextarg = EXPR(BLOCK, [nextarg], nextarg.span)
+            nextarg = EXPR(BLOCK, Expression[nextarg], nextarg.span)
         end
-        ret = EXPR(op, [ret, nextarg], op.span + ret.span + nextarg.span)
+        ret = EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
     elseif op_prec==4 || op_prec==5 || op isa INSTANCE{OPERATOR{3}, Tokens.RIGHT_ARROW}
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        ret = EXPR(op, [ret, nextarg], op.span + ret.span + nextarg.span)
+        ret = EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
     elseif op_prec==14
         if ps.formatcheck && op_prec==1 && isempty(ps.ws)
             push!(ps.hints, "add space at $(ps.nt.startbyte)")
         end
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        ret = EXPR(op, [ret, nextarg], op.span + ret.span + nextarg.span)
+        ret = EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
     elseif op_prec==15
         if ps.nt.kind==Tokens.LPAREN
             start = ps.nt.startbyte
@@ -189,15 +189,15 @@ function parse_operator(ps::ParseState, ret::Expression)
         end
 
         if nextarg isa INSTANCE
-            ret = EXPR(op, [ret, QUOTENODE(nextarg, nextarg.span)], op.span + ret.span + nextarg.span)
+            ret = EXPR(op, Expression[ret, QUOTENODE(nextarg, nextarg.span)], op.span + ret.span + nextarg.span)
         else
-            ret = EXPR(op, [ret, nextarg], op.span + ret.span + nextarg.span)
+            ret = EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
         end
     elseif op isa INSTANCE{OPERATOR{20},Tokens.DDDOT} || op isa INSTANCE{OPERATOR{20},Tokens.PRIME}
-        ret = EXPR(op, [ret], op.span + ret.span)
+        ret = EXPR(op, Expression[ret], op.span + ret.span)
     else
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        ret = EXPR(CALL, [op, ret, nextarg], op.span + ret.span + nextarg.span)
+        ret = EXPR(CALL, Expression[op, ret, nextarg], op.span + ret.span + nextarg.span)
     end
     return ret
 end

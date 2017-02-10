@@ -44,7 +44,8 @@ facts("misc reserved words") do
             """local i = x"""]
     for str in strs
         x = Parser.parse(str)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
         @fact sizeof(str) --> x.span
         @fact checkspan(x) --> true
     end
@@ -66,7 +67,8 @@ facts("tuples") do
             "(a,b) = (c,d)"]
     for str in strs
         x = Parser.parse(str)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
         @fact checkspan(x) --> true
     end
 end
@@ -77,7 +79,8 @@ facts("failing things") do
             "a ? b=c:d : e"]
     for str in strs
         x = Parser.parse(str)
-        @pending (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @pending Expr(io, x)  --> remlineinfo!(Base.parse(str))
     end
 end
 
@@ -88,7 +91,8 @@ facts("generators") do
             "((y,x) for y in X)"]
     for str in strs
         x = Parser.parse(str)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
         @fact checkspan(x) --> true
     end
 end

@@ -1,21 +1,13 @@
-function Base.show(io::IO, x::INSTANCE,indent=0)
-    println(io, " "^indent, " $(x.val)","    [",x.span,"]")
+function Base.show{T, K}(io::IO, x::INSTANCE{T,K},indent=0)
+    println(io, " "^indent, " $((Tokens.Kind[K][1]))","    [",x.span,"]")
 end
 
 function Base.show(io::IO, x::QUOTENODE,indent=0)
-    println(io, " "^indent, " $(x.val)")
+    println(io, " "^indent, " QUOTENODE")
 end
 
 function Base.show(io::IO, x::EXPR,indent=0)
-    if x.head==CALL
-        if x.args[1] isa INSTANCE
-            name = string(x.args[1].val)
-        else
-            name = string(x.args[1].args[1].val)
-        end
-    else
-        name = string(x.head.val)
-    end
+    name = sprint(show, x.head)
     println(io, " "^indent, "↘ ", name,"    [", x.span, "]")
     for a in x.args[(1+(x.head==CALL)):end]
         show(io, a, indent+1)
@@ -23,16 +15,16 @@ function Base.show(io::IO, x::EXPR,indent=0)
 end
 
 
-import Base.print
-function print(io::IO, x::EXPR)
-    for a in x
-        print(io, a)
-    end
-end
+# import Base.print
+# function print(io::IO, x::EXPR)
+#     for a in x
+#         print(io, a)
+#     end
+# end
 
-function print(io::IO, x::INSTANCE)
-    print(io, x.val,x.ws)
-end
-function print(io::IO, x::QUOTENODE)
-    print(io, x.val)
-end
+# function print(io::IO, x::INSTANCE)
+#     print(io, x.val,x.ws)
+# end
+# function print(io::IO, x::QUOTENODE)
+#     print(io, x.val)
+# end

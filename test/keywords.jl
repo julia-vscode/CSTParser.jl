@@ -36,7 +36,8 @@ facts("if blocks") do
     for str in strs
         ps = Parser.ParseState(str)
         x = Parser.parse_expression(ps)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
         @fact ps.t.kind --> Tokenize.Tokens.END "span mismatch for $str"
         @fact checkspan(x) --> true "span mismatch for $str"
     end
@@ -52,7 +53,8 @@ facts("try blocks") do
     for str in strs
         ps = Parser.ParseState(str)
         x = Parser.parse_expression(ps)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
         @fact ps.t.kind --> Tokenize.Tokens.END "span mismatch for $str"
         @fact checkspan(x) --> true "span mismatch for $str"
     end
@@ -69,7 +71,8 @@ facts("import statements") do
     for str in strs
         ps = Parser.ParseState(str)
         x = Parser.parse_expression(ps)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
         @fact checkspan(x) --> true "span mismatch for $str"
     end
 end
@@ -80,7 +83,8 @@ facts("export statements") do
     for str in strs
         ps = Parser.ParseState(str)
         x = Parser.parse_expression(ps)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
         @fact checkspan(x) --> true "span mismatch for $str"
     end
 end

@@ -4,7 +4,7 @@ function parse_kw_syntax(ps::ParseState)
         kw = INSTANCE(ps)
         arg = parse_block(ps)
         next(ps)
-        return EXPR(kw, [arg], ps.ws.endbyte - start + 1, [INSTANCE(ps)])
+        return EXPR(kw, Expression[arg], ps.ws.endbyte - start + 1, [INSTANCE(ps)])
     elseif ps.t.kind==Tokens.IF
         return parse_if(ps)
     elseif ps.t.kind==Tokens.TRY
@@ -16,10 +16,10 @@ function parse_kw_syntax(ps::ParseState)
     elseif ps.t.kind==Tokens.RETURN
         kw = INSTANCE(ps)
         if closer(ps)
-            return  EXPR(kw, [NOTHING], ps.ws.endbyte - start + 1)
+            return  EXPR(kw, Expression[NOTHING], ps.ws.endbyte - start + 1)
         else
             arg = parse_expression(ps)
-            return  EXPR(kw, [arg], ps.ws.endbyte - start + 1)
+            return  EXPR(kw, Expression[arg], ps.ws.endbyte - start + 1)
         end
     elseif ps.t.kind == Tokens.MODULE || ps.t.kind == Tokens.BAREMODULE
         kw = INSTANCE(ps)
@@ -32,25 +32,25 @@ function parse_kw_syntax(ps::ParseState)
         arg = @closer ps block @closer ps ws parse_expression(ps)
         block = parse_block(ps)
         next(ps)
-        return EXPR(kw, [kw isa INSTANCE{KEYWORD,Tokens.TYPE} ? TRUE : FALSE, arg, block], ps.ws.endbyte - start + 1, [INSTANCE(ps)])
+        return EXPR(kw, Expression[kw isa INSTANCE{KEYWORD,Tokens.TYPE} ? TRUE : FALSE, arg, block], ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
     elseif Tokens.begin_0arg_kw < ps.t.kind < Tokens.end_0arg_kw
         kw = INSTANCE(ps)
-        return EXPR(kw, [], ps.ws.endbyte - start + 1)
+        return EXPR(kw, Expression[], ps.ws.endbyte - start + 1)
     elseif Tokens.begin_1arg_kw < ps.t.kind < Tokens.end_1arg_kw
         kw = INSTANCE(ps)
         arg = parse_expression(ps)
-        return EXPR(kw, [arg], ps.ws.endbyte - start + 1)
+        return EXPR(kw, Expression[arg], ps.ws.endbyte - start + 1)
     elseif Tokens.begin_2arg_kw < ps.t.kind < Tokens.end_2arg_kw
         kw = INSTANCE(ps)
         arg1 = @closer ps ws parse_expression(ps) 
         arg2 = parse_expression(ps)
-        return EXPR(kw, [arg1, arg2], ps.ws.endbyte - start + 1)
+        return EXPR(kw, Expression[arg1, arg2], ps.ws.endbyte - start + 1)
     elseif Tokens.begin_3arg_kw < ps.t.kind < Tokens.end_3arg_kw
         kw = INSTANCE(ps)
         arg = @closer ps block @closer ps ws parse_expression(ps)
         block = parse_block(ps)
         next(ps)
-        return EXPR(kw, [arg, block], ps.ws.endbyte - start + 1, [INSTANCE(ps)])
+        return EXPR(kw, Expression[arg, block], ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
     else
         error(ps)
     end
@@ -63,16 +63,16 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
 
     if ps.nt.kind==Tokens.END
         next(ps)
-        return EXPR(kw, [cond, EXPR(BLOCK, [], 0)], ps.ws.endbyte - start + 1, [INSTANCE(ps)])
+        return EXPR(kw, Expression[cond, EXPR(BLOCK, Expression[], 0)], ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
     end
 
-    ifblock = EXPR(BLOCK, [], -ps.nt.startbyte)
+    ifblock = EXPR(BLOCK, Expression[], -ps.nt.startbyte)
     while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.ELSE && ps.nt.kind!==Tokens.ELSEIF
         push!(ifblock.args, @closer ps ifelse parse_expression(ps))
     end
     ifblock.span +=ps.ws.endbyte + 1
 
-    elseblock = EXPR(BLOCK, [], 0)
+    elseblock = EXPR(BLOCK, Expression[], 0)
     if ps.nt.kind==Tokens.ELSEIF
         next(ps)
         push!(puncs, INSTANCE(ps))
@@ -91,8 +91,8 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
     !nested && next(ps)
     !nested && push!(puncs, INSTANCE(ps))
     ret = isempty(elseblock.args) ? 
-        EXPR(kw, [cond, ifblock], ps.ws.endbyte - start + 1, puncs) : 
-        EXPR(kw, [cond, ifblock, elseblock], ps.ws.endbyte - start + 1, puncs)
+        EXPR(kw, Expression[cond, ifblock], ps.ws.endbyte - start + 1, puncs) : 
+        EXPR(kw, Expression[cond, ifblock, elseblock], ps.ws.endbyte - start + 1, puncs)
     return ret
 end
 
@@ -100,7 +100,7 @@ end
 function parse_try(ps::ParseState)
     start = ps.t.startbyte
     kw = INSTANCE(ps)
-    tryblock = EXPR(BLOCK, [], -ps.ws.endbyte)
+    tryblock = EXPR(BLOCK, Expression[], -ps.ws.endbyte)
     while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.CATCH 
         push!(tryblock.args, @closer ps trycatch parse_expression(ps))
     end
@@ -118,11 +118,11 @@ function parse_try(ps::ParseState)
         end
     else
         caught = FALSE
-        catchblock = EXPR(BLOCK, [], 0)
+        catchblock = EXPR(BLOCK, Expression[], 0)
     end
     ps.t.kind != Tokens.END && next(ps)
     push!(puncs, INSTANCE(ps))
-    return EXPR(kw, [tryblock, caught ,catchblock], ps.ws.endbyte - start + 1, puncs)
+    return EXPR(kw, Expression[tryblock, caught ,catchblock], ps.ws.endbyte - start + 1, puncs)
 end
 
 function parse_imports(ps::ParseState)
@@ -130,13 +130,13 @@ function parse_imports(ps::ParseState)
     kw = INSTANCE(ps)
     M = INSTANCE[]
     if ps.nt.kind==Tokens.DDOT
-        push!(M, INSTANCE{OPERATOR{15},Tokens.DOT}(1))
-        push!(M, INSTANCE{OPERATOR{15},Tokens.DOT}(1))
+        push!(M, INSTANCE{OPERATOR{15},Tokens.DOT}(1, ps.nt.startbyte))
+        push!(M, INSTANCE{OPERATOR{15},Tokens.DOT}(1, ps.nt.startbyte + 1))
         next(ps)
     end
     @assert ps.nt.kind == Tokens.IDENTIFIER "incomplete import statement"
     push!(M, INSTANCE(next(ps)))
-    puncs = []
+    puncs = INSTANCE[]
     while ps.nt.kind==Tokens.DOT
         push!(puncs, INSTANCE(next(ps)))
         @assert ps.nt.kind == Tokens.IDENTIFIER "expected only symbols in import statement"
@@ -147,7 +147,6 @@ function parse_imports(ps::ParseState)
     else
         @assert ps.nt.kind == Tokens.COLON
         push!(puncs, INSTANCE(next(ps)))
-        # args = parse_list(ps, puncs)
         args = Vector{INSTANCE}[]
         while ps.nt.kind == Tokens.IDENTIFIER
             a = INSTANCE[INSTANCE(next(ps))]
@@ -166,7 +165,7 @@ function parse_imports(ps::ParseState)
             push!(M, first(args)...)
             ret = EXPR(kw, M, ps.ws.endbyte - start + 1, puncs)
         else
-            ret = EXPR(INSTANCE{HEAD,Tokens.TOPLEVEL}(kw.span), [], ps.ws.endbyte - start + 1, puncs)
+            ret = EXPR(INSTANCE{HEAD,Tokens.TOPLEVEL}(kw.span, start), Expression[], ps.ws.endbyte - start + 1, puncs)
             for a in args
                 push!(ret.args, EXPR(kw, vcat(M, a), sum(y.span for y in a) + length(a) - 1))
             end
@@ -180,7 +179,7 @@ function parse_export(ps::ParseState)
     kw = INSTANCE(ps)
     @assert ps.nt.kind == Tokens.IDENTIFIER "incomplete export statement"
     args = INSTANCE[INSTANCE(next(ps))]
-    puncs = []
+    puncs = INSTANCE[]
     while ps.nt.kind==Tokens.COMMA
         push!(puncs, INSTANCE(next(ps)))
         @assert ps.nt.kind == Tokens.IDENTIFIER "expected only symbols in import statement"

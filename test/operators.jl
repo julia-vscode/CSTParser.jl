@@ -25,7 +25,8 @@ facts("operators simple") do
              "1 + 2 - 3 * 4"]
     for str in strs
         x = Parser.parse(str)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
         @fact x.span --> endof(str)
         @fact checkspan(x) --> true
     end
@@ -33,7 +34,8 @@ facts("operators simple") do
         for str2 in strs
             str = "$str1 $(randop()) $str2"
             x = Parser.parse(str)
-            @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+            io = IOBuffer(str)
+            @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
             @fact x.span --> endof(str)
             @fact checkspan(x) --> true
         end
@@ -45,7 +47,8 @@ facts("operators") do
     for iter = 1:250
         str = join([["$i $(randop()) " for i = 1:n-1];"$n"])
         x = Parser.parse(str)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
         @fact x.span --> endof(str)
         @fact checkspan(x) --> true
     end
@@ -76,7 +79,8 @@ facts("operators") do
         for i = 1:50
             str = join([["x$(randop())" for i = 1:n-1];"x"])
             x = Parser.parse(str)
-            @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+            io = IOBuffer(str)
+            @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
             @fact checkspan(x) --> true
         end
     end
@@ -88,7 +92,8 @@ facts("? : syntax") do
             "a ? b:c : d:e"]
     for str in strs
         x = Parser.parse(str)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
         @fact checkspan(x) --> true
     end
 end
@@ -102,7 +107,8 @@ facts("dot access") do
             "(a).b.(c+d)"]
     for str in strs
         x = Parser.parse(str)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
         # @fact checkspan(x) --> true
     end
 end
@@ -112,7 +118,8 @@ facts("unary") do
     for op in ops
         str = "$op b" 
         x = Parser.parse(str)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
         @fact checkspan(x) --> true
     end
 end
