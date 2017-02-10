@@ -43,12 +43,13 @@ end
 
 function Base.show(io::IO, ps::ParseState)
     println(io, "ParseState $(ps.done ? "finished " : "")at $(ps.l.current_pos)")
-    println(io, "token - (ws)")
-    println(io,"last    : ", ps.lt, " ($(length(ps.lws.val)))")
-    println(io,"current : ", ps.t, " ($(length(ps.ws.val)))")
-    println(io,"next    : ", ps.nt, " ($(length(ps.nws.val)))")
+    println(io,"last    : ", ps.lt, "    ($(wstype(ps.lws)))")
+    println(io,"current : ", ps.t, "    ($(wstype(ps.ws)))")
+    println(io,"next    : ", ps.nt, "    ($(wstype(ps.nws)))")
 end
 peekchar(ps::ParseState) = peekchar(ps.l)
+wstype(t::Token) = t.kind == Tokens.begin_delimiters ? "empty" :
+                   t.kind == Tokens.begin_literal ? "ws w/ newline" : "ws"
 
 function next(ps::ParseState)
     global empty_whitespace
@@ -87,6 +88,8 @@ function lex_ws_comment(l::Lexer, c)
 
     return emit(l, newline ? Tokens.begin_literal : Tokens.end_literal)
 end
+
+
 
 function read_ws(l::Lexer, ok)
     while iswhitespace(peekchar(l))

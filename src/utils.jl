@@ -1,5 +1,4 @@
 function closer(ps::ParseState)
-    # (ps.closer.newline && search(ps.ws.val, '\n')!=0) ||
     (ps.closer.newline && ps.ws.kind == Tokens.begin_literal) ||
     (isoperator(ps.nt) && precedence(ps.nt)<=ps.closer.precedence) ||
     (ps.closer.eof && ps.nt.kind==Tokens.ENDMARKER) ||

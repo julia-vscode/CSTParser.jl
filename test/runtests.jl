@@ -19,7 +19,7 @@ function checkspan(x)
         for a in x
             checkspan(a)
         end
-        @assert x.span == (length(x) == 0 ? 0 : sum(a.span for a in x)) "$(x.head.val)  $(x.span)  $(sum(a.span for a in x))"
+        @assert x.span == (length(x) == 0 ? 0 : sum(a.span for a in x)) "$(x.head)  $(x.span)  $(sum(a.span for a in x))"
     end
     true
 end
