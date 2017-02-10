@@ -21,8 +21,7 @@ function INSTANCE(ps::ParseState)
         ispunctuation(ps.t) ? PUNCTUATION :
         error("Couldn't make an INSTANCE from $(ps)")
 
-    # return INSTANCE{t,ps.t.kind}(ps.t.val, ps.ws.val, ps.ws.endbyte-ps.t.startbyte+1)
-    return INSTANCE{t,ps.t.kind}("", "", ps.ws.endbyte-ps.t.startbyte+1)
+    return INSTANCE{t,ps.t.kind}(ps.t.val, ps.ws.val, ps.ws.endbyte-ps.t.startbyte+1)
 end
 INSTANCE(str::String) = INSTANCE{0,Tokens.ERROR}(str, "", 0)
 
