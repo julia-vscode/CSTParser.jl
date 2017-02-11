@@ -42,10 +42,10 @@ function ParseState(str::String)
 end
 
 function Base.show(io::IO, ps::ParseState)
-    println(io, "ParseState $(ps.done ? "finished " : "")at $(ps.l.current_pos)")
-    println(io,"last    : ", ps.lt, "    ($(wstype(ps.lws)))")
-    println(io,"current : ", ps.t, "    ($(wstype(ps.ws)))")
-    println(io,"next    : ", ps.nt, "    ($(wstype(ps.nws)))")
+    println(io, "ParseState $(ps.done ? "finished " : "")at $(position(ps.l.io))")
+    println(io,"last    : ", ps.lt.kind, " ($(ps.lt))", "    ($(wstype(ps.lws)))")
+    println(io,"current : ", ps.t.kind, " ($(ps.t))", "    ($(wstype(ps.ws)))")
+    println(io,"next    : ", ps.nt.kind, " ($(ps.nt))", "    ($(wstype(ps.nws)))")
 end
 peekchar(ps::ParseState) = peekchar(ps.l)
 wstype(t::Token) = t.kind == Tokens.begin_delimiters ? "empty" :

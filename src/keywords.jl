@@ -148,16 +148,17 @@ function parse_imports(ps::ParseState)
         @assert ps.nt.kind == Tokens.COLON
         push!(puncs, INSTANCE(next(ps)))
         args = Vector{INSTANCE}[]
-        while ps.nt.kind == Tokens.IDENTIFIER
+        while ps.nt.kind == Tokens.IDENTIFIER && !closer(ps)
             a = INSTANCE[INSTANCE(next(ps))]
             while ps.nt.kind == Tokens.DOT
                 push!(puncs, INSTANCE(next(ps)))
                 push!(a, INSTANCE(next(ps)))
             end
-            if ps.nt.kind == Tokens.COMMA || closer(ps)
+            if ps.nt.kind == Tokens.COMMA
                 push!(args, a)
                 !closer(ps) && push!(puncs, INSTANCE(next(ps)))
             else
+                push!(args, a)
                 break
             end
         end

@@ -56,7 +56,7 @@ function Expr(io::IOBuffer, x::EXPR)
     elseif x.head isa INSTANCE{HEAD, Tokens.GENERATOR}
         return Expr(:generator, Expr(io, x.args[1]), fixranges.(io, x.args[2:end])...)
     elseif x.head == MACROCALL
-        return Expr(:macrocall, Symbol("@$(x.args[1].val)"), Expr.(io, x.args[2:end])...)
+        return Expr(:macrocall, Symbol('@', Expr(io, x.args[1])), Expr.(io, x.args[2:end])...)
     end
     return Expr(Expr(io, x.head), Expr.(io, x.args)...)
 end

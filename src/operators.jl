@@ -189,7 +189,7 @@ function parse_operator(ps::ParseState, ret::Expression)
         end
 
         if nextarg isa INSTANCE
-            ret = EXPR(op, Expression[ret, QUOTENODE(nextarg, nextarg.span)], op.span + ret.span + nextarg.span)
+            ret = EXPR(op, Expression[ret, QUOTENODE(nextarg, nextarg.span, [])], op.span + ret.span + nextarg.span)
         else
             ret = EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
         end

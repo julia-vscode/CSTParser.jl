@@ -101,7 +101,8 @@ facts("macros") do
     strs = ["@time sin(5)"]
     for str in strs
         x = Parser.parse(str)
-        @fact (x |> Expr) --> remlineinfo!(Base.parse(str))
+        io = IOBuffer(str)
+        @fact Expr(io, x) --> remlineinfo!(Base.parse(str))
         @fact checkspan(x) --> true
     end
 end

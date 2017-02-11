@@ -41,16 +41,11 @@ function parse_expression(ps::ParseState)
     elseif ps.t.kind == Tokens.LPAREN
         ret = parse_paren(ps)
     elseif ps.t.kind == Tokens.LSQUARE
-        start = ps.t.startbyte
-        ret = @default ps @closer ps square parse_expression(ps)
-        if ret isa EXPR && ret.head==TUPLE
-            ret = EXPR(VECT, ret.args, ps.nt.endbyte - start + 1)
-        else
-            ret = EXPR(VECT, [ret], ps.nt.endbyte - start + 1)
-        end
-        next(ps)
+        ret = parse_square(ps)
     elseif ps.t.kind == Tokens.LBRACE
         error("discontinued cell1d syntax")
+    elseif ps.t.kind == Tokens.COLON
+        ret = parse_quote(ps)
     elseif isunaryop(ps.t)
         ret = parse_unary(ps)
     elseif isinstance(ps.t) || isoperator(ps.t)
@@ -82,10 +77,15 @@ function parse_expression(ps::ParseState)
                 next(ps)
                 start = ps.t.startbyte
                 opener = INSTANCE(ps)
-                arg = @default ps @closer ps square parse_expression(ps)
-                @assert ps.nt.kind==Tokens.RSQUARE
-                next(ps)
-                ret = EXPR(REF, [ret, arg], ps.t.endbyte - start + 1, [opener, INSTANCE(ps)])
+                if ps.nt.kind == Tokens.RSQUARE
+                    next(ps)
+                    ret = EXPR(REF, [ret], ps.t.endbyte - start + 1, [opener, INSTANCE(ps)])
+                else
+                    arg = @default ps @closer ps square parse_expression(ps)
+                    @assert ps.nt.kind==Tokens.RSQUARE
+                    next(ps)
+                    ret = EXPR(REF, [ret, arg], ps.t.endbyte - start + 1, [opener, INSTANCE(ps)])
+                end
             else
                 error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
             end
@@ -163,7 +163,7 @@ function parse_generator(ps::ParseState, ret)
 
     ret = EXPR(GENERATOR, [ret, range], ret.span + ps.ws.endbyte - start + 1, [op])
     if !(ps.nt.kind==Tokens.RPAREN || ps.nt.kind==Tokens.RSQUARE)
-        error("generator/comprehension syntax not followed by ')' or ']'")
+        error("generator/comprehension syntax not followed by ')' or ']' at $(ps)")
     end
     return ret
 end
@@ -240,7 +240,7 @@ function parse_curly(ps::ParseState, ret)
     next(ps)
     start = ps.t.startbyte
     puncs = INSTANCE[INSTANCE(ps)]
-    args = @closer ps brace parse_list(ps, puncs)
+    args = @default ps @closer ps brace parse_list(ps, puncs)
     push!(puncs, INSTANCE(next(ps)))
     return EXPR(CURLY, [ret, args...], ret.span + ps.ws.endbyte - start + 1, puncs)
 end
@@ -270,6 +270,45 @@ function parse_paren(ps::ParseState)
         ret = EXPR(BLOCK, [ret], ps.ws.endbyte - start + 1, [openparen, closeparen])
     end
     return ret
+end
+
+function parse_square(ps::ParseState)
+    start = ps.t.startbyte
+    if ps.nt.kind == Tokens.RSQUARE
+        next(ps)
+        return EXPR(VECT, [], ps.ws.endbyte - start + 1)
+    else
+        ret = @default ps @closer ps square parse_expression(ps)
+        if ret isa EXPR && ret.head==TUPLE
+            next(ps)
+            return EXPR(VECT, ret.args, ps.ws.endbyte - start + 1)
+        else
+            next(ps)
+            return EXPR(VECT, [ret], ps.ws.endbyte - start + 1)
+        end 
+    end
+end
+
+function parse_quote(ps::ParseState)
+    start = ps.t.startbyte
+    puncs = INSTANCE[INSTANCE(ps)]
+    if ps.nt.kind == Tokens.IDENTIFIER
+        arg = INSTANCE(next(ps))
+        return QUOTENODE(arg, arg.span, puncs)
+    elseif iskw(ps.nt)
+        next(ps)
+        arg = INSTANCE{IDENTIFIER, Tokens.IDENTIFIER}(ps.ws.endbyte-ps.t.startbyte+1,ps.t.startbyte)
+        return QUOTENODE(arg, arg.span, puncs)
+    elseif isliteral(ps.nt)
+        return INSTANCE(next(ps))
+    elseif ps.nt.kind == Tokens.LPAREN
+        next(ps)
+        push!(puncs, INSTANCE(ps))
+        arg = @closer ps paren parse_expression(ps)
+        next(ps)
+        push!(puncs, INSTANCE(ps))
+        return EXPR(QUOTE, [arg],  ps.ws.endbyte - start + 1, puncs)
+    end
 end
 
 

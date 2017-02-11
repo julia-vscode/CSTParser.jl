@@ -1,4 +1,3 @@
-
 type Iterator{T}
     i::Int
     n::Int
@@ -53,6 +52,8 @@ function start(x::EXPR)
         return Iterator{:toplevel}(1, (cnt - 1 + length(x.args))*2)
     elseif x.head == CURLY
         return Iterator{:curly}(1, length(x.args)*2)
+    elseif x.head == QUOTE
+        return Iterator{:quote}(1, length(x.args) + length(x.punctuation))
     elseif x.head == TUPLE
         if first(x.punctuation) isa INSTANCE{PUNCTUATION,Tokens.LPAREN}
             return Iterator{:tuple}(1, length(x.args) + length(x.punctuation))
@@ -437,6 +438,22 @@ end
 function next(x::EXPR, s::Iterator{:break})
     if s.i == 1
         return x.head, +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:quote})
+    if s.i == 1
+        return x.punctuation[1], +s
+    elseif s.i == s.n
+        return x.punctuation[end], +s
+    elseif s.i == 2
+        if s.n == 4
+            return x.punctuation[2], +s
+        else
+            return x.args[1], +s
+        end
+    elseif s.i == 3
+        return x.args[1], +s
     end
 end
 

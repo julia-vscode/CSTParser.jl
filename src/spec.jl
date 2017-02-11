@@ -27,6 +27,7 @@ end
 type QUOTENODE <: Expression
     val::Expression
     span::Int
+    punctuation::Vector{INSTANCE}
 end
 
 # heads
@@ -44,6 +45,7 @@ const KW = INSTANCE{HEAD,Tokens.KW}(0, 0)
 const LINE = INSTANCE{HEAD,Tokens.LINE}(0, 0)
 const MACROCALL = INSTANCE{HEAD,Tokens.MACROCALL}(0, 0)
 const PARAMETERS = INSTANCE{HEAD,Tokens.PARAMETERS}(0, 0)
+const QUOTE = INSTANCE{HEAD,Tokens.QUOTE}(0, 0)
 const REF = INSTANCE{HEAD,Tokens.REF}(0, 0)
 const TOPLEVEL = INSTANCE{HEAD,Tokens.TOPLEVEL}(0, 0)
 const TUPLE = INSTANCE{HEAD,Tokens.TUPLE}(0, 0)
