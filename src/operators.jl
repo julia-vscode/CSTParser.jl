@@ -100,8 +100,7 @@ issyntaxcall(op) = false
 
 Having hit a unary operator at the start of an expression return a call.
 """
-function parse_unary(ps::ParseState)
-    op = INSTANCE(ps)
+function parse_unary(ps::ParseState, op)
     arg = parse_expression(ps)
     if issyntaxcall(op) && !(op isa INSTANCE{OPERATOR{6},Tokens.ISSUBTYPE} || op isa INSTANCE{OPERATOR{6},Tokens.GREATER_COLON})
         return EXPR(op, [arg], op.span + arg.span)

@@ -46,8 +46,6 @@ function parse_expression(ps::ParseState)
         error("discontinued cell1d syntax")
     elseif ps.t.kind == Tokens.COLON
         ret = parse_quote(ps)
-    elseif isunaryop(ps.t)
-        ret = parse_unary(ps)
     elseif isinstance(ps.t) || isoperator(ps.t)
         ret = INSTANCE(ps)
     elseif ps.t.kind==Tokens.AT_SIGN
@@ -93,6 +91,14 @@ function parse_expression(ps::ParseState)
             ret = parse_comma(ps, ret)
         elseif ps.nt.kind == Tokens.FOR 
             ret = parse_generator(ps, ret)
+        elseif isinstance(ps.nt)
+            if isunaryop(ps.t)
+                ret = parse_unary(ps, ret)
+            elseif isoperator(ps.t)
+                error("$ret is not a unary operator")
+            else 
+                error("unexpected at $ps")
+            end
         else
             for s in stacktrace()
                 println(s)
