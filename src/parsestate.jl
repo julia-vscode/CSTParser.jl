@@ -1,8 +1,7 @@
 import Tokenize.Lexers: peekchar, prevchar, readchar, iswhitespace, emit, emit_error, backup!, accept_batch, eof
 
-const empty_whitespace = Token()
-
 type Closer
+    toplevel::Bool
     newline::Bool
     eof::Bool
     tuple::Bool
@@ -19,7 +18,7 @@ type Closer
     precedence::Int
 end
 
-Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, 0)
+Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, 0)
 
 type ParseState
     l::Lexer
@@ -52,7 +51,6 @@ wstype(t::Token) = t.kind == Tokens.begin_delimiters ? "empty" :
                    t.kind == Tokens.begin_literal ? "ws w/ newline" : "ws"
 
 function next(ps::ParseState)
-    global empty_whitespace
     ps.lt = ps.t
     ps.t = ps.nt
     ps.lws = ps.ws
@@ -72,15 +70,16 @@ end
 
 function lex_ws_comment(l::Lexer, c)
     newline = c=='\n'
-    if prevchar(l)=='#'
+    if c=='#'
         newline = read_comment(l)
     else
         newline = read_ws(l, newline)
     end
     while iswhitespace(peekchar(l)) || peekchar(l)=='#'
-        readchar(l)
-        if prevchar(l)=='#'
+        c = readchar(l)
+        if c=='#'
             read_comment(l)
+            newline = peekchar(l)=='\n'
         else
             newline = read_ws(l, newline)
         end

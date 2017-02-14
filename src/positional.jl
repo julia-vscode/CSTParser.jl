@@ -20,7 +20,7 @@ punctuation.
 function start(x::EXPR)
     if x.head == CALL
         if x.args[1] isa INSTANCE{IDENTIFIER} || (x.args[1] isa EXPR && x.args[1].head == CURLY) # normal call
-            return Iterator{:call}(1, length(x.args)*2)
+            return Iterator{:call}(1, length(x.args) + length(x.punctuation))
         elseif x.args[1] isa INSTANCE # op calls
             if x.args[1] isa INSTANCE{OPERATOR{9},Tokens.PLUS} || x.args[1] isa INSTANCE{OPERATOR{11},Tokens.STAR}
                 return Iterator{:opchain}(1, max(2, length(x.args)*2-3))
@@ -36,22 +36,26 @@ function start(x::EXPR)
     elseif x.head == COMPARISON
         return Iterator{:comparison}(1, length(x.args))
     elseif x.head == MACROCALL
-        return Iterator{:macrocall}(1, length(x.args) + 1)
+        return _start_macrocall(x)
     elseif x.head isa INSTANCE{HEAD,Tokens.IF}
         return Iterator{:?}(1, 5)
     elseif x.head == BLOCK
         return Iterator{:block}(1, length(x.args) + length(x.punctuation))
     elseif x.head == GENERATOR
-        return Iterator{:generator}(1, 3)
+        return _start_generator(x)
     elseif x.head == TOPLEVEL
         @assert length(x.args) > 1
-        cnt = 1
-        while x.args[1].args[cnt] == x.args[2].args[cnt]
-            cnt+=1
+        if !(x.args[1] isa Expr && (x.args[1].head isa INSTANCE{KEYWORD, Tokens.IMPORT} || x.args[1].head isa INSTANCE{KEYWORD, Tokens.IMPORTALL} || x.args[1].head isa INSTANCE{KEYWORD, Tokens.USING})) 
+            return Iterator{:toplevelblock}(1, length(x.args) + length(x.punctuation))
+        else
+            cnt = 1
+            while x.args[1].args[cnt] == x.args[2].args[cnt]
+                cnt+=1
+            end
+            return Iterator{:toplevel}(1, (cnt - 1 + length(x.args))*2)
         end
-        return Iterator{:toplevel}(1, (cnt - 1 + length(x.args))*2)
     elseif x.head == CURLY
-        return Iterator{:curly}(1, length(x.args)*2)
+        return _start_curly(x)
     elseif x.head == QUOTE
         return Iterator{:quote}(1, length(x.args) + length(x.punctuation))
     elseif x.head == TUPLE
@@ -61,64 +65,53 @@ function start(x::EXPR)
             return Iterator{:tuplenoparen}(1, length(x.args) + length(x.punctuation))
         end
     elseif x.head isa INSTANCE{KEYWORD}
-        if x.head isa INSTANCE{KEYWORD,Tokens.BREAK}
-            return Iterator{:break}(1, 1)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.CONTINUE}
-            return Iterator{:continue}(1, 1)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.ABSTRACT} 
+        if x.head isa INSTANCE{KEYWORD,Tokens.ABSTRACT} 
             return Iterator{:abstract}(1, 2)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.CONST}
-            return Iterator{:const}(1, 2)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.GLOBAL}
-            return Iterator{:global}(1, 2)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.LOCAL}
-            return Iterator{:local}(1, 2)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.RETURN}
-            return Iterator{:return}(1, 2)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.IMPORT} || 
-               x.head isa INSTANCE{KEYWORD,Tokens.IMPORTALL} || 
-               x.head isa INSTANCE{KEYWORD,Tokens.USING}
-            return Iterator{:imports}(1, 1 + length(x.args) + length(x.punctuation)) 
-        
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.EXPORT}
-            return Iterator{:export}(1, length(x.args)*2)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.BITSTYPE}
-            return Iterator{:bitstype}(1, 3)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.TYPEALIAS}
-            return Iterator{:typealias}(1, 3)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.MODULE}
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.BAREMODULE}
             return Iterator{:module}(1, 4)
         elseif x.head isa INSTANCE{KEYWORD,Tokens.BEGIN}
             return Iterator{:begin}(1, 3)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.BAREMODULE}
-            return Iterator{:module}(1, 4)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.TYPE}
-            return Iterator{:type}(1, 4)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.IMMUTABLE}
-            return Iterator{:type}(1, 4)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.BITSTYPE}
+            return Iterator{:bitstype}(1, 3)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.BREAK}
+            return Iterator{:break}(1, 1)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.CONST}
+            return Iterator{:const}(1, 2)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.CONTINUE}
+            return Iterator{:continue}(1, 1)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.DO}
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.EXPORT}
+            return Iterator{:export}(1, length(x.args)*2)
         elseif x.head isa INSTANCE{KEYWORD,Tokens.FOR}
-            return Iterator{:for}(1, 4)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.WHILE}
-            return Iterator{:while}(1, 4)
+            return _start_for(x)
         elseif x.head isa INSTANCE{KEYWORD,Tokens.FUNCTION}
             return Iterator{:function}(1, 4)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.GLOBAL}
+            return Iterator{:global}(1, 2)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.IF}
+            return _start_if(x)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.IMMUTABLE}
+            return Iterator{:type}(1, 4)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.LOCAL}
+            return Iterator{:local}(1, 2)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.IMPORT} || 
+               x.head isa INSTANCE{KEYWORD,Tokens.IMPORTALL} || 
+               x.head isa INSTANCE{KEYWORD,Tokens.USING}
+            return _start_imports(x)
         elseif x.head isa INSTANCE{KEYWORD,Tokens.MACRO}
             return Iterator{:module}(1, 4)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.DO}
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.IF}
-            if length(x.args) == 2
-                return Iterator{:if}(1, 4)
-            elseif x.punctuation[end-1] isa INSTANCE{KEYWORD,Tokens.ELSE}
-                return Iterator{:if}(1, 4 + (length(x.punctuation)-2)*3 + 2)
-            else
-                return Iterator{:if}(1, 4 + (length(x.punctuation)-1)*3)
-            end
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.MODULE}
+            return Iterator{:module}(1, 4)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.RETURN}
+            return Iterator{:return}(1, 2)
         elseif x.head isa INSTANCE{KEYWORD,Tokens.TRY}
-            if isempty(x.args[3].args)
-                return Iterator{:try}(1, 3)
-            else
-                return Iterator{:try}(1, 5 + (x.args[2]!=FALSE))
-            end
+            return _start_try(x)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.TYPE}
+            return Iterator{:type}(1, 4)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.TYPEALIAS}
+            return Iterator{:typealias}(1, 3)
+        elseif x.head isa INSTANCE{KEYWORD,Tokens.WHILE}
+            return _start_while(x)
         end
     end
 end
@@ -127,7 +120,9 @@ done(x::EXPR, s::Iterator) = s.i > s.n
 length(x::EXPR) = start(x).n
 
 function next(x::EXPR, s::Iterator{:call})
-    if isodd(s.i)
+    if  s.i==s.n
+        return last(x.punctuation), +s
+    elseif isodd(s.i)
         return x.args[div(s.i+1, 2)], +s
     else
         return x.punctuation[div(s.i, 2)], +s
@@ -205,16 +200,6 @@ function next(x::EXPR, s::Iterator{:comparison})
     return x.args[s.i], +s
 end
 
-function next(x::EXPR, s::Iterator{:generator})
-    if s.i == 1
-        return x.args[1], +s
-    elseif s.i == 2 
-        return x.punctuation[1], +s
-    else
-        return x.args[s.i-1], +s
-    end
-end
-
 function next(x::EXPR, s::Iterator{:tuple})
     if isodd(s.i)
         return x.punctuation[div(s.i+1, 2)], +s
@@ -227,20 +212,6 @@ end
 
 function next(x::EXPR, s::Iterator{:tuplenoparen})
     if isodd(s.i)
-        return x.args[div(s.i+1, 2)], +s
-    else
-        return x.punctuation[div(s.i, 2)], +s
-    end
-end
-
-function next(x::EXPR, s::Iterator{:curly})
-    if s.i==1
-        return x.args[1], +s
-    elseif s.i==2
-        return x.punctuation[1], +s
-    elseif s.i==s.n
-        return last(x.punctuation), +s
-    elseif isodd(s.i)
         return x.args[div(s.i+1, 2)], +s
     else
         return x.punctuation[div(s.i, 2)], +s
@@ -300,81 +271,6 @@ function next(x::EXPR, s::Iterator{:module})
     end
 end
 
-function next(x::EXPR, s::Iterator{:type})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[2], +s
-    elseif s.i == 3
-        return x.args[3], +s
-    elseif s.i == 4
-        return x.punctuation[1], +s
-    end
-end
-
-function next(x::EXPR, s::Iterator{:abstract})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[1], +s
-    end
-end
-
-function next(x::EXPR, s::Iterator{:bitstype})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[1], +s
-    elseif s.i == 3
-        return x.args[2], +s
-    end
-end
-
-
-function next(x::EXPR, s::Iterator{:typealias})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[1], +s
-    elseif s.i == 3
-        return x.args[2], +s
-    end
-end
-
-function next(x::EXPR, s::Iterator{:while})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[1], +s
-    elseif s.i == 3
-        return x.args[2], +s
-    elseif s.i == 4
-        return x.punctuation[1], +s
-    end
-end
-
-function next(x::EXPR, s::Iterator{:for})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[1], +s
-    elseif s.i == 3
-        return x.args[2], +s
-    elseif s.i == 4
-        return x.punctuation[1], +s
-    end
-end
-
-
-function next(x::EXPR, s::Iterator{:imports})
-    if s.i == 1
-        return x.head, +s
-    elseif isodd(s.i)
-        return x.punctuation[div(s.i-1, 2)], +s
-    else
-        return x.args[div(s.i, 2)], +s
-    end
-end
 
 
 function next(x::EXPR, s::Iterator{:toplevel})
@@ -392,48 +288,7 @@ function next(x::EXPR, s::Iterator{:toplevel})
     end
 end
 
-function next(x::EXPR, s::Iterator{:export})
-    if s.i == 1
-        return x.head, +s
-    elseif isodd(s.i)
-        return x.punctuation[div(s.i-1, 2)], +s
-    else
-        return x.args[div(s.i, 2)], +s
-    end
-end
 
-
-function next(x::EXPR, s::Iterator{:const})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[1], +s
-    end
-end
-
-function next(x::EXPR, s::Iterator{:global})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[1], +s
-    end
-end
-
-function next(x::EXPR, s::Iterator{:local})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[1], +s
-    end
-end
-
-function next(x::EXPR, s::Iterator{:return})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[1], +s
-    end
-end
 
 function next(x::EXPR, s::Iterator{:break})
     if s.i == 1
@@ -463,68 +318,7 @@ function next(x::EXPR, s::Iterator{:continue})
     end
 end
 
-function next(x::EXPR, s::Iterator{:try})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[1], +s
-    elseif s.i == s.n
-        return last(x.punctuation), +s
-    elseif s.i == 3
-        return first(x.punctuation), +s
-    elseif s.i == 4
-        if x.args[2] != FALSE
-            return x.args[2], +s
-        else
-            return x.args[3], +s
-        end
-    else
-        return x.args[3], +s
-    end
-end
 
-
-function next(x::EXPR, s::Iterator{:if})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[1], +s
-    elseif s.i == 3
-        return x.args[2], +s
-    elseif s.i == 4
-        return x.punctuation[1], +s
-    elseif s.i == s.n
-        return last(x.punctuation), +s
-    else
-        haselse = x.punctuation[end-1] isa INSTANCE{KEYWORD,Tokens.ELSE}
-        nesteds = length(x.punctuation)-1-haselse
-        if haselse && s.i == s.n-1
-            n = div(s.i-2, 3)-1
-            y = x
-            for i = 1:n
-                y = y.args[3].args[1]
-            end
-            return y.args[3], +s
-        end
-        if mod(s.i-1, 3) == 0
-            return x.punctuation[div(s.i-1, 3)], +s
-        elseif mod(s.i-2, 3) == 0
-            n = div(s.i-2, 3)
-            y = x
-            for i = 1:n
-                y = y.args[3].args[1]
-            end
-            return y.args[1], +s
-        else
-            n = div(s.i-2, 3)
-            y = x
-            for i = 1:n
-                y = y.args[3].args[1]
-            end
-            return y.args[2], +s
-        end
-    end
-end
 
 
 function Base.find(x::EXPR, n)
@@ -544,10 +338,11 @@ function Base.find(x::Union{QUOTENODE,INSTANCE}, n)
 end
 
 
-function next(x::EXPR, s::Iterator{:macrocall})
-    if s.i == 1
-        return x.punctuation[1], +s
+
+function next(x::EXPR, s::Iterator{:toplevelblock})
+    if isodd(s.i)
+        return x.args[div(s.i+1, 2)], +s
     else
-        return x.args[s.i-1], +s
+        return x.punctuation[div(s.i, 2)], +s
     end
 end

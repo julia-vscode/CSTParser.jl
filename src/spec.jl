@@ -18,6 +18,7 @@ function INSTANCE(ps::ParseState)
         iskw(ps.t) ? KEYWORD :
         isoperator(ps.t) ? OPERATOR{precedence(ps.t)} :
         ispunctuation(ps.t) ? PUNCTUATION :
+        ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION :
         error("Couldn't make an INSTANCE from $(ps)")
 
     return INSTANCE{t,ps.t.kind}(ps.ws.endbyte-ps.t.startbyte+1, ps.t.startbyte)
@@ -53,9 +54,13 @@ const TYPED_COMPREHENSION = INSTANCE{HEAD,Tokens.TYPED_COMPREHENSION}(0, 0)
 const VCAT = INSTANCE{HEAD,Tokens.VCAT}(0, 0)
 const VECT = INSTANCE{HEAD,Tokens.VECT}(0, 0)
 
+# Misc items
+const x_STR = INSTANCE{HEAD,Tokens.KEYWORD}(1, 0)
+
 const TRUE = INSTANCE{LITERAL,Tokens.TRUE}(0, 0)
 const FALSE = INSTANCE{LITERAL,Tokens.FALSE}(0, 0)
 const AT_SIGN = INSTANCE{PUNCTUATION,Tokens.AT_SIGN}(1, 0)
+const GlobalRefDOC = INSTANCE{HEAD,:globalrefdoc}(0, 0)
 
 
 type EXPR <: Expression

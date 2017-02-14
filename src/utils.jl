@@ -1,5 +1,6 @@
 function closer(ps::ParseState)
     (ps.closer.newline && ps.ws.kind == Tokens.begin_literal) ||
+    (ps.nt.kind == Tokens.SEMICOLON) ||
     (isoperator(ps.nt) && precedence(ps.nt)<=ps.closer.precedence) ||
     (ps.closer.eof && ps.nt.kind==Tokens.ENDMARKER) ||
     (ps.closer.tuple && (iscomma(ps.nt) || isassignment(ps.nt))) ||
@@ -16,7 +17,7 @@ function closer(ps::ParseState)
 end
 
 """
-    @nocloser ps rule body 
+    @closer ps rule body 
 
 Continues parsing closing on `rule`.
 """

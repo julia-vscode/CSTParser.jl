@@ -64,6 +64,7 @@ facts("tuples") do
             "(a...)",
             "((a,b)...)",
             "a,b = c,d",
+            "(a,b = c,d)",
             "(a,b) = (c,d)"]
     for str in strs
         x = Parser.parse(str)

@@ -42,6 +42,17 @@ function Expr(io::IOBuffer, x::INSTANCE{LITERAL,Tokens.STRING})
     Base.parse(String(take!(ioout)))
 end
 
+function Expr(io::IOBuffer, x::INSTANCE{LITERAL,Tokens.TRIPLE_STRING}) 
+    ioout = IOBuffer()
+    seek(io, x.offset)
+    cnt = 0
+    while cnt < x.span
+        cnt+=1
+        write(ioout, read(io, Char))
+    end
+    Base.parse(String(take!(ioout)))
+end
+
 Expr(io::IOBuffer, x::INSTANCE{KEYWORD,Tokens.BAREMODULE}) = :module
 
 Expr(io::IOBuffer, x::QUOTENODE) = QuoteNode(Expr(io::IOBuffer, x.val))
@@ -55,8 +66,14 @@ function Expr(io::IOBuffer, x::EXPR)
         return Expr(:if, Expr.(io, x.args)...)
     elseif x.head isa INSTANCE{HEAD, Tokens.GENERATOR}
         return Expr(:generator, Expr(io, x.args[1]), fixranges.(io, x.args[2:end])...)
+    elseif x.head == x_STR
+        return Expr(:macrocall, string('@', Expr(io, x.args[1]), "_str"), Expr(io, x.args[2]))
     elseif x.head == MACROCALL
-        return Expr(:macrocall, Symbol('@', Expr(io, x.args[1])), Expr.(io, x.args[2:end])...)
+        if x.args[1] isa INSTANCE{HEAD, :globalrefdoc}
+            return Expr(:macrocall, GlobalRef(Core, Symbol("@doc")), Expr.(io, x.args[2:end])...)
+        else
+            return Expr(:macrocall, Symbol('@', Expr(io, x.args[1])), Expr.(io, x.args[2:end])...)
+        end
     end
     return Expr(Expr(io, x.head), Expr.(io, x.args)...)
 end

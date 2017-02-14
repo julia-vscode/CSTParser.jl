@@ -12,10 +12,17 @@ export ParseState
 include("parsestate.jl")
 include("utils.jl")
 include("spec.jl")
-include("conversion.jl")
-include("operators.jl")
-include("keywords.jl")
 include("positional.jl")
+include("conversion.jl")
+include("components/operators.jl")
+include("components/macros.jl")
+include("components/generators.jl")
+include("components/ifblock.jl")
+include("components/tryblock.jl")
+include("components/modules.jl")
+include("components/curly.jl")
+include("components/prefixkw.jl")
+include("keywords.jl")
 include("display.jl")
 
 
@@ -46,6 +53,8 @@ function parse_expression(ps::ParseState)
         error("discontinued cell1d syntax")
     elseif ps.t.kind == Tokens.COLON
         ret = parse_quote(ps)
+    elseif ps.t.kind == Tokens.TRIPLE_STRING
+        ret = parse_doc(ps)
     elseif isinstance(ps.t) || isoperator(ps.t)
         ret = INSTANCE(ps)
     elseif ps.t.kind==Tokens.AT_SIGN
@@ -54,67 +63,71 @@ function parse_expression(ps::ParseState)
         error("Expression started with $(ps)")
     end
 
-    # These are the allowed juxtapositions
     while !closer(ps)
-        if isoperator(ps.nt)
-            ret = parse_operator(ps, ret)
-        elseif ps.nt.kind==Tokens.LPAREN
-            if isempty(ps.ws)
-                ret = @default ps @closer ps paren parse_call(ps, ret)
-            else
-                error("space before \"(\" not allowed in \"$(Expr(ret)) (\"")
-            end
-        elseif ps.nt.kind==Tokens.LBRACE
-            if isempty(ps.ws)
-                ret = parse_curly(ps, ret)
-            else
-                error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
-            end
-        elseif ps.nt.kind==Tokens.LSQUARE
-            if isempty(ps.ws)
-                next(ps)
-                start = ps.t.startbyte
-                opener = INSTANCE(ps)
-                if ps.nt.kind == Tokens.RSQUARE
-                    next(ps)
-                    ret = EXPR(REF, [ret], ps.t.endbyte - start + 1, [opener, INSTANCE(ps)])
-                else
-                    arg = @default ps @closer ps square parse_expression(ps)
-                    @assert ps.nt.kind==Tokens.RSQUARE
-                    next(ps)
-                    ret = EXPR(REF, [ret, arg], ps.t.endbyte - start + 1, [opener, INSTANCE(ps)])
-                end
-            else
-                error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
-            end
-        elseif ps.nt.kind == Tokens.COMMA
-            ret = parse_comma(ps, ret)
-        elseif ps.nt.kind == Tokens.FOR 
-            ret = parse_generator(ps, ret)
-        elseif isinstance(ps.nt)
-            if isunaryop(ps.t)
-                ret = parse_unary(ps, ret)
-            elseif isoperator(ps.t)
-                error("$ret is not a unary operator")
-            else 
-                error("unexpected at $ps")
-            end
-        else
-            for s in stacktrace()
-                println(s)
-            end
-            for f in fieldnames(ps.closer)
-                if getfield(ps.closer, f)==true
-                    println(f, ": true")
-                end
-            end
-            error("infinite loop at $(ps)")
-        end
+        ret = parse_juxtaposition(ps, ret)
+    end
+    if ps.nt.kind==Tokens.SEMICOLON
+        next(ps)
     end
 
     return ret
 end
 
+
+"""
+    parse_juxtaposition(ps, ret)
+
+"""
+function parse_juxtaposition(ps::ParseState, ret)
+    if isoperator(ps.nt)
+        ret = parse_operator(ps, ret)
+    elseif ps.nt.kind==Tokens.LPAREN
+        if isempty(ps.ws)
+            ret = @default ps @closer ps paren parse_call(ps, ret)
+        else
+            error("space before \"(\" not allowed in \"$(Expr(ret)) (\"")
+        end
+    elseif ps.nt.kind==Tokens.LBRACE
+        if isempty(ps.ws)
+            ret = parse_curly(ps, ret)
+        else
+            error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
+        end
+    elseif ps.nt.kind==Tokens.LSQUARE
+        if isempty(ps.ws)
+            parse_cat(ps, ret)
+        else
+            error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
+        end
+    elseif ps.nt.kind == Tokens.COMMA
+        ret = parse_comma(ps, ret)
+    elseif ps.nt.kind == Tokens.FOR 
+        ret = parse_generator(ps, ret)
+    elseif ret isa INSTANCE{IDENTIFIER,Tokens.IDENTIFIER} && ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
+        next(ps)
+        arg = INSTANCE(ps)
+        ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
+    elseif isinstance(ps.nt)
+        if isunaryop(ps.t)
+            ret = parse_unary(ps, ret)
+        elseif isoperator(ps.t)
+            error("$ret is not a unary operator")
+        else 
+            error("unexpected at $ps")
+        end
+    else
+        for s in stacktrace()
+            println(s)
+        end
+        for f in fieldnames(ps.closer)
+            if getfield(ps.closer, f)==true
+                println(f, ": true")
+            end
+        end
+        error("infinite loop at $(ps)")
+    end
+    return ret
+end
 
 """
     parse_call(ps, ret)
@@ -125,7 +138,7 @@ function parse_call(ps::ParseState, ret)
     start = ps.nt.startbyte
     
     puncs = INSTANCE[INSTANCE(next(ps))]
-    args = @closer ps paren parse_list(ps, puncs)
+    args = @nocloser ps newline @closer ps paren parse_list(ps, puncs)
     push!(puncs, INSTANCE(next(ps)))
 
     ret = EXPR(CALL, [ret, args...], ret.span + ps.ws.endbyte - start + 1, puncs)
@@ -143,53 +156,19 @@ function parse_list(ps::ParseState, puncs)
     args = Expression[]
 
     while !closer(ps)
-        a = @closer ps comma parse_expression(ps)
+        a = @nocloser ps newline @closer ps comma parse_expression(ps)
         push!(args, a)
         if ps.nt.kind==Tokens.COMMA
             push!(puncs, INSTANCE(next(ps)))
         end
     end
+
+    if ps.t.kind == Tokens.COMMA
+        if ps.formatcheck 
+            push!(ps.hints, "extra comma unneeded at $(last(puncs).offset)")
+        end
+    end
     return args
-end
-
-
-"""
-    parse_generator(ps)
-
-Having hit `for` not at the beginning of an expression return a generator. 
-Comprehensions are parsed as SQUAREs containing a generator.
-"""
-function parse_generator(ps::ParseState, ret)
-    start = ps.nt.startbyte
-    
-    @assert !isempty(ps.ws)
-    next(ps)
-    op = INSTANCE(ps)
-    range = parse_expression(ps)
-
-    ret = EXPR(GENERATOR, [ret, range], ret.span + ps.ws.endbyte - start + 1, [op])
-    if !(ps.nt.kind==Tokens.RPAREN || ps.nt.kind==Tokens.RSQUARE)
-        error("generator/comprehension syntax not followed by ')' or ']' at $(ps)")
-    end
-    return ret
-end
-
-
-"""
-    parse_macrocall(ps)
-
-Parses a macro call. Expects to start on the `@`.
-"""
-function parse_macrocall(ps::ParseState)
-    start = ps.t.startbyte
-    ret = EXPR(MACROCALL, [INSTANCE(next(ps))], -start, [AT_SIGN])
-    isempty(ps.ws) && !closer(ps) && error("invalid macro name")
-    while !closer(ps)
-        a = @closer ps ws parse_expression(ps)
-        push!(ret.args, a)
-    end
-    ret.span+=ps.t.endbyte + 1
-    return ret
 end
 
 """
@@ -237,24 +216,9 @@ end
 
 
 """
-    parse_curly(ps, ret)
+    parse_paren(ps, ret)
 
-Parses the juxtaposition of `ret` with an opening brace. Parses a comma 
-seperated list.
-"""
-function parse_curly(ps::ParseState, ret)
-    next(ps)
-    start = ps.t.startbyte
-    puncs = INSTANCE[INSTANCE(ps)]
-    args = @default ps @closer ps brace parse_list(ps, puncs)
-    push!(puncs, INSTANCE(next(ps)))
-    return EXPR(CURLY, [ret, args...], ret.span + ps.ws.endbyte - start + 1, puncs)
-end
-
-"""
-    parse_curly(ps, ret)
-
-Parses the juxtaposition of `ret` with an opening brace. Parses a comma 
+Parses the juxtaposition of `ret` with an opening parentheses. Parses a comma 
 seperated list.
 """
 function parse_paren(ps::ParseState)
@@ -310,6 +274,10 @@ function parse_quote(ps::ParseState)
     elseif ps.nt.kind == Tokens.LPAREN
         next(ps)
         push!(puncs, INSTANCE(ps))
+        if ps.nt.kind == Tokens.RPAREN
+            next(ps)
+            return EXPR(QUOTE, [EXPR(TUPLE,[], 2, [pop!(puncs), INSTANCE(ps)])], 3, puncs)
+        end
         arg = @closer ps paren parse_expression(ps)
         next(ps)
         push!(puncs, INSTANCE(ps))
@@ -317,10 +285,49 @@ function parse_quote(ps::ParseState)
     end
 end
 
+function parse_doc(ps::ParseState)
+    start = ps.t.startbyte
+    doc = INSTANCE(ps)
+    arg = parse_expression(ps)
+    return EXPR(MACROCALL, [GlobalRefDOC, doc, arg], ps.ws.endbyte - start + 1)
+end
+
+function parse_cat(ps::ParseState, ret)
+    next(ps)
+    start = ps.t.startbyte
+    opener = INSTANCE(ps)
+    if ps.nt.kind == Tokens.RSQUARE
+        next(ps)
+        ret = EXPR(REF, [ret], ps.t.endbyte - start + 1, [opener, INSTANCE(ps)])
+    else
+        arg = @default ps @closer ps square parse_expression(ps)
+        @assert ps.nt.kind==Tokens.RSQUARE
+        next(ps)
+        ret = EXPR(REF, [ret, arg], ps.t.endbyte - start + 1, [opener, INSTANCE(ps)])
+    end
+    return ret
+end
 
 function parse(str::String, cont = false)
     ps = Parser.ParseState(str)
     ret = parse_expression(ps)
+    # Handle semicolon as linebreak
+    while ps.nt.kind == Tokens.SEMICOLON
+        if ret isa EXPR && ret.head == TOPLEVEL
+            next(ps)
+            op = INSTANCE(ps)
+            arg = parse_expression(ps)
+            push!(ret.punctuation, op)
+            push!(ret.args, arg)
+            ret.span += op.span + arg.span
+        else
+            next(ps)
+            op = INSTANCE(ps)
+            arg = parse_expression(ps)
+            ret = EXPR(TOPLEVEL, [ret, arg], ret.span + arg.span + op.span, [op])
+        end
+    end
+
     return ret
 end
 
