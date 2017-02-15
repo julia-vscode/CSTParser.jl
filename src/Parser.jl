@@ -14,15 +14,17 @@ include("utils.jl")
 include("spec.jl")
 include("positional.jl")
 include("conversion.jl")
+include("components/curly.jl")
 include("components/operators.jl")
-include("components/macros.jl")
+include("components/functions.jl")
 include("components/generators.jl")
 include("components/ifblock.jl")
-include("components/tryblock.jl")
+include("components/loops.jl")
+include("components/macros.jl")
 include("components/modules.jl")
-include("components/curly.jl")
 include("components/prefixkw.jl")
-include("keywords.jl")
+include("components/tryblock.jl")
+include("components/types.jl")
 include("display.jl")
 
 
@@ -44,7 +46,7 @@ Acceptable starting tokens are:
 function parse_expression(ps::ParseState)
     next(ps)
     if Tokens.begin_keywords < ps.t.kind < Tokens.end_keywords 
-        ret = parse_kw_syntax(ps)
+        ret = parse_kw(ps, Val{ps.t.kind})
     elseif ps.t.kind == Tokens.LPAREN
         ret = parse_paren(ps)
     elseif ps.t.kind == Tokens.LSQUARE

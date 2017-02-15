@@ -1,3 +1,26 @@
+parse_kw(ps::ParseState, ::Type{Val{Tokens.IMPORT}}) = parse_imports(ps)
+parse_kw(ps::ParseState, ::Type{Val{Tokens.IMPORTALL}}) = parse_imports(ps)
+parse_kw(ps::ParseState, ::Type{Val{Tokens.USING}}) = parse_imports(ps)
+parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}}) = parse_export(ps)
+
+function parse_kw(ps::ParseState, ::Type{Val{Tokens.MODULE}})
+    start = ps.t.startbyte
+    kw = INSTANCE(ps)
+    arg = @closer ps block @closer ps ws parse_expression(ps)
+    block = parse_block(ps)
+    next(ps)
+    return EXPR(kw, [TRUE, arg, block], ps.ws.endbyte - start + 1, [INSTANCE(ps)])
+end
+
+function parse_kw(ps::ParseState, ::Type{Val{Tokens.BAREMODULE}})
+    start = ps.t.startbyte
+    kw = INSTANCE(ps)
+    arg = @closer ps block @closer ps ws parse_expression(ps)
+    block = parse_block(ps)
+    next(ps)
+    return EXPR(kw, [FALSE, arg, block], ps.ws.endbyte - start + 1, [INSTANCE(ps)])
+end
+
 function parse_imports(ps::ParseState)
     start = ps.t.startbyte
     kw = INSTANCE(ps)
@@ -84,5 +107,18 @@ function next(x::EXPR, s::Iterator{:export})
         return x.punctuation[div(s.i-1, 2)], +s
     else
         return x.args[div(s.i, 2)], +s
+    end
+end
+
+
+function next(x::EXPR, s::Iterator{:module})
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == 2
+        return x.args[2], +s
+    elseif s.i == 3
+        return x.args[3], +s
+    elseif s.i == 4
+        return x.punctuation[1], +s
     end
 end

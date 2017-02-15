@@ -1,3 +1,12 @@
+function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
+    start = ps.t.startbyte
+    kw = INSTANCE(ps)
+    arg = @closer ps block @closer ps ws parse_expression(ps)
+    block = parse_block(ps)
+    next(ps)
+    return EXPR(kw, Expression[arg, block], ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
+end
+
 """
     parse_macrocall(ps)
 

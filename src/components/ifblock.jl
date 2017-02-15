@@ -1,3 +1,5 @@
+parse_kw(ps::ParseState, ::Type{Val{Tokens.IF}}) = parse_if(ps)
+
 """
     parse_if(ps, ret, nested=false, puncs=[])
 

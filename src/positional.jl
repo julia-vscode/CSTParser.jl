@@ -85,7 +85,7 @@ function start(x::EXPR)
         elseif x.head isa INSTANCE{KEYWORD,Tokens.FOR}
             return _start_for(x)
         elseif x.head isa INSTANCE{KEYWORD,Tokens.FUNCTION}
-            return Iterator{:function}(1, 4)
+            return _start_function(x)
         elseif x.head isa INSTANCE{KEYWORD,Tokens.GLOBAL}
             return Iterator{:global}(1, 2)
         elseif x.head isa INSTANCE{KEYWORD,Tokens.IF}
@@ -237,17 +237,7 @@ end
 
 # KEYWORDS
 
-function next(x::EXPR, s::Iterator{:function})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[1], +s
-    elseif s.i == 3
-        return x.args[2], +s
-    elseif s.i == 4
-        return x.punctuation[1], +s
-    end
-end
+
 
 function next(x::EXPR, s::Iterator{:begin})
     if s.i == 1
@@ -259,17 +249,6 @@ function next(x::EXPR, s::Iterator{:begin})
     end
 end
 
-function next(x::EXPR, s::Iterator{:module})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[2], +s
-    elseif s.i == 3
-        return x.args[3], +s
-    elseif s.i == 4
-        return x.punctuation[1], +s
-    end
-end
 
 
 
@@ -290,11 +269,7 @@ end
 
 
 
-function next(x::EXPR, s::Iterator{:break})
-    if s.i == 1
-        return x.head, +s
-    end
-end
+
 
 function next(x::EXPR, s::Iterator{:quote})
     if s.i == 1
@@ -311,13 +286,6 @@ function next(x::EXPR, s::Iterator{:quote})
         return x.args[1], +s
     end
 end
-
-function next(x::EXPR, s::Iterator{:continue})
-    if s.i == 1
-        return x.head, +s
-    end
-end
-
 
 
 

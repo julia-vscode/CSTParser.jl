@@ -1,3 +1,5 @@
+parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}}) = parse_try(ps)
+
 function parse_try(ps::ParseState)
     start = ps.t.startbyte
     kw = INSTANCE(ps)
