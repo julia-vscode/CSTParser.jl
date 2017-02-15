@@ -134,18 +134,3 @@ facts("fullspec") do
     @fact x.span --> sizeof(examplemodule)
 
 end
-
-function ttest3()
-    totT = -Base.gc_time_ns()
-    T1 =0 
-    T2 =0 
-    for i = 1:10000
-        ps = ParseState(examplemodule)
-        Parser.parse_expression(ps)
-        T1+=ps.T1
-        T2+=ps.T2
-    end
-    totT += Base.gc_time_ns()
-    return T1/totT, T2/totT
-end
-

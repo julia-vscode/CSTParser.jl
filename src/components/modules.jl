@@ -9,6 +9,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MODULE}})
     arg = @closer ps block @closer ps ws parse_expression(ps)
     block = parse_block(ps)
     next(ps)
+    push!(ps.current_scope, Declaration{Tokens.MODULE}(get_id(arg), []))
     return EXPR(kw, [TRUE, arg, block], ps.ws.endbyte - start + 1, [INSTANCE(ps)])
 end
 
@@ -18,6 +19,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BAREMODULE}})
     arg = @closer ps block @closer ps ws parse_expression(ps)
     block = parse_block(ps)
     next(ps)
+    push!(ps.current_scope, Declaration{Tokens.BAREMODULE}(get_id(arg), []))
     return EXPR(kw, [FALSE, arg, block], ps.ws.endbyte - start + 1, [INSTANCE(ps)])
 end
 

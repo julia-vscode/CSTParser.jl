@@ -20,6 +20,13 @@ end
 
 Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, 0)
 
+type Declaration{t}
+    id
+    internals::Vector
+end
+
+
+ 
 type ParseState
     l::Lexer
     done::Bool
@@ -33,11 +40,10 @@ type ParseState
     ids::Dict{String,Any}
     hints::Vector{Any}
     closer::Closer
-    T1::Int
-    T2::Int
+    current_scope::Vector{Declaration}
 end
 function ParseState(str::String)
-    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), true, Dict(), [], Closer(), 0, 0))
+    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), true, Dict(), [], Closer(), []))
 end
 
 function Base.show(io::IO, ps::ParseState)
@@ -55,13 +61,9 @@ function next(ps::ParseState)
     ps.t = ps.nt
     ps.lws = ps.ws
     ps.ws = ps.nws
-    b0 = Base.gc_time_ns()
     ps.nt, ps.done  = next(ps.l, ps.done)
-    ps.T1+= Base.gc_time_ns()-b0
     if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#'
-        b0 = Base.gc_time_ns()
         ps.nws = lex_ws_comment(ps.l, readchar(ps.l))
-        ps.T2+= Base.gc_time_ns()-b0
     else
         ps.nws = Token(Tokens.begin_delimiters, (0, 0), (0, 0), ps.nt.endbyte, ps.nt.endbyte, "")
     end

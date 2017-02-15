@@ -1,7 +1,8 @@
 facts("abstract defs") do
-    strs = strs =  ["abstract name"
-            "abstract name <: other"
-            "abstract f(x+1)"]
+    strs =  ["abstract t"
+            "abstract t{T}"
+            "abstract t <: S"
+            "abstract t{T} <: S"]
     for str in strs
         x = Parser.parse(str)
         io = IOBuffer(str)
@@ -12,8 +13,7 @@ end
 
 facts("bitstype defs") do
     strs =  ["bitstype 64 Int"
-            "bitstype 4*16 Int"
-            "bitstype 4*16 f(x)"]
+            "bitstype 4*16 Int"]
     for str in strs
         x = Parser.parse(str)
         io = IOBuffer(str)

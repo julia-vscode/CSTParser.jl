@@ -9,6 +9,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     sig = @closer ps block @closer ps ws parse_expression(ps)
     block = parse_block(ps)
     next(ps)
+    if sig isa INSTANCE
+        push!(ps.current_scope, Declaration{Tokens.FUNCTION}(sig, []))
+    else
+        push!(ps.current_scope, Declaration{Tokens.FUNCTION}(get_id(sig.args[1]), []))
+    end
     return EXPR(kw, Expression[sig, block], ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
 end
 

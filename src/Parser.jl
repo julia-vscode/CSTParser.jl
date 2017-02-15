@@ -10,8 +10,8 @@ import Tokenize.Lexers: Lexer, peekchar, iswhitespace
 export ParseState
 
 include("parsestate.jl")
-include("utils.jl")
 include("spec.jl")
+include("utils.jl")
 include("positional.jl")
 include("components/curly.jl")
 include("components/operators.jl")
@@ -23,7 +23,7 @@ include("components/loops.jl")
 include("components/macros.jl")
 include("components/modules.jl")
 include("components/prefixkw.jl")
-include("components/refs.jl"
+include("components/refs.jl")
 include("components/tryblock.jl")
 include("components/types.jl")
 include("components/tuples.jl")
