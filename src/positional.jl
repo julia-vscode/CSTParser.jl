@@ -58,6 +58,8 @@ function start(x::EXPR)
         return _start_curly(x)
     elseif x.head == QUOTE
         return Iterator{:quote}(1, length(x.args) + length(x.punctuation))
+    elseif x.head == REF
+        return _start_ref(x)
     elseif x.head == TUPLE
         if first(x.punctuation) isa INSTANCE{PUNCTUATION,Tokens.LPAREN}
             return Iterator{:tuple}(1, length(x.args) + length(x.punctuation))
@@ -119,176 +121,6 @@ end
 done(x::EXPR, s::Iterator) = s.i > s.n
 length(x::EXPR) = start(x).n
 
-function next(x::EXPR, s::Iterator{:call})
-    if  s.i==s.n
-        return last(x.punctuation), +s
-    elseif isodd(s.i)
-        return x.args[div(s.i+1, 2)], +s
-    else
-        return x.punctuation[div(s.i, 2)], +s
-    end
-end
-
-function next(x::EXPR, s::Iterator{:opchain})
-    if isodd(s.i)
-        return x.args[div(s.i+1,2)+1], +s
-    elseif s.i == 2
-        return x.args[1], +s
-    else 
-        return x.punctuation[div(s.i, 2)-1], +s
-    end
-end
-
-
-function next(x::EXPR, s::Iterator{:op})
-    if length(x.args) == 2
-        if s.i==1
-            return x.args[1], +s
-        elseif s.i==2
-            return x.args[2], +s
-        end
-    else
-        if s.i==1
-            return x.args[2], +s
-        elseif s.i==2
-            return x.args[1], +s
-        elseif s.i==3 
-            return x.args[3], +s
-        end
-    end
-end
-
-function next(x::EXPR, s::Iterator{:(:)})
-    if s.i == 1
-        return x.args[1], +s
-    elseif s.i == 2
-        return x.head, +s
-    elseif s.i == 3
-        return x.args[2], +s
-    elseif s.i == 4
-        return x.punctuation[1], +s
-    elseif s.i == 5 
-        return x.args[3], +s
-    end
-end
-
-function next(x::EXPR, s::Iterator{:syntaxcall})
-    if s.i==1
-        return x.args[1], +s
-    elseif s.i==2
-        return x.head, +s
-    elseif s.i==3 
-        return x.args[2], +s
-    end
-end
-
-function next(x::EXPR, s::Iterator{:?})
-    if s.i == 1
-        return x.args[1], +s
-    elseif s.i == 2 
-        return x.punctuation[1], +s
-    elseif s.i == 3
-        return x.args[2], +s
-    elseif s.i == 4 
-        return x.punctuation[2], +s
-    elseif s.i == 5
-        return x.args[3], +s
-    end 
-end
-
-function next(x::EXPR, s::Iterator{:comparison})
-    return x.args[s.i], +s
-end
-
-function next(x::EXPR, s::Iterator{:tuple})
-    if isodd(s.i)
-        return x.punctuation[div(s.i+1, 2)], +s
-    elseif s.i==s.n
-        return last(x.punctuation), +s
-    else
-        return x.args[div(s.i, 2)], +s
-    end
-end
-
-function next(x::EXPR, s::Iterator{:tuplenoparen})
-    if isodd(s.i)
-        return x.args[div(s.i+1, 2)], +s
-    else
-        return x.punctuation[div(s.i, 2)], +s
-    end
-end
-
-function next(x::EXPR, s::Iterator{:block})
-    if length(x.punctuation)==2
-        if s.i == 1
-            return x.punctuation[1], +s
-        elseif s.i == s.n
-            return x.punctuation[2], +s
-        else
-            return x.args[s.i-1], +s
-        end
-    end
-
-    return x.args[s.i], +s
-end
-
-
-
-
-# KEYWORDS
-
-
-
-function next(x::EXPR, s::Iterator{:begin})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[1], +s
-    elseif s.i == 3
-        return x.punctuation[1], +s
-    end
-end
-
-
-
-
-function next(x::EXPR, s::Iterator{:toplevel})
-    if s.i == 1
-        return x.args[1].head, +s
-    elseif isodd(s.i)
-        return x.punctuation[div(s.i-1, 2)], +s
-    else
-        if s.i <= div(s.n, 2)
-            return x.args[1].args[div(s.i, 2)], +s
-        else
-            # this needs to be fixed for `import A: a, b.c`
-            return last(x.args[div(s.i-div(s.n, 2)+1, 2)].args), +s
-        end
-    end
-end
-
-
-
-
-
-function next(x::EXPR, s::Iterator{:quote})
-    if s.i == 1
-        return x.punctuation[1], +s
-    elseif s.i == s.n
-        return x.punctuation[end], +s
-    elseif s.i == 2
-        if s.n == 4
-            return x.punctuation[2], +s
-        else
-            return x.args[1], +s
-        end
-    elseif s.i == 3
-        return x.args[1], +s
-    end
-end
-
-
-
 function Base.find(x::EXPR, n)
     i = 0
     @assert n <= x.span
@@ -301,16 +133,4 @@ function Base.find(x::EXPR, n)
     end
 end
 
-function Base.find(x::Union{QUOTENODE,INSTANCE}, n)
-    return x
-end
-
-
-
-function next(x::EXPR, s::Iterator{:toplevelblock})
-    if isodd(s.i)
-        return x.args[div(s.i+1, 2)], +s
-    else
-        return x.punctuation[div(s.i, 2)], +s
-    end
-end
+Base.find(x::Union{QUOTENODE,INSTANCE}, n) = x

@@ -75,12 +75,13 @@ function parse_export(ps::ParseState)
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     @assert ps.nt.kind == Tokens.IDENTIFIER "incomplete export statement"
-    args = INSTANCE[INSTANCE(next(ps))]
+    args = Expression[INSTANCE(next(ps))]
     puncs = INSTANCE[]
     while ps.nt.kind==Tokens.COMMA
         push!(puncs, INSTANCE(next(ps)))
-        @assert ps.nt.kind == Tokens.IDENTIFIER "expected only symbols in import statement"
-        push!(args, INSTANCE(next(ps)))
+        # @assert ps.nt.kind == Tokens.IDENTIFIER "expected only symbols in import statement"
+        # push!(args, INSTANCE(next(ps)))
+        push!(args, @closer ps comma parse_expression(ps))
     end
 
     return EXPR(kw, args, ps.ws.endbyte - start + 1, puncs)
@@ -122,3 +123,19 @@ function next(x::EXPR, s::Iterator{:module})
         return x.punctuation[1], +s
     end
 end
+
+function next(x::EXPR, s::Iterator{:toplevel})
+    if s.i == 1
+        return x.args[1].head, +s
+    elseif isodd(s.i)
+        return x.punctuation[div(s.i-1, 2)], +s
+    else
+        if s.i <= div(s.n, 2)
+            return x.args[1].args[div(s.i, 2)], +s
+        else
+            # this needs to be fixed for `import A: a, b.c`
+            return last(x.args[div(s.i-div(s.n, 2)+1, 2)].args), +s
+        end
+    end
+end
+

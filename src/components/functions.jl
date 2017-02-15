@@ -1,10 +1,31 @@
+# Functions
+#   definition
+#   short form definition
+#   call
+
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
-    arg = @closer ps block @closer ps ws parse_expression(ps)
+    sig = @closer ps block @closer ps ws parse_expression(ps)
     block = parse_block(ps)
     next(ps)
-    return EXPR(kw, Expression[arg, block], ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
+    return EXPR(kw, Expression[sig, block], ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
+end
+
+"""
+    parse_call(ps, ret)
+
+Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
+"""
+function parse_call(ps::ParseState, ret)
+    start = ps.nt.startbyte
+    
+    puncs = INSTANCE[INSTANCE(next(ps))]
+    args = @nocloser ps newline @closer ps paren parse_list(ps, puncs)
+    push!(puncs, INSTANCE(next(ps)))
+
+    ret = EXPR(CALL, [ret, args...], ret.span + ps.ws.endbyte - start + 1, puncs)
+    return ret
 end
 
 
@@ -21,3 +42,14 @@ function next(x::EXPR, s::Iterator{:function})
         return x.punctuation[1], +s
     end
 end
+
+function next(x::EXPR, s::Iterator{:call})
+    if  s.i==s.n
+        return last(x.punctuation), +s
+    elseif isodd(s.i)
+        return x.args[div(s.i+1, 2)], +s
+    else
+        return x.punctuation[div(s.i, 2)], +s
+    end
+end
+

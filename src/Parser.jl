@@ -13,18 +13,21 @@ include("parsestate.jl")
 include("utils.jl")
 include("spec.jl")
 include("positional.jl")
-include("conversion.jl")
 include("components/curly.jl")
 include("components/operators.jl")
 include("components/functions.jl")
 include("components/generators.jl")
+include("components/genericblocks.jl")
 include("components/ifblock.jl")
 include("components/loops.jl")
 include("components/macros.jl")
 include("components/modules.jl")
 include("components/prefixkw.jl")
+include("components/refs.jl"
 include("components/tryblock.jl")
 include("components/types.jl")
+include("components/tuples.jl")
+include("conversion.jl")
 include("display.jl")
 
 
@@ -79,6 +82,17 @@ end
 """
     parse_juxtaposition(ps, ret)
 
+Handles cases where an expression - `ret` - is not followed by 
+`closer(ps) == true`. Possible juxtapositions are: 
++ operators
++ `(`, calls
++ `[`, ref
++ `{`, curly
++ `,`, commas
++ `for`, generators
++ strings
++ an expression preceded by a unary operator
+
 """
 function parse_juxtaposition(ps::ParseState, ret)
     if isoperator(ps.nt)
@@ -97,7 +111,7 @@ function parse_juxtaposition(ps::ParseState, ret)
         end
     elseif ps.nt.kind==Tokens.LSQUARE
         if isempty(ps.ws)
-            parse_cat(ps, ret)
+            ret = parse_ref(ps, ret)
         else
             error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
         end
@@ -109,6 +123,9 @@ function parse_juxtaposition(ps::ParseState, ret)
         next(ps)
         arg = INSTANCE(ps)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
+    elseif (ret isa INSTANCE{LITERAL,Tokens.INTEGER} || ret isa INSTANCE{LITERAL,Tokens.FLOAT})
+        arg = parse_expression(ps)
+        ret = EXPR(CALL, [INSTANCE{OPERATOR{11}, Tokens.STAR}(0, 0), ret, arg], ret.span + arg.span)
     elseif isinstance(ps.nt)
         if isunaryop(ps.t)
             ret = parse_unary(ps, ret)
@@ -131,21 +148,7 @@ function parse_juxtaposition(ps::ParseState, ret)
     return ret
 end
 
-"""
-    parse_call(ps, ret)
 
-Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
-"""
-function parse_call(ps::ParseState, ret)
-    start = ps.nt.startbyte
-    
-    puncs = INSTANCE[INSTANCE(next(ps))]
-    args = @nocloser ps newline @closer ps paren parse_list(ps, puncs)
-    push!(puncs, INSTANCE(next(ps)))
-
-    ret = EXPR(CALL, [ret, args...], ret.span + ps.ws.endbyte - start + 1, puncs)
-    return ret
-end
 
 """
     parse_list(ps)
@@ -171,23 +174,6 @@ function parse_list(ps::ParseState, puncs)
         end
     end
     return args
-end
-
-"""
-    parseblocks(ps, ret = EXPR(BLOCK,...))
-
-Parses an array of expressions (stored in ret) until 'end' is the next token. 
-Returns `ps` the token before the closing `end`, the calling function is 
-assumed to handle the closer.
-"""
-function parse_block(ps::ParseState, ret::EXPR = EXPR(BLOCK, [], 0))
-    start = ps.nt.startbyte
-    while ps.nt.kind!==Tokens.END
-        push!(ret.args, @closer ps block parse_expression(ps))
-    end
-    @assert ps.nt.kind==Tokens.END
-    ret.span = ps.ws.endbyte - start + 1
-    return ret
 end
 
 function parse_comma(ps::ParseState, ret)
@@ -261,6 +247,13 @@ function parse_square(ps::ParseState)
     end
 end
 
+
+"""
+    parse_quote(ps)
+
+Handles the case where a colon is used as a unary operator on an
+expression. The output is a quoted expression.
+"""
 function parse_quote(ps::ParseState)
     start = ps.t.startbyte
     puncs = INSTANCE[INSTANCE(ps)]
@@ -287,28 +280,23 @@ function parse_quote(ps::ParseState)
     end
 end
 
+"""
+    parse_doc(ps)
+
+Handles the case where an expression starts with a single or triple quoted
+string.
+"""
 function parse_doc(ps::ParseState)
     start = ps.t.startbyte
     doc = INSTANCE(ps)
+    if ps.nt.kind == Tokens.ENDMARKER
+        return doc
+    end
     arg = parse_expression(ps)
     return EXPR(MACROCALL, [GlobalRefDOC, doc, arg], ps.ws.endbyte - start + 1)
 end
 
-function parse_cat(ps::ParseState, ret)
-    next(ps)
-    start = ps.t.startbyte
-    opener = INSTANCE(ps)
-    if ps.nt.kind == Tokens.RSQUARE
-        next(ps)
-        ret = EXPR(REF, [ret], ps.t.endbyte - start + 1, [opener, INSTANCE(ps)])
-    else
-        arg = @default ps @closer ps square parse_expression(ps)
-        @assert ps.nt.kind==Tokens.RSQUARE
-        next(ps)
-        ret = EXPR(REF, [ret, arg], ps.t.endbyte - start + 1, [opener, INSTANCE(ps)])
-    end
-    return ret
-end
+
 
 function parse(str::String, cont = false)
     ps = Parser.ParseState(str)

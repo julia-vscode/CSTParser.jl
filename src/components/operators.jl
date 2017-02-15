@@ -200,3 +200,74 @@ function parse_operator(ps::ParseState, ret::Expression)
     end
     return ret
 end
+
+function next(x::EXPR, s::Iterator{:op})
+    if length(x.args) == 2
+        if s.i==1
+            return x.args[1], +s
+        elseif s.i==2
+            return x.args[2], +s
+        end
+    else
+        if s.i==1
+            return x.args[2], +s
+        elseif s.i==2
+            return x.args[1], +s
+        elseif s.i==3 
+            return x.args[3], +s
+        end
+    end
+end
+
+function next(x::EXPR, s::Iterator{:opchain})
+    if isodd(s.i)
+        return x.args[div(s.i+1,2)+1], +s
+    elseif s.i == 2
+        return x.args[1], +s
+    else 
+        return x.punctuation[div(s.i, 2)-1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:syntaxcall})
+    if s.i==1
+        return x.args[1], +s
+    elseif s.i==2
+        return x.head, +s
+    elseif s.i==3 
+        return x.args[2], +s
+    end
+end
+
+
+function next(x::EXPR, s::Iterator{:(:)})
+    if s.i == 1
+        return x.args[1], +s
+    elseif s.i == 2
+        return x.head, +s
+    elseif s.i == 3
+        return x.args[2], +s
+    elseif s.i == 4
+        return x.punctuation[1], +s
+    elseif s.i == 5 
+        return x.args[3], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:?})
+    if s.i == 1
+        return x.args[1], +s
+    elseif s.i == 2 
+        return x.punctuation[1], +s
+    elseif s.i == 3
+        return x.args[2], +s
+    elseif s.i == 4 
+        return x.punctuation[2], +s
+    elseif s.i == 5
+        return x.args[3], +s
+    end 
+end
+
+function next(x::EXPR, s::Iterator{:comparison})
+    return x.args[s.i], +s
+end

@@ -17,10 +17,12 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.BREAK}})
+    start = ps.t.startbyte
     return EXPR(INSTANCE(ps), Expression[], ps.ws.endbyte - start + 1)
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONTINUE}})
+    start = ps.t.startbyte
     return EXPR(INSTANCE(ps), Expression[], ps.ws.endbyte - start + 1)
 end
 

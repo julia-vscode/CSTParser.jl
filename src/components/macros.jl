@@ -1,3 +1,7 @@
+# Macro expressions :
+#     definitions
+#     calls (ws and tuple form)
+
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
