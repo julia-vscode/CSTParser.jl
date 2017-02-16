@@ -167,26 +167,17 @@ function parse_list(ps::ParseState, puncs)
         if ps.nt.kind==Tokens.COMMA
             push!(puncs, INSTANCE(next(ps)))
             format(ps)
-            # if ps.formatcheck && ps.ws.kind == Tokens.begin_delimiters
-            #     push!(ps.hints, "add space at $(last(puncs).offset+1)")
-            # end
         end
     end
 
     if ps.t.kind == Tokens.COMMA
         format(ps)
-        # if ps.formatcheck 
-        #     push!(ps.hints, "extra comma unneeded at $(last(puncs).offset+1)")
-        # end
     end
     return args
 end
 
 function parse_comma(ps::ParseState, ret)
     format(ps)
-    # if ps.formatcheck && !isempty(ps.ws)
-    #     push!(ps.hints, "remove whitespace at $(ps.nt.startbyte+1)")
-    # end
     next(ps)
     op = INSTANCE(ps)
     start = ps.t.startbyte

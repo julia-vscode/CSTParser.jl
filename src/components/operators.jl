@@ -111,9 +111,6 @@ end
 
 function parse_operator(ps::ParseState, ret::Expression)
     next(ps)
-    # if ps.formatcheck && isassignment(ps.t) && isempty(ps.lws)
-    #     push!(ps.hints, "add space at $(ps.lws.endbyte)")
-    # end
     format(ps)
 
     op = INSTANCE(ps)
@@ -160,9 +157,6 @@ function parse_operator(ps::ParseState, ret::Expression)
             ret = EXPR(CALL, Expression[op, ret, nextarg], op.span + ret.span + nextarg.span)
         end
     elseif op_prec==1
-        # if ps.formatcheck && isempty(ps.ws)
-        #     push!(ps.hints, "add space at $(ps.nt.startbyte)")
-        # end
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         if ret isa EXPR && ret.head == CALL && !(nextarg isa EXPR && nextarg.head == BLOCK)
             nextarg = EXPR(BLOCK, Expression[nextarg], nextarg.span)
@@ -172,9 +166,6 @@ function parse_operator(ps::ParseState, ret::Expression)
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         ret = EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
     elseif op_prec==14
-        # if ps.formatcheck && op_prec==1 && isempty(ps.ws)
-        #     push!(ps.hints, "add space at $(ps.nt.startbyte)")
-        # end
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         ret = EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
     elseif op_prec==15
