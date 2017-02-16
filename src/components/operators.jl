@@ -78,19 +78,35 @@ ispower(t::Token) = Tokens.begin_power < t.kind < Tokens.end_power
 
 
 
-function issyntaxcall(op::INSTANCE)
-    op isa INSTANCE{OPERATOR{1}} && !(op isa INSTANCE{OPERATOR{1},Tokens.APPROX}) ||
-    op isa INSTANCE{OPERATOR{3},Tokens.RIGHT_ARROW} ||
-    op isa INSTANCE{OPERATOR{4},Tokens.LAZY_OR} ||
-    op isa INSTANCE{OPERATOR{5},Tokens.LAZY_AND} ||
-    op isa INSTANCE{OPERATOR{6},Tokens.ISSUBTYPE} ||
-    op isa INSTANCE{OPERATOR{6},Tokens.GREATER_COLON} ||
-    op isa INSTANCE{OPERATOR{8},Tokens.COLON} ||
-    op isa INSTANCE{OPERATOR{11},Tokens.AND} ||
-    op isa INSTANCE{OPERATOR{14},Tokens.DECLARATION} ||
-    op isa INSTANCE{OPERATOR{15},Tokens.DOT} ||
-    op isa INSTANCE{OPERATOR{20},Tokens.DDDOT}
+# function issyntaxcall(op::INSTANCE)
+#     op isa INSTANCE{OPERATOR{1}} && !(op isa INSTANCE{OPERATOR{1},Tokens.APPROX}) ||
+#     op isa INSTANCE{OPERATOR{3},Tokens.RIGHT_ARROW} ||
+#     op isa INSTANCE{OPERATOR{4},Tokens.LAZY_OR} ||
+#     op isa INSTANCE{OPERATOR{5},Tokens.LAZY_AND} ||
+#     op isa INSTANCE{OPERATOR{6},Tokens.ISSUBTYPE} ||
+#     op isa INSTANCE{OPERATOR{6},Tokens.GREATER_COLON} ||
+#     op isa INSTANCE{OPERATOR{8},Tokens.COLON} ||
+#     op isa INSTANCE{OPERATOR{11},Tokens.AND} ||
+#     op isa INSTANCE{OPERATOR{14},Tokens.DECLARATION} ||
+#     op isa INSTANCE{OPERATOR{15},Tokens.DOT} ||
+#     op isa INSTANCE{OPERATOR{20},Tokens.DDDOT}
+# end
+
+function issyntaxcall{P,K}(op::OPERATOR{P,K})
+    P == 1 && !(K == Tokens.APPROX) ||
+    P == 3 && K == Tokens.RIGHT_ARROW || 
+    P == 4 ||
+    P == 5 ||
+    K == Tokens.ISSUBTYPE ||
+    K == Tokens.GREATER_COLON ||
+    K == Tokens.COLON ||
+    K == Tokens.AND ||
+    K == Tokens.DECLARATION ||
+    K == Tokens.DOT ||
+    K == Tokens.DDDOT
 end
+    
+
 
 issyntaxcall(op) = false
 
@@ -102,7 +118,7 @@ Having hit a unary operator at the start of an expression return a call.
 """
 function parse_unary(ps::ParseState, op)
     arg = parse_expression(ps)
-    if issyntaxcall(op) && !(op isa INSTANCE{OPERATOR{6},Tokens.ISSUBTYPE} || op isa INSTANCE{OPERATOR{6},Tokens.GREATER_COLON})
+    if issyntaxcall(op) && !(op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.GREATER_COLON})
         return EXPR(op, [arg], op.span + arg.span)
     else
         return EXPR(CALL, [op, arg], op.span + arg.span)
@@ -116,7 +132,7 @@ function parse_operator(ps::ParseState, ret::Expression)
     op = INSTANCE(ps)
     op_prec = precedence(ps.t)
 
-    if ret isa EXPR && ret.head==CALL && typeof(ret.args[1]) == typeof(op)  && (op isa INSTANCE{OPERATOR{9},Tokens.PLUS} || op isa INSTANCE{OPERATOR{11},Tokens.STAR})
+    if ret isa EXPR && ret.head==CALL && typeof(ret.args[1]) == typeof(op)  && (op isa OPERATOR{9,Tokens.PLUS} || op isa OPERATOR{11,Tokens.STAR})
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         push!(ret.args, nextarg)
         ret.span += nextarg.span + op.span
@@ -126,15 +142,15 @@ function parse_operator(ps::ParseState, ret::Expression)
         nextarg = @closer ps ifop parse_expression(ps)
         op2 = INSTANCE(next(ps))
         nextarg2 = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        ret = EXPR(IF, Expression[ret, nextarg, nextarg2], ret.span + ps.t.endbyte - start + 1, INSTANCE[op, op2])
-    elseif op isa INSTANCE{OPERATOR{8},Tokens.COLON}
+        ret = EXPR(IF, Expression[ret, nextarg, nextarg2], ret.span + ps.ws.endbyte - start + 1, INSTANCE[op, op2])
+    elseif op isa OPERATOR{8,Tokens.COLON}
         start = ps.t.startbyte
         if ps.nt.kind == Tokens.END
             nextarg = INSTANCE(next(ps))
         else
             nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         end
-        if ret isa EXPR && ret.head isa INSTANCE{OPERATOR{8},Tokens.COLON} && length(ret.args)==2
+        if ret isa EXPR && ret.head isa OPERATOR{8,Tokens.COLON} && length(ret.args)==2
             push!(ret.punctuation, op)
             push!(ret.args, nextarg)
             ret.span += ps.ws.endbyte-start + 1
@@ -147,11 +163,11 @@ function parse_operator(ps::ParseState, ret::Expression)
             push!(ret.args, op)
             push!(ret.args, nextarg)
             ret.span += op.span + nextarg.span
-        elseif ret isa EXPR && ret.head == CALL && ret.args[1] isa INSTANCE{OPERATOR{6}}
+        elseif ret isa EXPR && ret.head == CALL && ret.args[1] isa OPERATOR{6}
             ret = EXPR(COMPARISON, Expression[ret.args[2], ret.args[1], ret.args[3], op, nextarg], ret.args[2].span + ret.args[1].span + ret.args[3].span + op.span + nextarg.span)
-        elseif ret isa EXPR && (ret.head isa INSTANCE{OPERATOR{6},Tokens.ISSUBTYPE} || ret.head isa INSTANCE{OPERATOR{6},Tokens.GREATER_COLON})
+        elseif ret isa EXPR && (ret.head isa OPERATOR{6,Tokens.ISSUBTYPE} || ret.head isa OPERATOR{6,Tokens.GREATER_COLON})
             ret = EXPR(COMPARISON, Expression[ret.args[1], ret.head, ret.args[2], op, nextarg], ret.args[1].span + ret.head.span + ret.args[2].span + op.span + nextarg.span)
-        elseif (op isa INSTANCE{OPERATOR{6},Tokens.ISSUBTYPE} || op isa INSTANCE{OPERATOR{6},Tokens.GREATER_COLON})
+        elseif (op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.GREATER_COLON})
             ret = EXPR(op, Expression[ret, nextarg], ret.span + op.span + nextarg.span)
         else
             ret = EXPR(CALL, Expression[op, ret, nextarg], op.span + ret.span + nextarg.span)
@@ -162,7 +178,7 @@ function parse_operator(ps::ParseState, ret::Expression)
             nextarg = EXPR(BLOCK, Expression[nextarg], nextarg.span)
         end
         ret = EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
-    elseif op_prec==4 || op_prec==5 || op isa INSTANCE{OPERATOR{3}, Tokens.RIGHT_ARROW}
+    elseif op_prec==4 || op_prec==5 || op isa OPERATOR{3, Tokens.RIGHT_ARROW}
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         ret = EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
     elseif op_prec==14
@@ -174,7 +190,7 @@ function parse_operator(ps::ParseState, ret::Expression)
             puncs = INSTANCE[INSTANCE(next(ps))]
             args = @closer ps paren parse_list(ps, puncs)
             push!(puncs, INSTANCE(next(ps)))
-            nextarg = EXPR(TUPLE, args, ps.t.endbyte - start + 1, puncs)
+            nextarg = EXPR(TUPLE, args, ps.ws.endbyte - start + 1, puncs)
         else
             nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         end
@@ -184,7 +200,7 @@ function parse_operator(ps::ParseState, ret::Expression)
         else
             ret = EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
         end
-    elseif op isa INSTANCE{OPERATOR{20},Tokens.DDDOT} || op isa INSTANCE{OPERATOR{20},Tokens.PRIME}
+    elseif op isa OPERATOR{20,Tokens.DDDOT} || op isa OPERATOR{20,Tokens.PRIME}
         ret = EXPR(op, Expression[ret], op.span + ret.span)
     else
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)

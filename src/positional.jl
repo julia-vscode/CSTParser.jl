@@ -19,17 +19,15 @@ punctuation.
 """
 function start(x::EXPR)
     if x.head == CALL
-        if x.args[1] isa INSTANCE{IDENTIFIER} || (x.args[1] isa EXPR && x.args[1].head == CURLY) # normal call
-            return Iterator{:call}(1, length(x.args) + length(x.punctuation))
-        elseif x.args[1] isa INSTANCE # op calls
-            if x.args[1] isa INSTANCE{OPERATOR{9},Tokens.PLUS} || x.args[1] isa INSTANCE{OPERATOR{11},Tokens.STAR}
-                return Iterator{:opchain}(1, max(2, length(x.args)*2-3))
-            else
-                return Iterator{:op}(1, length(x.args) + length(x.punctuation))
-            end
+        if x.args[1] isa OPERATOR{9,Tokens.PLUS} || x.args[1] isa OPERATOR{11,Tokens.STAR}
+            return Iterator{:opchain}(1, max(2, length(x.args)*2-3))
+        elseif x.args[1] isa OPERATOR
+            Iterator{:op}(1, length(x.args) + length(x.punctuation))
+        else
+            Iterator{:call}(1, length(x.args) + length(x.punctuation))
         end
     elseif issyntaxcall(x.head)
-        if x.head isa INSTANCE{OPERATOR{8},Tokens.COLON}
+        if x.head isa OPERATOR{8,Tokens.COLON}
             return Iterator{:(:)}(1, length(x.args) == 2 ? 3 : 5)
         end
         return Iterator{:syntaxcall}(1, length(x.args) + 1)
@@ -37,7 +35,7 @@ function start(x::EXPR)
         return Iterator{:comparison}(1, length(x.args))
     elseif x.head == MACROCALL
         return _start_macrocall(x)
-    elseif x.head isa INSTANCE{HEAD,Tokens.IF}
+    elseif x.head isa HEAD{Tokens.IF}
         return Iterator{:?}(1, 5)
     elseif x.head == BLOCK
         return Iterator{:block}(1, length(x.args) + length(x.punctuation))
@@ -45,7 +43,7 @@ function start(x::EXPR)
         return _start_generator(x)
     elseif x.head == TOPLEVEL
         @assert length(x.args) > 1
-        if !(x.args[1] isa Expr && (x.args[1].head isa INSTANCE{KEYWORD, Tokens.IMPORT} || x.args[1].head isa INSTANCE{KEYWORD, Tokens.IMPORTALL} || x.args[1].head isa INSTANCE{KEYWORD, Tokens.USING})) 
+        if !(x.args[1] isa Expr && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING})) 
             return Iterator{:toplevelblock}(1, length(x.args) + length(x.punctuation))
         else
             cnt = 1
@@ -61,58 +59,58 @@ function start(x::EXPR)
     elseif x.head == REF
         return _start_ref(x)
     elseif x.head == TUPLE
-        if first(x.punctuation) isa INSTANCE{PUNCTUATION,Tokens.LPAREN}
+        if first(x.punctuation) isa PUNCTUATION{Tokens.LPAREN}
             return Iterator{:tuple}(1, length(x.args) + length(x.punctuation))
         else
             return Iterator{:tuplenoparen}(1, length(x.args) + length(x.punctuation))
         end
-    elseif x.head isa INSTANCE{KEYWORD}
-        if x.head isa INSTANCE{KEYWORD,Tokens.ABSTRACT} 
+    elseif x.head isa KEYWORD
+        if x.head isa KEYWORD{Tokens.ABSTRACT} 
             return Iterator{:abstract}(1, 2)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.BAREMODULE}
+        elseif x.head isa KEYWORD{Tokens.BAREMODULE}
             return Iterator{:module}(1, 4)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.BEGIN}
+        elseif x.head isa KEYWORD{Tokens.BEGIN}
             return Iterator{:begin}(1, 3)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.BITSTYPE}
+        elseif x.head isa KEYWORD{Tokens.BITSTYPE}
             return Iterator{:bitstype}(1, 3)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.BREAK}
+        elseif x.head isa KEYWORD{Tokens.BREAK}
             return Iterator{:break}(1, 1)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.CONST}
+        elseif x.head isa KEYWORD{Tokens.CONST}
             return Iterator{:const}(1, 2)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.CONTINUE}
+        elseif x.head isa KEYWORD{Tokens.CONTINUE}
             return Iterator{:continue}(1, 1)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.DO}
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.EXPORT}
+        elseif x.head isa KEYWORD{Tokens.DO}
+        elseif x.head isa KEYWORD{Tokens.EXPORT}
             return Iterator{:export}(1, length(x.args)*2)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.FOR}
+        elseif x.head isa KEYWORD{Tokens.FOR}
             return _start_for(x)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.FUNCTION}
+        elseif x.head isa KEYWORD{Tokens.FUNCTION}
             return _start_function(x)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.GLOBAL}
+        elseif x.head isa KEYWORD{Tokens.GLOBAL}
             return Iterator{:global}(1, 2)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.IF}
+        elseif x.head isa KEYWORD{Tokens.IF}
             return _start_if(x)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.IMMUTABLE}
+        elseif x.head isa KEYWORD{Tokens.IMMUTABLE}
             return Iterator{:type}(1, 4)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.LOCAL}
+        elseif x.head isa KEYWORD{Tokens.LOCAL}
             return Iterator{:local}(1, 2)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.IMPORT} || 
-               x.head isa INSTANCE{KEYWORD,Tokens.IMPORTALL} || 
-               x.head isa INSTANCE{KEYWORD,Tokens.USING}
+        elseif x.head isa KEYWORD{Tokens.IMPORT} || 
+               x.head isa KEYWORD{Tokens.IMPORTALL} || 
+               x.head isa KEYWORD{Tokens.USING}
             return _start_imports(x)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.MACRO}
+        elseif x.head isa KEYWORD{Tokens.MACRO}
             return Iterator{:module}(1, 4)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.MODULE}
+        elseif x.head isa KEYWORD{Tokens.MODULE}
             return Iterator{:module}(1, 4)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.RETURN}
+        elseif x.head isa KEYWORD{Tokens.RETURN}
             return Iterator{:return}(1, 2)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.TRY}
+        elseif x.head isa KEYWORD{Tokens.TRY}
             return _start_try(x)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.TYPE}
+        elseif x.head isa KEYWORD{Tokens.TYPE}
             return Iterator{:type}(1, 4)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.TYPEALIAS}
+        elseif x.head isa KEYWORD{Tokens.TYPEALIAS}
             return Iterator{:typealias}(1, 3)
-        elseif x.head isa INSTANCE{KEYWORD,Tokens.WHILE}
+        elseif x.head isa KEYWORD{Tokens.WHILE}
             return _start_while(x)
         end
     end
@@ -151,9 +149,24 @@ end
 
 _find(x::Union{QUOTENODE,INSTANCE}, n, path, ind) = x
 
-function Base.find(x::EXPR, n)
+function Base.find(x::EXPR, n::Int)
     path = []
     ind = Int[]
     y = _find(x, n ,path, ind)
     return y, path, ind
+end
+
+
+Base.find(x, n::Symbol, list) = nothing
+function Base.find(x::IDENTIFIER, n::Symbol, list)
+    if x.val == n
+        push!(list, x)
+    end
+end
+
+function Base.find(x::EXPR, n::Symbol, list = [])
+    for a in x
+        find(a, n, list)
+    end
+    list
 end

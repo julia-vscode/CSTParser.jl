@@ -30,8 +30,8 @@ function parse_imports(ps::ParseState)
     kw = INSTANCE(ps)
     M = INSTANCE[]
     if ps.nt.kind==Tokens.DDOT
-        push!(M, INSTANCE{OPERATOR{15},Tokens.DOT}(1, ps.nt.startbyte))
-        push!(M, INSTANCE{OPERATOR{15},Tokens.DOT}(1, ps.nt.startbyte + 1))
+        push!(M, OPERATOR{15,Tokens.DOT}(1, ps.nt.startbyte))
+        push!(M, OPERATOR{15,Tokens.DOT}(1, ps.nt.startbyte + 1))
         next(ps)
     end
     @assert ps.nt.kind == Tokens.IDENTIFIER "incomplete import statement"
@@ -66,7 +66,7 @@ function parse_imports(ps::ParseState)
             push!(M, first(args)...)
             ret = EXPR(kw, M, ps.ws.endbyte - start + 1, puncs)
         else
-            ret = EXPR(INSTANCE{HEAD,Tokens.TOPLEVEL}(kw.span, start), Expression[], ps.ws.endbyte - start + 1, puncs)
+            ret = EXPR(HEAD{Tokens.TOPLEVEL}(kw.span, start), Expression[], ps.ws.endbyte - start + 1, puncs)
             for a in args
                 push!(ret.args, EXPR(kw, vcat(M, a), sum(y.span for y in a) + length(a) - 1))
             end

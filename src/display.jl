@@ -1,8 +1,27 @@
-function Base.show{T, K}(io::IO, x::INSTANCE{T,K},indent=0)
-    println(io, " "^indent, " $((Tokens.Kind[K][1]))","    [",x.span,"]")
-end
+# function Base.show{T, K}(io::IO, x::INSTANCE{T,K},indent=0)
+#     println(io, " "^indent, " $((Tokens.Kind[K][1]))","    [",x.span,"]")
+# end
 
-function Base.show{T}(io::IO, x::INSTANCE{T,:globalrefdoc},indent=0)
+Base.show(io::IO, x::IDENTIFIER,indent=0) =
+    println(io, " "^indent, " $(x.val)","    [",x.span,"]")
+
+
+Base.show{K}(io::IO, x::LITERAL{K},indent=0) =
+    println(io, " "^indent, " $((Tokens.Kind[K][1]))","    [",x.span,"]")
+
+Base.show{K}(io::IO, x::KEYWORD{K},indent=0) =
+    println(io, " "^indent, " $((Tokens.Kind[K][1]))","    [",x.span,"]")
+
+Base.show{P,K}(io::IO, x::OPERATOR{P,K},indent=0) =
+    println(io, " "^indent, " $((Tokens.Kind[K][1]))","    [",x.span,"]")
+
+Base.show{K}(io::IO, x::PUNCTUATION{K},indent=0) =
+    println(io, " "^indent, " $((Tokens.Kind[K][1]))","    [",x.span,"]")
+
+Base.show{K}(io::IO, x::HEAD{K},indent=0) =
+    println(io, " "^indent, " $((Tokens.Kind[K][1]))","    [",x.span,"]")
+
+function Base.show(io::IO, x::HEAD{:globalrefdoc},indent=0)
     println(io, " "^indent, " @doc","    [",x.span,"]")
 end
 
@@ -19,7 +38,12 @@ function Base.show(io::IO, x::EXPR,indent=0)
 end
 
 function Base.show{T}(io::IO, x::Scope{T},indent=0)
-    println(io, " "^indent, "↘ ", T)
+    print(io, " "^indent, "↘ ", T)
+    if x.id isa IDENTIFIER
+        println("  ", x.id.val)
+    else
+        println()
+    end
     for a in x.args
         show(io, a, indent+1)
     end 

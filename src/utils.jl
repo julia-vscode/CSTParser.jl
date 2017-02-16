@@ -15,7 +15,7 @@ function closer(ps::ParseState)
     (ps.closer.ifelse && ps.nt.kind==Tokens.ELSEIF || ps.nt.kind==Tokens.ELSE) ||
     (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt)<=1 || ps.nt.kind==Tokens.COLON)) ||
     (ps.closer.trycatch && ps.nt.kind==Tokens.CATCH || ps.nt.kind==Tokens.END) ||
-    (ps.closer.ws && (!isempty(ps.ws) && !isoperator(ps.nt)))
+    (ps.closer.ws && (!isempty(ps.ws) && !(isoperator(ps.nt) || ps.nt.kind == Tokens.COMMA)))
 end
 
 """
@@ -155,9 +155,9 @@ ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
 
 function declares_function(x::Expression)
     if x isa EXPR
-        if x.head isa INSTANCE{KEYWORD,Tokens.FUNCTION}
+        if x.head isa KEYWORD{Tokens.FUNCTION}
             return true
-        elseif x.head isa INSTANCE{OPERATOR{1}, Tokens.EQ} && x.args[1] isa EXPR && x.args[1].head==CALL
+        elseif x.head isa OPERATOR{1,Tokens.EQ} && x.args[1] isa EXPR && x.args[1].head==CALL
             return true
         else
             return false
@@ -167,10 +167,10 @@ function declares_function(x::Expression)
     end
 end
 
-get_id{K}(x::INSTANCE{IDENTIFIER,K}) = x
+get_id(x::IDENTIFIER) = x
 
 function get_id(x::EXPR)
-    if x.head isa INSTANCE{OPERATOR{6}, Tokens.ISSUBTYPE} || x.head isa INSTANCE{OPERATOR{14}, Tokens.DECLARATION}
+    if x.head isa OPERATOR{6,Tokens.ISSUBTYPE} || x.head isa OPERATOR{14, Tokens.DECLARATION}
         return get_id(x.args[1])
     elseif x.head == CURLY
         return get_id(x.args[1])
@@ -179,10 +179,10 @@ function get_id(x::EXPR)
     end
 end
 
-get_t{K}(x::INSTANCE{IDENTIFIER,K}) = :Any
+get_t(x::IDENTIFIER) = :Any
 
 function get_t(x::EXPR)
-    if x.head isa INSTANCE{OPERATOR{14}, Tokens.DECLARATION}
+    if x.head isa OPERATOR{14, Tokens.DECLARATION}
         return x.args[2]
     else
         return :Any

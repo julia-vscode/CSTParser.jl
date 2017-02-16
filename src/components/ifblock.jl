@@ -49,7 +49,7 @@ end
 function _start_if(x::EXPR)
     if length(x.args) == 2
         return Iterator{:if}(1, 4)
-    elseif x.punctuation[end-1] isa INSTANCE{KEYWORD,Tokens.ELSE}
+    elseif x.punctuation[end-1] isa KEYWORD{Tokens.ELSE}
         return Iterator{:if}(1, 4 + (length(x.punctuation)-2)*3 + 2)
     else
         return Iterator{:if}(1, 4 + (length(x.punctuation)-1)*3)
@@ -68,7 +68,7 @@ function next(x::EXPR, s::Iterator{:if})
     elseif s.i == s.n
         return last(x.punctuation), +s
     else
-        haselse = x.punctuation[end-1] isa INSTANCE{KEYWORD,Tokens.ELSE}
+        haselse = x.punctuation[end-1] isa KEYWORD{Tokens.ELSE}
         nesteds = length(x.punctuation)-1-haselse
         if haselse && s.i == s.n-1
             n = div(s.i-2, 3)-1

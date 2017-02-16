@@ -1,9 +1,9 @@
 import Base: Expr, Symbol
 
-Expr{T}(io::IOBuffer, x::INSTANCE{HEAD,T}) = Symbol(lowercase(string(T)))
-Expr{T}(io::IOBuffer, x::INSTANCE{KEYWORD,T}) = Symbol(lowercase(string(T)))
+Expr{T}(io::IOBuffer, x::HEAD{T}) = Symbol(lowercase(string(T)))
+Expr{T}(io::IOBuffer, x::KEYWORD{T}) = Symbol(lowercase(string(T)))
 
-function Expr(io::IOBuffer, x::INSTANCE{IDENTIFIER,Tokens.IDENTIFIER}) 
+function Expr(io::IOBuffer, x::IDENTIFIER) 
     ioout = IOBuffer()
     seek(io, x.offset)
     cnt = 0
@@ -14,13 +14,13 @@ function Expr(io::IOBuffer, x::INSTANCE{IDENTIFIER,Tokens.IDENTIFIER})
     Symbol(take!(ioout))
 end
 
-function Expr{O,K}(io::IOBuffer, x::INSTANCE{OPERATOR{O},K}) 
+function Expr{O,K}(io::IOBuffer, x::OPERATOR{O,K}) 
     UNICODE_OPS_REVERSE[K]
 end
 
-Expr(io::IOBuffer, x::INSTANCE{LITERAL,Tokens.TRUE}) = true
-Expr(io::IOBuffer, x::INSTANCE{LITERAL,Tokens.FALSE}) = false
-function Expr{T}(io::IOBuffer, x::INSTANCE{LITERAL,T}) 
+Expr(io::IOBuffer, x::LITERAL{Tokens.TRUE}) = true
+Expr(io::IOBuffer, x::LITERAL{Tokens.FALSE}) = false
+function Expr{T}(io::IOBuffer, x::LITERAL{T}) 
     ioout = IOBuffer()
     seek(io, x.offset)
     cnt = 0
@@ -31,7 +31,7 @@ function Expr{T}(io::IOBuffer, x::INSTANCE{LITERAL,T})
     Base.parse(String(take!(ioout)))
 end
 
-function Expr(io::IOBuffer, x::INSTANCE{LITERAL,Tokens.FLOAT}) 
+function Expr(io::IOBuffer, x::LITERAL{Tokens.FLOAT}) 
     ioout = IOBuffer()
     seek(io, x.offset)
     cnt = 0
@@ -42,7 +42,7 @@ function Expr(io::IOBuffer, x::INSTANCE{LITERAL,Tokens.FLOAT})
     Base.parse(String(take!(ioout)))
 end
 
-function Expr(io::IOBuffer, x::INSTANCE{LITERAL,Tokens.STRING}) 
+function Expr(io::IOBuffer, x::LITERAL{Tokens.STRING}) 
     ioout = IOBuffer()
     seek(io, x.offset)
     cnt = 0
@@ -53,7 +53,7 @@ function Expr(io::IOBuffer, x::INSTANCE{LITERAL,Tokens.STRING})
     Base.parse(String(take!(ioout)))
 end
 
-function Expr(io::IOBuffer, x::INSTANCE{LITERAL,Tokens.TRIPLE_STRING}) 
+function Expr(io::IOBuffer, x::LITERAL{Tokens.TRIPLE_STRING}) 
     ioout = IOBuffer()
     seek(io, x.offset)
     cnt = 0
@@ -64,25 +64,26 @@ function Expr(io::IOBuffer, x::INSTANCE{LITERAL,Tokens.TRIPLE_STRING})
     Base.parse(String(take!(ioout)))
 end
 
-Expr(io::IOBuffer, x::INSTANCE{KEYWORD,Tokens.BAREMODULE}) = :module
+Expr(io::IOBuffer, x::KEYWORD{Tokens.BAREMODULE}) = :module
 
 Expr(io::IOBuffer, x::QUOTENODE) = QuoteNode(Expr(io::IOBuffer, x.val))
 
 function Expr(io::IOBuffer, x::EXPR)
-    if x.head==BLOCK && length(x.punctuation)==2
+    if x.head==BLOCK && length(x.punctuation)==2 && first(x.punctuation) isa PUNCTUATION{Tokens.LPAREN}
         return Expr(io, x.args[1])
-    elseif x.head isa INSTANCE{KEYWORD,Tokens.BEGIN}
+        # return Expr(:block, Expr.(io, x.args)...)
+    elseif x.head isa KEYWORD{Tokens.BEGIN}
         return Expr(io, x.args[1])
-    elseif x.head isa INSTANCE{KEYWORD,Tokens.ELSEIF}
+    elseif x.head isa KEYWORD{Tokens.ELSEIF}
         return Expr(:if, Expr.(io, x.args)...)
-    elseif x.head isa INSTANCE{HEAD, Tokens.GENERATOR}
+    elseif x.head isa HEAD{Tokens.GENERATOR}
         return Expr(:generator, Expr(io, x.args[1]), fixranges.(io, x.args[2:end])...)
-    elseif x.head isa INSTANCE{KEYWORD, Tokens.IMMUTABLE}
+    elseif x.head isa KEYWORD{Tokens.IMMUTABLE}
         return Expr(:type, false, Expr.(io, x.args[2:end])...)
     elseif x.head == x_STR
         return Expr(:macrocall, string('@', Expr(io, x.args[1]), "_str"), Expr(io, x.args[2]))
     elseif x.head == MACROCALL
-        if x.args[1] isa INSTANCE{HEAD, :globalrefdoc}
+        if x.args[1] isa HEAD{:globalrefdoc}
             return Expr(:macrocall, GlobalRef(Core, Symbol("@doc")), Expr.(io, x.args[2:end])...)
         else
             return Expr(:macrocall, Symbol('@', Expr(io, x.args[1])), Expr.(io, x.args[2:end])...)
@@ -93,7 +94,7 @@ end
 
 
 function fixranges(io::IOBuffer, a::EXPR)
-    if a.head==CALL && a.args[1] isa INSTANCE{OPERATOR{6}, Tokens.IN} || a.args[1] isa INSTANCE{OPERATOR{6}, Tokens.ELEMENT_OF}
+    if a.head==CALL && a.args[1] isa OPERATOR{6, Tokens.IN} || a.args[1] isa OPERATOR{6, Tokens.ELEMENT_OF}
         return Expr(:(=), Expr.(io, a.args[2:end])...)
     else
         return Expr(io, a)

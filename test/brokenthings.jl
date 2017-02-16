@@ -1,10 +1,7 @@
 facts("broken things") do
     strs = ["2(b)"
             "(x.x for x in X)"
-            """
-            for i = 1:2, j = 1:2
-                f(i,j)
-            end"""
+            
             "import Base.@threads"
             "a ? b=c:d : e"
             """
@@ -20,10 +17,7 @@ facts("broken things") do
             ":(using \$s)"
             "[v[i]==Symbol(\"#unused#\") ? string(t[i]) : string(v[i])*\"::\"*string(t[i]) for i = 1:length(v)]"]
     for str in strs
-        x = Parser.parse(str)
-        io = IOBuffer(str)
-        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
-        @fact checkspan(x) --> true
+        test_parse(str)
     end
 end
 

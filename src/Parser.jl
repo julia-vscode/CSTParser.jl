@@ -120,13 +120,13 @@ function parse_juxtaposition(ps::ParseState, ret)
         ret = parse_comma(ps, ret)
     elseif ps.nt.kind == Tokens.FOR 
         ret = parse_generator(ps, ret)
-    elseif ret isa INSTANCE{IDENTIFIER,Tokens.IDENTIFIER} && ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
+    elseif ret isa IDENTIFIER && ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
         next(ps)
         arg = INSTANCE(ps)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
-    elseif (ret isa INSTANCE{LITERAL,Tokens.INTEGER} || ret isa INSTANCE{LITERAL,Tokens.FLOAT})
+    elseif (ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT})
         arg = parse_expression(ps)
-        ret = EXPR(CALL, [INSTANCE{OPERATOR{11}, Tokens.STAR}(0, 0), ret, arg], ret.span + arg.span)
+        ret = EXPR(CALL, [OPERATOR{11,Tokens.STAR}(0, 0), ret, arg], ret.span + arg.span)
     elseif isinstance(ps.nt)
         if isunaryop(ps.t)
             ret = parse_unary(ps, ret)
@@ -222,7 +222,7 @@ function parse_paren(ps::ParseState)
         push!(ret.punctuation, closeparen)
         format(ps)
         ret.span += openparen.span + closeparen.span
-    elseif ret isa EXPR && ret.head isa INSTANCE{OPERATOR{20},Tokens.DDDOT}
+    elseif ret isa EXPR && ret.head isa OPERATOR{20,Tokens.DDDOT}
         ret = EXPR(TUPLE, [ret], ps.ws.endbyte - start + 1, [openparen, closeparen])
     else
         ret = EXPR(BLOCK, [ret], ps.ws.endbyte - start + 1, [openparen, closeparen])
@@ -270,7 +270,7 @@ function parse_quote(ps::ParseState)
         return QUOTENODE(arg, arg.span, puncs)
     elseif iskw(ps.nt)
         next(ps)
-        arg = INSTANCE{IDENTIFIER, Tokens.IDENTIFIER}(ps.ws.endbyte-ps.t.startbyte+1,ps.t.startbyte)
+        arg = IDENTIFIER(ps.ws.endbyte-ps.t.startbyte+1, ps.t.startbyte, Symbol(ps.val))
         return QUOTENODE(arg, arg.span, puncs)
     elseif isliteral(ps.nt)
         return INSTANCE(next(ps))

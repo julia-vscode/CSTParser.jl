@@ -60,7 +60,13 @@ end
 
 
 function next(x::EXPR, s::Iterator{:block})
-    if length(x.punctuation)==2
+    if !isempty(x.punctuation) && first(x.punctuation) isa PUNCTUATION{Tokens.COMMA}
+        if isodd(s.i)
+            return x.args[div(s.i + 1, 2)], +s
+        else
+            return x.punctuation[div(s.i, 2)], +s
+        end
+    elseif length(x.punctuation)==2
         if s.i == 1
             return x.punctuation[1], +s
         elseif s.i == s.n
