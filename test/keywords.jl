@@ -1,20 +1,20 @@
 facts("if blocks") do
-    strs = ["if true end"
-            """if true
-                f(1)
-                f(2)
+    strs = ["if a end"
+            """if a
+                1
+                1
             end"""
-            """if true
+            """if a
             else
-                f(1)
-                f(2)
+                2
+                2
             end"""
-            """if true
-                f(1)
-                f(2)
+            """if a
+                1
+                1
             else
-                f(1)
-                f(2)
+                2
+                2
             end"""
             "if 1<2 end"
             """if 1<2
@@ -34,12 +34,7 @@ facts("if blocks") do
                 f(3)
             end"""]
     for str in strs
-        ps = Parser.ParseState(str)
-        x = Parser.parse_expression(ps)
-        io = IOBuffer(str)
-        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
-        @fact ps.t.kind --> Tokenize.Tokens.END "span mismatch for $str"
-        @fact checkspan(x) --> true "span mismatch for $str"
+        test_parse(str)
     end
 end
 
@@ -51,41 +46,15 @@ facts("try blocks") do
                 error(err)
             end"""]
     for str in strs
-        ps = Parser.ParseState(str)
-        x = Parser.parse_expression(ps)
-        io = IOBuffer(str)
-        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
-        @fact ps.t.kind --> Tokenize.Tokens.END "span mismatch for $str"
-        @fact checkspan(x) --> true "span mismatch for $str"
+        test_parse(str)
     end
 end
 
-
-
-facts("import statements") do
-    strs = ["import ModA"
-            "import ModA.subModA"
-            "import ModA.subModA: a"
-            "import ModA.subModA: a, b, c"
-            "import ModA.subModA: a, b, c.d"]
+facts("misc reserved words") do
+    strs =  ["const x = 3*5"
+            "global i"
+            """local i = x"""]
     for str in strs
-        ps = Parser.ParseState(str)
-        x = Parser.parse_expression(ps)
-        io = IOBuffer(str)
-        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
-        @fact checkspan(x) --> true "span mismatch for $str"
+        test_parse(str)
     end
 end
-
-facts("export statements") do
-    strs = ["export ModA"
-            "export a, b, c"]
-    for str in strs
-        ps = Parser.ParseState(str)
-        x = Parser.parse_expression(ps)
-        io = IOBuffer(str)
-        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
-        @fact checkspan(x) --> true "span mismatch for $str"
-    end
-end
-

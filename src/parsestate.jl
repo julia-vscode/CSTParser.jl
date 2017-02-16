@@ -1,5 +1,9 @@
 import Tokenize.Lexers: peekchar, prevchar, readchar, iswhitespace, emit, emit_error, backup!, accept_batch, eof
 
+typealias EmptyWS Tokens.begin_delimiters
+typealias NewLineWS Tokens.begin_literal
+typealias WS Tokens.end_literal
+
 type Closer
     toplevel::Bool
     newline::Bool
@@ -20,13 +24,16 @@ end
 
 Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, 0)
 
-type Declaration{t}
+type Scope{t}
     id
-    internals::Vector
+    args::Vector
 end
 
+type Variable
+    id
+    t
+end
 
- 
 type ParseState
     l::Lexer
     done::Bool
@@ -40,10 +47,10 @@ type ParseState
     ids::Dict{String,Any}
     hints::Vector{Any}
     closer::Closer
-    current_scope::Vector{Declaration}
+    current_scope::Scope
 end
 function ParseState(str::String)
-    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), true, Dict(), [], Closer(), []))
+    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), true, Dict(), [], Closer(), Scope{Tokens.TOPLEVEL}(TOPLEVEL, [])))
 end
 
 function Base.show(io::IO, ps::ParseState)
@@ -65,7 +72,7 @@ function next(ps::ParseState)
     if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#'
         ps.nws = lex_ws_comment(ps.l, readchar(ps.l))
     else
-        ps.nws = Token(Tokens.begin_delimiters, (0, 0), (0, 0), ps.nt.endbyte, ps.nt.endbyte, "")
+        ps.nws = Token(EmptyWS, (0, 0), (0, 0), ps.nt.endbyte, ps.nt.endbyte, "")
     end
     return ps
 end
@@ -87,7 +94,7 @@ function lex_ws_comment(l::Lexer, c)
         end
     end
 
-    return emit(l, newline ? Tokens.begin_literal : Tokens.end_literal)
+    return emit(l, newline ? NewLineWS : WS)
 end
 
 

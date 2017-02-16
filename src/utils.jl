@@ -2,6 +2,9 @@ function closer(ps::ParseState)
     (ps.closer.newline && ps.ws.kind == Tokens.begin_literal) ||
     (ps.nt.kind == Tokens.SEMICOLON) ||
     (isoperator(ps.nt) && precedence(ps.nt)<=ps.closer.precedence) ||
+    (ps.nt.kind == Tokens.LPAREN && ps.closer.precedence>14) ||
+    (ps.nt.kind == Tokens.LBRACE && ps.closer.precedence>14) ||
+    (ps.nt.kind == Tokens.LSQUARE && ps.closer.precedence>14) ||
     (ps.closer.eof && ps.nt.kind==Tokens.ENDMARKER) ||
     (ps.closer.tuple && (iscomma(ps.nt) || isassignment(ps.nt))) ||
     (ps.closer.comma && iscomma(ps.nt)) ||
@@ -13,7 +16,6 @@ function closer(ps::ParseState)
     (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt)<=1 || ps.nt.kind==Tokens.COLON)) ||
     (ps.closer.trycatch && ps.nt.kind==Tokens.CATCH || ps.nt.kind==Tokens.END) ||
     (ps.closer.ws && (!isempty(ps.ws) && !isoperator(ps.nt)))
-
 end
 
 """
@@ -116,6 +118,21 @@ macro default(ps, body)
 end
 
 
+"""
+    @closer ps rule body 
+
+Continues parsing closing on `rule`.
+"""
+macro scope(ps, new_scope, body)
+    quote
+        local tmp1 = $(esc(ps)).current_scope
+        $(esc(ps)).current_scope = $(esc(new_scope))
+        out = $(esc(body))
+        $(esc(ps)).current_scope = tmp1
+        out
+    end
+end
+
 isidentifier(t::Token) = t.kind == Tokens.IDENTIFIER
 
 isliteral(t::Token) = Tokens.begin_literal < t.kind < Tokens.end_literal
@@ -135,3 +152,39 @@ ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
                           t.kind == Tokens.END ||
                           Tokens.LSQUARE ≤ t.kind ≤ Tokens.RPAREN
 
+
+function declares_function(x::Expression)
+    if x isa EXPR
+        if x.head isa INSTANCE{KEYWORD,Tokens.FUNCTION}
+            return true
+        elseif x.head isa INSTANCE{OPERATOR{1}, Tokens.EQ} && x.args[1] isa EXPR && x.args[1].head==CALL
+            return true
+        else
+            return false
+        end
+    else
+        return false
+    end
+end
+
+get_id{K}(x::INSTANCE{IDENTIFIER,K}) = x
+
+function get_id(x::EXPR)
+    if x.head isa INSTANCE{OPERATOR{6}, Tokens.ISSUBTYPE} || x.head isa INSTANCE{OPERATOR{14}, Tokens.DECLARATION}
+        return get_id(x.args[1])
+    elseif x.head == CURLY
+        return get_id(x.args[1])
+    else
+        return x
+    end
+end
+
+get_t{K}(x::INSTANCE{IDENTIFIER,K}) = :Any
+
+function get_t(x::EXPR)
+    if x.head isa INSTANCE{OPERATOR{14}, Tokens.DECLARATION}
+        return x.args[2]
+    else
+        return :Any
+    end
+end

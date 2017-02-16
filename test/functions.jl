@@ -1,4 +1,4 @@
-facts("function calls") do
+facts("calls") do
     strs = ["f(x)"
             "f(x,y)"
             "f(g(x))"
@@ -8,10 +8,7 @@ facts("function calls") do
             "f{a}(x)"
             "f{a<:T}(x::T)"]
     for str in strs
-        x = Parser.parse(str)
-        io = IOBuffer(str)
-        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
-        @fact checkspan(x) --> true
+        test_parse(str)
     end
 end
 
@@ -22,22 +19,13 @@ facts("one liner functions") do
             "f(g(x)) = x"
             "f(g(x)) = h(x)"]
     for str in strs
-        x = Parser.parse(str)
-        io = IOBuffer(str)
-        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
-        @fact checkspan(x) --> true
+        test_parse(str)
     end
 end
 
-# facts("should fail to parse") do
-#     strs = ["f (x) = x"]
-#     for str in strs
-#         @fact (try Parser.parse(str) |> Expr catch e e.msg end) --> (try remlineinfo!(Base.parse(str)) catch e e.msg end)
-#     end
-# end
-
 facts("function definitions") do
-    strs =  ["""function f(x) x end"""
+    strs =  ["function f end"
+            "function f(x) x end"
             """function f(x)
                 x
             end"""
@@ -46,9 +34,6 @@ facts("function definitions") do
              "f(x::Vector{Vector{Int}})"
              "f(x::Vector{Vector{Int}})"]
     for str in strs
-        x = Parser.parse(str)
-        io = IOBuffer(str)
-        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
-        @fact checkspan(x) --> true
+        test_parse(str)
     end
 end

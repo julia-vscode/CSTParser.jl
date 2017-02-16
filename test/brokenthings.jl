@@ -6,6 +6,7 @@ facts("broken things") do
                 f(i,j)
             end"""
             "import Base.@threads"
+            "a ? b=c:d : e"
             """
             begin
                 "doc"
@@ -25,3 +26,4 @@ facts("broken things") do
         @fact checkspan(x) --> true
     end
 end
+

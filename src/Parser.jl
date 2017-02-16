@@ -29,6 +29,7 @@ include("components/types.jl")
 include("components/tuples.jl")
 include("conversion.jl")
 include("display.jl")
+include("formatting.jl")
 
 
 """
@@ -165,21 +166,27 @@ function parse_list(ps::ParseState, puncs)
         push!(args, a)
         if ps.nt.kind==Tokens.COMMA
             push!(puncs, INSTANCE(next(ps)))
+            format(ps)
+            # if ps.formatcheck && ps.ws.kind == Tokens.begin_delimiters
+            #     push!(ps.hints, "add space at $(last(puncs).offset+1)")
+            # end
         end
     end
 
     if ps.t.kind == Tokens.COMMA
-        if ps.formatcheck 
-            push!(ps.hints, "extra comma unneeded at $(last(puncs).offset)")
-        end
+        format(ps)
+        # if ps.formatcheck 
+        #     push!(ps.hints, "extra comma unneeded at $(last(puncs).offset+1)")
+        # end
     end
     return args
 end
 
 function parse_comma(ps::ParseState, ret)
-    if ps.formatcheck && !isempty(ps.ws)
-        push!(ps.hints, "remove whitespace at $(ps.nt.startbyte)")
-    end
+    format(ps)
+    # if ps.formatcheck && !isempty(ps.ws)
+    #     push!(ps.hints, "remove whitespace at $(ps.nt.startbyte+1)")
+    # end
     next(ps)
     op = INSTANCE(ps)
     start = ps.t.startbyte
@@ -212,6 +219,7 @@ seperated list.
 function parse_paren(ps::ParseState)
     start = ps.t.startbyte
     openparen = INSTANCE(ps)
+    format(ps)
     if ps.nt.kind == Tokens.RPAREN
         ret = EXPR(TUPLE, [])
     else
@@ -221,6 +229,7 @@ function parse_paren(ps::ParseState)
     if ret isa EXPR && ret.head == TUPLE
         unshift!(ret.punctuation, openparen)
         push!(ret.punctuation, closeparen)
+        format(ps)
         ret.span += openparen.span + closeparen.span
     elseif ret isa EXPR && ret.head isa INSTANCE{OPERATOR{20},Tokens.DDDOT}
         ret = EXPR(TUPLE, [ret], ps.ws.endbyte - start + 1, [openparen, closeparen])
@@ -232,17 +241,25 @@ end
 
 function parse_square(ps::ParseState)
     start = ps.t.startbyte
+    puncs = INSTANCE[INSTANCE(ps)]
+    format(ps)
     if ps.nt.kind == Tokens.RSQUARE
         next(ps)
-        return EXPR(VECT, [], ps.ws.endbyte - start + 1)
+        push!(puncs, INSTANCE(ps))
+        format(ps)
+        return EXPR(VECT, [], ps.ws.endbyte - start + 1, puncs)
     else
         ret = @default ps @closer ps square parse_expression(ps)
         if ret isa EXPR && ret.head==TUPLE
             next(ps)
-            return EXPR(VECT, ret.args, ps.ws.endbyte - start + 1)
+            push!(puncs, INSTANCE(ps))
+            format(ps)
+            return EXPR(VECT, ret.args, ps.ws.endbyte - start + 1, puncs)
         else
             next(ps)
-            return EXPR(VECT, [ret], ps.ws.endbyte - start + 1)
+            push!(puncs, INSTANCE(ps))
+            format(ps)
+            return EXPR(VECT, [ret], ps.ws.endbyte - start + 1, puncs)
         end 
     end
 end

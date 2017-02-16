@@ -8,8 +8,10 @@ function parse_curly(ps::ParseState, ret)
     next(ps)
     start = ps.t.startbyte
     puncs = INSTANCE[INSTANCE(ps)]
+    format(ps)
     args = @default ps @closer ps brace parse_list(ps, puncs)
     push!(puncs, INSTANCE(next(ps)))
+    format(ps)
     return EXPR(CURLY, [ret, args...], ret.span + ps.ws.endbyte - start + 1, puncs)
 end
 

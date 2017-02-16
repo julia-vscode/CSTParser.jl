@@ -121,16 +121,39 @@ end
 done(x::EXPR, s::Iterator) = s.i > s.n
 length(x::EXPR) = start(x).n
 
-function Base.find(x::EXPR, n)
-    i = 0
+function Base.getindex(x::EXPR, i::Int)
+    s = start(x)
+    @assert i<=s.n
+    s.i = i
+    next(x, s)[1]
+end
+
+function Base.setindex!(x::EXPR, i::Int)
+    s = start(x)
+    @assert i<=s.n
+    s.i = i
+    next(x, s)[1]
+end
+
+function _find(x::EXPR, n, path, ind)
+    offset = 0
     @assert n <= x.span
-    for a in x
-        if n > i+a.span
-            i+=a.span
+    push!(path, x)
+    for (i, a) in enumerate(x)
+        if n > offset + a.span
+            offset += a.span
         else
-            return find(a, n-i)
+            push!(ind, i)
+            return _find(a, n-offset, path, ind)
         end
     end
 end
 
-Base.find(x::Union{QUOTENODE,INSTANCE}, n) = x
+_find(x::Union{QUOTENODE,INSTANCE}, n, path, ind) = x
+
+function Base.find(x::EXPR, n)
+    path = []
+    ind = Int[]
+    y = _find(x, n ,path, ind)
+    return y, path, ind
+end

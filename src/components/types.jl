@@ -1,8 +1,20 @@
+# abstract
+# actions
+#   add to current_scope
+# linting
+#   `arg` declares a variable
+#   Capitalized
+#   doesn't conflict with existing names
+
+
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     arg = parse_expression(ps)
-    push!(ps.current_scope, Declaration{Tokens.ABSTRACT}(get_id(arg), []))
+    
+    scope = Scope{Tokens.ABSTRACT}(get_id(arg), [])
+    push!(ps.current_scope.args, scope)
+
     return EXPR(kw, Expression[arg], ps.ws.endbyte - start + 1)
 end
 
@@ -11,7 +23,10 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
     kw = INSTANCE(ps)
     arg1 = @closer ps ws parse_expression(ps) 
     arg2 = parse_expression(ps)
-    push!(ps.current_scope, Declaration{Tokens.BITSTYPE}(get_id(arg2), []))
+    
+    scope = Scope{Tokens.BITSTYPE}(get_id(arg2), [])
+    push!(ps.current_scope.args, scope)
+
     return EXPR(kw, Expression[arg1, arg2], ps.ws.endbyte - start + 1)
 end
 
@@ -20,29 +35,39 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
     kw = INSTANCE(ps)
     arg1 = @closer ps ws parse_expression(ps) 
     arg2 = parse_expression(ps)
-    push!(ps.current_scope, Declaration{Tokens.TYPEALIAS}(get_id(arg1), []))
+
+    scope = Scope{Tokens.TYPEALIAS}(get_id(arg1), [])
+    push!(ps.current_scope.args, scope)
+
     return EXPR(kw, Expression[arg1, arg2], ps.ws.endbyte - start + 1)
 end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPE}})
+# for 0.6 the above two can be merged to a `parse_type` function as 
+#  argument orderings will be the same.s
+
+parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPE}}) = parse_struct(ps, TRUE)
+parse_kw(ps::ParseState, ::Type{Val{Tokens.IMMUTABLE}}) = parse_struct(ps, FALSE)
+
+function parse_struct(ps::ParseState, mutable)
     start = ps.t.startbyte
     kw = INSTANCE(ps)
-    arg = @closer ps block @closer ps ws parse_expression(ps)
+    sig = @closer ps block @closer ps ws parse_expression(ps)
     block = parse_block(ps)
     next(ps)
-    push!(ps.current_scope, Declaration{Tokens.TYPE}(get_id(arg), []))
-    return EXPR(kw, Expression[TRUE, arg, block], ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
-end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.IMMUTABLE}})
-    start = ps.t.startbyte
-    kw = INSTANCE(ps)
-    arg = @closer ps block @closer ps ws parse_expression(ps)
-    block = parse_block(ps)
-    next(ps)
-    push!(ps.current_scope, Declaration{Tokens.IMMUTABLE}(get_id(arg), []))
+    T = mutable==TRUE ? Tokens.TYPE : Tokens.IMMUTABLE
+    scope = Scope{T}(get_id(sig), [])
+    for a in block.args
+        if declares_function(a)
+        else
+            id = get_id(a)
+            t = get_t(a)
+            push!(scope.args, Variable(id, t))
+        end
+    end
+    push!(ps.current_scope.args, scope)
 
-    return EXPR(kw, Expression[FALSE, arg, block], ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
+    return EXPR(kw, Expression[mutable, sig, block], ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
 end
 
 function next(x::EXPR, s::Iterator{:abstract})
@@ -82,19 +107,5 @@ function next(x::EXPR, s::Iterator{:typealias})
         return x.args[1], +s
     elseif s.i == 3
         return x.args[2], +s
-    end
-end
-
-
-
-get_id{K}(x::INSTANCE{IDENTIFIER,K}) = x
-
-function get_id(x::EXPR)
-    if x.head isa INSTANCE{OPERATOR{6}, Tokens.ISSUBTYPE}
-        return get_id(x.args[1])
-    elseif x.head == CURLY
-        return get_id(x.args[1])
-    else
-        error("couldn't find identifier name of $x")
     end
 end

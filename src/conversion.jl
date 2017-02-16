@@ -31,6 +31,17 @@ function Expr{T}(io::IOBuffer, x::INSTANCE{LITERAL,T})
     Base.parse(String(take!(ioout)))
 end
 
+function Expr(io::IOBuffer, x::INSTANCE{LITERAL,Tokens.FLOAT}) 
+    ioout = IOBuffer()
+    seek(io, x.offset)
+    cnt = 0
+    while Tokenize.Lexers.is_identifier_char(Tokenize.Lexers.peekchar(io)) || Tokenize.Lexers.peekchar(io) == '.' && cnt < x.span
+        cnt+=1
+        write(ioout, read(io, Char))
+    end
+    Base.parse(String(take!(ioout)))
+end
+
 function Expr(io::IOBuffer, x::INSTANCE{LITERAL,Tokens.STRING}) 
     ioout = IOBuffer()
     seek(io, x.offset)
@@ -66,6 +77,8 @@ function Expr(io::IOBuffer, x::EXPR)
         return Expr(:if, Expr.(io, x.args)...)
     elseif x.head isa INSTANCE{HEAD, Tokens.GENERATOR}
         return Expr(:generator, Expr(io, x.args[1]), fixranges.(io, x.args[2:end])...)
+    elseif x.head isa INSTANCE{KEYWORD, Tokens.IMMUTABLE}
+        return Expr(:type, false, Expr.(io, x.args[2:end])...)
     elseif x.head == x_STR
         return Expr(:macrocall, string('@', Expr(io, x.args[1]), "_str"), Expr(io, x.args[2]))
     elseif x.head == MACROCALL

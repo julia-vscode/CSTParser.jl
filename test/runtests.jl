@@ -13,18 +13,26 @@ function remlineinfo!(x)
     x
 end
 
-function checkspan(x)
+function test_span(x)
     if x isa EXPR
         cnt = 0
         for a in x
-            checkspan(a)
+            test_span(a)
         end
         @assert x.span == (length(x) == 0 ? 0 : sum(a.span for a in x)) "$(x.head)  $(x.span)  $(sum(a.span for a in x))"
     end
     true
 end
 
-function testfind(str)
+function test_parse(str)
+    x = Parser.parse(str)
+    io = IOBuffer(str)
+    @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
+    @fact sizeof(str) --> x.span
+    @fact test_span(x) --> true
+end
+
+function test_find(str)
     x = Parser.parse(str)
     for i = 1:sizeof(str)
         find(x, i)
@@ -33,81 +41,14 @@ end
 
 
 include("operators.jl")
+include("curly.jl")
+include("tuples.jl")
 include("functions.jl")
+include("modules.jl")
+include("generators.jl")
+include("macros.jl")
 include("types.jl")
 include("keywords.jl")
-
-
-facts("misc reserved words") do
-    strs =  ["const x = 3*5"
-            "global i"
-            """local i = x"""]
-    for str in strs
-        x = Parser.parse(str)
-        io = IOBuffer(str)
-        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
-        @fact sizeof(str) --> x.span
-        @fact checkspan(x) --> true
-    end
-end
-
-facts("tuples") do
-    strs = ["1,",
-            "1,2",
-            "1,2,3",
-            "()",
-            "(==)",
-            "(1)",
-            "(1,)",
-            "(1,2)",
-            "(a,b,c)",
-            "(a...)",
-            "((a,b)...)",
-            "a,b = c,d",
-            "(a,b = c,d)",
-            "(a,b) = (c,d)"]
-    for str in strs
-        x = Parser.parse(str)
-        io = IOBuffer(str)
-        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
-        @fact checkspan(x) --> true
-    end
-end
-
-facts("failing things") do
-    strs = ["function f end"
-            "(a,b = c,d)"
-            "a ? b=c:d : e"]
-    for str in strs
-        x = Parser.parse(str)
-        io = IOBuffer(str)
-        @pending Expr(io, x)  --> remlineinfo!(Base.parse(str))
-    end
-end
-
-facts("generators") do
-    strs = ["(y for y in X)"
-            "((y) for y in X)"
-            "(y,x for y in X)"
-            "((y,x) for y in X)"]
-    for str in strs
-        x = Parser.parse(str)
-        io = IOBuffer(str)
-        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
-        @fact checkspan(x) --> true
-    end
-end
-
-facts("macros") do
-    strs = ["@time sin(5)"]
-    for str in strs
-        x = Parser.parse(str)
-        io = IOBuffer(str)
-        @fact Expr(io, x) --> remlineinfo!(Base.parse(str))
-        @fact checkspan(x) --> true
-    end
-end
-
 
 const examplemodule = readstring("fullspecexample.jl")
 

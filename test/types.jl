@@ -1,60 +1,51 @@
-facts("abstract defs") do
+facts("abstract") do
     strs =  ["abstract t"
             "abstract t{T}"
             "abstract t <: S"
             "abstract t{T} <: S"]
     for str in strs
-        x = Parser.parse(str)
-        io = IOBuffer(str)
-        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
-        @fact checkspan(x) --> true "span mismatch for $str"
+        test_parse(str)
     end
 end
 
-facts("bitstype defs") do
+facts("bitstype") do
     strs =  ["bitstype 64 Int"
             "bitstype 4*16 Int"]
     for str in strs
-        x = Parser.parse(str)
-        io = IOBuffer(str)
-        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
-        @fact checkspan(x) --> true "span mismatch for $str"
+        test_parse(str)
     end
 end
 
-facts("typealias defs") do
+facts("typealias") do
     strs =  ["typealias name fsd"]
     for str in strs
-        x = Parser.parse(str)
-        io = IOBuffer(str)
-        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
-        @fact checkspan(x) --> true "span mismatch for $str"
+        test_parse(str)
     end
 end
 
-facts("type definitions") do
+facts("struct") do
     strs =  ["type a end"
             """type a
                 arg1
             end"""
-            """type a <: other
+            """type a <: T
                 arg1::Int
                 arg2::Int
             end"""
-            """type a{t}
-                arg1::t
+            """type a
+                arg1::T
             end"""
-            """type a{t}
-                arg1::t
+            """type a{T}
+                arg1::T
                 a(args) = new(args)
             end"""
              """type a <: Int
-                c::Vector{Int}
+                arg1::Vector{Int}
+             end"""
+             """immutable a <: Int
+                arg1::Vector{Int}
              end"""]
     for str in strs
-        x = Parser.parse(str)
-        io = IOBuffer(str)
-        @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
-        @fact checkspan(x) --> true "span mismatch for $str"
+        test_parse(str)
     end
 end

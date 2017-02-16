@@ -18,6 +18,17 @@ function Base.show(io::IO, x::EXPR,indent=0)
     end 
 end
 
+function Base.show{T}(io::IO, x::Scope{T},indent=0)
+    println(io, " "^indent, "↘ ", T)
+    for a in x.args
+        show(io, a, indent+1)
+    end 
+end
+
+function Base.show(io::IO, x::Variable,indent=0)
+    println(io, " "^indent, "→ ","Variable")
+end
+
 
 # import Base.print
 # function print(io::IO, x::EXPR)

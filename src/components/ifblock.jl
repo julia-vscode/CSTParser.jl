@@ -31,6 +31,7 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
     end
     if ps.nt.kind==Tokens.ELSE
         next(ps)
+        format(ps)
         push!(puncs, INSTANCE(ps))
         startelseblock = ps.ws.endbyte + 1
         parse_block(ps, elseblock)
