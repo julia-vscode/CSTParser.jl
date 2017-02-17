@@ -167,7 +167,7 @@ function declares_function(x::Expression)
     end
 end
 
-get_id(x::IDENTIFIER) = x
+get_id{T<:INSTANCE}(x::T) = x
 
 function get_id(x::EXPR)
     if x.head isa OPERATOR{6,Tokens.ISSUBTYPE} || x.head isa OPERATOR{14, Tokens.DECLARATION}
@@ -179,7 +179,7 @@ function get_id(x::EXPR)
     end
 end
 
-get_t(x::IDENTIFIER) = :Any
+get_t{T<:INSTANCE}(x::T) = :Any
 
 function get_t(x::EXPR)
     if x.head isa OPERATOR{14, Tokens.DECLARATION}

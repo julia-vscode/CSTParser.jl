@@ -78,23 +78,9 @@ ispower(t::Token) = Tokens.begin_power < t.kind < Tokens.end_power
 
 
 
-# function issyntaxcall(op::INSTANCE)
-#     op isa INSTANCE{OPERATOR{1}} && !(op isa INSTANCE{OPERATOR{1},Tokens.APPROX}) ||
-#     op isa INSTANCE{OPERATOR{3},Tokens.RIGHT_ARROW} ||
-#     op isa INSTANCE{OPERATOR{4},Tokens.LAZY_OR} ||
-#     op isa INSTANCE{OPERATOR{5},Tokens.LAZY_AND} ||
-#     op isa INSTANCE{OPERATOR{6},Tokens.ISSUBTYPE} ||
-#     op isa INSTANCE{OPERATOR{6},Tokens.GREATER_COLON} ||
-#     op isa INSTANCE{OPERATOR{8},Tokens.COLON} ||
-#     op isa INSTANCE{OPERATOR{11},Tokens.AND} ||
-#     op isa INSTANCE{OPERATOR{14},Tokens.DECLARATION} ||
-#     op isa INSTANCE{OPERATOR{15},Tokens.DOT} ||
-#     op isa INSTANCE{OPERATOR{20},Tokens.DDDOT}
-# end
-
 function issyntaxcall{P,K}(op::OPERATOR{P,K})
     P == 1 && !(K == Tokens.APPROX) ||
-    P == 3 && K == Tokens.RIGHT_ARROW || 
+    K == Tokens.RIGHT_ARROW || 
     P == 4 ||
     P == 5 ||
     K == Tokens.ISSUBTYPE ||
@@ -132,7 +118,7 @@ function parse_operator(ps::ParseState, ret::Expression)
     op = INSTANCE(ps)
     op_prec = precedence(ps.t)
 
-    if ret isa EXPR && ret.head==CALL && typeof(ret.args[1]) == typeof(op)  && (op isa OPERATOR{9,Tokens.PLUS} || op isa OPERATOR{11,Tokens.STAR})
+    if ret isa EXPR && ret.head==CALL && typeof(ret.args[1]) == typeof(op) && (op isa OPERATOR{9,Tokens.PLUS} || op isa OPERATOR{11,Tokens.STAR})
         nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         push!(ret.args, nextarg)
         ret.span += nextarg.span + op.span

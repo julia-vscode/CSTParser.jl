@@ -1,7 +1,5 @@
 facts("broken things") do
-    strs = ["2(b)"
-            "(x.x for x in X)"
-            
+    strs = ["(x.x for x in X)"
             "import Base.@threads"
             "a ? b=c:d : e"
             """
