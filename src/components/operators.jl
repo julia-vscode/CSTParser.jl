@@ -111,89 +111,149 @@ function parse_unary(ps::ParseState, op)
     end
 end
 
-function parse_operator(ps::ParseState, ret::Expression)
-    next(ps)
-    format(ps)
+# Parse assignments
+function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{1})
+    nextarg = @precedence ps 1-LtoR(1) parse_expression(ps)
+    if ret isa EXPR && ret.head == CALL && !(nextarg isa EXPR && nextarg.head == BLOCK)
+        nextarg = EXPR(BLOCK, Expression[nextarg], nextarg.span)
+    end
+    return EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
+end
 
-    op = INSTANCE(ps)
-    op_prec = precedence(ps.t)
+# Parse conditionals
+function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{2})
+    start = ps.t.startbyte
+    nextarg = @closer ps ifop parse_expression(ps)
+    op2 = INSTANCE(next(ps))
+    nextarg2 = @precedence ps 2-LtoR(2) parse_expression(ps)
+    return EXPR(IF, Expression[ret, nextarg, nextarg2], ret.span + ps.ws.endbyte - start + 1, INSTANCE[op, op2])
+end
 
-    if ret isa EXPR && ret.head==CALL && typeof(ret.args[1]) == typeof(op) && (op isa OPERATOR{9,Tokens.PLUS} || op isa OPERATOR{11,Tokens.STAR})
-        nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
+# Parse arrows
+function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{3, Tokens.RIGHT_ARROW})
+    nextarg = @precedence ps 3-LtoR(3) parse_expression(ps)
+    return EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
+end
+
+#  Parse ||
+function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{4})
+    nextarg = @precedence ps 4-LtoR(4) parse_expression(ps)
+    return EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
+end
+
+#  Parse &&
+function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{5})
+    nextarg = @precedence ps 5-LtoR(5) parse_expression(ps)
+    return EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
+end
+
+
+function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{6})
+    nextarg = @precedence ps 6-LtoR(6) parse_expression(ps)
+    if ret isa EXPR && ret.head==COMPARISON
+        push!(ret.args, op)
         push!(ret.args, nextarg)
-        ret.span += nextarg.span + op.span
-        push!(ret.punctuation, op)
-    elseif op_prec == 2
-        start = ps.t.startbyte
-        nextarg = @closer ps ifop parse_expression(ps)
-        op2 = INSTANCE(next(ps))
-        nextarg2 = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        ret = EXPR(IF, Expression[ret, nextarg, nextarg2], ret.span + ps.ws.endbyte - start + 1, INSTANCE[op, op2])
-    elseif op isa OPERATOR{8,Tokens.COLON}
-        start = ps.t.startbyte
-        if ps.nt.kind == Tokens.END
-            nextarg = INSTANCE(next(ps))
-        else
-            nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        end
-        if ret isa EXPR && ret.head isa OPERATOR{8,Tokens.COLON} && length(ret.args)==2
-            push!(ret.punctuation, op)
-            push!(ret.args, nextarg)
-            ret.span += ps.ws.endbyte-start + 1
-        else
-            ret = EXPR(op, Expression[ret, nextarg], ret.span + ps.ws.endbyte - start + 1)
-        end
-    elseif op_prec == 6 
-        nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        if ret isa EXPR && ret.head==COMPARISON
-            push!(ret.args, op)
-            push!(ret.args, nextarg)
-            ret.span += op.span + nextarg.span
-        elseif ret isa EXPR && ret.head == CALL && ret.args[1] isa OPERATOR{6}
-            ret = EXPR(COMPARISON, Expression[ret.args[2], ret.args[1], ret.args[3], op, nextarg], ret.args[2].span + ret.args[1].span + ret.args[3].span + op.span + nextarg.span)
-        elseif ret isa EXPR && (ret.head isa OPERATOR{6,Tokens.ISSUBTYPE} || ret.head isa OPERATOR{6,Tokens.GREATER_COLON})
-            ret = EXPR(COMPARISON, Expression[ret.args[1], ret.head, ret.args[2], op, nextarg], ret.args[1].span + ret.head.span + ret.args[2].span + op.span + nextarg.span)
-        elseif (op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.GREATER_COLON})
-            ret = EXPR(op, Expression[ret, nextarg], ret.span + op.span + nextarg.span)
-        else
-            ret = EXPR(CALL, Expression[op, ret, nextarg], op.span + ret.span + nextarg.span)
-        end
-    elseif op_prec==1
-        nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        if ret isa EXPR && ret.head == CALL && !(nextarg isa EXPR && nextarg.head == BLOCK)
-            nextarg = EXPR(BLOCK, Expression[nextarg], nextarg.span)
-        end
-        ret = EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
-    elseif op_prec==4 || op_prec==5 || op isa OPERATOR{3, Tokens.RIGHT_ARROW}
-        nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        ret = EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
-    elseif op_prec==14
-        nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        ret = EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
-    elseif op_prec==15
-        if ps.nt.kind==Tokens.LPAREN
-            start = ps.nt.startbyte
-            puncs = INSTANCE[INSTANCE(next(ps))]
-            args = @closer ps paren parse_list(ps, puncs)
-            push!(puncs, INSTANCE(next(ps)))
-            nextarg = EXPR(TUPLE, args, ps.ws.endbyte - start + 1, puncs)
-        else
-            nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
-        end
-
-        if nextarg isa INSTANCE
-            ret = EXPR(op, Expression[ret, QUOTENODE(nextarg, nextarg.span, [])], op.span + ret.span + nextarg.span)
-        else
-            ret = EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
-        end
-    elseif op isa OPERATOR{20,Tokens.DDDOT} || op isa OPERATOR{20,Tokens.PRIME}
-        ret = EXPR(op, Expression[ret], op.span + ret.span)
+        ret.span += op.span + nextarg.span
+    elseif ret isa EXPR && ret.head == CALL && ret.args[1] isa OPERATOR{6}
+        ret = EXPR(COMPARISON, Expression[ret.args[2], ret.args[1], ret.args[3], op, nextarg], ret.args[2].span + ret.args[1].span + ret.args[3].span + op.span + nextarg.span)
+    elseif ret isa EXPR && (ret.head isa OPERATOR{6,Tokens.ISSUBTYPE} || ret.head isa OPERATOR{6,Tokens.GREATER_COLON})
+        ret = EXPR(COMPARISON, Expression[ret.args[1], ret.head, ret.args[2], op, nextarg], ret.args[1].span + ret.head.span + ret.args[2].span + op.span + nextarg.span)
+    elseif (op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.GREATER_COLON})
+        ret = EXPR(op, Expression[ret, nextarg], ret.span + op.span + nextarg.span)
     else
-        nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
         ret = EXPR(CALL, Expression[op, ret, nextarg], op.span + ret.span + nextarg.span)
     end
     return ret
 end
+
+# Parse ranges
+function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{8, Tokens.COLON})
+    start = ps.t.startbyte
+    if ps.nt.kind == Tokens.END
+        nextarg = INSTANCE(next(ps))
+    else
+        nextarg = @precedence ps 8-LtoR(8) parse_expression(ps)
+    end
+    if ret isa EXPR && ret.head isa OPERATOR{8,Tokens.COLON} && length(ret.args)==2
+        push!(ret.punctuation, op)
+        push!(ret.args, nextarg)
+        ret.span += ps.ws.endbyte-start + 1
+    else
+        ret = EXPR(op, Expression[ret, nextarg], ret.span + ps.ws.endbyte - start + 1)
+    end
+    return ret
+end
+
+
+# Parse chained +
+function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{9,Tokens.PLUS})
+    if ret.head==CALL && typeof(ret.args[1]) == OPERATOR{9,Tokens.PLUS}
+        nextarg = @precedence ps 9-LtoR(9) parse_expression(ps)
+        push!(ret.args, nextarg)
+        ret.span += nextarg.span + op.span
+        push!(ret.punctuation, op)
+    else
+        ret = invoke(parse_operator, Tuple{ParseState,Expression,OPERATOR}, ps, ret, op)
+    end
+    return ret
+end
+
+# Parse chained *
+function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{11,Tokens.STAR})
+    if ret.head==CALL && typeof(ret.args[1]) == OPERATOR{11,Tokens.STAR}
+        nextarg = @precedence ps 11-LtoR(11) parse_expression(ps)
+        push!(ret.args, nextarg)
+        ret.span += nextarg.span + op.span
+        push!(ret.punctuation, op)
+    else
+        ret = invoke(parse_operator, Tuple{ParseState,Expression,OPERATOR}, ps, ret, op)
+    end
+    return ret
+end
+
+# parse declarations
+function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{14})
+    nextarg = @precedence ps 14-LtoR(14) parse_expression(ps)
+    return EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
+end
+
+# parse dot access
+function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{15})
+    if ps.nt.kind==Tokens.LPAREN
+        start = ps.nt.startbyte
+        puncs = INSTANCE[INSTANCE(next(ps))]
+        args = @closer ps paren parse_list(ps, puncs)
+        push!(puncs, INSTANCE(next(ps)))
+        nextarg = EXPR(TUPLE, args, ps.ws.endbyte - start + 1, puncs)
+    else
+        nextarg = @precedence ps 15-LtoR(15) parse_expression(ps)
+    end
+
+    if nextarg isa INSTANCE
+        ret = EXPR(op, Expression[ret, QUOTENODE(nextarg, nextarg.span, [])], op.span + ret.span + nextarg.span)
+    else
+        ret = EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
+    end
+    return ret
+end
+
+
+function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{20, Tokens.DDDOT})
+    return  EXPR(op, Expression[ret], op.span + ret.span)
+end
+
+function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{20, Tokens.PRIME})
+    return  EXPR(op, Expression[ret], op.span + ret.span)
+end
+
+function parse_operator{op_prec,K}(ps::ParseState, ret::Expression, op::OPERATOR{op_prec, K})
+    nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
+    ret = EXPR(CALL, Expression[op, ret, nextarg], op.span + ret.span + nextarg.span)
+    return ret
+end
+
+
+
 
 function next(x::EXPR, s::Iterator{:op})
     if length(x.args) == 2

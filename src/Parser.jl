@@ -97,7 +97,10 @@ Handles cases where an expression - `ret` - is not followed by
 """
 function parse_juxtaposition(ps::ParseState, ret)
     if isoperator(ps.nt)
-        ret = parse_operator(ps, ret)
+        next(ps)
+        format(ps)
+        op = INSTANCE(ps)
+        ret = parse_operator(ps, ret, op)
     elseif (ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == IDENTIFIER || ps.nt.kind == Tokens.LPAREN)
         arg = parse_expression(ps)
         ret = EXPR(CALL, [OPERATOR{11,Tokens.STAR}(0, 0), ret, arg], ret.span + arg.span)
