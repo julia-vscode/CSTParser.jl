@@ -126,11 +126,26 @@ function Base.getindex(x::EXPR, i::Int)
     next(x, s)[1]
 end
 
-function Base.setindex!(x::EXPR, i::Int)
-    s = start(x)
-    @assert i<=s.n
-    s.i = i
-    next(x, s)[1]
+function Base.setindex!(x::EXPR, y, i::Int)
+    x_old = x[i]
+    if x.head == x_old
+        x.head = y
+        return
+    else
+        for (j,a) in enumerate(x.args)
+            if a == x_old
+                x.args[j] = y
+                return
+            end
+        end
+        for (j,a) in enumerate(x.punctuation)
+            if a == x_old
+                x.punctuation[j] = y
+                return
+            end
+        end
+    end
+    error(BoundsError(x, i))
 end
 
 function _find(x::EXPR, n, path, ind)
