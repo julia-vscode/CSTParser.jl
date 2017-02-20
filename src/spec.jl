@@ -33,7 +33,7 @@ type HEAD{K} <: INSTANCE
 end
 
 function INSTANCE(ps::ParseState)
-    span = ps.ws.endbyte-ps.t.startbyte+1
+    span = ps.nt.startbyte - ps.t.startbyte
     offset = ps.t.startbyte
     return isidentifier(ps.t) ? IDENTIFIER(span, offset, Symbol(ps.t.val)) : 
         isliteral(ps.t) ? LITERAL{ps.t.kind}(span, offset) :

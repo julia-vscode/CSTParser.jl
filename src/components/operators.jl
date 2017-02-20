@@ -177,7 +177,7 @@ function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{8, Tokens.
     if ret isa EXPR && ret.head isa OPERATOR{8,Tokens.COLON} && length(ret.args)==2
         push!(ret.punctuation, op)
         push!(ret.args, nextarg)
-        ret.span += ps.ws.endbyte-start + 1
+        ret.span += ps.nt.startbyte-start
     else
         ret = EXPR(op, Expression[ret, nextarg], ret.span + ps.nt.startbyte - start)
     end

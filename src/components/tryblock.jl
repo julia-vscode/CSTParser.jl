@@ -3,11 +3,11 @@ parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}}) = parse_try(ps)
 function parse_try(ps::ParseState)
     start = ps.t.startbyte
     kw = INSTANCE(ps)
-    tryblock = EXPR(BLOCK, Expression[], -ps.ws.endbyte)
+    tryblock = EXPR(BLOCK, Expression[], -ps.nt.startbyte)
     while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.CATCH 
         push!(tryblock.args, @closer ps trycatch parse_expression(ps))
     end
-    tryblock.span += ps.ws.endbyte 
+    tryblock.span += ps.nt.startbyte 
 
     puncs = INSTANCE[]
     next(ps)

@@ -195,7 +195,7 @@ function parse_comma(ps::ParseState, ret)
         if ret isa EXPR && ret.head==TUPLE
             push!(ret.args, nextarg)
             push!(ret.punctuation, op)
-            ret.span += ps.ws.endbyte-start + 1
+            ret.span += ps.nt.start - start
         else
             ret =  EXPR(TUPLE, Expression[ret, nextarg], ret.span+ps.nt.startbyte - start, INSTANCE[op])
         end
@@ -273,7 +273,7 @@ function parse_quote(ps::ParseState)
         return QUOTENODE(arg, arg.span, puncs)
     elseif iskw(ps.nt)
         next(ps)
-        arg = IDENTIFIER(ps.ws.endbyte-ps.t.startbyte+1, ps.t.startbyte, Symbol(ps.val))
+        arg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, ps.t.startbyte, Symbol(ps.val))
         return QUOTENODE(arg, arg.span, puncs)
     elseif isliteral(ps.nt)
         return INSTANCE(next(ps))

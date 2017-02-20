@@ -19,23 +19,23 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
     while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.ELSE && ps.nt.kind!==Tokens.ELSEIF
         push!(ifblock.args, @closer ps ifelse parse_expression(ps))
     end
-    ifblock.span +=ps.ws.endbyte + 1
+    ifblock.span += ps.nt.startbyte
 
     elseblock = EXPR(BLOCK, Expression[], 0)
     if ps.nt.kind==Tokens.ELSEIF
         next(ps)
         push!(puncs, INSTANCE(ps))
-        startelseblock = ps.ws.endbyte + 1
+        startelseblock = ps.nt.startbyte
         push!(elseblock.args, parse_if(ps, true, puncs))
-        elseblock.span = ps.ws.endbyte - startelseblock + 1
+        elseblock.span = ps.nt.startbyte - startelseblock
     end
     if ps.nt.kind==Tokens.ELSE
         next(ps)
         format(ps)
         push!(puncs, INSTANCE(ps))
-        startelseblock = ps.ws.endbyte + 1
+        startelseblock = ps.nt.startbyte
         parse_block(ps, elseblock)
-        elseblock.span = ps.ws.endbyte - startelseblock + 1
+        elseblock.span = ps.nt.startbyte - startelseblock
     end
 
     !nested && next(ps)
