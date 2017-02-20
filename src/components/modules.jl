@@ -11,7 +11,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MODULE}})
     block = @scope ps scope parse_block(ps)
     next(ps)
     push!(ps.current_scope.args, scope)
-    return EXPR(kw, [TRUE, arg, block], ps.ws.endbyte - start + 1, [INSTANCE(ps)])
+    return EXPR(kw, [TRUE, arg, block], ps.nt.startbyte - start, [INSTANCE(ps)])
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.BAREMODULE}})
@@ -22,7 +22,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BAREMODULE}})
     block = @scope ps scope parse_block(ps)
     next(ps)
     push!(ps.current_scope.args, scope)
-    return EXPR(kw, [FALSE, arg, block], ps.ws.endbyte - start + 1, [INSTANCE(ps)])
+    return EXPR(kw, [FALSE, arg, block], ps.nt.startbyte - start, [INSTANCE(ps)])
 end
 
 function parse_imports(ps::ParseState)
@@ -43,7 +43,7 @@ function parse_imports(ps::ParseState)
         push!(M, INSTANCE(next(ps)))
     end
     if closer(ps)
-        ret =  EXPR(kw, M, ps.ws.endbyte - start + 1, puncs)
+        ret =  EXPR(kw, M, ps.nt.startbyte - start, puncs)
     else
         @assert ps.nt.kind == Tokens.COLON
         push!(puncs, INSTANCE(next(ps)))
@@ -64,9 +64,9 @@ function parse_imports(ps::ParseState)
         end
         if length(args)==1
             push!(M, first(args)...)
-            ret = EXPR(kw, M, ps.ws.endbyte - start + 1, puncs)
+            ret = EXPR(kw, M, ps.nt.startbyte - start, puncs)
         else
-            ret = EXPR(HEAD{Tokens.TOPLEVEL}(kw.span, start), Expression[], ps.ws.endbyte - start + 1, puncs)
+            ret = EXPR(HEAD{Tokens.TOPLEVEL}(kw.span, start), Expression[], ps.nt.startbyte - start, puncs)
             for a in args
                 push!(ret.args, EXPR(kw, vcat(M, a), sum(y.span for y in a) + length(a) - 1))
             end
@@ -88,7 +88,7 @@ function parse_export(ps::ParseState)
         push!(args, @closer ps comma parse_expression(ps))
     end
 
-    return EXPR(kw, args, ps.ws.endbyte - start + 1, puncs)
+    return EXPR(kw, args, ps.nt.startbyte - start, puncs)
 end
 
 function _start_imports(x::EXPR)

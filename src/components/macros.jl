@@ -8,7 +8,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
     arg = @closer ps block @closer ps ws parse_expression(ps)
     block = parse_block(ps)
     next(ps)
-    return EXPR(kw, Expression[arg, block], ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
+    return EXPR(kw, Expression[arg, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
 end
 
 """

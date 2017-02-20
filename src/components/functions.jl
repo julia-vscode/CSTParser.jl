@@ -15,7 +15,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
         push!(ps.current_scope.args, Scope{Tokens.FUNCTION}(get_id(sig.args[1]), []))
     end
     args = isempty(block.args) ? Expression[sig] : Expression[sig, block]
-    return EXPR(kw, args, ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
+    return EXPR(kw, args, ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
 end
 
 """
@@ -31,7 +31,7 @@ function parse_call(ps::ParseState, ret)
     args = @nocloser ps newline @closer ps paren parse_list(ps, puncs)
     push!(puncs, INSTANCE(next(ps)))
     format(ps)
-    ret = EXPR(CALL, [ret, args...], ret.span + ps.ws.endbyte - start + 1, puncs)
+    ret = EXPR(CALL, [ret, args...], ret.span + ps.nt.startbyte - start, puncs)
     return ret
 end
 

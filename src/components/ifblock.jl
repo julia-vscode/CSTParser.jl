@@ -12,7 +12,7 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
 
     if ps.nt.kind==Tokens.END
         next(ps)
-        return EXPR(kw, Expression[cond, EXPR(BLOCK, Expression[], 0)], ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
+        return EXPR(kw, Expression[cond, EXPR(BLOCK, Expression[], 0)], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
     end
 
     ifblock = EXPR(BLOCK, Expression[], -ps.nt.startbyte)
@@ -41,8 +41,8 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
     !nested && next(ps)
     !nested && push!(puncs, INSTANCE(ps))
     ret = isempty(elseblock.args) ? 
-        EXPR(kw, Expression[cond, ifblock], ps.ws.endbyte - start + 1, puncs) : 
-        EXPR(kw, Expression[cond, ifblock, elseblock], ps.ws.endbyte - start + 1, puncs)
+        EXPR(kw, Expression[cond, ifblock], ps.nt.startbyte - start, puncs) : 
+        EXPR(kw, Expression[cond, ifblock, elseblock], ps.nt.startbyte - start, puncs)
     return ret
 end
 

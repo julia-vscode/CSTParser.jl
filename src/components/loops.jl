@@ -18,7 +18,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
     end
     block = parse_block(ps)
     next(ps)
-    return EXPR(kw, Expression[indices, block], ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
+    return EXPR(kw, Expression[indices, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
@@ -27,17 +27,17 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
     arg = @closer ps block @closer ps ws parse_expression(ps)
     block = parse_block(ps)
     next(ps)
-    return EXPR(kw, Expression[arg, block], ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
+    return EXPR(kw, Expression[arg, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.BREAK}})
     start = ps.t.startbyte
-    return EXPR(INSTANCE(ps), Expression[], ps.ws.endbyte - start + 1)
+    return EXPR(INSTANCE(ps), Expression[], ps.nt.startbyte - start)
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONTINUE}})
     start = ps.t.startbyte
-    return EXPR(INSTANCE(ps), Expression[], ps.ws.endbyte - start + 1)
+    return EXPR(INSTANCE(ps), Expression[], ps.nt.startbyte - start)
 end
 
 _start_for(x::EXPR) = Iterator{:for}(1, 4)

@@ -126,7 +126,7 @@ function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{2})
     nextarg = @closer ps ifop parse_expression(ps)
     op2 = INSTANCE(next(ps))
     nextarg2 = @precedence ps 2-LtoR(2) parse_expression(ps)
-    return EXPR(IF, Expression[ret, nextarg, nextarg2], ret.span + ps.ws.endbyte - start + 1, INSTANCE[op, op2])
+    return EXPR(IF, Expression[ret, nextarg, nextarg2], ret.span + ps.nt.startbyte - start, INSTANCE[op, op2])
 end
 
 # Parse arrows
@@ -179,7 +179,7 @@ function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{8, Tokens.
         push!(ret.args, nextarg)
         ret.span += ps.ws.endbyte-start + 1
     else
-        ret = EXPR(op, Expression[ret, nextarg], ret.span + ps.ws.endbyte - start + 1)
+        ret = EXPR(op, Expression[ret, nextarg], ret.span + ps.nt.startbyte - start)
     end
     return ret
 end
@@ -224,7 +224,7 @@ function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{15})
         puncs = INSTANCE[INSTANCE(next(ps))]
         args = @closer ps paren parse_list(ps, puncs)
         push!(puncs, INSTANCE(next(ps)))
-        nextarg = EXPR(TUPLE, args, ps.ws.endbyte - start + 1, puncs)
+        nextarg = EXPR(TUPLE, args, ps.nt.startbyte - start, puncs)
     else
         nextarg = @precedence ps 15-LtoR(15) parse_expression(ps)
     end

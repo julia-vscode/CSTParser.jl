@@ -25,7 +25,7 @@ function parse_try(ps::ParseState)
     end
     ps.t.kind != Tokens.END && next(ps)
     push!(puncs, INSTANCE(ps))
-    return EXPR(kw, Expression[tryblock, caught ,catchblock], ps.ws.endbyte - start + 1, puncs)
+    return EXPR(kw, Expression[tryblock, caught ,catchblock], ps.nt.startbyte - start, puncs)
 end
 
 function _start_try(x::EXPR)

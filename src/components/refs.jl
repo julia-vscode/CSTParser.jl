@@ -5,12 +5,12 @@ function parse_ref(ps::ParseState, ret)
     if ps.nt.kind == Tokens.RSQUARE
         next(ps)
         push!(puncs, INSTANCE(ps))
-        ret = EXPR(REF, [ret], ret.span + ps.ws.endbyte - start + 1, puncs)
+        ret = EXPR(REF, [ret], ret.span + ps.nt.startbyte - start, puncs)
     else
         args = @nocloser ps newline @closer ps square parse_list(ps, puncs)
         next(ps)
         push!(puncs, INSTANCE(ps))
-        ret = EXPR(REF, [ret, args...], ret.span + ps.ws.endbyte - start + 1, puncs)
+        ret = EXPR(REF, [ret, args...], ret.span + ps.nt.startbyte - start, puncs)
     end
     return ret
 end

@@ -2,28 +2,28 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONST}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     arg = parse_expression(ps)
-    return EXPR(kw, Expression[arg], ps.ws.endbyte - start + 1)
+    return EXPR(kw, Expression[arg], ps.nt.startbyte - start)
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.GLOBAL}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     arg = parse_expression(ps)
-    return EXPR(kw, Expression[arg], ps.ws.endbyte - start + 1)
+    return EXPR(kw, Expression[arg], ps.nt.startbyte - start)
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.LOCAL}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     arg = parse_expression(ps)
-    return EXPR(kw, Expression[arg], ps.ws.endbyte - start + 1)
+    return EXPR(kw, Expression[arg], ps.nt.startbyte - start)
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.RETURN}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     args = Expression[closer(ps) ? NOTHING : parse_expression(ps)]
-    return  EXPR(kw, args, ps.ws.endbyte - start + 1)
+    return  EXPR(kw, args, ps.nt.startbyte - start)
 end
 
 function next(x::EXPR, s::Iterator{:const})

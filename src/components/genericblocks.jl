@@ -10,7 +10,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BEGIN}})
     kw = INSTANCE(ps)
     arg = parse_block(ps)
     next(ps)
-    return EXPR(kw, Expression[arg], ps.ws.endbyte - start + 1, [INSTANCE(ps)])
+    return EXPR(kw, Expression[arg], ps.nt.startbyte - start, [INSTANCE(ps)])
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.QUOTE}})
@@ -18,7 +18,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.QUOTE}})
     kw = INSTANCE(ps)
     arg = parse_block(ps)
     next(ps)
-    return EXPR(kw, Expression[arg], ps.ws.endbyte - start + 1, [INSTANCE(ps)])
+    return EXPR(kw, Expression[arg], ps.nt.startbyte - start, [INSTANCE(ps)])
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.DO}})
@@ -27,7 +27,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.DO}})
     arg = @closer ps block @closer ps ws parse_expression(ps)
     block = parse_block(ps)
     next(ps)
-    return EXPR(kw, Expression[arg, block], ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
+    return EXPR(kw, Expression[arg, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
 end
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
     start = ps.t.startbyte
@@ -35,7 +35,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
     arg = @closer ps block @closer ps ws parse_expression(ps)
     block = parse_block(ps)
     next(ps)
-    return EXPR(kw, Expression[arg, block], ps.ws.endbyte - start + 1, INSTANCE[INSTANCE(ps)])
+    return EXPR(kw, Expression[arg, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
 end
 
 
@@ -52,7 +52,7 @@ function parse_block(ps::ParseState, ret::EXPR = EXPR(BLOCK, [], 0))
         push!(ret.args, @closer ps block parse_expression(ps))
     end
     @assert ps.nt.kind==Tokens.END
-    ret.span = ps.ws.endbyte - start + 1
+    ret.span = ps.nt.startbyte - start
     return ret
 end
 

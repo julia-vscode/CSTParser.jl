@@ -197,7 +197,7 @@ function parse_comma(ps::ParseState, ret)
             push!(ret.punctuation, op)
             ret.span += ps.ws.endbyte-start + 1
         else
-            ret =  EXPR(TUPLE, Expression[ret, nextarg], ret.span+ps.ws.endbyte - start + 1, INSTANCE[op])
+            ret =  EXPR(TUPLE, Expression[ret, nextarg], ret.span+ps.nt.startbyte - start, INSTANCE[op])
         end
     end
     return ret
@@ -226,9 +226,9 @@ function parse_paren(ps::ParseState)
         format(ps)
         ret.span += openparen.span + closeparen.span
     elseif ret isa EXPR && ret.head isa OPERATOR{20,Tokens.DDDOT}
-        ret = EXPR(TUPLE, [ret], ps.ws.endbyte - start + 1, [openparen, closeparen])
+        ret = EXPR(TUPLE, [ret], ps.nt.startbyte - start, [openparen, closeparen])
     else
-        ret = EXPR(BLOCK, [ret], ps.ws.endbyte - start + 1, [openparen, closeparen])
+        ret = EXPR(BLOCK, [ret], ps.nt.startbyte - start, [openparen, closeparen])
     end
     return ret
 end
@@ -241,19 +241,19 @@ function parse_square(ps::ParseState)
         next(ps)
         push!(puncs, INSTANCE(ps))
         format(ps)
-        return EXPR(VECT, [], ps.ws.endbyte - start + 1, puncs)
+        return EXPR(VECT, [], ps.nt.startbyte - start, puncs)
     else
         ret = @default ps @closer ps square parse_expression(ps)
         if ret isa EXPR && ret.head==TUPLE
             next(ps)
             push!(puncs, INSTANCE(ps))
             format(ps)
-            return EXPR(VECT, ret.args, ps.ws.endbyte - start + 1, puncs)
+            return EXPR(VECT, ret.args, ps.nt.startbyte - start, puncs)
         else
             next(ps)
             push!(puncs, INSTANCE(ps))
             format(ps)
-            return EXPR(VECT, [ret], ps.ws.endbyte - start + 1, puncs)
+            return EXPR(VECT, [ret], ps.nt.startbyte - start, puncs)
         end 
     end
 end
@@ -287,7 +287,7 @@ function parse_quote(ps::ParseState)
         arg = @closer ps paren parse_expression(ps)
         next(ps)
         push!(puncs, INSTANCE(ps))
-        return EXPR(QUOTE, [arg],  ps.ws.endbyte - start + 1, puncs)
+        return EXPR(QUOTE, [arg],  ps.nt.startbyte - start, puncs)
     end
 end
 
@@ -304,7 +304,7 @@ function parse_doc(ps::ParseState)
         return doc
     end
     arg = parse_expression(ps)
-    return EXPR(MACROCALL, [GlobalRefDOC, doc, arg], ps.ws.endbyte - start + 1)
+    return EXPR(MACROCALL, [GlobalRefDOC, doc, arg], ps.nt.startbyte - start)
 end
 
 

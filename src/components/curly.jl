@@ -12,7 +12,7 @@ function parse_curly(ps::ParseState, ret)
     args = @default ps @closer ps brace parse_list(ps, puncs)
     push!(puncs, INSTANCE(next(ps)))
     format(ps)
-    return EXPR(CURLY, [ret, args...], ret.span + ps.ws.endbyte - start + 1, puncs)
+    return EXPR(CURLY, [ret, args...], ret.span + ps.nt.startbyte - start, puncs)
 end
 
 _start_curly(x::EXPR) = Iterator{:curly}(1, length(x.args)*2)
