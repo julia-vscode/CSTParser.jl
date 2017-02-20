@@ -13,6 +13,7 @@ facts("broken things") do
                 subtypes(m::Module, x::DataType) = x.abstract ? sort!(collect(_subtypes(m, x)), by=string) : DataType[]
             end"""
             ":(using \$s)"
+            "(a,b = c,d)"
             "[v[i]==Symbol(\"#unused#\") ? string(t[i]) : string(v[i])*\"::\"*string(t[i]) for i = 1:length(v)]"]
     for str in strs
         test_parse(str)

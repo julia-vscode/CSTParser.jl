@@ -45,7 +45,8 @@ isunaryop(t::Token) = t.kind == Tokens.PLUS ||
                       t.kind == Tokens.SQUARE_ROOT ||
                       t.kind == Tokens.CUBE_ROOT ||
                       t.kind == Tokens.QUAD_ROOT ||
-                      t.kind == Tokens.DECLARATION
+                      t.kind == Tokens.DECLARATION ||
+                      t.kind == Tokens.EX_OR
 
 isunaryandbinaryop(t::Token) = t.kind == Tokens.PLUS ||
                                t.kind == Tokens.MINUS ||

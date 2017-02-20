@@ -12,6 +12,7 @@ type Closer
     comma::Bool
     dot::Bool
     paren::Bool
+    quotemode::Bool
     brace::Bool
     square::Bool
     block::Bool
@@ -22,7 +23,7 @@ type Closer
     precedence::Int
 end
 
-Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, 0)
+Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, 0)
 
 type Scope{t}
     id

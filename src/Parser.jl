@@ -58,9 +58,13 @@ function parse_expression(ps::ParseState)
     elseif ps.t.kind == Tokens.LBRACE
         error("discontinued cell1d syntax")
     elseif ps.t.kind == Tokens.COLON
-        ret = parse_quote(ps)
+        ret = @closer ps quotemode parse_quote(ps)
     elseif ps.t.kind == Tokens.TRIPLE_STRING
         ret = parse_doc(ps)
+    elseif ps.t.kind == Tokens.OR && ps.closer.quotemode
+        head = INSTANCE(ps)
+        arg = parse_expression(ps)
+        ret = EXPR(head, arg, head.span + arg.span)
     elseif isinstance(ps.t) || isoperator(ps.t)
         ret = INSTANCE(ps)
     elseif ps.t.kind==Tokens.AT_SIGN
@@ -195,7 +199,7 @@ function parse_comma(ps::ParseState, ret)
         if ret isa EXPR && ret.head==TUPLE
             push!(ret.args, nextarg)
             push!(ret.punctuation, op)
-            ret.span += ps.nt.start - start
+            ret.span += ps.nt.startbyte - start
         else
             ret =  EXPR(TUPLE, Expression[ret, nextarg], ret.span+ps.nt.startbyte - start, INSTANCE[op])
         end
