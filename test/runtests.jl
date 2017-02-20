@@ -52,22 +52,35 @@ include("keywords.jl")
 
 const examplemodule = readstring("fullspecexample.jl")
 
-function timetest(n)
+function timeParser(n)
     for i =1:n
         Parser.parse(examplemodule)
     end
 end
 
-function timetest2(n)
+function timeBase(n)
     for i =1:n
         Base.parse(examplemodule)
     end
 end
 
+function timeTokenize(n)
+    for i =1:n
+        collect(Tokenize.tokenize(examplemodule))
+    end
+end
+
 # using BenchmarkTools
 
-timetest(1)
-println(signif((@elapsed timetest2(500))/(@elapsed timetest(500)),3), "x speedup")
+timeParser(1)
+timeBase(1)
+timeTokenize(1)
+tp = @elapsed timeParser(500)
+tb = @elapsed timeBase(500)
+tt = @elapsed timeTokenize(500)
+println(tb/tp)
+
+
 
 facts("fullspec") do
     x = Parser.parse(examplemodule)
