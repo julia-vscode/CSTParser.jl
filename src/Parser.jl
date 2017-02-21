@@ -50,15 +50,11 @@ Acceptable starting tokens are:
 function parse_expression(ps::ParseState)
     next(ps)
     if Tokens.begin_keywords < ps.t.kind < Tokens.end_keywords 
-        ret = parse_kw(ps, Val{ps.t.kind})
+        ret = @nocloser ps ws parse_kw(ps, Val{ps.t.kind})
     elseif ps.t.kind == Tokens.LPAREN
         ret = parse_paren(ps)
     elseif ps.t.kind == Tokens.LSQUARE
         ret = parse_square(ps)
-    elseif ps.t.kind == Tokens.LBRACE
-        error("discontinued cell1d syntax")
-    elseif ps.t.kind == Tokens.COLON
-        ret = @closer ps quotemode parse_quote(ps)
     elseif ps.t.kind == Tokens.TRIPLE_STRING
         ret = parse_doc(ps)
     elseif ps.t.kind == Tokens.OR && ps.closer.quotemode
@@ -100,7 +96,9 @@ Handles cases where an expression - `ret` - is not followed by
 
 """
 function parse_juxtaposition(ps::ParseState, ret)
-    if isoperator(ps.nt)
+    if isunaryop(ps.t)
+        ret = parse_unary(ps, ret)
+    elseif isoperator(ps.nt)
         next(ps)
         format(ps)
         op = INSTANCE(ps)

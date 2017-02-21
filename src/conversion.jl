@@ -42,7 +42,7 @@ function Expr(io::IOBuffer, x::LITERAL{Tokens.FLOAT})
     Base.parse(String(take!(ioout)))
 end
 
-function Expr(io::IOBuffer, x::LITERAL{Tokens.STRING}) 
+function Expr(io::IOBuffer, x::Union{LITERAL{Tokens.STRING},LITERAL{Tokens.TRIPLE_STRING}}) 
     ioout = IOBuffer()
     seek(io, x.offset)
     cnt = 0
@@ -50,19 +50,10 @@ function Expr(io::IOBuffer, x::LITERAL{Tokens.STRING})
         cnt+=1
         write(ioout, read(io, Char))
     end
-    Base.parse(String(take!(ioout)))
+    qs = x isa LITERAL{Tokens.STRING} ? 1 : 3
+    String(take!(ioout))[1+qs:end-(qs+1)]
 end
 
-function Expr(io::IOBuffer, x::LITERAL{Tokens.TRIPLE_STRING}) 
-    ioout = IOBuffer()
-    seek(io, x.offset)
-    cnt = 0
-    while cnt < x.span
-        cnt+=1
-        write(ioout, read(io, Char))
-    end
-    Base.parse(String(take!(ioout)))
-end
 
 Expr(io::IOBuffer, x::KEYWORD{Tokens.BAREMODULE}) = :module
 
@@ -71,7 +62,6 @@ Expr(io::IOBuffer, x::QUOTENODE) = QuoteNode(Expr(io::IOBuffer, x.val))
 function Expr(io::IOBuffer, x::EXPR)
     if x.head==BLOCK && length(x.punctuation)==2 && first(x.punctuation) isa PUNCTUATION{Tokens.LPAREN}
         return Expr(io, x.args[1])
-        # return Expr(:block, Expr.(io, x.args)...)
     elseif x.head isa KEYWORD{Tokens.BEGIN}
         return Expr(io, x.args[1])
     elseif x.head isa KEYWORD{Tokens.ELSEIF}

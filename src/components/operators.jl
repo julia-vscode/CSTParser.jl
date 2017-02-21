@@ -46,7 +46,8 @@ isunaryop(t::Token) = t.kind == Tokens.PLUS ||
                       t.kind == Tokens.CUBE_ROOT ||
                       t.kind == Tokens.QUAD_ROOT ||
                       t.kind == Tokens.DECLARATION ||
-                      t.kind == Tokens.EX_OR
+                      t.kind == Tokens.EX_OR ||
+                      t.kind == Tokens.COLON
 
 isunaryandbinaryop(t::Token) = t.kind == Tokens.PLUS ||
                                t.kind == Tokens.MINUS ||
@@ -104,8 +105,16 @@ issyntaxcall(op) = false
 Having hit a unary operator at the start of an expression return a call.
 """
 function parse_unary(ps::ParseState, op)
-    arg = parse_expression(ps)
-    if issyntaxcall(op) && !(op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.GREATER_COLON})
+    arg = @precedence ps 20 parse_expression(ps)
+    if op isa OPERATOR{8,Tokens.COLON}
+        if arg isa INSTANCE
+            return QUOTENODE(arg, arg.span, [])
+        else
+            return EXPR(QUOTE, [arg], arg.span, [])
+        end
+    elseif issyntaxcall(op) && !(op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.GREATER_COLON})
+        return EXPR(op, [arg], op.span + arg.span)
+    elseif op isa OPERATOR{9,Tokens.EX_OR}
         return EXPR(op, [arg], op.span + arg.span)
     else
         return EXPR(CALL, [op, arg], op.span + arg.span)
@@ -226,6 +235,9 @@ function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{15})
         args = @closer ps paren parse_list(ps, puncs)
         push!(puncs, INSTANCE(next(ps)))
         nextarg = EXPR(TUPLE, args, ps.nt.startbyte - start, puncs)
+    elseif iskw(ps.nt)
+        next(ps)
+        nextarg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, ps.t.startbyte, Symbol(lowercase(string(ps.t.kind))))
     else
         nextarg = @precedence ps 15-LtoR(15) parse_expression(ps)
     end
