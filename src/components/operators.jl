@@ -114,7 +114,7 @@ function parse_unary(ps::ParseState, op)
         end
     elseif issyntaxcall(op) && !(op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.GREATER_COLON})
         return EXPR(op, [arg], op.span + arg.span)
-    elseif op isa OPERATOR{9,Tokens.EX_OR}
+    elseif op isa OPERATOR{9,Tokens.EX_OR,false}
         return EXPR(op, [arg], op.span + arg.span)
     else
         return EXPR(CALL, [op, arg], op.span + arg.span)
@@ -197,7 +197,7 @@ end
 
 # Parse chained +
 function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{9,Tokens.PLUS})
-    if ret.head==CALL && typeof(ret.args[1]) == OPERATOR{9,Tokens.PLUS}
+    if ret.head==CALL && ret.args[1] isa OPERATOR{9,Tokens.PLUS,false}
         nextarg = @precedence ps 9-LtoR(9) parse_expression(ps)
         push!(ret.args, nextarg)
         ret.span += nextarg.span + op.span
@@ -210,7 +210,7 @@ end
 
 # Parse chained *
 function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{11,Tokens.STAR})
-    if ret.head==CALL && typeof(ret.args[1]) == OPERATOR{11,Tokens.STAR}
+    if ret.head==CALL && ret.args[1] isa OPERATOR{11,Tokens.STAR,false}
         nextarg = @precedence ps 11-LtoR(11) parse_expression(ps)
         push!(ret.args, nextarg)
         ret.span += nextarg.span + op.span

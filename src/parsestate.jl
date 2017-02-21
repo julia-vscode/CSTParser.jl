@@ -44,6 +44,7 @@ type ParseState
     lws::Token
     ws::Token
     nws::Token
+    dot::Bool
     formatcheck::Bool
     ids::Dict{String,Any}
     hints::Vector{Any}
@@ -51,7 +52,7 @@ type ParseState
     current_scope::Scope
 end
 function ParseState(str::String)
-    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), true, Dict(), [], Closer(), Scope{Tokens.TOPLEVEL}(TOPLEVEL, [])))
+    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), true, true, Dict(), [], Closer(), Scope{Tokens.TOPLEVEL}(TOPLEVEL, [])))
 end
 
 function Base.show(io::IO, ps::ParseState)
@@ -70,6 +71,14 @@ function next(ps::ParseState)
     ps.lws = ps.ws
     ps.ws = ps.nws
     ps.nt, ps.done  = next(ps.l, ps.done)
+
+    if ps.t.kind == Tokens.DOT && ps.ws.kind == EmptyWS && isoperator(ps.nt)
+        ps.t = ps.nt
+        ps.dot = true
+        ps.nt, ps.done  = next(ps.l, ps.done)
+    else
+        ps.dot = false
+    end
     if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#'
         ps.nws = lex_ws_comment(ps.l, readchar(ps.l))
     else

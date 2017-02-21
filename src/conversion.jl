@@ -14,8 +14,12 @@ function Expr(io::IOBuffer, x::IDENTIFIER)
     Symbol(take!(ioout))
 end
 
-function Expr{O,K}(io::IOBuffer, x::OPERATOR{O,K}) 
-    UNICODE_OPS_REVERSE[K]
+function Expr{O,K,dot}(io::IOBuffer, x::OPERATOR{O,K,dot}) 
+    if dot
+        Symbol(:.,UNICODE_OPS_REVERSE[K])
+    else
+        UNICODE_OPS_REVERSE[K]
+    end
 end
 
 Expr(io::IOBuffer, x::LITERAL{Tokens.TRUE}) = true
