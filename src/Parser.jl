@@ -55,7 +55,7 @@ function parse_expression(ps::ParseState)
         ret = parse_paren(ps)
     elseif ps.t.kind == Tokens.LSQUARE
         ret = parse_square(ps)
-    elseif ps.t.kind == Tokens.TRIPLE_STRING
+    elseif ps.t.kind == Tokens.TRIPLE_STRING && ps.current_scope.id == TOPLEVEL
         ret = parse_doc(ps)
     elseif ps.t.kind == Tokens.OR && ps.closer.quotemode
         head = INSTANCE(ps)

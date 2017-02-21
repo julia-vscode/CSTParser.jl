@@ -25,11 +25,13 @@ Parses a function call. Expects to start before the opening parentheses and is p
 """
 function parse_call(ps::ParseState, ret)
     start = ps.nt.startbyte
-    
-    puncs = INSTANCE[INSTANCE(next(ps))]
+
+    next(ps)
+    puncs = INSTANCE[INSTANCE(ps)]
     format(ps)
     args = @nocloser ps newline @closer ps paren parse_list(ps, puncs)
-    push!(puncs, INSTANCE(next(ps)))
+    next(ps)
+    push!(puncs, INSTANCE(ps))
     format(ps)
     ret = EXPR(CALL, [ret, args...], ret.span + ps.nt.startbyte - start, puncs)
     return ret
