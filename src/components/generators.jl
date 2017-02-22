@@ -43,3 +43,19 @@ function next(x::EXPR, s::Iterator{:comprehension})
         return x.punctuation[2], +s
     end
 end
+
+function _start_typed_comprehension(x::EXPR)
+    return Iterator{:typed_comprehension}(1, 4)
+end
+
+function next(x::EXPR, s::Iterator{:typed_comprehension})
+    if s.i == 1
+        return x.args[1], +s
+    elseif s.i == 2
+        return x.punctuation[1], +s
+    elseif s.i == 3
+        return x.args[2], +s
+    elseif s.i == 4 
+        return x.punctuation[2], +s
+    end
+end

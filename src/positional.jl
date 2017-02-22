@@ -43,6 +43,8 @@ function start(x::EXPR)
         return _start_generator(x)
     elseif x.head == COMPREHENSION
         return _start_comprehension(x)
+    elseif x.head == TYPED_COMPREHENSION
+        return _start_typed_comprehension(x)
     elseif x.head == TOPLEVEL
         @assert length(x.args) > 1
         if !(x.args[1] isa Expr && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING})) 
