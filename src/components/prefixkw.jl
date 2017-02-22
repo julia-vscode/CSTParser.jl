@@ -26,6 +26,14 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.RETURN}})
     return  EXPR(kw, args, ps.nt.startbyte - start)
 end
 
+function parse_kw(ps::ParseState, ::Type{Val{Tokens.END}})
+    if ps.closer.square
+        return IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, ps.t.startbyte, :end)
+    else
+        error("unexpected `end`")
+    end
+end
+
 function next(x::EXPR, s::Iterator{:const})
     if s.i == 1
         return x.head, +s

@@ -8,6 +8,10 @@ function parse_try(ps::ParseState)
         push!(tryblock.args, @closer ps trycatch parse_expression(ps))
     end
     tryblock.span += ps.nt.startbyte 
+    if ps.nt.kind == Tokens.END
+        next(ps)
+        return EXPR(kw, Expression[tryblock, FALSE, EXPR(BLOCK, Expression[], 0)], ps.nt.startbyte - start, [INSTANCE(ps)])
+    end
 
     puncs = INSTANCE[]
     next(ps)
@@ -23,7 +27,7 @@ function parse_try(ps::ParseState)
         caught = FALSE
         catchblock = EXPR(BLOCK, Expression[], 0)
     end
-    ps.t.kind != Tokens.END && next(ps)
+    next(ps)
     push!(puncs, INSTANCE(ps))
     return EXPR(kw, Expression[tryblock, caught ,catchblock], ps.nt.startbyte - start, puncs)
 end

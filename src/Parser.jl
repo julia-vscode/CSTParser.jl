@@ -64,16 +64,13 @@ function parse_expression(ps::ParseState)
     elseif isinstance(ps.t) || isoperator(ps.t)
         ret = INSTANCE(ps)
     elseif ps.t.kind==Tokens.AT_SIGN
-        ret = parse_macrocall(ps)
+        ret = @closer ps semicolon parse_macrocall(ps)
     else
         error("Expression started with $(ps)")
     end
 
     while !closer(ps)
         ret = parse_juxtaposition(ps, ret)
-    end
-    if ps.nt.kind==Tokens.SEMICOLON
-        next(ps)
     end
 
     return ret
@@ -124,6 +121,8 @@ function parse_juxtaposition(ps::ParseState, ret)
         else
             error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
         end
+    elseif ps.nt.kind == Tokens.SEMICOLON
+        ret = parse_semicolon(ps, ret)
     elseif ps.nt.kind == Tokens.COMMA
         ret = parse_comma(ps, ret)
     elseif ps.nt.kind == Tokens.FOR 
@@ -209,6 +208,29 @@ end
 """
     parse_paren(ps, ret)
 
+Constructs a `block` having hit a `;` while parsing an expression.
+"""
+function parse_semicolon(ps::ParseState, ret)
+    next(ps)
+    op = INSTANCE(ps)
+    if closer(ps)
+        ret = EXPR(BLOCK, [ret], ret.span, [op])
+    else
+        nextarg = @closer ps semicolon parse_expression(ps)
+        if ret isa EXPR && ret.head == BLOCK && last(ret.punctuation) isa PUNCTUATION{Tokens.SEMICOLON}
+            push!(ret.args, nextarg)
+            push!(ret.punctuation, op)
+            ret.span += nextarg.span + op.span
+        else
+            ret = EXPR(BLOCK, [ret, nextarg], ret.span, [op])
+        end
+    end
+    return ret
+end
+
+"""
+    parse_paren(ps, ret)
+
 Parses the juxtaposition of `ret` with an opening parentheses. Parses a comma 
 seperated list.
 """
@@ -222,7 +244,7 @@ function parse_paren(ps::ParseState)
         ret = @clear ps @closer ps paren parse_expression(ps)
     end
     closeparen = INSTANCE(next(ps))
-    if ret isa EXPR && ret.head == TUPLE
+    if ret isa EXPR && (ret.head == TUPLE || (ret.head == BLOCK && last(ret.punctuation isa PUNCTUATION{Tokens.SEMICOLON})))
         unshift!(ret.punctuation, openparen)
         push!(ret.punctuation, closeparen)
         format(ps)
@@ -315,21 +337,21 @@ function parse(str::String, cont = false)
     ps = Parser.ParseState(str)
     ret = parse_expression(ps)
     # Handle semicolon as linebreak
-    while ps.nt.kind == Tokens.SEMICOLON
-        if ret isa EXPR && ret.head == TOPLEVEL
-            next(ps)
-            op = INSTANCE(ps)
-            arg = parse_expression(ps)
-            push!(ret.punctuation, op)
-            push!(ret.args, arg)
-            ret.span += op.span + arg.span
-        else
-            next(ps)
-            op = INSTANCE(ps)
-            arg = parse_expression(ps)
-            ret = EXPR(TOPLEVEL, [ret, arg], ret.span + arg.span + op.span, [op])
-        end
-    end
+    # while ps.nt.kind == Tokens.SEMICOLON
+    #     if ret isa EXPR && ret.head == TOPLEVEL
+    #         next(ps)
+    #         op = INSTANCE(ps)
+    #         arg = parse_expression(ps)
+    #         push!(ret.punctuation, op)
+    #         push!(ret.args, arg)
+    #         ret.span += op.span + arg.span
+    #     else
+    #         next(ps)
+    #         op = INSTANCE(ps)
+    #         arg = parse_expression(ps)
+    #         ret = EXPR(TOPLEVEL, [ret, arg], ret.span + arg.span + op.span, [op])
+    #     end
+    # end
 
     return ret
 end

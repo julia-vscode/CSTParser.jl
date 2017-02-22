@@ -7,7 +7,7 @@ function parse_ref(ps::ParseState, ret)
         push!(puncs, INSTANCE(ps))
         ret = EXPR(REF, [ret], ret.span + ps.nt.startbyte - start, puncs)
     else
-        args = @nocloser ps newline @closer ps square parse_list(ps, puncs)
+        args = @clear ps @closer ps square parse_list(ps, puncs)
         next(ps)
         push!(puncs, INSTANCE(ps))
         ret = EXPR(REF, [ret, args...], ret.span + ps.nt.startbyte - start, puncs)

@@ -1,6 +1,6 @@
 function closer(ps::ParseState)
     (ps.closer.newline && ps.ws.kind == NewLineWS) ||
-    (ps.nt.kind == Tokens.SEMICOLON) ||
+    (ps.closer.semicolon && ps.nt.kind == Tokens.SEMICOLON) ||
     (isoperator(ps.nt) && precedence(ps.nt)<=ps.closer.precedence) ||
     (ps.nt.kind == Tokens.LPAREN && ps.closer.precedence>14) ||
     (ps.nt.kind == Tokens.LBRACE && ps.closer.precedence>14) ||
@@ -14,7 +14,7 @@ function closer(ps::ParseState)
     (ps.closer.block && ps.nt.kind==Tokens.END) ||
     (ps.closer.ifelse && ps.nt.kind==Tokens.ELSEIF || ps.nt.kind==Tokens.ELSE) ||
     (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt)<=1 || ps.nt.kind==Tokens.COLON)) ||
-    (ps.closer.trycatch && ps.nt.kind==Tokens.CATCH || ps.nt.kind==Tokens.END) ||
+    (ps.closer.trycatch && (ps.nt.kind==Tokens.CATCH || ps.nt.kind==Tokens.END)) ||
     (ps.closer.ws && (!isempty(ps.ws) && !(isoperator(ps.nt) || ps.nt.kind == Tokens.COMMA)))
 end
 
@@ -72,6 +72,7 @@ Parses the next expression using default closure rules.
 macro default(ps, body)
     quote
         local tmp1 = $(esc(ps)).closer.newline
+        local tmp2 = $(esc(ps)).closer.semicolon
         local tmp3 = $(esc(ps)).closer.eof
         local tmp4 = $(esc(ps)).closer.tuple
         local tmp5 = $(esc(ps)).closer.comma
@@ -85,6 +86,7 @@ macro default(ps, body)
         local tmp13 = $(esc(ps)).closer.ws
         local tmp14 = $(esc(ps)).closer.precedence
         $(esc(ps)).closer.newline = true
+        $(esc(ps)).closer.semicolon = false
         $(esc(ps)).closer.eof = true
         $(esc(ps)).closer.tuple = false
         $(esc(ps)).closer.comma = false
@@ -101,6 +103,7 @@ macro default(ps, body)
         out = $(esc(body))
         
         $(esc(ps)).closer.newline = tmp1
+        $(esc(ps)).closer.semicolon = tmp2
         $(esc(ps)).closer.eof = tmp3
         $(esc(ps)).closer.tuple = tmp4
         $(esc(ps)).closer.comma = tmp5
@@ -125,6 +128,7 @@ Parses the next expression using default closure rules.
 macro clear(ps, body)
     quote
         local tmp1 = $(esc(ps)).closer.newline
+        local tmp2 = $(esc(ps)).closer.semicolon
         local tmp3 = $(esc(ps)).closer.eof
         local tmp4 = $(esc(ps)).closer.tuple
         local tmp5 = $(esc(ps)).closer.comma
@@ -138,6 +142,7 @@ macro clear(ps, body)
         local tmp13 = $(esc(ps)).closer.ws
         local tmp14 = $(esc(ps)).closer.precedence
         $(esc(ps)).closer.newline = false
+        $(esc(ps)).closer.semicolon = false
         $(esc(ps)).closer.eof = false
         $(esc(ps)).closer.tuple = false
         $(esc(ps)).closer.comma = false
@@ -154,6 +159,7 @@ macro clear(ps, body)
         out = $(esc(body))
         
         $(esc(ps)).closer.newline = tmp1
+        $(esc(ps)).closer.semicolon = tmp2
         $(esc(ps)).closer.eof = tmp3
         $(esc(ps)).closer.tuple = tmp4
         $(esc(ps)).closer.comma = tmp5
