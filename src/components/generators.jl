@@ -10,12 +10,9 @@ function parse_generator(ps::ParseState, ret)
     @assert !isempty(ps.ws)
     next(ps)
     op = INSTANCE(ps)
-    range = parse_expression(ps)
+    range = @clear ps @closer ps paren @closer ps square parse_expression(ps)
 
     ret = EXPR(GENERATOR, [ret, range], ret.span + ps.nt.startbyte - start, [op])
-    if !(ps.nt.kind==Tokens.RPAREN || ps.nt.kind==Tokens.RSQUARE)
-        error("generator/comprehension syntax not followed by ')' or ']' at $(ps)")
-    end
     return ret
 end
 
@@ -30,5 +27,19 @@ function next(x::EXPR, s::Iterator{:generator})
         return x.punctuation[1], +s
     else
         return x.args[s.i-1], +s
+    end
+end
+
+function _start_comprehension(x::EXPR)
+    return Iterator{:comprehension}(1, 3)
+end
+
+function next(x::EXPR, s::Iterator{:comprehension})
+    if s.i == 1
+        return x.punctuation[1], +s
+    elseif s.i == 2
+        return x.args[1], +s
+    elseif s.i == 3 
+        return x.punctuation[2], +s
     end
 end

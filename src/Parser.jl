@@ -100,6 +100,8 @@ function parse_juxtaposition(ps::ParseState, ret)
         format(ps)
         op = INSTANCE(ps)
         ret = parse_operator(ps, ret, op)
+    elseif ps.nt.kind == Tokens.FOR
+        ret = parse_generator(ps, ret)
     elseif (ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == IDENTIFIER || ps.nt.kind == Tokens.LPAREN)
         arg = parse_expression(ps)
         ret = EXPR(CALL, [OPERATOR{11,Tokens.STAR}(0, 0), ret, arg], ret.span + arg.span)
@@ -125,8 +127,6 @@ function parse_juxtaposition(ps::ParseState, ret)
         ret = parse_semicolon(ps, ret)
     elseif ps.nt.kind == Tokens.COMMA
         ret = parse_comma(ps, ret)
-    elseif ps.nt.kind == Tokens.FOR 
-        ret = parse_generator(ps, ret)
     elseif ret isa IDENTIFIER && ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
         next(ps)
         arg = INSTANCE(ps)
@@ -243,7 +243,8 @@ function parse_paren(ps::ParseState)
     else
         ret = @clear ps @closer ps paren parse_expression(ps)
     end
-    closeparen = INSTANCE(next(ps))
+    next(ps)
+    closeparen = INSTANCE(ps)
     if ret isa EXPR && (ret.head == TUPLE || (ret.head == BLOCK && last(ret.punctuation isa PUNCTUATION{Tokens.SEMICOLON})))
         unshift!(ret.punctuation, openparen)
         push!(ret.punctuation, closeparen)
@@ -273,6 +274,11 @@ function parse_square(ps::ParseState)
             push!(puncs, INSTANCE(ps))
             format(ps)
             return EXPR(VECT, ret.args, ps.nt.startbyte - start, puncs)
+        elseif ret isa EXPR && ret.head==GENERATOR
+            next(ps)
+            push!(puncs, INSTANCE(ps))
+            format(ps)
+            return EXPR(COMPREHENSION, [ret], ps.nt.startbyte - start, puncs)
         else
             next(ps)
             push!(puncs, INSTANCE(ps))

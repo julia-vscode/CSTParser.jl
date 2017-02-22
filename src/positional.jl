@@ -41,6 +41,8 @@ function start(x::EXPR)
         return Iterator{:block}(1, length(x.args) + length(x.punctuation))
     elseif x.head == GENERATOR
         return _start_generator(x)
+    elseif x.head == COMPREHENSION
+        return _start_comprehension(x)
     elseif x.head == TOPLEVEL
         @assert length(x.args) > 1
         if !(x.args[1] isa Expr && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING})) 

@@ -8,6 +8,12 @@ function parse_ref(ps::ParseState, ret)
         ret = EXPR(REF, [ret], ret.span + ps.nt.startbyte - start, puncs)
     else
         args = @clear ps @closer ps square parse_list(ps, puncs)
+        if length(args)==1 && args[1] isa EXPR && args[1].head == GENERATOR
+
+            next(ps)
+            push!(puncs, INSTANCE(ps))
+            return EXPR(TYPED_COMPREHENSION, [ret, args[1]], ret.span + ps.nt.startbyte - start, puncs)
+        end
         next(ps)
         push!(puncs, INSTANCE(ps))
         ret = EXPR(REF, [ret, args...], ret.span + ps.nt.startbyte - start, puncs)

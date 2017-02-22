@@ -87,6 +87,7 @@ function Expr(io::IOBuffer, x::EXPR)
 end
 
 
+fixranges(io::IOBuffer, a::INSTANCE) = Expr(io, a)
 function fixranges(io::IOBuffer, a::EXPR)
     if a.head==CALL && a.args[1] isa OPERATOR{6, Tokens.IN} || a.args[1] isa OPERATOR{6, Tokens.ELEMENT_OF}
         return Expr(:(=), Expr.(io, a.args[2:end])...)
