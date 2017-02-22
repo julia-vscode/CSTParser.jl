@@ -219,7 +219,7 @@ function parse_paren(ps::ParseState)
     if ps.nt.kind == Tokens.RPAREN
         ret = EXPR(TUPLE, [])
     else
-        ret = @default ps @closer ps paren parse_expression(ps)
+        ret = @clear ps @closer ps paren parse_expression(ps)
     end
     closeparen = INSTANCE(next(ps))
     if ret isa EXPR && ret.head == TUPLE

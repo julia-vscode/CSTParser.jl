@@ -1,5 +1,5 @@
 function closer(ps::ParseState)
-    (ps.closer.newline && ps.ws.kind == Tokens.begin_literal) ||
+    (ps.closer.newline && ps.ws.kind == NewLineWS) ||
     (ps.nt.kind == Tokens.SEMICOLON) ||
     (isoperator(ps.nt) && precedence(ps.nt)<=ps.closer.precedence) ||
     (ps.nt.kind == Tokens.LPAREN && ps.closer.precedence>14) ||
@@ -117,9 +117,61 @@ macro default(ps, body)
     end
 end
 
+"""
+    @clear ps body
+
+Parses the next expression using default closure rules.
+"""
+macro clear(ps, body)
+    quote
+        local tmp1 = $(esc(ps)).closer.newline
+        local tmp3 = $(esc(ps)).closer.eof
+        local tmp4 = $(esc(ps)).closer.tuple
+        local tmp5 = $(esc(ps)).closer.comma
+        local tmp6 = $(esc(ps)).closer.paren
+        local tmp7 = $(esc(ps)).closer.brace
+        local tmp8 = $(esc(ps)).closer.square
+        local tmp9 = $(esc(ps)).closer.block
+        local tmp10 = $(esc(ps)).closer.ifelse
+        local tmp11 = $(esc(ps)).closer.ifop
+        local tmp12 = $(esc(ps)).closer.trycatch
+        local tmp13 = $(esc(ps)).closer.ws
+        local tmp14 = $(esc(ps)).closer.precedence
+        $(esc(ps)).closer.newline = false
+        $(esc(ps)).closer.eof = false
+        $(esc(ps)).closer.tuple = false
+        $(esc(ps)).closer.comma = false
+        $(esc(ps)).closer.paren = false
+        $(esc(ps)).closer.brace = false
+        $(esc(ps)).closer.square = false
+        $(esc(ps)).closer.block = false
+        $(esc(ps)).closer.ifelse = false
+        $(esc(ps)).closer.ifop = false
+        $(esc(ps)).closer.trycatch = false
+        $(esc(ps)).closer.ws = false
+        $(esc(ps)).closer.precedence = 0
+
+        out = $(esc(body))
+        
+        $(esc(ps)).closer.newline = tmp1
+        $(esc(ps)).closer.eof = tmp3
+        $(esc(ps)).closer.tuple = tmp4
+        $(esc(ps)).closer.comma = tmp5
+        $(esc(ps)).closer.paren = tmp6
+        $(esc(ps)).closer.brace = tmp7
+        $(esc(ps)).closer.square = tmp8
+        $(esc(ps)).closer.block = tmp9
+        $(esc(ps)).closer.ifelse = tmp10
+        $(esc(ps)).closer.ifop = tmp11
+        $(esc(ps)).closer.trycatch = tmp12
+        $(esc(ps)).closer.ws = tmp13
+        $(esc(ps)).closer.precedence = tmp14
+        out
+    end
+end
 
 """
-    @closer ps rule body 
+    @scope ps scope body 
 
 Continues parsing closing on `rule`.
 """
