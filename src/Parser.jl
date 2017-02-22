@@ -93,14 +93,7 @@ Handles cases where an expression - `ret` - is not followed by
 
 """
 function parse_juxtaposition(ps::ParseState, ret)
-    if isunaryop(ps.t)
-        ret = parse_unary(ps, ret)
-    elseif isoperator(ps.nt)
-        next(ps)
-        format(ps)
-        op = INSTANCE(ps)
-        ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind == Tokens.FOR
+    if ps.nt.kind == Tokens.FOR
         ret = parse_generator(ps, ret)
     elseif (ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == IDENTIFIER || ps.nt.kind == Tokens.LPAREN)
         arg = parse_expression(ps)
@@ -123,6 +116,13 @@ function parse_juxtaposition(ps::ParseState, ret)
         else
             error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
         end
+    elseif isunaryop(ps.t)
+        ret = parse_unary(ps, ret)
+    elseif isoperator(ps.nt)
+        next(ps)
+        format(ps)
+        op = INSTANCE(ps)
+        ret = parse_operator(ps, ret, op)
     elseif ps.nt.kind == Tokens.SEMICOLON
         ret = parse_semicolon(ps, ret)
     elseif ps.nt.kind == Tokens.COMMA
