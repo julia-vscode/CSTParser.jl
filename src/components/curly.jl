@@ -9,10 +9,14 @@ function parse_curly(ps::ParseState, ret)
     start = ps.t.startbyte
     puncs = INSTANCE[INSTANCE(ps)]
     format(ps)
-    args = @default ps @closer ps brace parse_list(ps, puncs)
+    arg = @closer ps brace @nocloser ps newline parse_expression(ps)
+    if arg isa EXPR && arg.head == TUPLE
+        append!(puncs, arg.punctuation)
+        arg = arg.args
+    end
     push!(puncs, INSTANCE(next(ps)))
     format(ps)
-    return EXPR(CURLY, [ret, args...], ret.span + ps.nt.startbyte - start, puncs)
+    return EXPR(CURLY, [ret, arg...], ret.span + ps.nt.startbyte - start, puncs)
 end
 
 _start_curly(x::EXPR) = Iterator{:curly}(1, length(x.args)*2)

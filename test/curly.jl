@@ -1,5 +1,8 @@
 facts("abstract") do
     strs =  ["x{T}"
+             "x{T,S}"
+             """x{T,
+             S}"""
              "a.b{T}"
              "a(b){T}"
              "(a(b)){T}"
