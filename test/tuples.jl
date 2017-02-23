@@ -11,6 +11,7 @@ facts("tuples") do
             "(a...)",
             "((a,b)...)",
             "a,b = c,d",
+            "(a,b = c,d)",
             "(a,b) = (c,d)"]
     for str in strs
         test_parse(str)

@@ -34,20 +34,25 @@ precedence(x) = 0
 
 isoperator(t::Token) = Tokens.begin_ops < t.kind < Tokens.end_ops
 
-isunaryop(t::Token) = t.kind == Tokens.PLUS ||
-                      t.kind == Tokens.MINUS ||
-                      t.kind == Tokens.NOT ||
-                      t.kind == Tokens.APPROX ||
-                      t.kind == Tokens.ISSUBTYPE ||
-                      t.kind == Tokens.NOT_SIGN ||
-                      t.kind == Tokens.AND ||
-                      t.kind == Tokens.GREATER_COLON ||
-                      t.kind == Tokens.SQUARE_ROOT ||
-                      t.kind == Tokens.CUBE_ROOT ||
-                      t.kind == Tokens.QUAD_ROOT ||
-                      t.kind == Tokens.DECLARATION ||
-                      t.kind == Tokens.EX_OR ||
-                      t.kind == Tokens.COLON
+
+
+isunaryop{P,K,D}(op::OPERATOR{P,K,D}) = isunaryop(K)
+isunaryop(t::Token) = isunaryop(t.kind)
+
+isunaryop(kind) = kind == Tokens.PLUS ||
+                      kind == Tokens.MINUS ||
+                      kind == Tokens.NOT ||
+                      kind == Tokens.APPROX ||
+                      kind == Tokens.ISSUBTYPE ||
+                      kind == Tokens.NOT_SIGN ||
+                      kind == Tokens.AND ||
+                      kind == Tokens.GREATER_COLON ||
+                      kind == Tokens.SQUARE_ROOT ||
+                      kind == Tokens.CUBE_ROOT ||
+                      kind == Tokens.QUAD_ROOT ||
+                      kind == Tokens.DECLARATION ||
+                      kind == Tokens.EX_OR ||
+                      kind == Tokens.COLON
 
 isunaryandbinaryop(t::Token) = t.kind == Tokens.PLUS ||
                                t.kind == Tokens.MINUS ||
@@ -104,22 +109,36 @@ issyntaxcall(op) = false
 
 Having hit a unary operator at the start of an expression return a call.
 """
-function parse_unary(ps::ParseState, op)
+function parse_unary(ps::ParseState, op::OPERATOR)
     arg = @precedence ps 20 parse_expression(ps)
-    if op isa OPERATOR{8,Tokens.COLON}
-        if arg isa INSTANCE
-            return QUOTENODE(arg, arg.span, [])
-        else
-            return EXPR(QUOTE, [arg], arg.span, [])
-        end
-    elseif issyntaxcall(op) && !(op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.GREATER_COLON})
-        return EXPR(op, [arg], op.span + arg.span)
-    elseif op isa OPERATOR{9,Tokens.EX_OR,false}
+    if issyntaxcall(op) && !(op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.GREATER_COLON})
         return EXPR(op, [arg], op.span + arg.span)
     else
         return EXPR(CALL, [op, arg], op.span + arg.span)
     end
 end
+
+function parse_unary(ps::ParseState, op::OPERATOR{8,Tokens.COLON})
+    if Tokens.begin_keywords < ps.nt.kind < Tokens.end_keywords || 
+        Tokens.begin_literal < ps.nt.kind < Tokens.end_literal || 
+        isoperator(ps.nt.kind) ||
+        ps.nt.kind == Tokens.IDENTIFIER
+        next(ps)
+        arg = INSTANCE(ps)
+        return QUOTENODE(arg, arg.span, [])
+    # elseif 
+    else
+        arg = @precedence ps 20 parse_expression(ps)
+        return EXPR(QUOTE, [arg], arg.span, [])
+    end
+end
+
+
+function parse_unary(ps::ParseState, op::OPERATOR{9,Tokens.EX_OR,false})
+    arg = @precedence ps 20 parse_expression(ps)
+    return EXPR(op, [arg], op.span + arg.span)
+end
+
 
 # Parse assignments
 function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{1})

@@ -93,7 +93,10 @@ Handles cases where an expression - `ret` - is not followed by
 
 """
 function parse_juxtaposition(ps::ParseState, ret)
-    if ps.nt.kind == Tokens.FOR
+
+    if isunaryop(ret)
+        ret = parse_unary(ps, ret)
+    elseif ps.nt.kind == Tokens.FOR
         ret = parse_generator(ps, ret)
     elseif (ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == IDENTIFIER || ps.nt.kind == Tokens.LPAREN)
         arg = parse_expression(ps)
@@ -116,8 +119,6 @@ function parse_juxtaposition(ps::ParseState, ret)
         else
             error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
         end
-    elseif isunaryop(ps.t)
-        ret = parse_unary(ps, ret)
     elseif isoperator(ps.nt)
         next(ps)
         format(ps)
@@ -192,7 +193,7 @@ function parse_comma(ps::ParseState, ret)
     elseif closer(ps)
         ret = EXPR(TUPLE, Expression[ret], ret.span + op.span, INSTANCE[op])
     else
-        nextarg = @closer ps tuple parse_expression(ps)
+        nextarg = @closer ps comma parse_expression(ps)
         if ret isa EXPR && ret.head==TUPLE
             push!(ret.args, nextarg)
             push!(ret.punctuation, op)
