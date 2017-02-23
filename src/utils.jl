@@ -6,7 +6,8 @@ function closer(ps::ParseState)
     (ps.nt.kind == Tokens.LBRACE && ps.closer.precedence>14) ||
     (ps.nt.kind == Tokens.LSQUARE && ps.closer.precedence>14) ||
     (ps.closer.eof && ps.nt.kind==Tokens.ENDMARKER) ||
-    (ps.closer.comma && (iscomma(ps.nt) || (!ps.closer.paren && isassignment(ps.nt)))) ||
+    (ps.closer.comma && iscomma(ps.nt)) || 
+    (ps.closer.tuple && (iscomma(ps.nt) || (!ps.closer.paren && isassignment(ps.nt)))) ||
     (ps.nt.kind==Tokens.FOR && ps.closer.precedence>14) ||
     (ps.closer.paren && ps.nt.kind==Tokens.RPAREN) ||
     (ps.closer.brace && ps.nt.kind==Tokens.RBRACE) ||

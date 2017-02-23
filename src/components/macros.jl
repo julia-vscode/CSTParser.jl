@@ -6,8 +6,10 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     arg = @closer ps block @closer ps ws parse_expression(ps)
-    block = parse_block(ps)
+    scope = Scope{Tokens.MACRO}(get_id(arg), [])
+    block = @scope ps scope parse_block(ps)
     next(ps)
+    push!(ps.current_scope.args, scope)
     return EXPR(kw, Expression[arg, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
 end
 

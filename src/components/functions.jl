@@ -7,7 +7,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     sig = @closer ps block @closer ps ws parse_expression(ps)
-    block = parse_block(ps)
+    scope = Scope{Tokens.FUNCTION}(get_id(sig), [])
+    block = @scope ps scope parse_block(ps)
     next(ps)
     if sig isa INSTANCE
         push!(ps.current_scope.args, Scope{Tokens.FUNCTION}(sig, []))
@@ -15,6 +16,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
         push!(ps.current_scope.args, Scope{Tokens.FUNCTION}(get_id(sig.args[1]), []))
     end
     args = isempty(block.args) ? Expression[sig] : Expression[sig, block]
+    push!(ps.current_scope.args, scope)
     return EXPR(kw, args, ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
 end
 
