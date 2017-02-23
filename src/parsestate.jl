@@ -26,15 +26,6 @@ end
 
 Closer() = Closer(true, true, false, true, false, false, false, false, false, false, false, false, false, false, false, false, 0)
 
-type Scope{t}
-    id
-    args::Vector
-end
-
-type Variable
-    id
-    t
-end
 
 type ParseState
     l::Lexer
@@ -50,7 +41,7 @@ type ParseState
     ids::Dict{String,Any}
     hints::Vector{Any}
     closer::Closer
-    current_scope::Scope
+    current_scope
 end
 function ParseState(str::String)
     next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), true, true, Dict(), [], Closer(), Scope{Tokens.TOPLEVEL}(TOPLEVEL, [])))

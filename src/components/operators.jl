@@ -146,9 +146,9 @@ function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{1})
     if ret isa EXPR && ret.head == CALL && !(nextarg isa EXPR && nextarg.head == BLOCK)
         nextarg = EXPR(BLOCK, Expression[nextarg], nextarg.span)
     end
-    if ret isa IDENTIFIER
-        push!(ps.current_scope.args, Variable(ret, :Any))
-    end
+    # if ret isa IDENTIFIER
+    #     push!(ps.current_scope.args, Variable(ret, :Any))
+    # end
     return EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
 end
 

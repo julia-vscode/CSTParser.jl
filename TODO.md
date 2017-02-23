@@ -4,6 +4,7 @@
 
 
 needs fixing
++ parsing kw, default values and splatting in function calls
 + interpolation
 + allow juxtaposition of number w/ identifier
 + dot operators

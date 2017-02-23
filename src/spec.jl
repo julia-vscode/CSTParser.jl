@@ -82,13 +82,26 @@ const FALSE = LITERAL{Tokens.FALSE}(0, 0)
 const AT_SIGN = PUNCTUATION{Tokens.AT_SIGN}(1, 0)
 const GlobalRefDOC = HEAD{:globalrefdoc}(0, 0)
 
+type Scope{t}
+    id
+    args::Vector
+end
+
+Scope() = Scope{nothing}(nothing, [])
+
+type Variable
+    id
+    t
+end
 
 type EXPR <: Expression
     head::Expression
     args::Vector{Expression}
     span::Int
     punctuation::Vector{INSTANCE}
+    scope::Scope
 end
 
-EXPR(head, args) = EXPR(head, args, 0)
-EXPR(head, args, span::Int) = EXPR(head, args, span, [])
+EXPR(head, args) = EXPR(head, args, 0, [], Scope())
+EXPR(head, args, span::Int) = EXPR(head, args, span, [], Scope())
+EXPR(head, args, span::Int, puncs) = EXPR(head, args, span, puncs, Scope())
