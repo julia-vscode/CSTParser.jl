@@ -12,6 +12,14 @@ facts("calls") do
     end
 end
 
+facts("kw args") do
+    strs = ["f(x=1)"
+            "f(x=1,y::Int = 1)"]
+    for str in strs
+        test_parse(str)
+    end
+end
+
 
 facts("one liner functions") do
     strs = ["f(x) = x"

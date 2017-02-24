@@ -47,33 +47,70 @@ function parse_imports(ps::ParseState)
     else
         @assert ps.nt.kind == Tokens.COLON
         push!(puncs, INSTANCE(next(ps)))
-        args = Vector{INSTANCE}[]
-        while ps.nt.kind == Tokens.IDENTIFIER && !closer(ps)
-            a = INSTANCE[INSTANCE(next(ps))]
-            while ps.nt.kind == Tokens.DOT
-                push!(puncs, INSTANCE(next(ps)))
-                push!(a, INSTANCE(next(ps)))
-            end
-            if ps.nt.kind == Tokens.COMMA
-                push!(args, a)
-                !closer(ps) && push!(puncs, INSTANCE(next(ps)))
-            else
-                push!(args, a)
-                break
-            end
-        end
-        if length(args)==1
-            push!(M, first(args)...)
-            ret = EXPR(kw, M, ps.nt.startbyte - start, puncs)
-        else
+        args = parse_expression(ps)
+        if args isa EXPR && args.head == TUPLE
+            append!(puncs, args.punctuation)
             ret = EXPR(HEAD{Tokens.TOPLEVEL}(kw.span, start), Expression[], ps.nt.startbyte - start, puncs)
-            for a in args
+            for a in args.args
                 push!(ret.args, EXPR(kw, vcat(M, a), sum(y.span for y in a) + length(a) - 1))
             end
+        else
+            push!(M, first(args)...)
+            ret = EXPR(kw, M, ps.nt.startbyte - start, puncs)
         end
     end
     return ret
 end
+
+# function parse_imports(ps::ParseState)
+#     start = ps.t.startbyte
+#     kw = INSTANCE(ps)
+#     M = INSTANCE[]
+#     if ps.nt.kind==Tokens.DDOT
+#         push!(M, OPERATOR{15,Tokens.DOT}(1, ps.nt.startbyte))
+#         push!(M, OPERATOR{15,Tokens.DOT}(1, ps.nt.startbyte + 1))
+#         next(ps)
+#     end
+#     @assert ps.nt.kind == Tokens.IDENTIFIER "incomplete import statement"
+#     push!(M, INSTANCE(next(ps)))
+#     puncs = INSTANCE[]
+#     while ps.nt.kind==Tokens.DOT
+#         push!(puncs, INSTANCE(next(ps)))
+#         @assert ps.nt.kind == Tokens.IDENTIFIER "expected only symbols in import statement"
+#         push!(M, INSTANCE(next(ps)))
+#     end
+#     if closer(ps)
+#         ret =  EXPR(kw, M, ps.nt.startbyte - start, puncs)
+#     else
+#         @assert ps.nt.kind == Tokens.COLON
+#         push!(puncs, INSTANCE(next(ps)))
+#         args = Vector{INSTANCE}[]
+#         while ps.nt.kind == Tokens.IDENTIFIER && !closer(ps)
+#             a = INSTANCE[INSTANCE(next(ps))]
+#             while ps.nt.kind == Tokens.DOT
+#                 push!(puncs, INSTANCE(next(ps)))
+#                 push!(a, INSTANCE(next(ps)))
+#             end
+#             if ps.nt.kind == Tokens.COMMA
+#                 push!(args, a)
+#                 !closer(ps) && push!(puncs, INSTANCE(next(ps)))
+#             else
+#                 push!(args, a)
+#                 break
+#             end
+#         end
+#         if length(args)==1
+#             push!(M, first(args)...)
+#             ret = EXPR(kw, M, ps.nt.startbyte - start, puncs)
+#         else
+#             ret = EXPR(HEAD{Tokens.TOPLEVEL}(kw.span, start), Expression[], ps.nt.startbyte - start, puncs)
+#             for a in args
+#                 push!(ret.args, EXPR(kw, vcat(M, a), sum(y.span for y in a) + length(a) - 1))
+#             end
+#         end
+#     end
+#     return ret
+# end
 
 function parse_export(ps::ParseState)
     start = ps.t.startbyte

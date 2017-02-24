@@ -22,9 +22,13 @@ function start(x::EXPR)
         if x.args[1] isa OPERATOR{9,Tokens.PLUS} || x.args[1] isa OPERATOR{11,Tokens.STAR}
             return Iterator{:opchain}(1, max(2, length(x.args)*2-3))
         elseif x.args[1] isa OPERATOR
-            Iterator{:op}(1, length(x.args) + length(x.punctuation))
+            return Iterator{:op}(1, length(x.args) + length(x.punctuation))
         else
-            Iterator{:call}(1, length(x.args) + length(x.punctuation))
+            if last(x.args) isa EXPR && last(x.args).head == PARAMETERS
+                Iterator{:call}(1, length(x.args) + length(x.punctuation) + length(last(x.args).args) - 1)
+            else
+                return Iterator{:call}(1, length(x.args) + length(x.punctuation))
+            end
         end
     elseif issyntaxcall(x.head)
         if x.head isa OPERATOR{8,Tokens.COLON}
@@ -33,6 +37,8 @@ function start(x::EXPR)
         return Iterator{:syntaxcall}(1, length(x.args) + 1)
     elseif x.head == COMPARISON
         return Iterator{:comparison}(1, length(x.args))
+    elseif x.head isa HEAD{Tokens.KW}
+        return Iterator{:syntaxcall}(1, 1 + length(x.args))
     elseif x.head == MACROCALL
         return _start_macrocall(x)
     elseif x.head isa HEAD{Tokens.IF}
@@ -45,7 +51,8 @@ function start(x::EXPR)
         return _start_comprehension(x)
     elseif x.head == TYPED_COMPREHENSION
         return _start_typed_comprehension(x)
-    elseif x.head == TOPLEVEL
+    # elseif x.head == TOPLEVEL
+    elseif x.head isa HEAD{Tokens.TOPLEVEL}
         @assert length(x.args) > 1
         if !(x.args[1] isa Expr && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING})) 
             return Iterator{:toplevelblock}(1, length(x.args) + length(x.punctuation))

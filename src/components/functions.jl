@@ -26,16 +26,45 @@ end
 Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
 """
 function parse_call(ps::ParseState, ret)
-    start = ps.nt.startbyte
+    next(ps)
+    ret = EXPR(CALL, [ret], ret.span - ps.t.startbyte, [INSTANCE(ps)])
+    format(ps)
+    
+    @nocloser ps newline @closer ps comma @closer ps brace @closer ps semicolon while !closer(ps)
+        a = parse_expression(ps)
+        if a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
+            a.head = HEAD{Tokens.KW}(a.head.span, a.head.offset)
+        end
+        push!(ret.args, a)
+        if ps.nt.kind == Tokens.COMMA
+            next(ps)
+            format(ps)
+            push!(ret.punctuation, INSTANCE(ps))
+        end
+    end
 
+    if ps.nt.kind == Tokens.SEMICOLON
+        next(ps)
+        push!(ret.punctuation, INSTANCE(ps))
+        paras = EXPR(PARAMETERS, [], 0)
+        @nocloser ps newline @closer ps comma @closer ps brace @closer ps semicolon while !closer(ps)
+            a = parse_expression(ps)
+            if a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
+                a.head = HEAD{Tokens.KW}(a.head.span, a.head.offset)
+            end
+            push!(paras.args, a)
+            if ps.nt.kind == Tokens.COMMA
+                next(ps)
+                format(ps)
+                push!(ret.punctuation, INSTANCE(ps))
+            end
+        end
+        push!(ret.args, paras)
+    end
     next(ps)
-    puncs = INSTANCE[INSTANCE(ps)]
+    push!(ret.punctuation, INSTANCE(ps))
     format(ps)
-    args = @nocloser ps newline @closer ps paren parse_list(ps, puncs)
-    next(ps)
-    push!(puncs, INSTANCE(ps))
-    format(ps)
-    ret = EXPR(CALL, [ret, args...], ret.span + ps.nt.startbyte - start, puncs)
+    ret.span += ps.nt.startbyte
     return ret
 end
 

@@ -6,17 +6,22 @@ seperated list.
 """
 function parse_curly(ps::ParseState, ret)
     next(ps)
-    start = ps.t.startbyte
-    puncs = INSTANCE[INSTANCE(ps)]
     format(ps)
-    arg = @closer ps brace @nocloser ps newline parse_expression(ps)
-    if arg isa EXPR && arg.head == TUPLE
-        append!(puncs, arg.punctuation)
-        arg = arg.args
+    ret = EXPR(CURLY, [ret], ret.span - ps.t.startbyte, [INSTANCE(ps)])
+
+    @nocloser ps newline @closer ps comma @closer ps brace while !closer(ps)
+        push!(ret.args, parse_expression(ps))
+        if ps.nt.kind == Tokens.COMMA
+            next(ps)
+            format(ps)
+            push!(ret.punctuation, INSTANCE(ps))
+        end
     end
-    push!(puncs, INSTANCE(next(ps)))
+    next(ps)
     format(ps)
-    return EXPR(CURLY, [ret, arg...], ret.span + ps.nt.startbyte - start, puncs)
+    push!(ret.punctuation, INSTANCE(ps))
+    ret.span += ps.nt.startbyte
+    return ret
 end
 
 _start_curly(x::EXPR) = Iterator{:curly}(1, length(x.args)*2)
