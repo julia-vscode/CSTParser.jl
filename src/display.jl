@@ -42,10 +42,12 @@ function Base.show{T}(io::IO, x::Scope{T},indent=0)
     if x.id isa IDENTIFIER
         println("  ", x.id.val)
     else
-        println()
+        println(typeof(x.id))
     end
     for a in x.args
-        show(io, a, indent+1)
+        if a isa Scope
+            show(io, a, indent+1)
+        end
     end 
 end
 

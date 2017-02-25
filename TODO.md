@@ -9,9 +9,7 @@ needs fixing
 + interpolation
 + allow juxtaposition of number w/ identifier
 + dot operators
-+ generators problem parsing `x.x for x in X`
 + special macrocall instance for Core.@doc case. requires different iterator.
-+ multi ranges e.g. for i = 1:4, j = 2:4
 + parsing `x.$x` inside quote blocks
 + allow parsing but add error hint for assignment within tuples
 + assignment, give error if incorrect lhs and return block on rhs
@@ -19,11 +17,9 @@ needs fixing
 + only allow Core.@doc in toplevel scope
 + import/export/using of macros 
 
-Operators
-+ handle ';'
+
 Unhandled 'head's
 + ccall
-+ kw
 + parameters
 + stdcall
 + string

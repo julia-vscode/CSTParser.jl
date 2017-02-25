@@ -110,7 +110,7 @@ issyntaxcall(op) = false
 Having hit a unary operator at the start of an expression return a call.
 """
 function parse_unary(ps::ParseState, op::OPERATOR)
-    arg = @precedence ps 20 parse_expression(ps)
+    arg = @precedence ps 14 parse_expression(ps)
     if issyntaxcall(op) && !(op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.GREATER_COLON})
         return EXPR(op, [arg], op.span + arg.span)
     else
@@ -279,6 +279,14 @@ end
 
 function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{20, Tokens.PRIME})
     return  EXPR(op, Expression[ret], op.span + ret.span)
+end
+
+function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{20, Tokens.ANON_FUNC})
+    ret = EXPR(op, Expression[ret], op.span + ret.span - ps.nt.startbyte)
+    arg = parse_expression(ps)
+    push!(ret.args, EXPR(BLOCK, [arg], arg.span))
+    ret.span += ps.nt.startbyte
+    return ret
 end
 
 function parse_operator{op_prec,K}(ps::ParseState, ret::Expression, op::OPERATOR{op_prec, K})

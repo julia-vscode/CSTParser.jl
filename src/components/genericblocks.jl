@@ -29,14 +29,6 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.DO}})
     next(ps)
     return EXPR(kw, Expression[arg, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
 end
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
-    start = ps.t.startbyte
-    kw = INSTANCE(ps)
-    arg = @closer ps block @closer ps ws parse_expression(ps)
-    block = parse_block(ps)
-    next(ps)
-    return EXPR(kw, Expression[arg, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
-end
 
 
 """

@@ -50,6 +50,40 @@ facts("try blocks") do
     end
 end
 
+facts("for loops") do
+    strs = ["""for i = 1:10
+                f(i)
+            end"""
+            """for i = 1:10, j = 1:20
+                f(i)
+            end"""]
+    for str in strs
+        test_parse(str)
+    end
+end
+
+# facts("do blocks") do
+#     strs = ["""map(b,c) do x
+#                     f(x)
+#                     f(x)
+#                 end"""]
+#     for str in strs
+#         test_parse(str)
+#     end
+# end
+
+facts("let blocks") do
+    strs = ["""let x = 1
+                    f(x)
+                end"""
+            """let x = 1, y = 2
+                    f(x)
+                end"""]
+    for str in strs
+        test_parse(str)
+    end
+end
+
 facts("misc reserved words") do
     strs =  ["const x = 3*5"
             "global i"

@@ -28,7 +28,7 @@ function test_parse(str)
     x = Parser.parse(str)
     io = IOBuffer(str)
     @fact Expr(io, x)  --> remlineinfo!(Base.parse(str))
-    @fact sizeof(str) --> x.span
+    @fact sizeof(str)  --> x.span
     @fact test_span(x) --> true
 end
 

@@ -10,6 +10,7 @@ end
 type LITERAL{K} <: INSTANCE
     span::Int
     offset::Int
+    val::String
 end
 
 type KEYWORD{K} <: INSTANCE
@@ -36,7 +37,7 @@ function INSTANCE(ps::ParseState)
     span = ps.nt.startbyte - ps.t.startbyte
     offset = ps.t.startbyte
     return isidentifier(ps.t) ? IDENTIFIER(span, offset, Symbol(ps.t.val)) : 
-        isliteral(ps.t) ? LITERAL{ps.t.kind}(span, offset) :
+        isliteral(ps.t) ? LITERAL{ps.t.kind}(span, offset, ps.t.val) :
         iskw(ps.t) ? KEYWORD{ps.t.kind}(span, offset) :
         isoperator(ps.t) ? OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}(span + ps.dot, offset - ps.dot) :
         ispunctuation(ps.t) ? PUNCTUATION{ps.t.kind}(span, offset) :
@@ -53,7 +54,7 @@ end
 
 # heads
 
-const NOTHING = LITERAL{nothing}(0, 0)
+const NOTHING = LITERAL{nothing}(0, 0, "")
 const BLOCK = HEAD{Tokens.BLOCK}(0, 0)
 const CALL = HEAD{Tokens.CALL}(0, 0)
 const CCALL = HEAD{Tokens.CCALL}(0, 0)
@@ -77,8 +78,8 @@ const VECT = HEAD{Tokens.VECT}(0, 0)
 # Misc items
 const x_STR = HEAD{Tokens.KEYWORD}(1, 0)
 
-const TRUE = LITERAL{Tokens.TRUE}(0, 0)
-const FALSE = LITERAL{Tokens.FALSE}(0, 0)
+const TRUE = LITERAL{Tokens.TRUE}(0, 0, "")
+const FALSE = LITERAL{Tokens.FALSE}(0, 0, "")
 const AT_SIGN = PUNCTUATION{Tokens.AT_SIGN}(1, 0)
 const GlobalRefDOC = HEAD{:globalrefdoc}(0, 0)
 

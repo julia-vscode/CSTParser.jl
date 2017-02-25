@@ -4,14 +4,15 @@ Expr{T}(io::IOBuffer, x::HEAD{T}) = Symbol(lowercase(string(T)))
 Expr{T}(io::IOBuffer, x::KEYWORD{T}) = Symbol(lowercase(string(T)))
 
 function Expr(io::IOBuffer, x::IDENTIFIER) 
-    ioout = IOBuffer()
-    seek(io, x.offset)
-    cnt = 0
-    while Tokenize.Lexers.is_identifier_char(Tokenize.Lexers.peekchar(io)) && cnt < x.span
-        cnt+=1
-        write(ioout, read(io, Char))
-    end
-    Symbol(take!(ioout))
+    # ioout = IOBuffer()
+    # seek(io, x.offset)
+    # cnt = 0
+    # while Tokenize.Lexers.is_identifier_char(Tokenize.Lexers.peekchar(io)) && cnt < x.span
+    #     cnt+=1
+    #     write(ioout, read(io, Char))
+    # end
+    # Symbol(take!(ioout))
+    return x.val
 end
 
 function Expr{O,K,dot}(io::IOBuffer, x::OPERATOR{O,K,dot}) 
@@ -25,37 +26,40 @@ end
 Expr(io::IOBuffer, x::LITERAL{Tokens.TRUE}) = true
 Expr(io::IOBuffer, x::LITERAL{Tokens.FALSE}) = false
 function Expr{T}(io::IOBuffer, x::LITERAL{T}) 
-    ioout = IOBuffer()
-    seek(io, x.offset)
-    cnt = 0
-    while Tokenize.Lexers.is_identifier_char(Tokenize.Lexers.peekchar(io)) && cnt < x.span
-        cnt+=1
-        write(ioout, read(io, Char))
-    end
-    Base.parse(String(take!(ioout)))
+    # ioout = IOBuffer()
+    # seek(io, x.offset)
+    # cnt = 0
+    # while Tokenize.Lexers.is_identifier_char(Tokenize.Lexers.peekchar(io)) && cnt < x.span
+    #     cnt+=1
+    #     write(ioout, read(io, Char))
+    # end
+    # Base.parse(String(take!(ioout)))
+    Base.parse(x.val)
 end
 
 function Expr(io::IOBuffer, x::LITERAL{Tokens.FLOAT}) 
-    ioout = IOBuffer()
-    seek(io, x.offset)
-    cnt = 0
-    while Tokenize.Lexers.is_identifier_char(Tokenize.Lexers.peekchar(io)) || Tokenize.Lexers.peekchar(io) == '.' && cnt < x.span
-        cnt+=1
-        write(ioout, read(io, Char))
-    end
-    Base.parse(String(take!(ioout)))
+    # ioout = IOBuffer()
+    # seek(io, x.offset)
+    # cnt = 0
+    # while Tokenize.Lexers.is_identifier_char(Tokenize.Lexers.peekchar(io)) || Tokenize.Lexers.peekchar(io) == '.' && cnt < x.span
+    #     cnt+=1
+    #     write(ioout, read(io, Char))
+    # end
+    # Base.parse(String(take!(ioout)))
+    Base.parse(x.val)
 end
 
 function Expr(io::IOBuffer, x::Union{LITERAL{Tokens.STRING},LITERAL{Tokens.TRIPLE_STRING}}) 
-    ioout = IOBuffer()
-    seek(io, x.offset)
-    cnt = 0
-    while cnt < x.span
-        cnt+=1
-        write(ioout, read(io, Char))
-    end
-    qs = x isa LITERAL{Tokens.STRING} ? 1 : 3
-    String(take!(ioout))[1+qs:end-(qs+1)]
+    # ioout = IOBuffer()
+    # seek(io, x.offset)
+    # cnt = 0
+    # while cnt < x.span
+    #     cnt+=1
+    #     write(ioout, read(io, Char))
+    # end
+    # qs = x isa LITERAL{Tokens.STRING} ? 1 : 3
+    # String(take!(ioout))[1+qs:end-(qs+1)]
+    x.val
 end
 
 

@@ -103,6 +103,8 @@ function start(x::EXPR)
             return _start_if(x)
         elseif x.head isa KEYWORD{Tokens.IMMUTABLE}
             return Iterator{:type}(1, 4)
+        elseif x.head isa KEYWORD{Tokens.LET}
+            return _start_let(x)
         elseif x.head isa KEYWORD{Tokens.LOCAL}
             return Iterator{:local}(1, 2)
         elseif x.head isa KEYWORD{Tokens.IMPORT} || 
