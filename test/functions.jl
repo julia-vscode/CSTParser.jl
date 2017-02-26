@@ -37,10 +37,18 @@ facts("function definitions") do
             """function f(x)
                 x
             end"""
-            "f(x::Int)"
-             "f(x::Vector{Int})"
-             "f(x::Vector{Vector{Int}})"
-             "f(x::Vector{Vector{Int}})"]
+            """function f(x::Int)
+                x
+            end"""
+            """function f(x::Vector{Int})
+                x
+            end"""
+            """function f(x,y =1)
+                x
+            end"""
+            """function f(x,y =1;z =2)
+                x
+            end"""]
     for str in strs
         test_parse(str)
     end

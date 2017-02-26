@@ -1,21 +1,13 @@
 import Base: Expr, Symbol
 
-Expr{T}(io::IOBuffer, x::HEAD{T}) = Symbol(lowercase(string(T)))
-Expr{T}(io::IOBuffer, x::KEYWORD{T}) = Symbol(lowercase(string(T)))
+Expr{T}(x::HEAD{T}) = Symbol(lowercase(string(T)))
+Expr{T}(x::KEYWORD{T}) = Symbol(lowercase(string(T)))
 
-function Expr(io::IOBuffer, x::IDENTIFIER) 
-    # ioout = IOBuffer()
-    # seek(io, x.offset)
-    # cnt = 0
-    # while Tokenize.Lexers.is_identifier_char(Tokenize.Lexers.peekchar(io)) && cnt < x.span
-    #     cnt+=1
-    #     write(ioout, read(io, Char))
-    # end
-    # Symbol(take!(ioout))
+function Expr(x::IDENTIFIER)
     return x.val
 end
 
-function Expr{O,K,dot}(io::IOBuffer, x::OPERATOR{O,K,dot}) 
+function Expr{O,K,dot}(x::OPERATOR{O,K,dot}) 
     if dot
         Symbol(:.,UNICODE_OPS_REVERSE[K])
     else
@@ -23,80 +15,94 @@ function Expr{O,K,dot}(io::IOBuffer, x::OPERATOR{O,K,dot})
     end
 end
 
-Expr(io::IOBuffer, x::LITERAL{Tokens.TRUE}) = true
-Expr(io::IOBuffer, x::LITERAL{Tokens.FALSE}) = false
-function Expr{T}(io::IOBuffer, x::LITERAL{T}) 
-    # ioout = IOBuffer()
-    # seek(io, x.offset)
-    # cnt = 0
-    # while Tokenize.Lexers.is_identifier_char(Tokenize.Lexers.peekchar(io)) && cnt < x.span
-    #     cnt+=1
-    #     write(ioout, read(io, Char))
-    # end
-    # Base.parse(String(take!(ioout)))
+Expr(x::LITERAL{Tokens.TRUE}) = true
+Expr(x::LITERAL{Tokens.FALSE}) = false
+function Expr{T}(x::LITERAL{T})
     Base.parse(x.val)
 end
 
-function Expr(io::IOBuffer, x::LITERAL{Tokens.FLOAT}) 
-    # ioout = IOBuffer()
-    # seek(io, x.offset)
-    # cnt = 0
-    # while Tokenize.Lexers.is_identifier_char(Tokenize.Lexers.peekchar(io)) || Tokenize.Lexers.peekchar(io) == '.' && cnt < x.span
-    #     cnt+=1
-    #     write(ioout, read(io, Char))
-    # end
-    # Base.parse(String(take!(ioout)))
+function Expr(x::LITERAL{Tokens.FLOAT}) 
     Base.parse(x.val)
 end
 
-function Expr(io::IOBuffer, x::Union{LITERAL{Tokens.STRING},LITERAL{Tokens.TRIPLE_STRING}}) 
-    # ioout = IOBuffer()
-    # seek(io, x.offset)
-    # cnt = 0
-    # while cnt < x.span
-    #     cnt+=1
-    #     write(ioout, read(io, Char))
-    # end
-    # qs = x isa LITERAL{Tokens.STRING} ? 1 : 3
-    # String(take!(ioout))[1+qs:end-(qs+1)]
+function Expr(x::Union{LITERAL{Tokens.STRING},LITERAL{Tokens.TRIPLE_STRING}}) 
     x.val
 end
 
 
-Expr(io::IOBuffer, x::KEYWORD{Tokens.BAREMODULE}) = :module
+Expr(x::KEYWORD{Tokens.BAREMODULE}) = :module
 
-Expr(io::IOBuffer, x::QUOTENODE) = QuoteNode(Expr(io::IOBuffer, x.val))
+Expr(x::QUOTENODE) = QuoteNode(Expr(x.val))
 
-function Expr(io::IOBuffer, x::EXPR)
+function Expr(x::EXPR)
     if x.head==BLOCK && length(x.punctuation)==2 && first(x.punctuation) isa PUNCTUATION{Tokens.LPAREN}
-        return Expr(io, x.args[1])
+        return Expr(x.args[1])
     elseif x.head isa KEYWORD{Tokens.BEGIN}
-        return Expr(io, x.args[1])
+        return Expr(x.args[1])
     elseif x.head isa KEYWORD{Tokens.ELSEIF}
-        return Expr(:if, Expr.(io, x.args)...)
+        ret = Expr(:if)
+        for a in x.args
+            push!(ret.args, Expr(a))
+        end
+        return ret
     elseif x.head isa HEAD{Tokens.GENERATOR}
-        return Expr(:generator, Expr(io, x.args[1]), fixranges.(io, x.args[2:end])...)
+        ret = Expr(:generator, Expr(x.args[1]))
+        for a in x.args[2:end]
+            push!(ret.args, fixranges(a))
+        end
+        return ret
     elseif x.head isa KEYWORD{Tokens.IMMUTABLE}
-        return Expr(:type, false, Expr.(io, x.args[2:end])...)
+        ret = Expr(:type, false)
+        for a in x.args[2:end]
+            push!(ret.args, Expr(a))
+        end
+        return ret
     elseif x.head == x_STR
-        return Expr(:macrocall, string('@', Expr(io, x.args[1]), "_str"), Expr(io, x.args[2]))
+        return Expr(:macrocall, string('@', Expr(x.args[1]), "_str"), Expr(x.args[2]))
     elseif x.head == MACROCALL
         if x.args[1] isa HEAD{:globalrefdoc}
-            return Expr(:macrocall, GlobalRef(Core, Symbol("@doc")), Expr.(io, x.args[2:end])...)
+            ret = Expr(:macrocall, GlobalRef(Core, Symbol("@doc")))
+            for a in x.args[2:end]
+                push!(ret.args, Expr(a))
+            end
+            return ret
         else
-            return Expr(:macrocall, Symbol('@', Expr(io, x.args[1])), Expr.(io, x.args[2:end])...)
+            # return Expr(:macrocall, Symbol('@', Expr(x.args[1])), Expr.(x.args[2:end])...)
+            ret =  Expr(:macrocall, Symbol('@', Expr(x.args[1])))
+            for a in x.args[2:end]
+                push!(ret.args, Expr(a))
+            end
+            return ret
         end
+    elseif x.head == CALL
+        ret = Expr(Expr(x.head))
+        for a in (x.args)
+            if a isa EXPR && a.head == PARAMETERS
+                insert!(ret.args, 2, Expr(a))
+            else
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
     end
-    return Expr(Expr(io, x.head), Expr.(io, x.args)...)
+    ret = Expr(Expr(x.head))
+    for a in x.args
+        push!(ret.args, Expr(a))
+    end 
+    return ret
 end
 
 
-fixranges(io::IOBuffer, a::INSTANCE) = Expr(io, a)
-function fixranges(io::IOBuffer, a::EXPR)
+fixranges(a::INSTANCE) = Expr(a)
+function fixranges(a::EXPR)
     if a.head==CALL && a.args[1] isa OPERATOR{6, Tokens.IN} || a.args[1] isa OPERATOR{6, Tokens.ELEMENT_OF}
-        return Expr(:(=), Expr.(io, a.args[2:end])...)
+        ret = Expr(:(=))
+        for x in a.args[2:end]
+            push!(ret.args, Expr(x))
+        end
+        return ret
     else
-        return Expr(io, a)
+        return Expr(a)
     end
 end
 

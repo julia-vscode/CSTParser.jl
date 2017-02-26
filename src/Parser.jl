@@ -9,6 +9,8 @@ import Tokenize.Lexers: Lexer, peekchar, iswhitespace
 
 export ParseState
 
+include("hints.jl")
+import .Hints: Hint, LintCodes, FormatCodes
 include("parsestate.jl")
 include("spec.jl")
 include("utils.jl")
@@ -66,7 +68,7 @@ function parse_expression(ps::ParseState)
     elseif isinstance(ps.t) || isoperator(ps.t)
         ret = INSTANCE(ps)
     elseif ps.t.kind==Tokens.AT_SIGN
-        ret = @closer ps semicolon parse_macrocall(ps)
+        ret = @default ps @closer ps semicolon parse_macrocall(ps)
     else
         error("Expression started with $(ps)")
     end

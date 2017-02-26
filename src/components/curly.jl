@@ -9,7 +9,7 @@ function parse_curly(ps::ParseState, ret)
     format(ps)
     ret = EXPR(CURLY, [ret], ret.span - ps.t.startbyte, [INSTANCE(ps)])
 
-    @nocloser ps newline @closer ps comma @closer ps brace while !closer(ps)
+    @default ps @nocloser ps newline @closer ps comma @closer ps brace while !closer(ps)
         push!(ret.args, parse_expression(ps))
         if ps.nt.kind == Tokens.COMMA
             next(ps)

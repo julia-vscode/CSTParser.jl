@@ -24,11 +24,11 @@ function start(x::EXPR)
         elseif x.args[1] isa OPERATOR
             return Iterator{:op}(1, length(x.args) + length(x.punctuation))
         else
-            if last(x.args) isa EXPR && last(x.args).head == PARAMETERS
-                Iterator{:call}(1, length(x.args) + length(x.punctuation) + length(last(x.args).args) - 1)
-            else
+            # if last(x.args) isa EXPR && last(x.args).head == PARAMETERS
+            #     Iterator{:call}(1, length(x.args) + length(x.punctuation) + length(last(x.args).args) - 1)
+            # else
                 return Iterator{:call}(1, length(x.args) + length(x.punctuation))
-            end
+            # end
         end
     elseif issyntaxcall(x.head)
         if x.head isa OPERATOR{8,Tokens.COLON}
@@ -49,6 +49,8 @@ function start(x::EXPR)
         return _start_generator(x)
     elseif x.head == COMPREHENSION
         return _start_comprehension(x)
+    elseif x.head == PARAMETERS
+        return _start_parameters(x)
     elseif x.head == TYPED_COMPREHENSION
         return _start_typed_comprehension(x)
     # elseif x.head == TOPLEVEL

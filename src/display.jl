@@ -38,12 +38,8 @@ function Base.show(io::IO, x::EXPR,indent=0)
 end
 
 function Base.show{T}(io::IO, x::Scope{T},indent=0)
-    print(io, " "^indent, "↘ ", T)
-    if x.id isa IDENTIFIER
-        println("  ", x.id.val)
-    else
-        println(typeof(x.id))
-    end
+    print(io, " "^indent, "↘ ", T, " (", length(x.args), ") ")
+    println("[",join(collect(a.id.val for a in x.args if a isa Variable),", "),"]")
     for a in x.args
         if a isa Scope
             show(io, a, indent+1)

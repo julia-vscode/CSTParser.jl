@@ -59,73 +59,38 @@ function parse_imports(ps::ParseState)
             ret = EXPR(kw, M, ps.nt.startbyte - start, puncs)
         end
     end
+
+    # Linting
+    if ps.current_scope isa Scope{Tokens.FUNCTION}
+        push!(ps.hints, Hint{Hints.ImportInFunction}(kw.offset + (1:ret.span)))
+    end
+
     return ret
 end
 
-# function parse_imports(ps::ParseState)
-#     start = ps.t.startbyte
-#     kw = INSTANCE(ps)
-#     M = INSTANCE[]
-#     if ps.nt.kind==Tokens.DDOT
-#         push!(M, OPERATOR{15,Tokens.DOT}(1, ps.nt.startbyte))
-#         push!(M, OPERATOR{15,Tokens.DOT}(1, ps.nt.startbyte + 1))
-#         next(ps)
-#     end
-#     @assert ps.nt.kind == Tokens.IDENTIFIER "incomplete import statement"
-#     push!(M, INSTANCE(next(ps)))
-#     puncs = INSTANCE[]
-#     while ps.nt.kind==Tokens.DOT
-#         push!(puncs, INSTANCE(next(ps)))
-#         @assert ps.nt.kind == Tokens.IDENTIFIER "expected only symbols in import statement"
-#         push!(M, INSTANCE(next(ps)))
-#     end
-#     if closer(ps)
-#         ret =  EXPR(kw, M, ps.nt.startbyte - start, puncs)
-#     else
-#         @assert ps.nt.kind == Tokens.COLON
-#         push!(puncs, INSTANCE(next(ps)))
-#         args = Vector{INSTANCE}[]
-#         while ps.nt.kind == Tokens.IDENTIFIER && !closer(ps)
-#             a = INSTANCE[INSTANCE(next(ps))]
-#             while ps.nt.kind == Tokens.DOT
-#                 push!(puncs, INSTANCE(next(ps)))
-#                 push!(a, INSTANCE(next(ps)))
-#             end
-#             if ps.nt.kind == Tokens.COMMA
-#                 push!(args, a)
-#                 !closer(ps) && push!(puncs, INSTANCE(next(ps)))
-#             else
-#                 push!(args, a)
-#                 break
-#             end
-#         end
-#         if length(args)==1
-#             push!(M, first(args)...)
-#             ret = EXPR(kw, M, ps.nt.startbyte - start, puncs)
-#         else
-#             ret = EXPR(HEAD{Tokens.TOPLEVEL}(kw.span, start), Expression[], ps.nt.startbyte - start, puncs)
-#             for a in args
-#                 push!(ret.args, EXPR(kw, vcat(M, a), sum(y.span for y in a) + length(a) - 1))
-#             end
-#         end
-#     end
-#     return ret
-# end
-
 function parse_export(ps::ParseState)
-    start = ps.t.startbyte
     kw = INSTANCE(ps)
-    @assert ps.nt.kind == Tokens.IDENTIFIER "incomplete export statement"
-    args = Expression[INSTANCE(next(ps))]
-    puncs = INSTANCE[]
-    while ps.nt.kind==Tokens.COMMA
-        push!(puncs, INSTANCE(next(ps)))
-        # @assert ps.nt.kind == Tokens.IDENTIFIER "expected only symbols in import statement"
-        # push!(args, INSTANCE(next(ps)))
-        push!(args, @closer ps comma parse_expression(ps))
-    end
+    ret = EXPR(kw, [], -ps.t.startbyte)
+    while !closer(ps) || ps.t.kind == Tokens.COMMA
+        a =  @closer ps comma parse_expression(ps)
 
-    return EXPR(kw, args, ps.nt.startbyte - start, puncs)
+        if a isa EXPR && a.head == MACROCALL
+            a = IDENTIFIER(a.span, a.args[1].offset - 1, Symbol('@', a.args[1].val))
+        end
+        push!(ret.args, a)
+        if ps.nt.kind == Tokens.COMMA
+            next(ps)
+            format(ps)
+            push!(ret.punctuation, INSTANCE(ps))
+        end
+    end
+    ret.span += ps.nt.startbyte
+
+    # Linting
+    if ps.current_scope isa Scope{Tokens.FUNCTION}
+        push!(ps.hints, Hint{Hints.ImportInFunction}(kw.offset + (1:ret.span)))
+    end
+    return ret
 end
 
 function _start_imports(x::EXPR)
