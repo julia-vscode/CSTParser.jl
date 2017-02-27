@@ -15,7 +15,7 @@ function closer(ps::ParseState)
     (ps.closer.block && ps.nt.kind==Tokens.END) ||
     (ps.closer.ifelse && ps.nt.kind==Tokens.ELSEIF || ps.nt.kind==Tokens.ELSE) ||
     (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt)<=1 || ps.nt.kind==Tokens.COLON)) ||
-    (ps.closer.trycatch && (ps.nt.kind==Tokens.CATCH || ps.nt.kind==Tokens.END)) ||
+    (ps.closer.trycatch && (ps.nt.kind==Tokens.CATCH || ps.nt.kind==Tokens.FINALLY || ps.nt.kind==Tokens.END)) ||
     (ps.closer.ws && (!isempty(ps.ws) && !(isoperator(ps.nt) || ps.nt.kind == Tokens.COMMA)))
 end
 

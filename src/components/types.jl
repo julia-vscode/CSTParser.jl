@@ -50,9 +50,10 @@ parse_kw(ps::ParseState, ::Type{Val{Tokens.IMMUTABLE}}) = parse_struct(ps, FALSE
 
 function parse_struct(ps::ParseState, mutable)
     start = ps.t.startbyte
+    start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
     sig = @closer ps block @closer ps ws parse_expression(ps)
-    block = parse_block(ps)
+    block = parse_block(ps, start_col)
     next(ps)
 
     T = mutable==TRUE ? Tokens.TYPE : Tokens.IMMUTABLE
@@ -62,7 +63,7 @@ function parse_struct(ps::ParseState, mutable)
         else
             id = get_id(a)
             t = get_t(a)
-            push!(scope.args, Variable(id, t))
+            push!(scope.args, Variable(id, t, :field))
         end
     end
     push!(ps.current_scope.args, scope)

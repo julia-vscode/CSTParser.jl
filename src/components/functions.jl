@@ -5,11 +5,12 @@
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     start = ps.t.startbyte
+    start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
-    sig = @closer ps block @closer ps ws parse_expression(ps)
+    sig = @default ps @closer ps block @closer ps ws parse_expression(ps)
     scope = Scope{Tokens.FUNCTION}(get_id(sig), [])
     @scope ps scope _lint_func_sig(ps, sig)
-    block = @scope ps scope parse_block(ps)
+    block = @default ps @scope ps scope parse_block(ps, start_col)
     next(ps)
     args = isempty(block.args) ? Expression[sig] : Expression[sig, block]
     push!(ps.current_scope.args, scope)
@@ -129,7 +130,7 @@ end
     
 function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw)
     a = _arg_id(arg)
-    push!(ps.current_scope.args, Variable(a, :Any))
+    push!(ps.current_scope.args, Variable(a, :Any, :argument))
     if !(a.val in args)
         push!(args, a.val)
     else 

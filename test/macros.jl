@@ -1,5 +1,6 @@
 facts("macros") do
-    strs = ["@time sin(5)"]
+    strs = ["@mac f(5)"
+            "(@mac x)"]
     for str in strs
         test_parse(str)
     end

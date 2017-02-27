@@ -1,4 +1,5 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
+    start_col = ps.t.startpos[2]
     ret = EXPR(INSTANCE(ps), [], -ps.t.startbyte)
     args = []
     @closer ps comma @closer ps block while !closer(ps)
@@ -11,7 +12,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
         end
     end
 
-    block = parse_block(ps)
+    block = parse_block(ps, start_col)
     push!(ret.args, block)
     for a in args
         push!(ret.args, a)

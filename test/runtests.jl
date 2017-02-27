@@ -48,6 +48,7 @@ include("modules.jl")
 include("generators.jl")
 include("macros.jl")
 include("types.jl")
+include("do.jl")
 include("keywords.jl")
 
 const examplemodule = readstring("fullspecexample.jl")

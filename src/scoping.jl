@@ -48,12 +48,23 @@ function func_sig(x::EXPR)
     end
 end
 
-function _track_assignment(ps::ParseState, x)
+function _track_assignment(ps::ParseState, x, val)
     if x isa IDENTIFIER
-        push!(ps.current_scope.args, Variable(x, :Any))
+        push!(ps.current_scope.args, Variable(x, :Any, val))
     elseif x isa EXPR && x.head == TUPLE
         for a in x.args
-            _track_assignment(ps, a)
+            _track_assignment(ps, a, val)
         end
     end
+end
+
+function _get_full_scope(x::EXPR, n::Int)
+    y, path, ind = find(x, n)
+    full_scope = []
+    for p in path
+        if p isa EXPR && !(p.scope isa Scope{nothing})
+            append!(full_scope, p.scope.args)
+        end
+    end
+    full_scope
 end

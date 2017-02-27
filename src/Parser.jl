@@ -11,6 +11,7 @@ export ParseState
 
 include("hints.jl")
 import .Hints: Hint, LintCodes, FormatCodes
+
 include("parsestate.jl")
 include("spec.jl")
 include("utils.jl")
@@ -18,6 +19,7 @@ include("positional.jl")
 include("scoping.jl")
 include("components/curly.jl")
 include("components/operators.jl")
+include("components/do.jl")
 include("components/functions.jl")
 include("components/genericblocks.jl")
 include("components/ifblock.jl")
@@ -53,8 +55,14 @@ Acceptable starting tokens are:
 """
 function parse_expression(ps::ParseState)
     next(ps)
-    if Tokens.begin_keywords < ps.t.kind < Tokens.end_keywords 
-        ret = @nocloser ps ws parse_kw(ps, Val{ps.t.kind})
+    if Tokens.begin_keywords < ps.t.kind < Tokens.end_keywords && ps.t.kind != Tokens.DO #&& ps.t.kind != Tokens.END
+        ret = parse_kw(ps, Val{ps.t.kind})
+    elseif ps.t.kind == Tokens.END
+        # if ps.closer.square
+            ret = parse_kw(ps, Val{ps.t.kind})
+        # else
+        #     error("unexpected `end`")
+        # end
     elseif ps.t.kind == Tokens.LPAREN
         ret = parse_paren(ps)
     elseif ps.t.kind == Tokens.LSQUARE
@@ -67,8 +75,11 @@ function parse_expression(ps::ParseState)
         ret = EXPR(head, arg, head.span + arg.span)
     elseif isinstance(ps.t) || isoperator(ps.t)
         ret = INSTANCE(ps)
+        if ret isa OPERATOR{8,Tokens.COLON}
+            ret = parse_unary(ps, ret)
+        end
     elseif ps.t.kind==Tokens.AT_SIGN
-        ret = @default ps @closer ps semicolon parse_macrocall(ps)
+        ret = @closer ps semicolon parse_macrocall(ps)
     else
         error("Expression started with $(ps)")
     end
@@ -99,9 +110,11 @@ Handles cases where an expression - `ret` - is not followed by
 function parse_juxtaposition(ps::ParseState, ret)
     if ps.nt.kind == Tokens.FOR
         ret = parse_generator(ps, ret)
+    elseif ps.nt.kind == Tokens.DO
+        ret = parse_do(ps, ret)
     elseif (ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN)
         arg = parse_expression(ps)
-        ret = EXPR(CALL, [OPERATOR{11,Tokens.STAR}(0, 0), ret, arg], ret.span + arg.span)
+        ret = EXPR(CALL, [OPERATOR{11,Tokens.STAR,false}(0, 0), ret, arg], ret.span + arg.span)
     elseif ps.nt.kind==Tokens.LPAREN
         if isempty(ps.ws)
             ret = @default ps @closer ps paren parse_call(ps, ret)
@@ -272,7 +285,7 @@ function parse_square(ps::ParseState)
         format(ps)
         return EXPR(VECT, [], ps.nt.startbyte - start, puncs)
     else
-        ret = @default ps @closer ps square parse_expression(ps)
+        ret = @clear ps @closer ps square parse_expression(ps)
         if ret isa EXPR && ret.head==TUPLE
             next(ps)
             push!(puncs, INSTANCE(ps))

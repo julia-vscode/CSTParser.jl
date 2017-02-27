@@ -93,6 +93,7 @@ Scope() = Scope{nothing}(nothing, [])
 type Variable
     id
     t
+    val
 end
 
 type EXPR <: Expression

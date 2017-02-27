@@ -40,11 +40,41 @@ end
 
 facts("try blocks") do
     strs = ["try f(1) end"
+
+            """try
+                f(1)
+            catch 
+                error(err)
+            end"""
+
             """try
                 f(1)
             catch err
                 error(err)
-            end"""]
+            end"""
+            
+            """try
+                f(1)
+            catch 
+                error(err)
+            finally
+                stop(f)
+            end"""
+
+            """try
+                f(1)
+            catch err
+                error(err)
+            finally
+                stop(f)
+            end"""
+
+            """try
+                f(1)
+            finally
+                stop(f)
+            end"""
+            ]
     for str in strs
         test_parse(str)
     end
@@ -61,16 +91,6 @@ facts("for loops") do
         test_parse(str)
     end
 end
-
-# facts("do blocks") do
-#     strs = ["""map(b,c) do x
-#                     f(x)
-#                     f(x)
-#                 end"""]
-#     for str in strs
-#         test_parse(str)
-#     end
-# end
 
 facts("let blocks") do
     strs = ["""let x = 1

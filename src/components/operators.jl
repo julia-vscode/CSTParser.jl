@@ -126,7 +126,8 @@ function parse_unary(ps::ParseState, op::OPERATOR{8,Tokens.COLON})
         next(ps)
         arg = INSTANCE(ps)
         return QUOTENODE(arg, arg.span, [])
-    # elseif 
+    elseif closer(ps)
+        return op
     else
         arg = @precedence ps 20 parse_expression(ps)
         return EXPR(QUOTE, [arg], arg.span, [])
@@ -148,7 +149,7 @@ function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{1})
     end
 
     # Track variable assignment
-    _track_assignment(ps, ret)
+    _track_assignment(ps, ret, nextarg)
     return EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
 end
 

@@ -1,22 +1,9 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
     start = ps.t.startbyte
+    start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
-    # arg = @closer ps comma @closer ps block @closer ps ws parse_expression(ps)
-    # if ps.nt.kind == Tokens.COMMA
-    #     indices = EXPR(BLOCK, [arg], arg.span)
-    #     while ps.nt.kind == Tokens.COMMA
-    #         next(ps)
-    #         push!(indices.punctuation, INSTANCE(ps))
-    #         indices.span += last(indices.punctuation).span
-    #         format(ps)
-    #         push!(indices.args, @closer ps comma @closer ps block @closer ps ws parse_expression(ps))
-    #         indices.span += last(indices.args).span
-    #     end
-    # else
-    #     indices = arg
-    # end
-    ranges = @closer ps block parse_ranges(ps)
-    block = parse_block(ps)
+    ranges = @default ps @closer ps block parse_ranges(ps)
+    block = @default ps parse_block(ps, start_col)
     next(ps)
     return EXPR(kw, Expression[ranges, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
 end
@@ -43,9 +30,10 @@ end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
     start = ps.t.startbyte
+    start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
-    arg = @closer ps block @closer ps ws parse_expression(ps)
-    block = parse_block(ps)
+    arg = @default ps @closer ps block @closer ps ws parse_expression(ps)
+    block = @default ps parse_block(ps, start_col)
     next(ps)
     return EXPR(kw, Expression[arg, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
 end

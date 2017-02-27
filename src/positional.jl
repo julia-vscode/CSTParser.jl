@@ -24,11 +24,7 @@ function start(x::EXPR)
         elseif x.args[1] isa OPERATOR
             return Iterator{:op}(1, length(x.args) + length(x.punctuation))
         else
-            # if last(x.args) isa EXPR && last(x.args).head == PARAMETERS
-            #     Iterator{:call}(1, length(x.args) + length(x.punctuation) + length(last(x.args).args) - 1)
-            # else
-                return Iterator{:call}(1, length(x.args) + length(x.punctuation))
-            # end
+            return Iterator{:call}(1, length(x.args) + length(x.punctuation))
         end
     elseif issyntaxcall(x.head)
         if x.head isa OPERATOR{8,Tokens.COLON}
@@ -72,10 +68,10 @@ function start(x::EXPR)
     elseif x.head == REF
         return _start_ref(x)
     elseif x.head == TUPLE
-        if first(x.punctuation) isa PUNCTUATION{Tokens.LPAREN}
-            return Iterator{:tuple}(1, length(x.args) + length(x.punctuation))
-        else
+        if isempty(x.punctuation) || first(x.punctuation) isa PUNCTUATION{Tokens.COMMA}
             return Iterator{:tuplenoparen}(1, length(x.args) + length(x.punctuation))
+        else
+            return Iterator{:tuple}(1, length(x.args) + length(x.punctuation))
         end
     elseif x.head isa KEYWORD
         if x.head isa KEYWORD{Tokens.ABSTRACT} 
@@ -93,6 +89,7 @@ function start(x::EXPR)
         elseif x.head isa KEYWORD{Tokens.CONTINUE}
             return Iterator{:continue}(1, 1)
         elseif x.head isa KEYWORD{Tokens.DO}
+            return _start_do(x)
         elseif x.head isa KEYWORD{Tokens.EXPORT}
             return Iterator{:export}(1, length(x.args)*2)
         elseif x.head isa KEYWORD{Tokens.FOR}

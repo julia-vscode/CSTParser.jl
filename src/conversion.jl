@@ -57,6 +57,10 @@ function Expr(x::EXPR)
             push!(ret.args, Expr(a))
         end
         return ret
+    elseif x.head isa KEYWORD{Tokens.DO}
+        ret = Expr(x.args[1])
+        insert!(ret.args, 2, Expr(:->, Expr(x.args[2]), Expr(x.args[3])))
+        return ret
     elseif x.head == x_STR
         return Expr(:macrocall, string('@', Expr(x.args[1]), "_str"), Expr(x.args[2]))
     elseif x.head == MACROCALL

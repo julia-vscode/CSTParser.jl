@@ -9,7 +9,8 @@ end
 @enum(FormatCodes,
 AddWhiteSpace,
 DeleteWhiteSpace,
-Useelseif)
+Useelseif,
+Indents)
 
 @enum(LintCodes,
 DuplicateArgumentName,

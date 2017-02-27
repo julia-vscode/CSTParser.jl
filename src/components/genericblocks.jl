@@ -7,29 +7,21 @@
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.BEGIN}})
     start = ps.t.startbyte
+    start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
-    arg = parse_block(ps)
+    arg = @default ps parse_block(ps, start_col)
     next(ps)
     return EXPR(kw, Expression[arg], ps.nt.startbyte - start, [INSTANCE(ps)])
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.QUOTE}})
     start = ps.t.startbyte
+    start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
-    arg = parse_block(ps)
+    arg = @default ps parse_block(ps, start_col)
     next(ps)
     return EXPR(kw, Expression[arg], ps.nt.startbyte - start, [INSTANCE(ps)])
 end
-
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.DO}})
-    start = ps.t.startbyte
-    kw = INSTANCE(ps)
-    arg = @closer ps block @closer ps ws parse_expression(ps)
-    block = parse_block(ps)
-    next(ps)
-    return EXPR(kw, Expression[arg, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
-end
-
 
 """
     parseblocks(ps, ret = EXPR(BLOCK,...))
@@ -38,12 +30,15 @@ Parses an array of expressions (stored in ret) until 'end' is the next token.
 Returns `ps` the token before the closing `end`, the calling function is 
 assumed to handle the closer.
 """
-function parse_block(ps::ParseState, ret::EXPR = EXPR(BLOCK, [], 0))
+function parse_block(ps::ParseState,  start_col = 0, ret::EXPR = EXPR(BLOCK, [], 0))
     start = ps.nt.startbyte
-    while ps.nt.kind!==Tokens.END
+    while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.CATCH && ps.nt.kind!==Tokens.FINALLY 
+        if (start_col>0 && ps.nt.startpos[2]!=start_col+4)
+            push!(ps.hints, Hint{Hints.Indents}(ps.nt.startbyte+(-ps.nt.startpos[2]+1:0)))
+        end
         push!(ret.args, @closer ps block parse_expression(ps))
     end
-    @assert ps.nt.kind==Tokens.END
+    # @assert ps.nt.kind==Tokens.END
     ret.span = ps.nt.startbyte - start
     return ret
 end
