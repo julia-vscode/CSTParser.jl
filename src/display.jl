@@ -5,6 +5,8 @@
 Base.show(io::IO, x::IDENTIFIER,indent=0) =
     println(io, " "^indent, " $(x.val)","    [",x.span,"]")
 
+Base.show(io::IO, x::LITERAL{nothing},indent=0) =
+    println(io, " "^indent, " nothing","    [",x.span,"]")
 
 Base.show{K}(io::IO, x::LITERAL{K},indent=0) =
     println(io, " "^indent, " $((Tokens.Kind[K][1]))","    [",x.span,"]")

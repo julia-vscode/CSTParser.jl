@@ -24,7 +24,11 @@ Parses a function call. Expects to start before the opening parentheses and is p
 """
 function parse_call(ps::ParseState, ret)
     next(ps)
-    ret = EXPR(CALL, [ret], ret.span - ps.t.startbyte, [INSTANCE(ps)])
+    if ret isa IDENTIFIER && ret.val == :ccall
+        ret = EXPR(ret, [], ret.span - ps.t.startbyte, [INSTANCE(ps)])
+    else
+        ret = EXPR(CALL, [ret], ret.span - ps.t.startbyte, [INSTANCE(ps)])
+    end
     format(ps)
     
     @nocloser ps newline @closer ps comma @closer ps brace @closer ps semicolon while !closer(ps)
@@ -178,7 +182,9 @@ function _sig_params(x, p = [])
 end
 
 function _get_fname(sig)
-    if sig isa EXPR && sig.head isa OPERATOR{14,Tokens.DECLARATION}
+    if sig isa EXPR && sig.head == TUPLE
+        return NOTHING
+    elseif sig isa EXPR && sig.head isa OPERATOR{14,Tokens.DECLARATION}
         get_id(sig.args[1].args[1])
     else
         get_id(sig.args[1])

@@ -33,22 +33,39 @@ end
 
 facts("function definitions") do
     strs =  ["function f end"
+
             "function f(x) x end"
+            
             """function f(x)
                 x
-            end"""
+            end
+            """
+
             """function f(x::Int)
                 x
-            end"""
+            end
+            """
+
             """function f(x::Vector{Int})
                 x
-            end"""
+            end
+            """
+
             """function f(x,y =1)
                 x
-            end"""
+            end
+            """
+
             """function f(x,y =1;z =2)
                 x
-            end"""]
+            end
+            """
+
+            """
+            function ()
+                return 
+            end
+            """]
     for str in strs
         test_parse(str)
     end

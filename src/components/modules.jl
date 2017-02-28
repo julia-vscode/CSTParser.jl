@@ -5,11 +5,10 @@ parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}}) = parse_export(ps)
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.MODULE}})
     start = ps.t.startbyte
-    start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
     arg = @closer ps block @closer ps ws parse_expression(ps)
     scope = Scope{Tokens.MODULE}(get_id(arg), [])
-    block = @scope ps scope parse_block(ps, start_col)
+    block = @scope ps scope parse_block(ps)
     next(ps)
     push!(ps.current_scope.args, scope)
     return EXPR(kw, [TRUE, arg, block], ps.nt.startbyte - start, [INSTANCE(ps)], scope)
@@ -17,11 +16,10 @@ end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.BAREMODULE}})
     start = ps.t.startbyte
-    start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
     arg = @closer ps block @closer ps ws parse_expression(ps)
     scope = Scope{Tokens.MODULE}(get_id(arg), [])
-    block = @scope ps scope parse_block(ps, start_col)
+    block = @scope ps scope parse_block(ps)
     next(ps)
     push!(ps.current_scope.args, scope)
     return EXPR(kw, [FALSE, arg, block], ps.nt.startbyte - start, [INSTANCE(ps)], scope)
@@ -72,7 +70,7 @@ end
 #     return ret
 # end
 
-function parse_dot_mod(ps)
+function parse_dot_mod(ps::ParseState)
     args = []
     while true
         next(ps)
@@ -98,6 +96,7 @@ end
 function parse_imports(ps::ParseState)
     start = ps.t.startbyte
     kw = INSTANCE(ps)
+    tk = ps.t.kind
     dots = []
 
     while ps.nt.kind==Tokens.DOT || ps.nt.kind==Tokens.DDOT || ps.nt.kind==Tokens.DDDOT
@@ -120,20 +119,20 @@ function parse_imports(ps::ParseState)
         push!(ret.punctuation, INSTANCE(ps))
         M = arg
         arg = vcat(M, parse_dot_mod(ps))
-        push!(ret.args, EXPR(KEYWORD{Tokens.IMPORT}(0,0), arg, sum(x.span for x in arg) + length(arg)-1))
+        push!(ret.args, EXPR(KEYWORD{tk}(0,0), arg, sum(x.span for x in arg) + length(arg)-1))
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
             arg = vcat(M, parse_dot_mod(ps))
-            push!(ret.args, EXPR(KEYWORD{Tokens.IMPORT}(0,0), arg, sum(x.span for x in arg) + length(arg)-1))
+            push!(ret.args, EXPR(KEYWORD{tk}(0,0), arg, sum(x.span for x in arg) + length(arg)-1))
         end
     else
-        push!(ret.args, EXPR(KEYWORD{Tokens.IMPORT}(0,0), arg, sum(x.span for x in arg) + length(arg)-1))
+        push!(ret.args, EXPR(KEYWORD{tk}(0,0), arg, sum(x.span for x in arg) + length(arg)-1))
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
             arg = parse_dot_mod(ps)
-            push!(ret.args, EXPR(KEYWORD{Tokens.IMPORT}(0,0), arg, sum(x.span for x in arg) + length(arg)-1))
+            push!(ret.args, EXPR(KEYWORD{tk}(0,0), arg, sum(x.span for x in arg) + length(arg)-1))
         end
     end
     
@@ -153,28 +152,48 @@ function parse_imports(ps::ParseState)
 end
 
 
+# function parse_export(ps::ParseState)
+#     kw = INSTANCE(ps)
+#     ret = EXPR(kw, [@closer ps comma parse_expression(ps)], -ps.t.startbyte)
+#     while !closer(ps) || ps.t.kind == Tokens.COMMA
+#         a =  @closer ps comma parse_expression(ps)
+
+#         if a isa EXPR && a.head == MACROCALL
+#             a = IDENTIFIER(a.span, a.args[1].offset - 1, Symbol('@', a.args[1].val))
+#         end
+#         push!(ret.args, a)
+#         if ps.nt.kind == Tokens.COMMA
+#             next(ps)
+#             format(ps)
+#             push!(ret.punctuation, INSTANCE(ps))
+#         end
+#     end
+#     ret.span += ps.nt.startbyte
+
+#     # Linting
+#     if ps.current_scope isa Scope{Tokens.FUNCTION}
+#         push!(ps.hints, Hint{Hints.ImportInFunction}(kw.offset + (1:ret.span)))
+#     end
+#     return ret
+# end
+
 function parse_export(ps::ParseState)
+    start = ps.t.startbyte
     kw = INSTANCE(ps)
-    ret = EXPR(kw, [], -ps.t.startbyte)
-    while !closer(ps) || ps.t.kind == Tokens.COMMA
-        a =  @closer ps comma parse_expression(ps)
-
-        if a isa EXPR && a.head == MACROCALL
-            a = IDENTIFIER(a.span, a.args[1].offset - 1, Symbol('@', a.args[1].val))
-        end
-        push!(ret.args, a)
-        if ps.nt.kind == Tokens.COMMA
-            next(ps)
-            format(ps)
-            push!(ret.punctuation, INSTANCE(ps))
-        end
+    
+    ret = EXPR(kw, [parse_dot_mod(ps)[1]], 0, [])
+    
+    while ps.nt.kind == Tokens.COMMA
+        next(ps)
+        push!(ret.punctuation, INSTANCE(ps))
+        arg = parse_dot_mod(ps)[1]
+        push!(ret.args, arg)
     end
-    ret.span += ps.nt.startbyte
-
-    # Linting
+    
     if ps.current_scope isa Scope{Tokens.FUNCTION}
         push!(ps.hints, Hint{Hints.ImportInFunction}(kw.offset + (1:ret.span)))
     end
+    ret.span = ps.nt.startbyte - start
     return ret
 end
 

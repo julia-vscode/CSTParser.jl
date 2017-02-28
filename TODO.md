@@ -1,26 +1,14 @@
 # To do list
 
-
-
-
 needs fixing
-+ finally 
-+ parsing kw, default values and splatting in function calls
-+ interpolation
-+ allow juxtaposition of number w/ identifier
-+ dot operators
 + special macrocall instance for Core.@doc case. requires different iterator.
-+ parsing `x.$x` inside quote blocks
 + allow parsing but add error hint for assignment within tuples
 + assignment, give error if incorrect lhs and return block on rhs
 + fix `a ? b : c` syntax
 + only allow Core.@doc in toplevel scope
-+ import/export/using of macros 
 
 
 Unhandled 'head's
-+ ccall
-+ parameters
 + stdcall
 + string
 + typed_comprehension

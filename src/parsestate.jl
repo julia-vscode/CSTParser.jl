@@ -67,6 +67,11 @@ function next(ps::ParseState)
     if ps.t.kind == Tokens.DOT && ps.ws.kind == EmptyWS && isoperator(ps.nt)
         ps.t = ps.nt
         ps.dot = true
+        if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#'
+            ps.ws = lex_ws_comment(ps.l, readchar(ps.l))
+        else
+            ps.ws = Token(EmptyWS, (0, 0), (0, 0), ps.nt.endbyte, ps.nt.endbyte, "")
+        end
         ps.nt, ps.done  = next(ps.l, ps.done)
     else
         ps.dot = false

@@ -144,12 +144,17 @@ end
 # Parse assignments
 function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{1})
     nextarg = @precedence ps 1-LtoR(1) parse_expression(ps)
-    if ret isa EXPR && ret.head == CALL && !(nextarg isa EXPR && nextarg.head == BLOCK)
-        nextarg = EXPR(BLOCK, Expression[nextarg], nextarg.span)
+    if is_func_call(ret)
+        scope = Scope{Tokens.FUNCTION}(get_id(ret), [])
+        @scope ps scope _lint_func_sig(ps, ret)
+        if !(nextarg isa EXPR && nextarg.head == BLOCK)
+            nextarg = EXPR(BLOCK, Expression[nextarg], nextarg.span)
+        end
+        push!(ps.current_scope.args, scope)
+    else
+        _track_assignment(ps, ret, nextarg)
     end
 
-    # Track variable assignment
-    _track_assignment(ps, ret, nextarg)
     return EXPR(op, Expression[ret, nextarg], op.span + ret.span + nextarg.span)
 end
 

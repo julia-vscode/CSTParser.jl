@@ -1,3 +1,4 @@
+__precompile__()
 module Parser
 global debug = true
 
@@ -58,11 +59,7 @@ function parse_expression(ps::ParseState)
     if Tokens.begin_keywords < ps.t.kind < Tokens.end_keywords && ps.t.kind != Tokens.DO #&& ps.t.kind != Tokens.END
         ret = parse_kw(ps, Val{ps.t.kind})
     elseif ps.t.kind == Tokens.END
-        # if ps.closer.square
-            ret = parse_kw(ps, Val{ps.t.kind})
-        # else
-        #     error("unexpected `end`")
-        # end
+        ret = parse_kw(ps, Val{ps.t.kind})
     elseif ps.t.kind == Tokens.LPAREN
         ret = parse_paren(ps)
     elseif ps.t.kind == Tokens.LSQUARE
@@ -358,23 +355,25 @@ end
 
 function parse(str::String, cont = false)
     ps = Parser.ParseState(str)
-    ret = parse_expression(ps)
-    # Handle semicolon as linebreak
-    # while ps.nt.kind == Tokens.SEMICOLON
-    #     if ret isa EXPR && ret.head == TOPLEVEL
-    #         next(ps)
-    #         op = INSTANCE(ps)
-    #         arg = parse_expression(ps)
-    #         push!(ret.punctuation, op)
-    #         push!(ret.args, arg)
-    #         ret.span += op.span + arg.span
-    #     else
-    #         next(ps)
-    #         op = INSTANCE(ps)
-    #         arg = parse_expression(ps)
-    #         ret = EXPR(TOPLEVEL, [ret, arg], ret.span + arg.span + op.span, [op])
-    #     end
-    # end
+    if cont
+        ret = EXPR(TOPLEVEL, [], 0)
+        if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
+            next(ps)
+            push!(ret.args, LITERAL{nothing}(ps.nt.startbyte, ps.nt.startbyte, :nothing))
+        end
+        while !ps.done
+            push!(ret.args, parse_expression(ps))
+        end
+        ret.span += ps.nt.startbyte
+
+    else
+        if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
+            next(ps)
+            ret = LITERAL{nothing}(ps.nt.startbyte, ps.nt.startbyte, :nothing)
+        else
+            ret = parse_expression(ps)
+        end
+    end
 
     return ret
 end
@@ -383,4 +382,6 @@ end
 ischainable(t::Token) = t.kind == Tokens.PLUS || t.kind == Tokens.STAR || t.kind == Tokens.APPROX
 LtoR(prec::Int) = 1 ≤ prec ≤ 5 || prec == 13
 
+include("precompile.jl")
+_precompile_()
 end

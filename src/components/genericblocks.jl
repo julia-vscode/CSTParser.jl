@@ -30,7 +30,7 @@ Parses an array of expressions (stored in ret) until 'end' is the next token.
 Returns `ps` the token before the closing `end`, the calling function is 
 assumed to handle the closer.
 """
-function parse_block(ps::ParseState,  start_col = 0, ret::EXPR = EXPR(BLOCK, [], 0))
+function parse_block(ps::ParseState, start_col = 0, ret::EXPR = EXPR(BLOCK, [], 0))
     start = ps.nt.startbyte
     while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.CATCH && ps.nt.kind!==Tokens.FINALLY 
         if (start_col>0 && ps.nt.startpos[2]!=start_col+4)

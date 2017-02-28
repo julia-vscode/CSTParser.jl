@@ -16,7 +16,7 @@ function closer(ps::ParseState)
     (ps.closer.ifelse && ps.nt.kind==Tokens.ELSEIF || ps.nt.kind==Tokens.ELSE) ||
     (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt)<=1 || ps.nt.kind==Tokens.COLON)) ||
     (ps.closer.trycatch && (ps.nt.kind==Tokens.CATCH || ps.nt.kind==Tokens.FINALLY || ps.nt.kind==Tokens.END)) ||
-    (ps.closer.ws && (!isempty(ps.ws) && !(isoperator(ps.nt) || ps.nt.kind == Tokens.COMMA)))
+    (ps.closer.ws && (!isempty(ps.ws) && !(isoperator(ps.nt) || ps.nt.kind == Tokens.COMMA || ps.nt.kind == Tokens.FOR)))
 end
 
 """
@@ -77,9 +77,9 @@ macro default(ps, body)
         local tmp3 = $(esc(ps)).closer.eof
         local tmp4 = $(esc(ps)).closer.tuple
         local tmp5 = $(esc(ps)).closer.comma
-        local tmp6 = $(esc(ps)).closer.paren
-        local tmp7 = $(esc(ps)).closer.brace
-        local tmp8 = $(esc(ps)).closer.square
+        # local tmp6 = $(esc(ps)).closer.paren
+        # local tmp7 = $(esc(ps)).closer.brace
+        # local tmp8 = $(esc(ps)).closer.square
         local tmp9 = $(esc(ps)).closer.block
         local tmp10 = $(esc(ps)).closer.ifelse
         local tmp11 = $(esc(ps)).closer.ifop
@@ -91,9 +91,9 @@ macro default(ps, body)
         $(esc(ps)).closer.eof = true
         $(esc(ps)).closer.tuple = false
         $(esc(ps)).closer.comma = false
-        $(esc(ps)).closer.paren = false
-        $(esc(ps)).closer.brace = false
-        $(esc(ps)).closer.square = false
+        # $(esc(ps)).closer.paren = false
+        # $(esc(ps)).closer.brace = false
+        # $(esc(ps)).closer.square = false
         # $(esc(ps)).closer.block = false
         $(esc(ps)).closer.ifelse = false
         $(esc(ps)).closer.ifop = false
@@ -108,9 +108,9 @@ macro default(ps, body)
         $(esc(ps)).closer.eof = tmp3
         $(esc(ps)).closer.tuple = tmp4
         $(esc(ps)).closer.comma = tmp5
-        $(esc(ps)).closer.paren = tmp6
-        $(esc(ps)).closer.brace = tmp7
-        $(esc(ps)).closer.square = tmp8
+        # $(esc(ps)).closer.paren = tmp6
+        # $(esc(ps)).closer.brace = tmp7
+        # $(esc(ps)).closer.square = tmp8
         $(esc(ps)).closer.block = tmp9
         $(esc(ps)).closer.ifelse = tmp10
         $(esc(ps)).closer.ifop = tmp11
@@ -133,9 +133,9 @@ macro clear(ps, body)
         local tmp3 = $(esc(ps)).closer.eof
         local tmp4 = $(esc(ps)).closer.tuple
         local tmp5 = $(esc(ps)).closer.comma
-        local tmp6 = $(esc(ps)).closer.paren
-        local tmp7 = $(esc(ps)).closer.brace
-        local tmp8 = $(esc(ps)).closer.square
+        # local tmp6 = $(esc(ps)).closer.paren
+        # local tmp7 = $(esc(ps)).closer.brace
+        # local tmp8 = $(esc(ps)).closer.square
         local tmp9 = $(esc(ps)).closer.block
         local tmp10 = $(esc(ps)).closer.ifelse
         local tmp11 = $(esc(ps)).closer.ifop
@@ -147,9 +147,9 @@ macro clear(ps, body)
         $(esc(ps)).closer.eof = false
         $(esc(ps)).closer.tuple = false
         $(esc(ps)).closer.comma = false
-        $(esc(ps)).closer.paren = false
-        $(esc(ps)).closer.brace = false
-        $(esc(ps)).closer.square = false
+        # $(esc(ps)).closer.paren = false
+        # $(esc(ps)).closer.brace = false
+        # $(esc(ps)).closer.square = false
         $(esc(ps)).closer.block = false
         $(esc(ps)).closer.ifelse = false
         $(esc(ps)).closer.ifop = false
@@ -164,9 +164,9 @@ macro clear(ps, body)
         $(esc(ps)).closer.eof = tmp3
         $(esc(ps)).closer.tuple = tmp4
         $(esc(ps)).closer.comma = tmp5
-        $(esc(ps)).closer.paren = tmp6
-        $(esc(ps)).closer.brace = tmp7
-        $(esc(ps)).closer.square = tmp8
+        # $(esc(ps)).closer.paren = tmp6
+        # $(esc(ps)).closer.brace = tmp7
+        # $(esc(ps)).closer.square = tmp8
         $(esc(ps)).closer.block = tmp9
         $(esc(ps)).closer.ifelse = tmp10
         $(esc(ps)).closer.ifop = tmp11
