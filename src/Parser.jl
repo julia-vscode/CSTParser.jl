@@ -352,9 +352,12 @@ function parse_doc(ps::ParseState)
 end
 
 
-
 function parse(str::String, cont = false)
     ps = Parser.ParseState(str)
+    x = parse(ps, cont)
+    return x, ps
+end
+function parse(ps::ParseState, cont = false)
     if cont
         ret = EXPR(TOPLEVEL, [], 0)
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT

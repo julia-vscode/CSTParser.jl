@@ -192,6 +192,21 @@ macro scope(ps, new_scope, body)
     end
 end
 
+"""
+    @noscope ps body
+
+Continues parsing not tracking declared variables.
+"""
+macro noscope(ps, body)
+    quote
+        local tmp1 = $(esc(ps)).trackscope
+        $(esc(ps)).trackscope = false
+        out = $(esc(body))
+        $(esc(ps)).trackscope = tmp1
+        out
+    end
+end
+
 isidentifier(t::Token) = t.kind == Tokens.IDENTIFIER
 
 isliteral(t::Token) = Tokens.begin_literal < t.kind < Tokens.end_literal

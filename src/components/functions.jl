@@ -31,7 +31,7 @@ function parse_call(ps::ParseState, ret)
     end
     format(ps)
     
-    @nocloser ps newline @closer ps comma @closer ps brace @closer ps semicolon while !closer(ps)
+    @noscope ps @nocloser ps newline @closer ps comma @closer ps brace @closer ps semicolon while !closer(ps)
         a = parse_expression(ps)
         if a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
             a.head = HEAD{Tokens.KW}(a.head.span, a.head.offset)
@@ -134,6 +134,7 @@ end
     
 function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw)
     a = _arg_id(arg)
+    !(a isa IDENTIFIER) && return
     push!(ps.current_scope.args, Variable(a, :Any, :argument))
     if !(a.val in args)
         push!(args, a.val)

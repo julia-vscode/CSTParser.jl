@@ -37,6 +37,7 @@ type ParseState
     ws::Token
     nws::Token
     dot::Bool
+    trackscope::Bool
     formatcheck::Bool
     ids::Dict{String,Any}
     hints::Vector{Any}
@@ -44,7 +45,7 @@ type ParseState
     current_scope
 end
 function ParseState(str::String)
-    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), true, true, Dict(), [], Closer(), Scope{Tokens.TOPLEVEL}(TOPLEVEL, [])))
+    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), true, true, true, Dict(), [], Closer(), Scope{Tokens.TOPLEVEL}(TOPLEVEL, [])))
 end
 
 function Base.show(io::IO, ps::ParseState)
