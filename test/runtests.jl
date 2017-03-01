@@ -31,6 +31,17 @@ function test_parse(str)
     @fact test_span(x) --> true
 end
 
+function test_order(x, out = [])
+    if x isa EXPR
+        for y in x
+            test_order(y, out)
+        end
+    else
+        push!(out, x)
+    end
+    out
+end
+
 function test_find(str)
     x = Parser.parse(str)
     for i = 1:sizeof(str)

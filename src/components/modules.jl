@@ -129,16 +129,36 @@ function parse_export(ps::ParseState)
 end
 
 function _start_imports(x::EXPR)
-    return Iterator{:imports}(1, length(x.args) * 2) 
+    return Iterator{:imports}(1, length(x.args) * 2 - (x.head.span==0)) 
+end
+
+function _start_toplevel(x::EXPR)
+    if !(x.args[1] isa EXPR && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING})) 
+        return Iterator{:toplevelblock}(1, length(x.args) + length(x.punctuation))
+    else
+        cnt = 1
+        while x.args[1].args[cnt] == x.args[2].args[cnt]
+            cnt+=1
+        end
+        return Iterator{:toplevel}(1, (cnt - 1 + length(x.args))*2)
+    end
 end
 
 function next(x::EXPR, s::Iterator{:imports})
-    if s.i == 1
-        return x.head, +s
-    elseif isodd(s.i)
-        return PUNCTUATION{Tokens.DOT}(1,0), +s
+    if x.head.span == 0
+        if isodd(s.i)
+            return x.args[div(s.i+1, 2)], +s
+        else
+            return PUNCTUATION{Tokens.DOT}(1,0), +s
+        end
     else
-        return x.args[div(s.i, 2)], +s
+        if s.i == 1
+            return x.head, +s
+        elseif isodd(s.i)
+            return PUNCTUATION{Tokens.DOT}(1,0), +s
+        else
+            return x.args[div(s.i, 2)], +s
+        end
     end
 end
 
@@ -167,16 +187,11 @@ end
 
 function next(x::EXPR, s::Iterator{:toplevel})
     if s.i == 1
-        return x.args[1].head, +s
-    elseif isodd(s.i)
-        return x.punctuation[div(s.i-1, 2)], +s
+        return x.punctuation[1], +s
+    elseif iseven(s.i)
+        return x.args[div(s.i, 2)], +s
     else
-        if s.i <= div(s.n, 2)
-            return x.args[1].args[div(s.i, 2)], +s
-        else
-            # this needs to be fixed for `import A: a, b.c`
-            return last(x.args[div(s.i-div(s.n, 2)+1, 2)].args), +s
-        end
+        return x.punctuation[div(s.i+1, 2)], +s
     end
 end
 

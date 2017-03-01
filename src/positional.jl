@@ -51,15 +51,7 @@ function start(x::EXPR)
         return _start_typed_comprehension(x)
     # elseif x.head == TOPLEVEL
     elseif x.head isa HEAD{Tokens.TOPLEVEL}
-        if !(x.args[1] isa Expr && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING})) 
-            return Iterator{:toplevelblock}(1, length(x.args) + length(x.punctuation))
-        else
-            cnt = 1
-            while x.args[1].args[cnt] == x.args[2].args[cnt]
-                cnt+=1
-            end
-            return Iterator{:toplevel}(1, (cnt - 1 + length(x.args))*2)
-        end
+        return _start_toplevel(x)
     elseif x.head == CURLY
         return _start_curly(x)
     elseif x.head == QUOTE
