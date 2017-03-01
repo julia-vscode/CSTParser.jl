@@ -354,8 +354,8 @@ end
 
 function parse(str::String, cont = false)
     ps = Parser.ParseState(str)
-    x = parse(ps, cont)
-    return x, ps
+    x, ps = parse(ps, cont)
+    return x
 end
 function parse(ps::ParseState, cont = false)
     if cont
@@ -378,7 +378,7 @@ function parse(ps::ParseState, cont = false)
         end
     end
 
-    return ret
+    return ret, ps
 end
 
 
