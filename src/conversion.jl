@@ -71,13 +71,23 @@ function Expr(x::EXPR)
             end
             return ret
         else
-            # return Expr(:macrocall, Symbol('@', Expr(x.args[1])), Expr.(x.args[2:end])...)
             ret =  Expr(:macrocall, Symbol('@', Expr(x.args[1])))
             for a in x.args[2:end]
                 push!(ret.args, Expr(a))
             end
             return ret
         end
+    elseif x.head == TOPLEVEL && x.punctuation[1] isa KEYWORD{Tokens.IMPORT}
+        ret = Expr(Expr(x.head))
+        col = findfirst(x-> x isa OPERATOR{8, Tokens.COLON}, x.punctuation)
+        if length(x.args) == 1
+            a = first(x.args)
+            return Expr(Expr(a.head), Expr.(x.punctuation[2:2:col])..., Expr.(a.args)...)
+        end
+        for a in x.args
+            push!(ret.args, Expr(Expr(a.head), Expr.(x.punctuation[2:2:col])..., Expr.(a.args)...))
+        end 
+        return ret
     elseif x.head == CALL
         ret = Expr(Expr(x.head))
         for a in (x.args)
