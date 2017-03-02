@@ -255,11 +255,17 @@ function parse_paren(ps::ParseState)
     if ps.nt.kind == Tokens.RPAREN
         ret = EXPR(TUPLE, [])
     else
-        ret = @clear ps @closer ps paren parse_expression(ps)
+        ret = EXPR(BLOCK, [], -ps.nt.startbyte)
+        while ps.nt.kind != Tokens.RPAREN
+            a = @default ps @closer ps paren parse_expression(ps)
+            push!(ret.args, a)
+        end
+        ret.span +=ps.nt.startbyte
     end
     next(ps)
     closeparen = INSTANCE(ps)
-    if ret isa EXPR && (ret.head == TUPLE || (ret.head == BLOCK && last(ret.punctuation isa PUNCTUATION{Tokens.SEMICOLON})))
+    # if ret isa EXPR && (ret.head == TUPLE || (ret.head == BLOCK && last(ret.punctuation isa PUNCTUATION{Tokens.SEMICOLON})))
+    if ret isa EXPR && (ret.head == TUPLE || ret.head == BLOCK)
         unshift!(ret.punctuation, openparen)
         push!(ret.punctuation, closeparen)
         format(ps)

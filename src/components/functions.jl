@@ -48,7 +48,7 @@ function parse_call(ps::ParseState, ret)
         next(ps)
         push!(ret.punctuation, INSTANCE(ps))
         paras = EXPR(PARAMETERS, [], -ps.nt.startbyte)
-        @nocloser ps newline @closer ps comma @closer ps brace @closer ps semicolon while !closer(ps)
+        @nocloser ps newline @closer ps comma @closer ps brace while !closer(ps)
             a = parse_expression(ps)
             if a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
                 a.head = HEAD{Tokens.KW}(a.head.span, a.head.offset)

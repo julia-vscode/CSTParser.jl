@@ -45,7 +45,12 @@ type ParseState
     current_scope
 end
 function ParseState(str::String)
-    next(ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), true, true, true, Dict(), [], Closer(), Scope{Tokens.TOPLEVEL}(TOPLEVEL, [])))
+    ps = ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), true, true, true, Dict(), [], Closer(), Scope{Tokens.TOPLEVEL}(TOPLEVEL, []))
+    # if peekchar(ps.l) == '('
+    #     return @closer ps semicolon next(ps)
+    # else
+        return next(ps)
+    # end
 end
 
 function Base.show(io::IO, ps::ParseState)
@@ -68,7 +73,7 @@ function next(ps::ParseState)
     if ps.t.kind == Tokens.DOT && ps.ws.kind == EmptyWS && isoperator(ps.nt)
         ps.t = ps.nt
         ps.dot = true
-        if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#'
+        if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#' || (!ps.closer.semicolon && peekchar(ps.l) == ';')
             ps.ws = lex_ws_comment(ps.l, readchar(ps.l))
         else
             ps.ws = Token(EmptyWS, (0, 0), (0, 0), ps.nt.endbyte, ps.nt.endbyte, "")
@@ -77,7 +82,7 @@ function next(ps::ParseState)
     else
         ps.dot = false
     end
-    if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#'
+    if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#' || (!ps.closer.semicolon && peekchar(ps.l) == ';')
         ps.nws = lex_ws_comment(ps.l, readchar(ps.l))
     else
         ps.nws = Token(EmptyWS, (0, 0), (0, 0), ps.nt.endbyte, ps.nt.endbyte, "")
@@ -89,14 +94,18 @@ function lex_ws_comment(l::Lexer, c)
     newline = c=='\n'
     if c=='#'
         newline = read_comment(l)
+    elseif c== ';'
+        newline = true
     else
         newline = read_ws(l, newline)
     end
-    while iswhitespace(peekchar(l)) || peekchar(l)=='#'
+    while iswhitespace(peekchar(l)) || peekchar(l)=='#' || peekchar(l) == ';'
         c = readchar(l)
         if c=='#'
             read_comment(l)
             newline = peekchar(l)=='\n'
+        elseif c== ';'
+            newline = true
         else
             newline = read_ws(l, newline)
         end
