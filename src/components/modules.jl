@@ -55,15 +55,15 @@ function parse_imports(ps::ParseState)
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     tk = ps.t.kind
-    # dots = []
+    dots = []
 
-    # while ps.nt.kind==Tokens.DOT || ps.nt.kind==Tokens.DDOT || ps.nt.kind==Tokens.DDDOT
-    #     next(ps)
-    #     d = INSTANCE(ps)
-    #     for i = 1:d.span
-    #         push!(dots, OPERATOR{15,Tokens.DOT,false}(1, ps.nt.startbyte+i))
-    #     end
-    # end
+    while ps.nt.kind==Tokens.DOT || ps.nt.kind==Tokens.DDOT || ps.nt.kind==Tokens.DDDOT
+        next(ps)
+        d = INSTANCE(ps)
+        for i = 1:d.span
+            push!(dots, OPERATOR{15,Tokens.DOT,false}(1, ps.nt.startbyte+i))
+        end
+    end
 
     arg, puncs = parse_dot_mod(ps)
 

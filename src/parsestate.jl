@@ -115,12 +115,17 @@ function read_ws(l::Lexer, ok)
 end
 
 function read_comment(l::Lexer)
-    if readchar(l) != '='
+    if peekchar(l) != '='
+        c = readchar(l)
+        if c == '\n' || eof(c)
+            backup!(l)
+            return true
+        end
         while true
             c = readchar(l)
             if c == '\n' || eof(c)
                 backup!(l)
-                break
+                return true
             end
         end
     else
