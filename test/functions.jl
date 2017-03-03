@@ -35,6 +35,14 @@ facts("function definitions") do
     strs =  ["function f end"
 
             "function f(x) x end"
+
+            "function f(x); x; end"
+
+            "function f(x) x; end"
+
+            "function f(x); x end"
+
+            "function f(x) x;y end"
             
             """function f(x)
                 x

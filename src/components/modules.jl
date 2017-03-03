@@ -79,9 +79,6 @@ function parse_imports(ps::ParseState)
             push!(ret.punctuation, arg[i])
             push!(ret.punctuation, puncs[i])
         end
-
-        # ret = EXPR(TOPLEVEL,[], 0, vcat(kw, arg, puncs))
-
         
         M = arg
         arg, puncs = parse_dot_mod(ps)

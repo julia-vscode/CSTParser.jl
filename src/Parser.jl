@@ -137,22 +137,12 @@ function parse_juxtaposition(ps::ParseState, ret)
         format(ps)
         op = INSTANCE(ps)
         ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind == Tokens.SEMICOLON
-        ret = parse_semicolon(ps, ret)
     elseif ps.nt.kind == Tokens.COMMA
         ret = parse_comma(ps, ret)
     elseif ret isa IDENTIFIER && ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
         next(ps)
         arg = INSTANCE(ps)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
-    elseif isinstance(ps.nt)
-        if isunaryop(ps.t)
-            ret = parse_unary(ps, ret)
-        elseif isoperator(ps.t)
-            error("$ret is not a unary operator")
-        else 
-            error("unexpected at $ps")
-        end
     else
         for s in stacktrace()
             println(s)
@@ -288,23 +278,40 @@ function parse_square(ps::ParseState)
         format(ps)
         return EXPR(VECT, [], ps.nt.startbyte - start, puncs)
     else
-        ret = @clear ps @closer ps square parse_expression(ps)
-        if ret isa EXPR && ret.head==TUPLE
-            next(ps)
-            push!(puncs, INSTANCE(ps))
-            format(ps)
-            return EXPR(VECT, ret.args, ps.nt.startbyte - start, puncs)
-        elseif ret isa EXPR && ret.head==GENERATOR
-            next(ps)
-            push!(puncs, INSTANCE(ps))
-            format(ps)
-            return EXPR(COMPREHENSION, [ret], ps.nt.startbyte - start, puncs)
-        else
-            next(ps)
-            push!(puncs, INSTANCE(ps))
-            format(ps)
-            return EXPR(VECT, [ret], ps.nt.startbyte - start, puncs)
-        end 
+        first_arg = @default ps @closer ps square @closer ps ws parse_expression(ps)
+        # 
+        if ps.nt.kind == Tokens.RSQUARE
+            if first_arg isa EXPR && first_arg.head == TUPLE
+                first_arg.head = VECT
+                return first_arg
+            end
+        elseif ps.nt.kind == Tokens.SEMICOLON
+            ret = EXPR(VCAT,[first_arg], -start, puncs)
+
+            @default ps @closer ps square @closer ps ws while ps.nt.kind == Tokens.SEMICOLON
+                next(ps)
+                push!(ret.punctuation, INSTANCE(ps))
+                arg = parse_expression(ps)
+            end
+        end
+
+        # ret = @clear ps @closer ps square parse_expression(ps)
+        # if ret isa EXPR && ret.head==TUPLE
+        #     next(ps)
+        #     push!(puncs, INSTANCE(ps))
+        #     format(ps)
+        #     return EXPR(VECT, ret.args, ps.nt.startbyte - start, puncs)
+        # elseif ret isa EXPR && ret.head==GENERATOR
+        #     next(ps)
+        #     push!(puncs, INSTANCE(ps))
+        #     format(ps)
+        #     return EXPR(COMPREHENSION, [ret], ps.nt.startbyte - start, puncs)
+        # else
+        #     next(ps)
+        #     push!(puncs, INSTANCE(ps))
+        #     format(ps)
+        #     return EXPR(VECT, [ret], ps.nt.startbyte - start, puncs)
+        # end 
     end
 end
 

@@ -121,6 +121,7 @@ end
 
 done(x::EXPR, s::Iterator) = s.i > s.n
 length(x::EXPR) = start(x).n
+last(x::EXPR) = x[length(x)]
 
 function Base.getindex(x::EXPR, i::Int)
     s = start(x)

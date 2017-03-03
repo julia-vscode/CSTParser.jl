@@ -1,6 +1,6 @@
 function closer(ps::ParseState)
     (ps.closer.newline && ps.ws.kind == NewLineWS) ||
-    (ps.closer.semicolon && ps.nt.kind == Tokens.SEMICOLON) ||
+    (ps.closer.semicolon && ps.ws.kind == SemiColonWS) ||
     (isoperator(ps.nt) && precedence(ps.nt)<=ps.closer.precedence) ||
     (ps.nt.kind == Tokens.LPAREN && ps.closer.precedence>14) ||
     (ps.nt.kind == Tokens.LBRACE && ps.closer.precedence>14) ||
@@ -16,7 +16,7 @@ function closer(ps::ParseState)
     (ps.closer.ifelse && ps.nt.kind==Tokens.ELSEIF || ps.nt.kind==Tokens.ELSE) ||
     (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt)<=1 || ps.nt.kind==Tokens.COLON)) ||
     (ps.closer.trycatch && (ps.nt.kind==Tokens.CATCH || ps.nt.kind==Tokens.FINALLY || ps.nt.kind==Tokens.END)) ||
-    (ps.closer.ws && (!isempty(ps.ws) && !(isoperator(ps.nt) || ps.nt.kind == Tokens.COMMA || ps.nt.kind == Tokens.FOR)))
+    (ps.closer.ws && (!isempty(ps.ws) && !(isoperator(ps.nt) || ps.nt.kind == Tokens.COMMA || ps.nt.kind == Tokens.FOR || ps.nt.kind == Tokens.DO)))
 end
 
 """
@@ -87,7 +87,7 @@ macro default(ps, body)
         local tmp13 = $(esc(ps)).closer.ws
         local tmp14 = $(esc(ps)).closer.precedence
         $(esc(ps)).closer.newline = true
-        $(esc(ps)).closer.semicolon = false
+        $(esc(ps)).closer.semicolon = true
         $(esc(ps)).closer.eof = true
         $(esc(ps)).closer.tuple = false
         $(esc(ps)).closer.comma = false
