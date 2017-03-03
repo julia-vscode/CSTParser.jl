@@ -23,14 +23,19 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
     #  Catch block
     if ps.nt.kind==Tokens.CATCH
         next(ps)
-        start_col = ps.t.startpos[2]
-        push!(ret.punctuation, INSTANCE(ps))
-        caught = parse_expression(ps)
-        catchblock = @closer ps trycatch parse_block(ps, start_col)
-        if !(caught isa INSTANCE)
-            unshift!(catchblock.args, caught)
-            catchblock.span = caught.span
+        if ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END
             caught = FALSE
+            catchblock = EXPR(BLOCK, Expression[])
+        else
+            start_col = ps.t.startpos[2]
+            push!(ret.punctuation, INSTANCE(ps))
+            caught = parse_expression(ps)
+            catchblock = @closer ps trycatch parse_block(ps, start_col)
+            if !(caught isa INSTANCE)
+                unshift!(catchblock.args, caught)
+                catchblock.span = caught.span
+                caught = FALSE
+            end
         end
     else
         caught = FALSE

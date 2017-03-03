@@ -263,7 +263,7 @@ function parse_operator(ps::ParseState, ret::Expression, op::OPERATOR{15})
         args = @closer ps paren parse_list(ps, puncs)
         push!(puncs, INSTANCE(next(ps)))
         nextarg = EXPR(TUPLE, args, ps.nt.startbyte - start, puncs)
-    elseif iskw(ps.nt)
+    elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA
         next(ps)
         nextarg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, ps.t.startbyte, Symbol(lowercase(string(ps.t.kind))))
     else

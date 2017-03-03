@@ -68,7 +68,7 @@ function next(ps::ParseState)
     ps.ws = ps.nws
     ps.nt, ps.done  = next(ps.l, ps.done)
 
-    if ps.t.kind == Tokens.DOT && ps.ws.kind == EmptyWS && isoperator(ps.nt)
+    if ps.t.kind == Tokens.DOT && ps.ws.kind == EmptyWS && isoperator(ps.nt) && !(ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA)
         ps.t = ps.nt
         ps.dot = true
         if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#' || peekchar(ps.l) == ';'
@@ -154,7 +154,7 @@ function read_comment(l::Lexer)
                 n_end += 1
             end
             if n_start == n_end
-                break
+                return false
             end
             c = nc
         end
@@ -162,4 +162,4 @@ function read_comment(l::Lexer)
 end
 
 
-isempty(t::Token) = t.kind == Tokens.begin_delimiters
+isempty(t::Token) = t.kind == EmptyWS
