@@ -44,6 +44,11 @@ facts("try blocks") do
             """try
                 f(1)
             catch 
+            end"""
+
+            """try
+                f(1)
+            catch 
                 error(err)
             end"""
 

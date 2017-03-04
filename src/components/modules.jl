@@ -37,6 +37,12 @@ function parse_dot_mod(ps::ParseState)
             a.span +=1
             a.offset -=1
             push!(args, a)
+        elseif ps.t.kind == Tokens.LPAREN
+            a = EXPR(BLOCK, [], -ps.t.startbyte, [INSTANCE(ps)])
+            push!(a.args, @default ps @closer ps paren parse_expression(ps))
+            next(ps)
+            push!(a.punctuation, INSTANCE(ps))
+            push!(args, a)
         else
             push!(args, INSTANCE(ps))
         end
@@ -79,9 +85,6 @@ function parse_imports(ps::ParseState)
             push!(ret.punctuation, arg[i])
             push!(ret.punctuation, puncs[i])
         end
-
-        # ret = EXPR(TOPLEVEL,[], 0, vcat(kw, arg, puncs))
-
         
         M = arg
         arg, puncs = parse_dot_mod(ps)

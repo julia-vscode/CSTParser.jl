@@ -14,7 +14,8 @@ facts("generators") do
             """
             [a
             for a = 1:2]
-            """]
+            """
+            ]
     for str in strs
         test_parse(str)
     end

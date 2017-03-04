@@ -25,8 +25,16 @@ function Expr(x::LITERAL{Tokens.FLOAT})
     Base.parse(x.val)
 end
 
-function Expr(x::Union{LITERAL{Tokens.STRING},LITERAL{Tokens.TRIPLE_STRING}}) 
-    x.val
+
+function Expr(x::LITERAL{Tokens.STRING}) 
+    if startswith(x.val, '\"')
+        x.val[2:end-1]
+    else
+        x.val
+    end
+end
+function Expr(x::LITERAL{Tokens.TRIPLE_STRING}) 
+    x.val[4:end-3]
 end
 
 
@@ -62,7 +70,7 @@ function Expr(x::EXPR)
         insert!(ret.args, 2, Expr(:->, Expr(x.args[2]), Expr(x.args[3])))
         return ret
     elseif x.head == x_STR
-        return Expr(:macrocall, string('@', Expr(x.args[1]), "_str"), Expr(x.args[2]))
+        return Expr(:macrocall, Symbol('@', Expr(x.args[1]), "_str"), Expr.(x.args[2:end])...)
     elseif x.head == MACROCALL
         if x.args[1] isa HEAD{:globalrefdoc}
             ret = Expr(:macrocall, GlobalRef(Core, Symbol("@doc")))

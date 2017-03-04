@@ -23,14 +23,20 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
     #  Catch block
     if ps.nt.kind==Tokens.CATCH
         next(ps)
-        start_col = ps.t.startpos[2]
-        push!(ret.punctuation, INSTANCE(ps))
-        caught = parse_expression(ps)
-        catchblock = @closer ps trycatch parse_block(ps, start_col)
-        if !(caught isa INSTANCE)
-            unshift!(catchblock.args, caught)
-            catchblock.span = caught.span
+        if ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END
+            push!(ret.punctuation, INSTANCE(ps))
             caught = FALSE
+            catchblock = EXPR(BLOCK, Expression[])
+        else
+            start_col = ps.t.startpos[2]
+            push!(ret.punctuation, INSTANCE(ps))
+            caught = parse_expression(ps)
+            catchblock = @closer ps trycatch parse_block(ps, start_col)
+            if !(caught isa INSTANCE)
+                unshift!(catchblock.args, caught)
+                catchblock.span = caught.span
+                caught = FALSE
+            end
         end
     else
         caught = FALSE
@@ -89,6 +95,8 @@ function next(x::EXPR, s::Iterator{:try})
     elseif s.i == 4
         if x.args[2] != FALSE
             return x.args[2], +s
+        elseif x.punctuation[1] isa KEYWORD{Tokens.FINALLY}
+            return x.args[4], +s
         # elseif length(x.args) == 4 && s.n == 5
         #     return x.args[4], +s
         else

@@ -31,7 +31,7 @@ function parse_call(ps::ParseState, ret)
     end
     format(ps)
     
-    @noscope ps @nocloser ps newline @closer ps comma @closer ps brace @closer ps semicolon while !closer(ps)
+    @noscope ps @nocloser ps newline @closer ps comma @closer ps brace while !closer(ps)
         a = parse_expression(ps)
         if a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
             a.head = HEAD{Tokens.KW}(a.head.span, a.head.offset)
@@ -42,13 +42,16 @@ function parse_call(ps::ParseState, ret)
             format(ps)
             push!(ret.punctuation, INSTANCE(ps))
         end
+        if ps.ws.kind == SemiColonWS
+            break
+        end
     end
 
-    if ps.nt.kind == Tokens.SEMICOLON
-        next(ps)
-        push!(ret.punctuation, INSTANCE(ps))
+    if ps.ws.kind == SemiColonWS
+        # next(ps)
+        # push!(ret.punctuation, INSTANCE(ps))
         paras = EXPR(PARAMETERS, [], -ps.nt.startbyte)
-        @nocloser ps newline @closer ps comma @closer ps brace while !closer(ps)
+        @nocloser ps newline @nocloser ps semicolon @closer ps comma @closer ps brace while !closer(ps)
             a = parse_expression(ps)
             if a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
                 a.head = HEAD{Tokens.KW}(a.head.span, a.head.offset)
@@ -77,7 +80,7 @@ _start_function(x::EXPR) = Iterator{:function}(1, 1 + length(x.args) + length(x.
 
 _start_parameters(x::EXPR) = Iterator{:parameters}(1, length(x.args) + length(x.punctuation))
 
-function next(x::EXPR, s::Iterator{:function})
+function next(x::EXPR, s::Iterator{:function})    
     if s.i == 1
         return x.head, +s
     elseif s.i == s.n
@@ -88,6 +91,9 @@ function next(x::EXPR, s::Iterator{:function})
 end
 
 function next(x::EXPR, s::Iterator{:call})
+    if length(x.args)>0 && last(x.args) isa EXPR && last(x.args).head == PARAMETERS && s.i == (s.n-1)
+        return last(x.args), +s
+    end
     if  s.i==s.n
         return last(x.punctuation), +s
     elseif isodd(s.i)

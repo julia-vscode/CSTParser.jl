@@ -18,6 +18,7 @@ include("spec.jl")
 include("utils.jl")
 include("positional.jl")
 include("scoping.jl")
+include("components/array.jl")
 include("components/curly.jl")
 include("components/operators.jl")
 include("components/do.jl")
@@ -63,16 +64,16 @@ function parse_expression(ps::ParseState)
     elseif ps.t.kind == Tokens.LPAREN
         ret = parse_paren(ps)
     elseif ps.t.kind == Tokens.LSQUARE
-        ret = parse_square(ps)
+        ret = parse_array(ps)
     # elseif ps.t.kind == Tokens.TRIPLE_STRING && ps.current_scope.id == TOPLEVEL
     #     ret = parse_doc(ps)
-    elseif ps.t.kind == Tokens.OR && ps.closer.quotemode
-        head = INSTANCE(ps)
-        arg = parse_expression(ps)
-        ret = EXPR(head, arg, head.span + arg.span)
+    # elseif ps.t.kind == Tokens.OR && ps.closer.quotemode
+    #     head = INSTANCE(ps)
+    #     arg = parse_expression(ps)
+    #     ret = EXPR(head, arg, head.span + arg.span)
     elseif isinstance(ps.t) || isoperator(ps.t)
         ret = INSTANCE(ps)
-        if ret isa OPERATOR{8,Tokens.COLON}
+        if ret isa OPERATOR{8,Tokens.COLON} && ps.nt.kind != Tokens.COMMA
             ret = parse_unary(ps, ret)
         end
     elseif ps.t.kind==Tokens.AT_SIGN
@@ -126,10 +127,23 @@ function parse_juxtaposition(ps::ParseState, ret)
         end
     elseif ps.nt.kind==Tokens.LSQUARE
         if isempty(ps.ws)
-            ret = parse_ref(ps, ret)
+            next(ps)
+            ref = parse_array(ps)
+            if ref isa EXPR && ref.head == VECT
+                ret = EXPR(REF, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+            elseif ref isa EXPR && ref.head == HCAT
+                ret = EXPR(TYPED_HCAT, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+            elseif ref isa EXPR && ref.head == VCAT
+                ret = EXPR(TYPED_VCAT, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+            elseif ref isa EXPR && ref.head == COMPREHENSION
+                ret = EXPR(TYPED_COMPREHENSION, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+            end
+            # ret = parse_ref(ps, ret)
         else
             error("space before \"[\" not allowed in \"$(Expr(ret)) {\"")
         end
+    elseif ps.nt.kind == Tokens.COMMA
+        ret = parse_comma(ps, ret)
     elseif isunaryop(ret)
         ret = parse_unary(ps, ret)
     elseif isoperator(ps.nt)
@@ -137,22 +151,14 @@ function parse_juxtaposition(ps::ParseState, ret)
         format(ps)
         op = INSTANCE(ps)
         ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind == Tokens.SEMICOLON
-        ret = parse_semicolon(ps, ret)
-    elseif ps.nt.kind == Tokens.COMMA
-        ret = parse_comma(ps, ret)
     elseif ret isa IDENTIFIER && ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
         next(ps)
         arg = INSTANCE(ps)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
-    elseif isinstance(ps.nt)
-        if isunaryop(ps.t)
-            ret = parse_unary(ps, ret)
-        elseif isoperator(ps.t)
-            error("$ret is not a unary operator")
-        else 
-            error("unexpected at $ps")
-        end
+    elseif ret isa EXPR && ret.head isa HEAD{Tokens.KEYWORD} && ps.nt.kind == Tokens.IDENTIFIER
+        next(ps)
+        arg = INSTANCE(ps)
+        push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.offset, arg.val))
     else
         for s in stacktrace()
             println(s)
@@ -264,49 +270,23 @@ function parse_paren(ps::ParseState)
     end
     next(ps)
     closeparen = INSTANCE(ps)
-    # if ret isa EXPR && (ret.head == TUPLE || (ret.head == BLOCK && last(ret.punctuation isa PUNCTUATION{Tokens.SEMICOLON})))
-    if ret isa EXPR && (ret.head == TUPLE || ret.head == BLOCK)
+    if length(ret.args)==1 && ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{20,Tokens.DDDOT}
+        ret.args[1] = EXPR(TUPLE,[ret.args[1]], ret.args[1].span)
+        unshift!(ret.punctuation, openparen)
+        push!(ret.punctuation, closeparen)
+        ret.span = ps.nt.startbyte - start
+    elseif ret isa EXPR && (ret.head == TUPLE || ret.head == BLOCK)
         unshift!(ret.punctuation, openparen)
         push!(ret.punctuation, closeparen)
         format(ps)
         ret.span += openparen.span + closeparen.span
-    elseif ret isa EXPR && ret.head isa OPERATOR{20,Tokens.DDDOT}
-        ret = EXPR(TUPLE, [ret], ps.nt.startbyte - start, [openparen, closeparen])
     else
         ret = EXPR(BLOCK, [ret], ps.nt.startbyte - start, [openparen, closeparen])
     end
     return ret
 end
 
-function parse_square(ps::ParseState)
-    start = ps.t.startbyte
-    puncs = INSTANCE[INSTANCE(ps)]
-    format(ps)
-    if ps.nt.kind == Tokens.RSQUARE
-        next(ps)
-        push!(puncs, INSTANCE(ps))
-        format(ps)
-        return EXPR(VECT, [], ps.nt.startbyte - start, puncs)
-    else
-        ret = @clear ps @closer ps square parse_expression(ps)
-        if ret isa EXPR && ret.head==TUPLE
-            next(ps)
-            push!(puncs, INSTANCE(ps))
-            format(ps)
-            return EXPR(VECT, ret.args, ps.nt.startbyte - start, puncs)
-        elseif ret isa EXPR && ret.head==GENERATOR
-            next(ps)
-            push!(puncs, INSTANCE(ps))
-            format(ps)
-            return EXPR(COMPREHENSION, [ret], ps.nt.startbyte - start, puncs)
-        else
-            next(ps)
-            push!(puncs, INSTANCE(ps))
-            format(ps)
-            return EXPR(VECT, [ret], ps.nt.startbyte - start, puncs)
-        end 
-    end
-end
+
 
 
 """
