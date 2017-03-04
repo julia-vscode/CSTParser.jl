@@ -10,7 +10,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
     scope = Scope{Tokens.MACRO}(get_id(arg), [])
     block = parse_block(ps, start_col)
     next(ps)
-    return EXPR(kw, Expression[arg, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
+    return EXPR(kw, SyntaxNode[arg, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
 end
 
 """

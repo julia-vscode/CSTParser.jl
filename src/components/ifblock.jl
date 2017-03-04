@@ -12,16 +12,16 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
 
     if ps.nt.kind==Tokens.END
         next(ps)
-        return EXPR(kw, Expression[cond, EXPR(BLOCK, Expression[], 0)], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
+        return EXPR(kw, SyntaxNode[cond, EXPR(BLOCK, SyntaxNode[], 0)], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
     end
 
-    ifblock = EXPR(BLOCK, Expression[], -ps.nt.startbyte)
+    ifblock = EXPR(BLOCK, SyntaxNode[], -ps.nt.startbyte)
     while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.ELSE && ps.nt.kind!==Tokens.ELSEIF
         push!(ifblock.args, @default ps @closer ps ifelse parse_expression(ps))
     end
     ifblock.span += ps.nt.startbyte
 
-    elseblock = EXPR(BLOCK, Expression[], 0)
+    elseblock = EXPR(BLOCK, SyntaxNode[], 0)
     if ps.nt.kind==Tokens.ELSEIF
         next(ps)
         push!(puncs, INSTANCE(ps))
@@ -42,8 +42,8 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
     !nested && next(ps)
     !nested && push!(puncs, INSTANCE(ps))
     ret = isempty(elseblock.args) ? 
-        EXPR(kw, Expression[cond, ifblock], ps.nt.startbyte - start, puncs) : 
-        EXPR(kw, Expression[cond, ifblock, elseblock], ps.nt.startbyte - start, puncs)
+        EXPR(kw, SyntaxNode[cond, ifblock], ps.nt.startbyte - start, puncs) : 
+        EXPR(kw, SyntaxNode[cond, ifblock, elseblock], ps.nt.startbyte - start, puncs)
     return ret
 end
 

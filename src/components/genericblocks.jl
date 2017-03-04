@@ -11,7 +11,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BEGIN}})
     kw = INSTANCE(ps)
     arg = @default ps parse_block(ps, start_col)
     next(ps)
-    return EXPR(kw, Expression[arg], ps.nt.startbyte - start, [INSTANCE(ps)])
+    return EXPR(kw, SyntaxNode[arg], ps.nt.startbyte - start, [INSTANCE(ps)])
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.QUOTE}})
@@ -20,7 +20,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.QUOTE}})
     kw = INSTANCE(ps)
     arg = @default ps parse_block(ps, start_col)
     next(ps)
-    return EXPR(kw, Expression[arg], ps.nt.startbyte - start, [INSTANCE(ps)])
+    return EXPR(kw, SyntaxNode[arg], ps.nt.startbyte - start, [INSTANCE(ps)])
 end
 
 """

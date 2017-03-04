@@ -1,3 +1,11 @@
+"""
+    parse_array(ps)
+Having hit '[' return either:
++ A vect
++ A vcat
++ A comprehension
++ An array (vcat of hcats)
+"""
 function parse_array(ps::ParseState)
     start = ps.t.startbyte
     puncs = INSTANCE[INSTANCE(ps)]

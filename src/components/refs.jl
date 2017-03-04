@@ -1,22 +1,21 @@
+"""
+    parse_juxtaposition(ps, ret)
+
+Handles cases where an expression - `ret` - is followed by 
+`[`. Parses the following bracketed expression and modifies it's
+`.head` appropriately.
+"""
 function parse_ref(ps::ParseState, ret)
     next(ps)
-    start = ps.t.startbyte
-    puncs = INSTANCE[INSTANCE(ps)]
-    if ps.nt.kind == Tokens.RSQUARE
-        next(ps)
-        push!(puncs, INSTANCE(ps))
-        ret = EXPR(REF, [ret], ret.span + ps.nt.startbyte - start, puncs)
-    else
-        args = @clear ps @closer ps square parse_list(ps, puncs)
-        if length(args)==1 && args[1] isa EXPR && args[1].head == GENERATOR
-
-            next(ps)
-            push!(puncs, INSTANCE(ps))
-            return EXPR(TYPED_COMPREHENSION, [ret, args[1]], ret.span + ps.nt.startbyte - start, puncs)
-        end
-        next(ps)
-        push!(puncs, INSTANCE(ps))
-        ret = EXPR(REF, [ret, args...], ret.span + ps.nt.startbyte - start, puncs)
+    ref = parse_array(ps)
+    if ref isa EXPR && ref.head == VECT
+        ret = EXPR(REF, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+    elseif ref isa EXPR && ref.head == HCAT
+        ret = EXPR(TYPED_HCAT, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+    elseif ref isa EXPR && ref.head == VCAT
+        ret = EXPR(TYPED_VCAT, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+    elseif ref isa EXPR && ref.head == COMPREHENSION
+        ret = EXPR(TYPED_COMPREHENSION, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
     end
     return ret
 end

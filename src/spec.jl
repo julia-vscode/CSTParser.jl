@@ -1,5 +1,5 @@
-abstract Expression
-abstract INSTANCE <: Expression
+abstract SyntaxNode
+abstract INSTANCE <: SyntaxNode
 
 type IDENTIFIER <: INSTANCE
     span::Int
@@ -46,8 +46,8 @@ function INSTANCE(ps::ParseState)
 end
 
 
-type QUOTENODE <: Expression
-    val::Expression
+type QUOTENODE <: SyntaxNode
+    val::SyntaxNode
     span::Int
     punctuation::Vector{INSTANCE}
 end
@@ -70,6 +70,7 @@ const MACROCALL = HEAD{Tokens.MACROCALL}(0, 0)
 const PARAMETERS = HEAD{Tokens.PARAMETERS}(0, 0)
 const QUOTE = HEAD{Tokens.QUOTE}(0, 0)
 const REF = HEAD{Tokens.REF}(0, 0)
+const STRING = HEAD{Tokens.STRING}(0, 0)
 const TOPLEVEL = HEAD{Tokens.TOPLEVEL}(0, 0)
 const TUPLE = HEAD{Tokens.TUPLE}(0, 0)
 const TYPED_COMPREHENSION = HEAD{Tokens.TYPED_COMPREHENSION}(0, 0)
@@ -99,9 +100,9 @@ type Variable
     val
 end
 
-type EXPR <: Expression
-    head::Expression
-    args::Vector{Expression}
+type EXPR <: SyntaxNode
+    head::SyntaxNode
+    args::Vector{SyntaxNode}
     span::Int
     punctuation::Vector{INSTANCE}
     scope::Scope

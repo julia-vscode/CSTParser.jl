@@ -101,9 +101,10 @@ Handles cases where an expression - `ret` - is not followed by
 + `{`, curly
 + `,`, commas
 + `for`, generators
++ `do`
 + strings
 + an expression preceded by a unary operator
-
++ A number followed by an expression (with no seperating white space)
 """
 function parse_juxtaposition(ps::ParseState, ret)
     if ps.nt.kind == Tokens.FOR
@@ -127,23 +128,12 @@ function parse_juxtaposition(ps::ParseState, ret)
         end
     elseif ps.nt.kind==Tokens.LSQUARE
         if isempty(ps.ws)
-            next(ps)
-            ref = parse_array(ps)
-            if ref isa EXPR && ref.head == VECT
-                ret = EXPR(REF, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
-            elseif ref isa EXPR && ref.head == HCAT
-                ret = EXPR(TYPED_HCAT, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
-            elseif ref isa EXPR && ref.head == VCAT
-                ret = EXPR(TYPED_VCAT, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
-            elseif ref isa EXPR && ref.head == COMPREHENSION
-                ret = EXPR(TYPED_COMPREHENSION, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
-            end
-            # ret = parse_ref(ps, ret)
+            ret = parse_ref(ps, ret)
         else
             error("space before \"[\" not allowed in \"$(Expr(ret)) {\"")
         end
     elseif ps.nt.kind == Tokens.COMMA
-        ret = parse_comma(ps, ret)
+        ret = parse_tuple(ps, ret)
     elseif isunaryop(ret)
         ret = parse_unary(ps, ret)
     elseif isoperator(ps.nt)
@@ -181,9 +171,12 @@ end
 Parses a list of comma seperated expressions finishing when the parent state
 of `ps.closer` is met. Expects to start at the first item and ends on the last
 item so surrounding punctuation must be handled externally.
+
+**NOTE**
+Should be replaced with the approach taken in `parse_call`
 """
 function parse_list(ps::ParseState, puncs)
-    args = Expression[]
+    args = SyntaxNode[]
 
     while !closer(ps)
         a = @nocloser ps newline @closer ps comma parse_expression(ps)
@@ -200,53 +193,31 @@ function parse_list(ps::ParseState, puncs)
     return args
 end
 
-function parse_comma(ps::ParseState, ret)
-    format(ps)
-    next(ps)
-    op = INSTANCE(ps)
-    start = ps.t.startbyte
-    if isassignment(ps.nt)
-        if ret isa EXPR && ret.head!=TUPLE
-            ret =  EXPR(TUPLE, Expression[ret], ps.t.endbyte - start + 1, INSTANCE[op])
-        end
-    elseif closer(ps)
-        ret = EXPR(TUPLE, Expression[ret], ret.span + op.span, INSTANCE[op])
-    else
-        nextarg = @closer ps tuple parse_expression(ps)
-        if ret isa EXPR && ret.head==TUPLE
-            push!(ret.args, nextarg)
-            push!(ret.punctuation, op)
-            ret.span += ps.nt.startbyte - start
-        else
-            ret =  EXPR(TUPLE, Expression[ret, nextarg], ret.span+ps.nt.startbyte - start, INSTANCE[op])
-        end
-    end
-    return ret
-end
 
 
-"""
-    parse_paren(ps, ret)
 
-Constructs a `block` having hit a `;` while parsing an expression.
-"""
-function parse_semicolon(ps::ParseState, ret)
-    next(ps)
-    op = INSTANCE(ps)
-    if closer(ps)
-        ret = EXPR(BLOCK, [ret], ret.span, [op])
-    else
-        nextarg = @closer ps semicolon parse_expression(ps)
-        if ret isa EXPR && ret.head == BLOCK && last(ret.punctuation) isa PUNCTUATION{Tokens.SEMICOLON}
-            push!(ret.args, nextarg)
-            push!(ret.punctuation, op)
-            ret.span += nextarg.span + op.span
-        else
-            ret = EXPR(BLOCK, [ret, nextarg], ret.span, [op])
-        end
-    end
-    return ret
-end
+# """
+#     parse_semicolon(ps, ret)
+
+# Constructs a `block` having hit a `;` while parsing an expression.
+# """
+# function parse_semicolon(ps::ParseState, ret)
+#     next(ps)
+#     op = INSTANCE(ps)
+#     if closer(ps)
+#         ret = EXPR(BLOCK, [ret], ret.span, [op])
+#     else
+#         nextarg = @closer ps semicolon parse_expression(ps)
+#         if ret isa EXPR && ret.head == BLOCK && last(ret.punctuation) isa PUNCTUATION{Tokens.SEMICOLON}
+#             push!(ret.args, nextarg)
+#             push!(ret.punctuation, op)
+#             ret.span += nextarg.span + op.span
+#         else
+#             ret = EXPR(BLOCK, [ret, nextarg], ret.span, [op])
+#         end
+#     end
+#     return ret
+# end
 
 """
     parse_paren(ps, ret)
@@ -338,11 +309,22 @@ function parse_doc(ps::ParseState)
 end
 
 
+
+"""
+    parse(str, cont = false)
+
+Parses the passed string. If `cont` is true then will continue parsing until the end of the string returning the resulting expressions in a TOPLEVEL block.
+"""
 function parse(str::String, cont = false)
     ps = Parser.ParseState(str)
     x, ps = parse(ps, cont)
     return x
 end
+
+"""
+    parse(str, cont = false)
+
+"""
 function parse(ps::ParseState, cont = false)
     if cont
         ret = EXPR(TOPLEVEL, [], 0)

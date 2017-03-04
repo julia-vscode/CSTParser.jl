@@ -1,5 +1,5 @@
 import Base: Expr, Symbol
-
+# Converts EXPR to Base.Expr
 Expr{T}(x::HEAD{T}) = Symbol(lowercase(string(T)))
 Expr{T}(x::KEYWORD{T}) = Symbol(lowercase(string(T)))
 
@@ -17,6 +17,8 @@ end
 
 Expr(x::LITERAL{Tokens.TRUE}) = true
 Expr(x::LITERAL{Tokens.FALSE}) = false
+
+# No reason 
 function Expr{T}(x::LITERAL{T})
     Base.parse(x.val)
 end

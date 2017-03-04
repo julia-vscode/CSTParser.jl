@@ -12,7 +12,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     @scope ps scope _lint_func_sig(ps, sig)
     block = @default ps @scope ps scope parse_block(ps, start_col)
     next(ps)
-    args = isempty(block.args) ? Expression[sig] : Expression[sig, block]
+    args = isempty(block.args) ? SyntaxNode[sig] : SyntaxNode[sig, block]
     push!(ps.current_scope.args, scope)
     return EXPR(kw, args, ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)], scope)
 end

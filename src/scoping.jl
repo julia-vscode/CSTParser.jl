@@ -1,4 +1,4 @@
-function declares_function(x::Expression)
+function declares_function(x::SyntaxNode)
     if x isa EXPR
         if x.head isa KEYWORD{Tokens.FUNCTION}
             return true

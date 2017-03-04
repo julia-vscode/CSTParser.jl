@@ -1,10 +1,16 @@
 import Tokenize.Lexers: peekchar, prevchar, readchar, iswhitespace, emit, emit_error, backup!, accept_batch, eof
 
+# Types of white space
 typealias EmptyWS Tokens.begin_delimiters
 typealias SemiColonWS Tokens.end_delimiters
 typealias NewLineWS Tokens.begin_literal
 typealias WS Tokens.end_literal
 
+"""
+    Closer
+Struct holding information on the tokens that will close the expression
+currently being parsed.
+"""
 type Closer
     toplevel::Bool
     newline::Bool
@@ -27,7 +33,17 @@ end
 
 Closer() = Closer(true, true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, 0)
 
+"""
+    ParseState
 
+The parser's interface with `Tokenize.Lexers.Lexer`. This alters the output of `tokenize` in three ways:
++ Merging of whitespace, comments and semicolons;
++ Skips DOT tokens where they are followed by another operator and marks the trailing operator as dotted.
++ Keeps track of the previous, current and next tokens.
+
+In addition a list of formatting hints is updated as the parsing progresses 
+and copy of the current `Scope`.
+"""
 type ParseState
     l::Lexer
     done::Bool
@@ -62,15 +78,19 @@ wstype(t::Token) = t.kind == EmptyWS ? "empty" :
                    t.kind == SemiColonWS ? "ws w/ semicolon" : "ws"
 
 function next(ps::ParseState)
+    #  shift old tokens
     ps.lt = ps.t
     ps.t = ps.nt
     ps.lws = ps.ws
     ps.ws = ps.nws
+    
     ps.nt, ps.done  = next(ps.l, ps.done)
 
+    # Handle dotted operators
     if ps.t.kind == Tokens.DOT && ps.ws.kind == EmptyWS && isoperator(ps.nt) && !(ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA)
         ps.t = ps.nt
         ps.dot = true
+        # combines whitespace, comments and semicolons
         if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#' || peekchar(ps.l) == ';'
             ps.ws = lex_ws_comment(ps.l, readchar(ps.l))
         else
@@ -80,6 +100,7 @@ function next(ps::ParseState)
     else
         ps.dot = false
     end
+    # combines whitespace, comments and semicolons
     if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#' || peekchar(ps.l) == ';'
         ps.nws = lex_ws_comment(ps.l, readchar(ps.l))
     else
@@ -88,6 +109,13 @@ function next(ps::ParseState)
     return ps
 end
 
+
+"""
+    lex_ws_comment(l::Lexer, c)
+
+Having hit an initial whitespace/comment/semicolon continues collecting similar
+`Chars` until they end. Returns a WS token with an indication of newlines/ semicolons. Indicating a semicolons takes precedence over line breaks as the former is equivalent to the former in most cases.
+"""
 function lex_ws_comment(l::Lexer, c)
     newline = c == '\n'
     semicolon = c == ';'

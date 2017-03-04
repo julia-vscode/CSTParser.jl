@@ -5,7 +5,7 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
     start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
-    ret = EXPR(kw, [EXPR(BLOCK, Expression[], -ps.nt.startbyte)], -ps.t.startbyte)
+    ret = EXPR(kw, [EXPR(BLOCK, SyntaxNode[], -ps.nt.startbyte)], -ps.t.startbyte)
 
     @closer ps trycatch parse_block(ps, start_col, ret.args[1])
     
@@ -13,7 +13,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
     if ps.nt.kind == Tokens.END
         next(ps)
         push!(ret.args, FALSE)
-        push!(ret.args, EXPR(BLOCK, Expression[]))
+        push!(ret.args, EXPR(BLOCK, SyntaxNode[]))
         push!(ret.punctuation, INSTANCE(ps))
         ret.span += ps.nt.startbyte
         return ret
@@ -26,7 +26,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
         if ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END
             push!(ret.punctuation, INSTANCE(ps))
             caught = FALSE
-            catchblock = EXPR(BLOCK, Expression[])
+            catchblock = EXPR(BLOCK, SyntaxNode[])
         else
             start_col = ps.t.startpos[2]
             push!(ret.punctuation, INSTANCE(ps))
@@ -40,7 +40,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
         end
     else
         caught = FALSE
-        catchblock = EXPR(BLOCK, Expression[])
+        catchblock = EXPR(BLOCK, SyntaxNode[])
     end
     push!(ret.args, caught)
     push!(ret.args, catchblock)
