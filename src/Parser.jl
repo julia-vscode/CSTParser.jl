@@ -155,6 +155,10 @@ function parse_juxtaposition(ps::ParseState, ret)
         next(ps)
         arg = INSTANCE(ps)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
+    elseif ret isa EXPR && ret.head isa HEAD{Tokens.KEYWORD} && ps.nt.kind == Tokens.IDENTIFIER
+        next(ps)
+        arg = INSTANCE(ps)
+        push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.offset, arg.val))
     else
         for s in stacktrace()
             println(s)
@@ -266,14 +270,16 @@ function parse_paren(ps::ParseState)
     end
     next(ps)
     closeparen = INSTANCE(ps)
-    # if ret isa EXPR && (ret.head == TUPLE || (ret.head == BLOCK && last(ret.punctuation isa PUNCTUATION{Tokens.SEMICOLON})))
-    if ret isa EXPR && (ret.head == TUPLE || ret.head == BLOCK)
+    if length(ret.args)==1 && ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{20,Tokens.DDDOT}
+        ret.args[1] = EXPR(TUPLE,[ret.args[1]], ret.args[1].span)
+        unshift!(ret.punctuation, openparen)
+        push!(ret.punctuation, closeparen)
+        ret.span = ps.nt.startbyte - start
+    elseif ret isa EXPR && (ret.head == TUPLE || ret.head == BLOCK)
         unshift!(ret.punctuation, openparen)
         push!(ret.punctuation, closeparen)
         format(ps)
         ret.span += openparen.span + closeparen.span
-    elseif ret isa EXPR && ret.head isa OPERATOR{20,Tokens.DDDOT}
-        ret = EXPR(TUPLE, [ret], ps.nt.startbyte - start, [openparen, closeparen])
     else
         ret = EXPR(BLOCK, [ret], ps.nt.startbyte - start, [openparen, closeparen])
     end

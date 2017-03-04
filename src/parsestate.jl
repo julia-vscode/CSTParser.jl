@@ -93,8 +93,6 @@ function lex_ws_comment(l::Lexer, c)
     semicolon = c == ';'
     if c=='#'
         newline = read_comment(l)
-    elseif c== ';'
-        semicolon = true
     else
         newline, semicolon = read_ws(l, newline, semicolon)
     end
@@ -102,8 +100,8 @@ function lex_ws_comment(l::Lexer, c)
         c = readchar(l)
         if c=='#'
             read_comment(l)
-            newline = peekchar(l)=='\n'
-            semicolon = peekchar(l)==';'
+            newline = newline || peekchar(l)=='\n'
+            semicolon = semicolon || peekchar(l)==';'
         elseif c== ';'
             semicolon = true
         else

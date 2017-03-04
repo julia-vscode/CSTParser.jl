@@ -24,6 +24,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
     if ps.nt.kind==Tokens.CATCH
         next(ps)
         if ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END
+            push!(ret.punctuation, INSTANCE(ps))
             caught = FALSE
             catchblock = EXPR(BLOCK, Expression[])
         else
@@ -94,6 +95,8 @@ function next(x::EXPR, s::Iterator{:try})
     elseif s.i == 4
         if x.args[2] != FALSE
             return x.args[2], +s
+        elseif x.punctuation[1] isa KEYWORD{Tokens.FINALLY}
+            return x.args[4], +s
         # elseif length(x.args) == 4 && s.n == 5
         #     return x.args[4], +s
         else
