@@ -32,6 +32,7 @@ include("components/macros.jl")
 include("components/modules.jl")
 include("components/prefixkw.jl")
 include("components/refs.jl")
+include("components/strings.jl")
 include("components/tryblock.jl")
 include("components/types.jl")
 include("components/tuples.jl")
@@ -77,7 +78,13 @@ function parse_expression(ps::ParseState)
             ret = parse_unary(ps, ret)
         end
     elseif ps.t.kind==Tokens.AT_SIGN
-        ret = @closer ps semicolon parse_macrocall(ps)
+        
+        @assert isempty(ps.ws)
+        next(ps)
+        ret = LITERAL{Tokens.MACRO}(ps.nt.startbyte - ps.t.startbyte + 1, ps.t.startbyte - 1, string("@", ps.t.val))
+        if ps.ws.kind == SemiColonWS || ps.ws.kind == NewLineWS || ps.nt.kind == Tokens.ENDMARKER
+            ret = EXPR(MACROCALL, [ret], ret.span)
+        end
     else
         error("Expression started with $(ps)")
     end
@@ -107,7 +114,21 @@ Handles cases where an expression - `ret` - is not followed by
 + A number followed by an expression (with no seperating white space)
 """
 function parse_juxtaposition(ps::ParseState, ret)
-    if ps.nt.kind == Tokens.FOR
+    if ismacro(ret)
+        if ps.nt.kind ==Tokens.LPAREN
+            ret = @default ps @closer ps paren parse_call(ps, ret)
+        # elseif ps.ws.kind == NewLineWS || ps.nt.kind == Tokens.ENDMARKER
+        #     next(ps)
+        #     ret = EXPR(MACROCALL, [ret], ret.span)
+        else
+            ret = EXPR(MACROCALL, [ret], -ps.nt.startbyte + ret.span)
+            @nocloser ps ws @closer ps comma while !closer(ps)
+                a = @closer ps ws parse_expression(ps)
+                push!(ret.args, a)
+            end
+            ret.span += ps.nt.startbyte
+        end
+    elseif ps.nt.kind == Tokens.FOR
         ret = parse_generator(ps, ret)
     elseif ps.nt.kind == Tokens.DO
         ret = parse_do(ps, ret)
@@ -241,7 +262,7 @@ function parse_paren(ps::ParseState)
     end
     next(ps)
     closeparen = INSTANCE(ps)
-    if length(ret.args)==1 && ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{20,Tokens.DDDOT}
+    if length(ret.args)==1 && ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{0,Tokens.DDDOT}
         ret.args[1] = EXPR(TUPLE,[ret.args[1]], ret.args[1].span)
         unshift!(ret.punctuation, openparen)
         push!(ret.punctuation, closeparen)

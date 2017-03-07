@@ -49,3 +49,14 @@ function next(x::EXPR, s::Iterator{:macrocall})
         return x.args[s.i-1], +s
     end
 end
+
+ismacro(x) = false
+ismacro(x::LITERAL{Tokens.MACRO}) = true
+ismacro(x::QUOTENODE) = ismacro(x.val)
+function ismacro(x::EXPR)
+    if x.head isa OPERATOR{15, Tokens.DOT}
+        return ismacro(x.args[2])
+    else
+        return false
+    end
+end

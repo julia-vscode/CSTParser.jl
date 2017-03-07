@@ -150,7 +150,7 @@ function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw)
     if a.val == Expr(fname)
         push!(ps.hints, Hint{Hints.ArgumentFunctionNameConflict}(a.offset + (1:arg.span)))
     end
-    if arg isa EXPR && arg.head isa OPERATOR{20,Tokens.DDDOT} && i!=nargs
+    if arg isa EXPR && arg.head isa OPERATOR{0,Tokens.DDDOT} && i!=nargs
         push!(ps.hints, Hint{Hints.SlurpingPosition}(a.offset + (1:arg.span)))
     end
     if arg isa EXPR && arg.head isa HEAD{Tokens.KW} && i < firstkw
@@ -169,7 +169,7 @@ end
 _arg_id(x::INSTANCE) = x
 
 function _arg_id(x::EXPR)
-    if x.head isa OPERATOR{14, Tokens.DECLARATION} || x.head == CURLY || x.head isa OPERATOR{20, Tokens.DDDOT} || x.head isa HEAD{Tokens.KW}
+    if x.head isa OPERATOR{14, Tokens.DECLARATION} || x.head == CURLY || x.head isa OPERATOR{0, Tokens.DDDOT} || x.head isa HEAD{Tokens.KW}
         return _arg_id(x.args[1])
     else
         return x

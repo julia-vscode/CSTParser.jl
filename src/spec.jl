@@ -33,11 +33,24 @@ type HEAD{K} <: INSTANCE
     offset::Int
 end
 
+function LITERAL(ps::ParseState)
+    span = ps.nt.startbyte - ps.t.startbyte
+    offset = ps.t.startbyte
+    if ps.t.kind == Tokens.STRING #|| ps.t.kind == Tokens.TRIPLE_STRING
+        # return parse_string(ps)
+        LITERAL{ps.t.kind}(span, offset, ps.t.val[2:end-1])
+    elseif ps.t.kind == Tokens.TRIPLE_STRING
+        LITERAL{ps.t.kind}(span, offset, startswith(ps.t.val, "\"\"\"\n") ? ps.t.val[5:end-3] : ps.t.val[4:end-3])
+    else
+        LITERAL{ps.t.kind}(span, offset, ps.t.val)
+    end
+end
+
 function INSTANCE(ps::ParseState)
     span = ps.nt.startbyte - ps.t.startbyte
     offset = ps.t.startbyte
     return isidentifier(ps.t) ? IDENTIFIER(span, offset, Symbol(ps.t.val)) : 
-        isliteral(ps.t) ? LITERAL{ps.t.kind}(span, offset, ps.t.val) :
+        isliteral(ps.t) ? LITERAL(ps) :
         iskw(ps.t) ? KEYWORD{ps.t.kind}(span, offset) :
         isoperator(ps.t) ? OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}(span + ps.dot, offset - ps.dot) :
         ispunctuation(ps.t) ? PUNCTUATION{ps.t.kind}(span, offset) :

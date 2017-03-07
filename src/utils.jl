@@ -100,7 +100,7 @@ macro default(ps, body)
         $(esc(ps)).closer.ifop = false
         $(esc(ps)).closer.trycatch = false
         $(esc(ps)).closer.ws = false
-        $(esc(ps)).closer.precedence = 0
+        $(esc(ps)).closer.precedence = -1
 
         out = $(esc(body))
         
@@ -227,4 +227,104 @@ ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
                           t.kind == Tokens.END ||
                           Tokens.LSQUARE ≤ t.kind ≤ Tokens.RPAREN
 
+
+
+
+# Testing functions
+function remlineinfo!(x)
+    if isa(x,Expr)
+        id = find(map(x->isa(x,Expr) && x.head==:line,x.args))
+        deleteat!(x.args,id)
+        for j in x.args
+            remlineinfo!(j)
+        end
+    end
+    x
+end
+
+
+
+function test_order(x, out = [])
+    if x isa EXPR
+        for y in x
+            test_order(y, out)
+        end
+    else
+        push!(out, x)
+    end
+    out
+end
+
+function test_find(str)
+    x = Parser.parse(str)
+    for i = 1:sizeof(str)
+        find(x, i)
+    end
+end
+
+
+
+
+function check_file(f::String)
+    str = readstring(f)
+    ps = ParseState(str)
+    io = IOBuffer(str)
+    if ps.nt.kind == Tokens.COMMENT
+        next(ps)
+    end
+    ismod = false
+    if ps.nt.kind == Tokens.MODULE
+        next(ps)
+        next(ps)
+        ismod = true
+    end
+    seek(io, ps.nt.startbyte)
+    cnt = 0
+    failed = []
+    while !eof(io)
+        if ps.nt.endbyte == length(str)-1
+            break
+        end
+        cnt+=1
+        x,ps = try
+            Parser.parse(ps)
+        end
+        if x isa LITERAL{Tokens.TRIPLE_STRING}
+            doc = x
+            x,ps = Parser.parse(ps)
+            x = EXPR(MACROCALL, [GlobalRefDOC, doc, x], doc.span + x.span)
+        end
+        x0 = Expr(x)
+        y = try Base.parse(io) end
+        y0 = remlineinfo!(y)
+        eq = (x0 == y0)
+        
+        if !eq
+            push!(failed, (x0, y0))
+        end
+    end
+    failed, cnt
+end
+
+
+compare(x,y) = x == y ? true : (x,y)
+
+function compare(x::Expr,y::Expr)
+    if x == y
+        return true
+    else
+        if x.head != y.head
+            return (x, y)
+        end
+        if length(x.args) != length(y.args)
+            return (x.args, y.args)
+        end
+        for i = 1:length(x.args)
+            t = compare(x.args[i], y.args[i])
+            if t!=true
+                return t
+            end
+        end
+    end
+end
 

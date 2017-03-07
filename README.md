@@ -38,6 +38,10 @@ The `K` parameterisation refers to the `kind` of the associated token as specifi
 
 
 
+### Parsing errors
+- relative module use/import etc.
+- relative indents in triple quoted strings (maybe Tokenize related?)
+- 
 
 ### Major current syntax omissions
 - String interpolation
@@ -56,3 +60,5 @@ The `K` parameterisation refers to the `kind` of the associated token as specifi
 - Return code hints in response to parsing failures.
 - Second pass for linting.
 - Second pass for type inference.
+
+

@@ -2,16 +2,6 @@ using FactCheck, Parser
 for n in names(Parser, true, true)
     eval(:(import Parser.$n))
 end
-function remlineinfo!(x)
-    if isa(x,Expr)
-        id = find(map(x->isa(x,Expr) && x.head==:line,x.args))
-        deleteat!(x.args,id)
-        for j in x.args
-            remlineinfo!(j)
-        end
-    end
-    x
-end
 
 function test_span(x)
     if x isa EXPR
@@ -31,23 +21,6 @@ function test_parse(str)
     @fact test_span(x) --> true
 end
 
-function test_order(x, out = [])
-    if x isa EXPR
-        for y in x
-            test_order(y, out)
-        end
-    else
-        push!(out, x)
-    end
-    out
-end
-
-function test_find(str)
-    x = Parser.parse(str)
-    for i = 1:sizeof(str)
-        find(x, i)
-    end
-end
 
 
 include("operators.jl")

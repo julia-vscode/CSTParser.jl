@@ -9,7 +9,7 @@ precedence(op::Int) = op < Tokens.end_assignments ? 1 :
                        op < Tokens.end_plus ? 9 :
                        op < Tokens.end_bitshifts ? 10 :
                        op < Tokens.end_times ? 11 :
-                       op < Tokens.end_rational ? 12 :
+                       op < Tfokens.end_rational ? 12 :
                        op < Tokens.end_power ? 13 :
                        op < Tokens.end_decl ? 14 : 15
 
@@ -111,7 +111,14 @@ Having hit a unary operator at the start of an expression return a call.
 """
 function parse_unary(ps::ParseState, op::OPERATOR)
     arg = @precedence ps 14 parse_expression(ps)
-    if issyntaxcall(op) && !(op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.GREATER_COLON})
+    if (op isa OPERATOR{9, Tokens.PLUS} || op isa OPERATOR{9, Tokens.MINUS}) && (arg isa LITERAL{Tokens.INTEGER} || arg isa LITERAL{Tokens.FLOAT})
+        arg.span += op.span
+        arg.offset = op.offset
+        if op isa OPERATOR{9, Tokens.MINUS}
+            arg.val = string("-", arg.val)
+        end
+        return arg
+    elseif issyntaxcall(op) && !(op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.GREATER_COLON})
         return EXPR(op, [arg], op.span + arg.span)
     else
         return EXPR(CALL, [op, arg], op.span + arg.span)
@@ -145,9 +152,9 @@ end
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1})
     nextarg = @precedence ps 1-LtoR(1) parse_expression(ps)
     if is_func_call(ret)
-        if !(nextarg isa EXPR && nextarg.head == BLOCK)
+        # if !(nextarg isa EXPR && nextarg.head == BLOCK)
             nextarg = EXPR(BLOCK, SyntaxNode[nextarg], nextarg.span)
-        end
+        # end
         scope = Scope{Tokens.FUNCTION}(get_id(ret), [])
         @scope ps scope _lint_func_sig(ps, ret)
         push!(ps.current_scope.args, scope)
@@ -266,6 +273,8 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
     elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA
         next(ps)
         nextarg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, ps.t.startbyte, Symbol(lowercase(string(ps.t.kind))))
+    elseif ps.nt.kind == Tokens.AT_SIGN
+        nextarg = @closer ps ws @precedence ps 15-LtoR(15) parse_expression(ps)
     else
         nextarg = @precedence ps 15-LtoR(15) parse_expression(ps)
     end
@@ -279,7 +288,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
 end
 
 
-function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{20, Tokens.DDDOT})
+function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{0, Tokens.DDDOT})
     return  EXPR(op, SyntaxNode[ret], op.span + ret.span)
 end
 

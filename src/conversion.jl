@@ -27,16 +27,19 @@ function Expr(x::LITERAL{Tokens.FLOAT})
     Base.parse(x.val)
 end
 
+Expr(x::LITERAL{Tokens.MACRO}) = Symbol(x.val)
+
 
 function Expr(x::LITERAL{Tokens.STRING}) 
-    if startswith(x.val, '\"')
-        x.val[2:end-1]
-    else
-        x.val
-    end
+    # if startswith(x.val, '\"')
+    #     x.val[2:end-1]
+    # else
+    #     x.val
+    # end
+    x.val
 end
 function Expr(x::LITERAL{Tokens.TRIPLE_STRING}) 
-    x.val[4:end-3]
+    x.val
 end
 
 
@@ -45,7 +48,7 @@ Expr(x::KEYWORD{Tokens.BAREMODULE}) = :module
 Expr(x::QUOTENODE) = QuoteNode(Expr(x.val))
 
 function Expr(x::EXPR)
-    if x.head==BLOCK && length(x.punctuation)==2 && first(x.punctuation) isa PUNCTUATION{Tokens.LPAREN}
+    if x.head==BLOCK && length(x.punctuation)==2 && first(x.punctuation) isa PUNCTUATION{Tokens.LPAREN} && length(x.args) ==1
         return Expr(x.args[1])
     elseif x.head isa KEYWORD{Tokens.BEGIN}
         return Expr(x.args[1])
@@ -81,8 +84,8 @@ function Expr(x::EXPR)
             end
             return ret
         else
-            ret =  Expr(:macrocall, Symbol('@', Expr(x.args[1])))
-            for a in x.args[2:end]
+            ret =  Expr(:macrocall)
+            for a in x.args
                 push!(ret.args, Expr(a))
             end
             return ret
@@ -99,6 +102,9 @@ function Expr(x::EXPR)
         end 
         return ret
     elseif x.head == CALL
+        if x.args[1] isa OPERATOR{9, Tokens.MINUS} && length(x.args) ==2 && (x.args[2] isa LITERAL{Tokens.INTEGER} || x.args[2] isa LITERAL{Tokens.FLOAT})
+            return -Expr(x.args[2])
+        end
         ret = Expr(Expr(x.head))
         for a in (x.args)
             if a isa EXPR && a.head == PARAMETERS
@@ -107,6 +113,17 @@ function Expr(x::EXPR)
                 push!(ret.args, Expr(a))
             end
         end
+        return ret
+    elseif x.head isa KEYWORD{Tokens.FOR}
+        ret = Expr(Expr(x.head))
+        if x.args[1].args[1] isa OPERATOR{6, Tokens.IN}
+            push!(ret.args, Expr(:(=), Expr.(x.args[1].args[2:end])...))
+        else
+            push!(ret.args, Expr(x.args[1]))
+        end
+        for a in x.args[2:end]
+            push!(ret.args, Expr(a))
+        end 
         return ret
     end
     ret = Expr(Expr(x.head))
