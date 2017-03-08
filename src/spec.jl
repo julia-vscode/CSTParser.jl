@@ -36,11 +36,12 @@ end
 function LITERAL(ps::ParseState)
     span = ps.nt.startbyte - ps.t.startbyte
     offset = ps.t.startbyte
-    if ps.t.kind == Tokens.STRING #|| ps.t.kind == Tokens.TRIPLE_STRING
-        # return parse_string(ps)
-        LITERAL{ps.t.kind}(span, offset, ps.t.val[2:end-1])
-    elseif ps.t.kind == Tokens.TRIPLE_STRING
-        LITERAL{ps.t.kind}(span, offset, startswith(ps.t.val, "\"\"\"\n") ? ps.t.val[5:end-3] : ps.t.val[4:end-3])
+    if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING
+        return parse_string(ps)
+    # if ps.t.kind == Tokens.STRING 
+    #     LITERAL{ps.t.kind}(span, offset, ps.t.val[2:end-1])
+    # elseif ps.t.kind == Tokens.TRIPLE_STRING
+    #     LITERAL{ps.t.kind}(span, offset, startswith(ps.t.val, "\"\"\"\n") ? ps.t.val[5:end-3] : ps.t.val[4:end-3])
     else
         LITERAL{ps.t.kind}(span, offset, ps.t.val)
     end

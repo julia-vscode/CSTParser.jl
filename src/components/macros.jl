@@ -39,14 +39,18 @@ function parse_macrocall(ps::ParseState)
 end
 
 function _start_macrocall(x::EXPR)
-    return Iterator{:macrocall}(1, length(x.args) + 1)
+    return Iterator{:macrocall}(1, length(x.args) + length(x.punctuation))
 end
 
 function next(x::EXPR, s::Iterator{:macrocall})
-    if s.i == 1
-        return x.punctuation[1], +s
+    if isempty(x.punctuation)
+        return x.args[s.i], +s
     else
-        return x.args[s.i-1], +s
+        if isodd(s.i)
+            return x.args[div(s.i + 1, 2)], +s
+        else
+            return x.punctuation[div(s.i, 2)], +s
+        end
     end
 end
 

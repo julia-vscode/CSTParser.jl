@@ -28,6 +28,15 @@ end
 function parse_dot_mod(ps::ParseState)
     args = []
     puncs = []
+
+    while ps.nt.kind==Tokens.DOT || ps.nt.kind==Tokens.DDOT || ps.nt.kind==Tokens.DDDOT
+        next(ps)
+        d = INSTANCE(ps)
+        for i = 1:d.span
+            push!(puncs, OPERATOR{15,Tokens.DOT,false}(1, ps.nt.startbyte+i))
+        end
+    end
+
     while true
         next(ps)
         if ps.t.kind == Tokens.AT_SIGN
@@ -61,29 +70,25 @@ function parse_imports(ps::ParseState)
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     tk = ps.t.kind
-    dots = []
-
-    while ps.nt.kind==Tokens.DOT || ps.nt.kind==Tokens.DDOT || ps.nt.kind==Tokens.DDDOT
-        next(ps)
-        d = INSTANCE(ps)
-        for i = 1:d.span
-            push!(dots, OPERATOR{15,Tokens.DOT,false}(1, ps.nt.startbyte+i))
-        end
-    end
 
     arg, puncs = parse_dot_mod(ps)
 
     if ps.nt.kind!=Tokens.COMMA && ps.nt.kind!=Tokens.COLON
-        return EXPR(kw, arg, kw.span + sum(x.span for x in arg) + length(arg)-1, puncs)
+        return EXPR(kw, arg, ps.nt.startbyte - start, puncs)
     end
 
     if ps.nt.kind == Tokens.COLON
         ret = EXPR(TOPLEVEL,[], 0, [kw])
+        t = 0
+        for t = 1:length(puncs)-length(arg)+1
+            push!(ret.punctuation, puncs[t])
+        end
+
         next(ps)
         push!(puncs, INSTANCE(ps))
         for i = 1:length(arg)
             push!(ret.punctuation, arg[i])
-            push!(ret.punctuation, puncs[i])
+            push!(ret.punctuation, puncs[i + t])
         end
         
         M = arg
@@ -136,7 +141,7 @@ function parse_export(ps::ParseState)
 end
 
 function _start_imports(x::EXPR)
-    return Iterator{:imports}(1, length(x.args) * 2 - (x.head.span==0)) 
+    return Iterator{:imports}(1, (x.head.span>0) + length(x.args) + length(x.punctuation)) 
 end
 
 function _start_toplevel(x::EXPR)
@@ -148,19 +153,24 @@ function _start_toplevel(x::EXPR)
 end
 
 function next(x::EXPR, s::Iterator{:imports})
+    ndots = length(x.punctuation) - length(x.args) + 1
     if x.head.span == 0
-        if isodd(s.i)
-            return x.args[div(s.i+1, 2)], +s
+        if s.i <= ndots
+            return x.punctuation[s.i], +s
+        elseif isodd(s.i + ndots)
+            return x.args[div(s.i + 1 - ndots, 2)], +s
         else
             return PUNCTUATION{Tokens.DOT}(1,0), +s
         end
     else
         if s.i == 1
             return x.head, +s
-        elseif isodd(s.i)
+        elseif s.i <=ndots+1
+            return x.punctuation[s.i - 1], +s
+        elseif isodd(s.i+ndots) 
             return PUNCTUATION{Tokens.DOT}(1,0), +s
         else
-            return x.args[div(s.i, 2)], +s
+            return x.args[div(s.i - ndots, 2)], +s
         end
     end
 end

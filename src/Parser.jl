@@ -164,7 +164,8 @@ function parse_juxtaposition(ps::ParseState, ret)
         ret = parse_operator(ps, ret, op)
     elseif ret isa IDENTIFIER && ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
         next(ps)
-        arg = INSTANCE(ps)
+        # arg = INSTANCE(ps)
+        arg = parse_string(ps, true)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
     elseif ret isa EXPR && ret.head isa HEAD{Tokens.KEYWORD} && ps.nt.kind == Tokens.IDENTIFIER
         next(ps)

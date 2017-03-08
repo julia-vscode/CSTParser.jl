@@ -31,11 +31,6 @@ Expr(x::LITERAL{Tokens.MACRO}) = Symbol(x.val)
 
 
 function Expr(x::LITERAL{Tokens.STRING}) 
-    # if startswith(x.val, '\"')
-    #     x.val[2:end-1]
-    # else
-    #     x.val
-    # end
     x.val
 end
 function Expr(x::LITERAL{Tokens.TRIPLE_STRING}) 
@@ -90,15 +85,29 @@ function Expr(x::EXPR)
             end
             return ret
         end
-    elseif x.head == TOPLEVEL && x.punctuation[1] isa KEYWORD{Tokens.IMPORT}
+    elseif x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL} || x.head isa KEYWORD{Tokens.USING}
         ret = Expr(Expr(x.head))
-        col = findfirst(x-> x isa OPERATOR{8, Tokens.COLON}, x.punctuation)
-        if length(x.args) == 1
-            a = first(x.args)
-            return Expr(Expr(a.head), Expr.(x.punctuation[2:2:col])..., Expr.(a.args)...)
+        for i = 1:(length(x.punctuation) - length(x.args) + 1)
+            push!(ret.args, :.)
         end
         for a in x.args
-            push!(ret.args, Expr(Expr(a.head), Expr.(x.punctuation[2:2:col])..., Expr.(a.args)...))
+            push!(ret.args, Expr(a))
+        end 
+        return ret
+    elseif x.head == TOPLEVEL && (x.punctuation[1] isa KEYWORD{Tokens.IMPORT} || x.punctuation[1] isa KEYWORD{Tokens.IMPORTALL} || x.punctuation[1] isa KEYWORD{Tokens.USING})
+        ret = Expr(Expr(x.head))
+        col = findfirst(x-> x isa OPERATOR{8, Tokens.COLON}, x.punctuation)
+        ndots = 0
+        while x.punctuation[ndots + 2] isa OPERATOR{15, Tokens.DOT}
+            ndots += 1
+        end
+
+        if length(x.args) == 1
+            a = first(x.args)
+            return Expr(Expr(a.head), (:. for i = 1:ndots)..., Expr.(x.punctuation[ndots + 2:2:col])..., Expr.(a.args)...)
+        end
+        for a in x.args
+            push!(ret.args, Expr(Expr(a.head), (:. for i = 1:ndots)..., Expr.(x.punctuation[ndots + 2:2:col])..., Expr.(a.args)...))
         end 
         return ret
     elseif x.head == CALL

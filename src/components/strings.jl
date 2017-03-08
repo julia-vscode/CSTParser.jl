@@ -4,7 +4,7 @@
 When trying to make an `INSTANCE` from a string token we must check for 
 interpolating operators.
 """
-function parse_string(ps::ParseState)
+function parse_string(ps::ParseState, prefixed = false)
     span = ps.nt.startbyte - ps.t.startbyte
     offset = ps.t.startbyte
     istrip = ps.t.kind == Tokens.TRIPLE_STRING
@@ -15,7 +15,7 @@ function parse_string(ps::ParseState)
     end
 
     # there are interpolations in the string
-    if ismatch(r"\$", lit.val)
+    if ismatch(r"\$", lit.val) && !prefixed
         io = IOBuffer(lit.val)
         ret = EXPR(STRING, [], lit.span)
         pos = 1
