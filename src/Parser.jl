@@ -115,11 +115,8 @@ Handles cases where an expression - `ret` - is not followed by
 """
 function parse_juxtaposition(ps::ParseState, ret)
     if ismacro(ret)
-        if ps.nt.kind ==Tokens.LPAREN
+        if ps.nt.kind ==Tokens.LPAREN && isempty(ps.ws)
             ret = @default ps @closer ps paren parse_call(ps, ret)
-        # elseif ps.ws.kind == NewLineWS || ps.nt.kind == Tokens.ENDMARKER
-        #     next(ps)
-        #     ret = EXPR(MACROCALL, [ret], ret.span)
         else
             ret = EXPR(MACROCALL, [ret], -ps.nt.startbyte + ret.span)
             @nocloser ps ws @closer ps comma while !closer(ps)
@@ -171,6 +168,9 @@ function parse_juxtaposition(ps::ParseState, ret)
         next(ps)
         arg = INSTANCE(ps)
         push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.offset, arg.val))
+    elseif ret isa EXPR && ret.head isa OPERATOR{20, Tokens.PRIME} 
+        nextarg = @precedence ps 11 parse_expression(ps)
+        ret = EXPR(CALL, [OPERATOR{11, Tokens.STAR, false}(0, 0), ret, nextarg], ret.span + nextarg.span)
     else
         for s in stacktrace()
             println(s)

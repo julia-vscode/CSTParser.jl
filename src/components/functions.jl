@@ -31,7 +31,7 @@ function parse_call(ps::ParseState, ret)
     end
     format(ps)
     
-    @noscope ps @nocloser ps newline @closer ps comma @closer ps brace while !closer(ps)
+    @noscope ps @nocloser ps newline @closer ps comma @closer ps paren while !closer(ps)
         a = parse_expression(ps)
         if a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
             a.head = HEAD{Tokens.KW}(a.head.span, a.head.offset)

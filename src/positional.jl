@@ -58,6 +58,8 @@ function start(x::EXPR)
         return Iterator{:quote}(1, length(x.args) + length(x.punctuation))
     elseif x.head == REF
         return _start_ref(x)
+    elseif x.head == VECT
+        return _start_vect(x)
     elseif x.head == TUPLE
         if isempty(x.punctuation) || first(x.punctuation) isa PUNCTUATION{Tokens.COMMA}
             return Iterator{:tuplenoparen}(1, length(x.args) + length(x.punctuation))

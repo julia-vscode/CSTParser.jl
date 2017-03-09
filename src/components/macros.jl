@@ -29,7 +29,8 @@ function parse_macrocall(ps::ParseState)
         next(ps)
         push!(ret.punctuation, INSTANCE(ps))
     else
-        @nocloser ps ws @closer ps comma while !closer(ps)
+        # @nocloser ps ws @closer ps comma while !closer(ps)
+        @default ps while !closer(ps)
             a = @closer ps ws parse_expression(ps)
             push!(ret.args, a)
         end

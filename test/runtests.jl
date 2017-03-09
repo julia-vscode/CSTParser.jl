@@ -1,4 +1,4 @@
-using FactCheck, Parser
+using Parser
 for n in names(Parser, true, true)
     eval(:(import Parser.$n))
 end
@@ -14,25 +14,9 @@ function test_span(x)
     true
 end
 
-function test_parse(str)
-    x = Parser.parse(str)
-    @fact Expr(x)      --> remlineinfo!(Base.parse(str))
-    @fact sizeof(str)  --> x.span
-    @fact test_span(x) --> true
-end
 
+include("parser.jl")
 
-
-include("operators.jl")
-include("curly.jl")
-include("tuples.jl")
-include("functions.jl")
-include("modules.jl")
-include("generators.jl")
-include("macros.jl")
-include("types.jl")
-include("do.jl")
-include("keywords.jl")
 
 const examplemodule = readstring("fullspecexample.jl")
 
@@ -65,10 +49,31 @@ tt = @elapsed timeTokenize(500)
 println(tb/tp)
 
 
-
-facts("fullspec") do
-    x = Parser.parse(examplemodule)
-    sizeof(examplemodule)
-    @fact x.span --> sizeof(examplemodule)
-
+if VERSION.major <=6 && VERSION.prerelease[1] == "dev" && VERSION.prerelease[2]<=2084
+    p = joinpath(dirname(dirname(Base.functionloc(Base.eval, Tuple{Void})[1])),"base")
+    N = 0
+    nF = 0
+    failed  =[]
+    wontparse = []
+    @time for f in readdir(p)
+        str = readstring(joinpath(p,f))
+        ps = ParseState(str)
+        try
+            next(ps)
+            while ps.nt.kind != Tokens.ENDMARKER 
+                x = Expr(parse_expression(ps))
+            end
+            # failed, cnt = check_file(joinpath(p,f))
+            # N+=cnt
+            # nF += length(failed)
+            # append!(allfailed, failed)
+        catch
+            push!(wontparse, f)
+        end
+    end
+    println("These files failed to parse: ")
+    for f in wontparse
+        println("    ", f)
+    end
+    println("failed to parse: $(length(wontparse))")
 end

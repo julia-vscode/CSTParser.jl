@@ -15,15 +15,27 @@ function parse_string(ps::ParseState, prefixed = false)
     end
 
     # there are interpolations in the string
-    if ismatch(r"\$", lit.val) && !prefixed
+    if ismatch(r"(?<!\\)\$", lit.val) && !prefixed
         io = IOBuffer(lit.val)
         ret = EXPR(STRING, [], lit.span)
         pos = 1
+        lc = ' '
         while !eof(io)
-            str1 = readuntil(io, '$')
-            pos+=length(str1)
-            if last(str1) === '$'
-                push!(ret.args, LITERAL{Tokens.STRING}(sizeof(str1) - 1, 0, str1[1:end-1]))
+            io2 = IOBuffer()
+            while !eof(io)
+                c = read(io, Char)
+                # pos += 1
+                write(io2, c)
+                if c == '$' && lc != '\\'
+                    break
+                end
+                lc = c
+            end
+            str1 = String(take!(io2))
+            pos+=endof(str1)
+
+            if last(str1) === '$' && (length(str1) ==1 || str1[end-1] != '\\')#&& str1[endof(str1)-1] != '''
+                push!(ret.args, LITERAL{Tokens.STRING}(endof(str1) - 1, 0, unescape_string(str1[1:end-1])))
                 if peekchar(io) == '('
                     # interp = EXPR(BLOCK, [])
                     ps1 = ParseState(lit.val[pos+1:end])
@@ -37,11 +49,11 @@ function parse_string(ps::ParseState, prefixed = false)
                     interp = INSTANCE(ps1)
                     push!(ret.args, interp)
                     
-                    skip(io, interp.span - (ps1.ws.endbyte - ps1.ws.startbyte + 1))
-                    pos += interp.span - (ps1.ws.endbyte - ps1.ws.startbyte + 1)
+                    skip(io, interp.span - (ps1.ws.endbyte - ps1.ws.startbyte + 0))
+                    pos += interp.span - (ps1.ws.endbyte - ps1.ws.startbyte + 0)
                 end
             else
-                push!(ret.args, LITERAL{Tokens.STRING}(sizeof(str1) - 1, 0, str1))
+                push!(ret.args, LITERAL{Tokens.STRING}(sizeof(str1) - 1, 0, unescape_string(str1)))
             end
         end
         return ret
