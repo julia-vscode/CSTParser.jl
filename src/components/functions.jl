@@ -70,6 +70,20 @@ function parse_call(ps::ParseState, ret)
     push!(ret.punctuation, INSTANCE(ps))
     format(ps)
     ret.span += ps.nt.startbyte
+    # fix arbitrary $ case
+    if ret.args[1] isa OPERATOR{9, Tokens.EX_OR}
+        ret.head = shift!(ret.args)
+    end
+    if length(ret.args)>0 && ismacro(ret.args[1]) #ret.args[1] isa LITERAL{Tokens.MACRO}
+        ret.head = MACROCALL
+    end
+    if ret.head isa IDENTIFIER && ret.head.val == :ccall && 
+       length(ret.args) > 1 && 
+       ret.args[2] isa IDENTIFIER &&
+       (ret.args[2].val == :stdcall || ret.args[2].val == :fastcall || ret.args[2].val == :cdecl || ret.args[2].val == :thiscall)
+       arg = splice!(ret.args, 2)
+       push!(ret.args, EXPR(arg, [], arg.span))    
+    end
     return ret
 end
 

@@ -1,1 +1,4 @@
-bt[do_test_ind + 1:end]
+(begin
+ast, pos = f() do
+        end
+end)

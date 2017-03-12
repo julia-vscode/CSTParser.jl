@@ -14,11 +14,15 @@ function parse_tuple(ps::ParseState, ret)
             ret =  EXPR(TUPLE, SyntaxNode[ret], ps.t.endbyte - start + 1, INSTANCE[op])
         end
     elseif closer(ps)
-        ret = EXPR(TUPLE, SyntaxNode[ret], ret.span + op.span, INSTANCE[op])
+        if ret isa EXPR && ret.head==TUPLE && (length(ret.punctuation)==0 || !(first(ret.punctuation) isa PUNCTUATION{Tokens.LPAREN}))
+            push!(ret.punctuation, op)
+        else
+            ret = EXPR(TUPLE, SyntaxNode[ret], ret.span + op.span, INSTANCE[op])
+        end
     else
         nextarg = @closer ps tuple parse_expression(ps)
-        if ret isa EXPR && ret.head==TUPLE
-            push!(ret.args, nextarg)
+        if ret isa EXPR && ret.head==TUPLE && (length(ret.punctuation)==0 || !(first(ret.punctuation) isa PUNCTUATION{Tokens.LPAREN}))
+            push!(ret.args, nextarg) 
             push!(ret.punctuation, op)
             ret.span += ps.nt.startbyte - start
         else

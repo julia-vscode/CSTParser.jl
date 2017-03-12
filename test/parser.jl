@@ -73,7 +73,8 @@ end
 end
 
 @testset "Tuples" begin
-    for str in ["1,",
+    for str in [
+                "1,",
                 "1,2",
                 "1,2,3",
                 "()",
@@ -85,8 +86,8 @@ end
                 "(a...)",
                 "((a,b)...)",
                 "a,b = c,d",
-                "(a,b = c,d)",
-                "(a,b) = (c,d)"]
+                "(a,b) = (c,d)"
+                ]
         x = Parser.parse(str)
         @test Expr(x) == remlineinfo!(Base.parse(str))
     end
@@ -258,6 +259,7 @@ end
         end
     end
 end
+
 @testset "Generators" begin
     for str in ["(y for y in X)"
                 "((x,y) for x in X, y in Y)"
@@ -275,6 +277,8 @@ end
                 [a
                 for a = 1:2]
                 """
+                "[ V[j][i]::T for i=1:length(V[1]), j=1:length(V) ]"
+                "all(d ≥ 0 for d in B.dims)"
                 ]
         x = Parser.parse(str)
         @test Expr(x) == remlineinfo!(Base.parse(str))
@@ -288,6 +292,8 @@ end
                 "(@mac x)"
                 "Mod.@mac a b c"
                 "[@mac a b]"
+                "@inline get_chunks_id(i::Integer) = _div64(Int(i)-1)+1, _mod64(Int(i)-1)"
+                "@inline f() = (), ()"
                 ]
         x = Parser.parse(str)
         @test Expr(x) == remlineinfo!(Base.parse(str))
@@ -452,5 +458,50 @@ end
             x = Parser.parse(str)
             @test Expr(x) == remlineinfo!(Base.parse(str))
         end
+    end
+end
+
+@testset "No longer Broken things" begin
+    for str in [
+                "[ V[j][i]::T for i=1:length(V[1]), j=1:length(V) ]"
+                "all(d ≥ 0 for d in B.dims)"
+                ":(=)"
+                ":(1)"
+                ":(a)"
+                "\"dimension \$d is not 1 ≤ \$d ≤ \$nd\" "
+
+                "(@_inline_meta(); f(x))"
+                "isa(a,b) != c"
+                "isa(a,a) != isa(a,a)"
+                "@mac return x"
+                "ccall(:gethostname, stdcall, Int32, ())"
+                "a,b,"
+                ]
+        x = Parser.parse(str)
+        @test Expr(x) == remlineinfo!(Base.parse(str))
+    end
+end
+
+@testset "Broken things" begin
+    for str in [
+                # """
+                # A[if n == d
+                #     i
+                # else
+                #     (indices(A,n) for n = 1:nd)
+                # end...]
+                # """
+                "m!=m"
+                """
+                ccall(:jl_finalize_th, Void, (Ptr{Void}, Any,),
+                         Core.getptls(), o)
+                """
+                # """Base.@__doc__(bitstype \$(sizeof(basetype) * 8) \$(esc(typename)) <: Enum{\$(basetype)})"""
+                "(a,b = c,d)"
+                "-(-x)^1"
+                "(Base.@_pure_meta;)"
+                ]
+        x = Parser.parse(str)
+        @test_broken Expr(x) == remlineinfo!(Base.parse(str))
     end
 end

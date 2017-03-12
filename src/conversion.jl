@@ -38,7 +38,7 @@ function Expr(x::LITERAL{Tokens.TRIPLE_STRING})
 end
 
 
-Expr(x::KEYWORD{Tokens.BAREMODULE}) = :module
+# Expr(x::KEYWORD{Tokens.BAREMODULE}) = :module
 
 Expr(x::QUOTENODE) = QuoteNode(Expr(x.val))
 
@@ -64,6 +64,12 @@ function Expr(x::EXPR)
         for a in x.args[2:end]
             push!(ret.args, Expr(a))
         end
+        return ret
+    elseif x.head isa KEYWORD{Tokens.BAREMODULE}
+        ret = Expr(:module)
+        for a in x.args
+            push!(ret.args, Expr(a))
+        end 
         return ret
     elseif x.head isa KEYWORD{Tokens.DO}
         ret = Expr(x.args[1])

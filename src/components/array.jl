@@ -41,6 +41,10 @@ function parse_array(ps::ParseState)
                 next(ps)
                 push!(puncs, INSTANCE(ps))
                 return EXPR(COMPREHENSION, [first_arg], ps.nt.startbyte - start, puncs)
+            elseif ps.ws.kind== SemiColonWS
+                next(ps)
+                push!(puncs, INSTANCE(ps))
+                ret = EXPR(VCAT, [first_arg], ps.nt.startbyte - start, puncs)
             else
                 next(ps)
                 push!(puncs, INSTANCE(ps))

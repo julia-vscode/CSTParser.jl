@@ -58,9 +58,7 @@ Acceptable starting tokens are:
 """
 function parse_expression(ps::ParseState)
     next(ps)
-    if Tokens.begin_keywords < ps.t.kind < Tokens.end_keywords && ps.t.kind != Tokens.DO #&& ps.t.kind != Tokens.END
-        ret = parse_kw(ps, Val{ps.t.kind})
-    elseif ps.t.kind == Tokens.END
+    if Tokens.begin_keywords < ps.t.kind < Tokens.end_keywords && ps.t.kind != Tokens.DO
         ret = parse_kw(ps, Val{ps.t.kind})
     elseif ps.t.kind == Tokens.LPAREN
         ret = parse_paren(ps)
@@ -78,7 +76,6 @@ function parse_expression(ps::ParseState)
             ret = parse_unary(ps, ret)
         end
     elseif ps.t.kind==Tokens.AT_SIGN
-        
         @assert isempty(ps.ws)
         next(ps)
         ret = LITERAL{Tokens.MACRO}(ps.nt.startbyte - ps.t.startbyte + 1, ps.t.startbyte - 1, string("@", ps.t.val))
@@ -119,12 +116,15 @@ function parse_juxtaposition(ps::ParseState, ret)
             ret = @default ps @closer ps paren parse_call(ps, ret)
         else
             ret = EXPR(MACROCALL, [ret], -ps.nt.startbyte + ret.span)
-            @nocloser ps ws @closer ps comma while !closer(ps)
+            while !closer(ps)
                 a = @closer ps ws parse_expression(ps)
                 push!(ret.args, a)
             end
             ret.span += ps.nt.startbyte
         end
+    # elseif ret isa OPERATOR{9, Tokens.EX_OR}
+    #     arg = parse_expression(ps)
+    #     ret = EXPR(ret, [arg], ret.span + arg.span)
     elseif ps.nt.kind == Tokens.FOR
         ret = parse_generator(ps, ret)
     elseif ps.nt.kind == Tokens.DO
@@ -161,7 +161,6 @@ function parse_juxtaposition(ps::ParseState, ret)
         ret = parse_operator(ps, ret, op)
     elseif ret isa IDENTIFIER && ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
         next(ps)
-        # arg = INSTANCE(ps)
         arg = parse_string(ps, true)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
     elseif ret isa EXPR && ret.head isa HEAD{Tokens.KEYWORD} && ps.nt.kind == Tokens.IDENTIFIER
@@ -172,9 +171,8 @@ function parse_juxtaposition(ps::ParseState, ret)
         nextarg = @precedence ps 11 parse_expression(ps)
         ret = EXPR(CALL, [OPERATOR{11, Tokens.STAR, false}(0, 0), ret, nextarg], ret.span + nextarg.span)
     else
-        for s in stacktrace()
-            println(s)
-        end
+        println(first(stacktrace()))
+        print_with_color(:green, string("Failed at: ", position(ps.l.io), "\n"))
         for f in fieldnames(ps.closer)
             if getfield(ps.closer, f)==true
                 println(f, ": true")
@@ -217,30 +215,6 @@ end
 
 
 
-
-# """
-#     parse_semicolon(ps, ret)
-
-# Constructs a `block` having hit a `;` while parsing an expression.
-# """
-# function parse_semicolon(ps::ParseState, ret)
-#     next(ps)
-#     op = INSTANCE(ps)
-#     if closer(ps)
-#         ret = EXPR(BLOCK, [ret], ret.span, [op])
-#     else
-#         nextarg = @closer ps semicolon parse_expression(ps)
-#         if ret isa EXPR && ret.head == BLOCK && last(ret.punctuation) isa PUNCTUATION{Tokens.SEMICOLON}
-#             push!(ret.args, nextarg)
-#             push!(ret.punctuation, op)
-#             ret.span += nextarg.span + op.span
-#         else
-#             ret = EXPR(BLOCK, [ret, nextarg], ret.span, [op])
-#         end
-#     end
-#     return ret
-# end
-
 """
     parse_paren(ps, ret)
 
@@ -252,7 +226,9 @@ function parse_paren(ps::ParseState)
     openparen = INSTANCE(ps)
     format(ps)
     if ps.nt.kind == Tokens.RPAREN
-        ret = EXPR(TUPLE, [])
+        next(ps)
+        closeparen = INSTANCE(ps)
+        return EXPR(TUPLE, [], ps.nt.startbyte - start, [openparen, closeparen])
     else
         ret = EXPR(BLOCK, [], -ps.nt.startbyte)
         while ps.nt.kind != Tokens.RPAREN

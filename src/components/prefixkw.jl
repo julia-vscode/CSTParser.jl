@@ -2,27 +2,39 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONST}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     arg = parse_expression(ps)
-    return EXPR(kw, SyntaxNode[arg], ps.nt.startbyte - start)
+    return EXPR(kw, [arg], ps.nt.startbyte - start)
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.GLOBAL}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     arg = parse_expression(ps)
-    return EXPR(kw, SyntaxNode[arg], ps.nt.startbyte - start)
+    if arg isa EXPR && arg.head isa KEYWORD{Tokens.CONST}
+        ret = EXPR(arg.head, [arg], ps.nt.startbyte - start)
+        arg.head = kw
+    else
+        ret = EXPR(kw, [arg], ps.nt.startbyte - start)
+    end
+    return ret
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.LOCAL}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
-    arg = parse_expression(ps)
-    return EXPR(kw, SyntaxNode[arg], ps.nt.startbyte - start)
+    arg = @default ps parse_expression(ps)
+    if arg isa EXPR && arg.head isa KEYWORD{Tokens.CONST}
+        ret = EXPR(arg.head, [arg], ps.nt.startbyte - start)
+        arg.head = kw
+    else
+        ret = EXPR(kw, [arg], ps.nt.startbyte - start)
+    end
+    return ret
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.RETURN}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
-    args = SyntaxNode[closer(ps) ? NOTHING : parse_expression(ps)]
+    args = @default ps SyntaxNode[closer(ps) ? NOTHING : parse_expression(ps)]
     return  EXPR(kw, args, ps.nt.startbyte - start)
 end
 

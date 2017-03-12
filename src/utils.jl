@@ -1,5 +1,5 @@
 function closer(ps::ParseState)
-    (ps.closer.newline && ps.ws.kind == NewLineWS) ||
+    (ps.closer.newline && ps.ws.kind == NewLineWS && ps.t.kind != Tokens.COMMA) ||
     (ps.closer.semicolon && ps.ws.kind == SemiColonWS) ||
     (isoperator(ps.nt) && precedence(ps.nt)<=ps.closer.precedence) ||
     (ps.nt.kind == Tokens.LPAREN && ps.closer.precedence>14) ||
@@ -8,8 +8,8 @@ function closer(ps::ParseState)
     (ps.nt.kind == Tokens.COMMA && ps.closer.precedence>0) ||
     (ps.closer.eof && ps.nt.kind==Tokens.ENDMARKER) ||
     (ps.closer.comma && iscomma(ps.nt)) || 
-    (ps.closer.tuple && (iscomma(ps.nt) || (!ps.closer.paren && isassignment(ps.nt)))) ||
-    (ps.nt.kind==Tokens.FOR && ps.closer.precedence>14) ||
+    (ps.closer.tuple && (iscomma(ps.nt) || (isassignment(ps.nt)))) ||
+    (ps.nt.kind==Tokens.FOR && ps.closer.precedence>-1) ||
     (ps.closer.paren && ps.nt.kind==Tokens.RPAREN) ||
     (ps.closer.brace && ps.nt.kind==Tokens.RBRACE) ||
     (ps.closer.square && ps.nt.kind==Tokens.RSQUARE) ||
@@ -283,6 +283,9 @@ function check_file(f::String)
     failed = []
     while !eof(io)
         if ps.nt.endbyte == length(str)-1
+            break
+        end
+        if ismod && ps.nt.kind == Tokens.END && ps.nws.endbyte > (sizeof(str)-10)
             break
         end
         cnt+=1

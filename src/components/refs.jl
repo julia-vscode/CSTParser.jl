@@ -9,7 +9,11 @@ function parse_ref(ps::ParseState, ret)
     next(ps)
     ref = parse_array(ps)
     if ref isa EXPR && ref.head == VECT
-        ret = EXPR(REF, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+        # if !isempty(ref.args) && ref.args[1] isa EXPR && ref.args[1].head isa OPERATOR{0, Tokens.DDDOT}
+        #     ret = EXPR(TYPED_VCAT, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+        # else
+            ret = EXPR(REF, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+        # end
     elseif ref isa EXPR && ref.head == HCAT
         ret = EXPR(TYPED_HCAT, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
     elseif ref isa EXPR && ref.head == VCAT

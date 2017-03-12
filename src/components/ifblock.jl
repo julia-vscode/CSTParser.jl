@@ -29,6 +29,7 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
         push!(elseblock.args, parse_if(ps, true, puncs))
         elseblock.span = ps.nt.startbyte - startelseblock
     end
+    elsekw = ps.nt.kind == Tokens.ELSE
     if ps.nt.kind==Tokens.ELSE
         next(ps)
         start_col = ps.t.startpos[2]
@@ -38,12 +39,11 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
         @default ps parse_block(ps, start_col, elseblock)
         elseblock.span = ps.nt.startbyte - startelseblock
     end
-
-    !nested && next(ps)
-    !nested && push!(puncs, INSTANCE(ps))
-    ret = isempty(elseblock.args) ? 
+    ret = isempty(elseblock.args) && !elsekw ? 
         EXPR(kw, SyntaxNode[cond, ifblock], ps.nt.startbyte - start, puncs) : 
         EXPR(kw, SyntaxNode[cond, ifblock, elseblock], ps.nt.startbyte - start, puncs)
+    !nested && next(ps)
+    !nested && push!(ret.punctuation, INSTANCE(ps))
     return ret
 end
 
