@@ -64,12 +64,6 @@ function parse_expression(ps::ParseState)
         ret = parse_paren(ps)
     elseif ps.t.kind == Tokens.LSQUARE
         ret = parse_array(ps)
-    # elseif ps.t.kind == Tokens.TRIPLE_STRING && ps.current_scope.id == TOPLEVEL
-    #     ret = parse_doc(ps)
-    # elseif ps.t.kind == Tokens.OR && ps.closer.quotemode
-    #     head = INSTANCE(ps)
-    #     arg = parse_expression(ps)
-    #     ret = EXPR(head, arg, head.span + arg.span)
     elseif isinstance(ps.t) || isoperator(ps.t)
         ret = INSTANCE(ps)
         if ret isa OPERATOR{8,Tokens.COLON} && ps.nt.kind != Tokens.COMMA
@@ -122,9 +116,6 @@ function parse_juxtaposition(ps::ParseState, ret)
             end
             ret.span += ps.nt.startbyte
         end
-    # elseif ret isa OPERATOR{9, Tokens.EX_OR}
-    #     arg = parse_expression(ps)
-    #     ret = EXPR(ret, [arg], ret.span + arg.span)
     elseif ps.nt.kind == Tokens.FOR
         ret = parse_generator(ps, ret)
     elseif ps.nt.kind == Tokens.DO
@@ -132,7 +123,7 @@ function parse_juxtaposition(ps::ParseState, ret)
     elseif (ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN)
         arg = parse_expression(ps)
         ret = EXPR(CALL, [OPERATOR{11,Tokens.STAR,false}(0, 0), ret, arg], ret.span + arg.span)
-    elseif ps.nt.kind==Tokens.LPAREN
+    elseif ps.nt.kind==Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR})
         if isempty(ps.ws)
             ret = @default ps @closer ps paren parse_call(ps, ret)
         else

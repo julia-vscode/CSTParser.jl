@@ -1,4 +1,1 @@
-(begin
-ast, pos = f() do
-        end
-end)
+@inbounds C[ind] = @ncall $nargs f val

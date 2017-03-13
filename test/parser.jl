@@ -476,6 +476,12 @@ end
                 "@mac return x"
                 "ccall(:gethostname, stdcall, Int32, ())"
                 "a,b,"
+                "m!=m"
+                """
+                ccall(:jl_finalize_th, Void, (Ptr{Void}, Any,),
+                         Core.getptls(), o)
+                """
+                "\$(x...)"
                 ]
         x = Parser.parse(str)
         @test Expr(x) == remlineinfo!(Base.parse(str))
@@ -491,11 +497,6 @@ end
                 #     (indices(A,n) for n = 1:nd)
                 # end...]
                 # """
-                "m!=m"
-                """
-                ccall(:jl_finalize_th, Void, (Ptr{Void}, Any,),
-                         Core.getptls(), o)
-                """
                 # """Base.@__doc__(bitstype \$(sizeof(basetype) * 8) \$(esc(typename)) <: Enum{\$(basetype)})"""
                 "(a,b = c,d)"
                 "-(-x)^1"
