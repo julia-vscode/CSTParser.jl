@@ -81,12 +81,6 @@ function Expr(x::EXPR)
                 push!(ret.args, Expr(a))
             end
             return ret
-        # else
-        #     ret =  Expr(:macrocall)
-        #     for a in x.args
-        #         push!(ret.args, Expr(a))
-        #     end
-        #     return ret
         end
     elseif x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL} || x.head isa KEYWORD{Tokens.USING}
         ret = Expr(Expr(x.head))
@@ -97,7 +91,7 @@ function Expr(x::EXPR)
             push!(ret.args, Expr(a))
         end 
         return ret
-    elseif x.head == TOPLEVEL && (x.punctuation[1] isa KEYWORD{Tokens.IMPORT} || x.punctuation[1] isa KEYWORD{Tokens.IMPORTALL} || x.punctuation[1] isa KEYWORD{Tokens.USING})
+    elseif x.head == TOPLEVEL && !(isempty(x.punctuation)) && (x.punctuation[1] isa KEYWORD{Tokens.IMPORT} || x.punctuation[1] isa KEYWORD{Tokens.IMPORTALL} || x.punctuation[1] isa KEYWORD{Tokens.USING})
         ret = Expr(Expr(x.head))
         col = findfirst(x-> x isa OPERATOR{8, Tokens.COLON}, x.punctuation)
         ndots = 0
@@ -128,10 +122,14 @@ function Expr(x::EXPR)
         return ret
     elseif x.head isa KEYWORD{Tokens.FOR}
         ret = Expr(Expr(x.head))
-        if x.args[1].args[1] isa OPERATOR{6, Tokens.IN}
-            push!(ret.args, Expr(:(=), Expr.(x.args[1].args[2:end])...))
+        if x.args[1] isa EXPR && x.args[1].head == BLOCK
+            ranges = Expr(:block)
+            for a in x.args[1].args
+                push!(ranges.args, fixranges(a))
+            end
+            push!(ret.args, ranges)
         else
-            push!(ret.args, Expr(x.args[1]))
+            push!(ret.args, fixranges(x.args[1]))
         end
         for a in x.args[2:end]
             push!(ret.args, Expr(a))
@@ -144,6 +142,7 @@ function Expr(x::EXPR)
     end 
     return ret
 end
+
 
 
 fixranges(a::INSTANCE) = Expr(a)

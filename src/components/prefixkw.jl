@@ -13,7 +13,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.GLOBAL}})
         ret = EXPR(arg.head, [arg], ps.nt.startbyte - start)
         arg.head = kw
     else
-        ret = EXPR(kw, [arg], ps.nt.startbyte - start)
+        if arg isa EXPR && arg.head == TUPLE && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
+            ret = EXPR(kw, [arg.args...], ps.nt.startbyte - start, arg.punctuation)
+        else
+            ret = EXPR(kw, [arg], ps.nt.startbyte - start)
+        end
     end
     return ret
 end
@@ -26,7 +30,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LOCAL}})
         ret = EXPR(arg.head, [arg], ps.nt.startbyte - start)
         arg.head = kw
     else
-        ret = EXPR(kw, [arg], ps.nt.startbyte - start)
+        if arg isa EXPR && arg.head == TUPLE && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
+            ret = EXPR(kw, [arg.args...], ps.nt.startbyte - start, arg.punctuation)
+        else
+            ret = EXPR(kw, [arg], ps.nt.startbyte - start)
+        end
     end
     return ret
 end

@@ -23,6 +23,7 @@ type Closer
     paren::Bool
     quotemode::Bool
     brace::Bool
+    inmacro::Bool
     square::Bool
     block::Bool
     ifelse::Bool
@@ -32,7 +33,7 @@ type Closer
     precedence::Int
 end
 
-Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, -1)
+Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, -1)
 
 """
     ParseState
@@ -88,7 +89,7 @@ function next(ps::ParseState)
     ps.nt, ps.done  = next(ps.l, ps.done)
 
     # Handle dotted operators
-    if ps.t.kind == Tokens.DOT && ps.ws.kind == EmptyWS && isoperator(ps.nt) && !(ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA)
+    if ps.t.kind == Tokens.DOT && ps.ws.kind == EmptyWS && isoperator(ps.nt) && !non_dotted_op(ps.nt)
         ps.t = ps.nt
         ps.dot = true
         # combines whitespace, comments and semicolons

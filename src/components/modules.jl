@@ -47,7 +47,7 @@ function parse_dot_mod(ps::ParseState)
             a.offset -=1
             push!(args, a)
         elseif ps.t.kind == Tokens.LPAREN
-            a = EXPR(BLOCK, [], -ps.t.startbyte, [INSTANCE(ps)])
+            a = EXPR(HEAD{InvisibleBrackets}(0, 0), [], -ps.t.startbyte, [INSTANCE(ps)])
             push!(a.args, @default ps @closer ps paren parse_expression(ps))
             next(ps)
             push!(a.punctuation, INSTANCE(ps))

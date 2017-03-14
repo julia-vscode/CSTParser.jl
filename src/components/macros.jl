@@ -26,13 +26,12 @@ function parse_macrocall(ps::ParseState)
     if isempty(ps.ws) && ps.nt.kind == Tokens.LPAREN
         next(ps)
         push!(ret.punctuation, INSTANCE(ps))
-        args = @nocloser ps newline @closer ps paren parse_list(ps, ret.punctuation)
+        args = @default ps @nocloser ps newline @closer ps paren parse_list(ps, ret.punctuation)
         append!(ret.args, args)
         next(ps)
         push!(ret.punctuation, INSTANCE(ps))
     else
-        # @nocloser ps ws @closer ps comma while !closer(ps)
-        @default ps while !closer(ps)
+        @default ps @closer ps inmacro while !closer(ps)
             a = @closer ps ws parse_expression(ps)
             push!(ret.args, a)
         end

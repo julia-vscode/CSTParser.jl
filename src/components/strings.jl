@@ -9,16 +9,16 @@ function parse_string(ps::ParseState, prefixed = false)
     offset = ps.t.startbyte
     istrip = ps.t.kind == Tokens.TRIPLE_STRING
     if istrip
-        # val = startswith(ps.t.val, "\"\"\"\n") ? ps.t.val[5:end-3] : ps.t.val[4:end-3]
-        # # val = Base.unindent(val, Base.indentation(val)[1])
-        # lit = LITERAL{ps.t.kind}(span, offset, val)
         lit = unindent_triple_string(ps)
     else
         lit = LITERAL{ps.t.kind}(span, offset, ps.t.val[2:end-1])
     end
 
     # there are interpolations in the string
-    if prefixed
+    if prefixed!=false
+        if prefixed isa INSTANCE && prefixed.val == :r
+            lit.val = replace(lit.val, "\\\"", "\"")
+        end
         return lit
     elseif ismatch(r"(?<!\\)\$", lit.val) 
         io = IOBuffer(lit.val)
@@ -76,11 +76,10 @@ function unindent_triple_string(ps::ParseState)
     indent = -1
     val = startswith(ps.t.val, "\"\"\"\n") ? ps.t.val[5:end-3] : ps.t.val[4:end-3]
     io = IOBuffer(val)
-
     while !eof(io)
         c = readuntil(io, '\n')
         eof(io) && break
-        c == '\n' && skip(io,1)
+        peekchar(io) == '\n' && skip(io,1)
         cnt = 0
         while iswhitespace(peekchar(io)) && peekchar(io) != '\n'
             read(io, Char)

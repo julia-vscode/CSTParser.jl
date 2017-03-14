@@ -70,7 +70,6 @@ function parse_expression(ps::ParseState)
             ret = parse_unary(ps, ret)
         end
     elseif ps.t.kind==Tokens.AT_SIGN
-        @assert isempty(ps.ws)
         ret = parse_macrocall(ps)
     else
         error("Expression started with $(ps)")
@@ -109,8 +108,8 @@ function parse_juxtaposition(ps::ParseState, ret)
     elseif ps.nt.kind == Tokens.DO
         ret = parse_do(ps, ret)
     elseif (ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN)
-        arg = parse_expression(ps)
-        ret = EXPR(CALL, [OPERATOR{11,Tokens.STAR,false}(0, 0), ret, arg], ret.span + arg.span)
+        op = OPERATOR{11,Tokens.STAR,false}(0, 0)
+        ret = parse_operator(ps, ret, op)
     elseif ps.nt.kind==Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR})
         if isempty(ps.ws)
             ret = @default ps @closer ps paren parse_call(ps, ret)
@@ -140,7 +139,7 @@ function parse_juxtaposition(ps::ParseState, ret)
         ret = parse_operator(ps, ret, op)
     elseif ret isa IDENTIFIER && ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
         next(ps)
-        arg = parse_string(ps, true)
+        arg = parse_string(ps, ret)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
     elseif ret isa EXPR && ret.head isa HEAD{Tokens.KEYWORD} && ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
@@ -305,28 +304,41 @@ function parse(str::String, cont = false)
     return x
 end
 
+
+function parse_doc(ps::ParseState, ret)
+    (ps.nt.kind == Tokens.ENDMARKER) && return ret
+    if ret isa LITERAL{Tokens.STRING} || ret isa LITERAL{Tokens.TRIPLE_STRING} || (ret isa EXPR && ret.head==STRING)
+        doc = ret
+        ret = parse_expression(ps)
+        ret = EXPR(MACROCALL, [GlobalRefDOC, doc, ret], doc.span + ret.span)
+    end
+    return ret
+end
+
 """
     parse(str, cont = false)
 
 """
 function parse(ps::ParseState, cont = false)
     if cont
-        ret = EXPR(TOPLEVEL, [], 0)
+        top = EXPR(TOPLEVEL, [], 0)
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
-            push!(ret.args, LITERAL{nothing}(ps.nt.startbyte, ps.nt.startbyte, :nothing))
+            push!(top.args, LITERAL{nothing}(ps.nt.startbyte, ps.nt.startbyte, :nothing))
         end
         while !ps.done
-            push!(ret.args, parse_expression(ps))
+            ret = parse_expression(ps)
+            ret = parse_doc(ps, ret)
+            push!(top.args, ret)
         end
         ret.span += ps.nt.startbyte
-
     else
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
             ret = LITERAL{nothing}(ps.nt.startbyte, ps.nt.startbyte, :nothing)
         else
             ret = parse_expression(ps)
+            ret = parse_doc(ps, ret)
         end
     end
 

@@ -83,7 +83,24 @@ istimes(t::Token) = Tokens.begin_times < t.kind < Tokens.end_times
 
 ispower(t::Token) = Tokens.begin_power < t.kind < Tokens.end_power
 
-
+function non_dotted_op(t::Token)
+    k = t.kind
+    return (k == Tokens.COLON_EQ || 
+            k == Tokens.PAIR_ARROW ||
+            k == Tokens.EX_OR_EQ ||
+            k == Tokens.CONDITIONAL ||
+            k == Tokens.LAZY_OR ||
+            k == Tokens.LAZY_AND ||
+            k == Tokens.ISSUBTYPE ||
+            k == Tokens.GREATER_COLON ||
+            k == Tokens.LPIPE ||
+            k == Tokens.RPIPE ||
+            k == Tokens.EX_OR ||
+            k == Tokens.COLON ||
+            k == Tokens.DECLARATION ||
+            k == Tokens.IN ||
+            k == Tokens.ISA)
+end
 
 function issyntaxcall{P,K}(op::OPERATOR{P,K})
     P == 1 && !(K == Tokens.APPROX) ||
@@ -290,6 +307,8 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
     end
 
     if nextarg isa INSTANCE
+        ret = EXPR(op, SyntaxNode[ret, QUOTENODE(nextarg, nextarg.span, [])], op.span + ret.span + nextarg.span)
+    elseif nextarg isa EXPR && nextarg.head isa OPERATOR{9, Tokens.EX_OR}
         ret = EXPR(op, SyntaxNode[ret, QUOTENODE(nextarg, nextarg.span, [])], op.span + ret.span + nextarg.span)
     elseif nextarg isa EXPR && nextarg.head == MACROCALL
         mname = EXPR(op,[ret, QUOTENODE(nextarg.args[1], nextarg.args[1].span, [])], ret.span + op.span + nextarg.args[1].span)

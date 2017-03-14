@@ -1,4 +1,4 @@
-function closer(ps::ParseState)
+function closer(ps::ParseState, ret=nothing)
     (ps.closer.newline && ps.ws.kind == NewLineWS && ps.t.kind != Tokens.COMMA) ||
     (ps.closer.semicolon && ps.ws.kind == SemiColonWS) ||
     (isoperator(ps.nt) && precedence(ps.nt)<=ps.closer.precedence) ||
@@ -8,16 +8,17 @@ function closer(ps::ParseState)
     (ps.nt.kind == Tokens.COMMA && ps.closer.precedence>0) ||
     ps.nt.kind==Tokens.ENDMARKER ||
     (ps.closer.comma && iscomma(ps.nt)) || 
-    (ps.closer.tuple && (iscomma(ps.nt) || (isassignment(ps.nt)))) ||
+    (ps.closer.tuple && (iscomma(ps.nt) || isassignment(ps.nt))) ||
     (ps.nt.kind==Tokens.FOR && ps.closer.precedence>-1) ||
     (ps.closer.paren && ps.nt.kind==Tokens.RPAREN) ||
     (ps.closer.brace && ps.nt.kind==Tokens.RBRACE) ||
     (ps.closer.square && ps.nt.kind==Tokens.RSQUARE) ||
     (ps.closer.block && ps.nt.kind==Tokens.END) ||
+    # (ps.closer.inmacro && ps.nt.kind==Tokens.FOR) ||
     (ps.closer.ifelse && ps.nt.kind==Tokens.ELSEIF || ps.nt.kind==Tokens.ELSE) ||
     (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt)<=1 || ps.nt.kind==Tokens.COLON)) ||
     (ps.closer.trycatch && (ps.nt.kind==Tokens.CATCH || ps.nt.kind==Tokens.FINALLY || ps.nt.kind==Tokens.END)) ||
-    (ps.closer.ws && (!isempty(ps.ws) && !((isoperator(ps.nt)) || ps.nt.kind == Tokens.COMMA || ps.t.kind == Tokens.COMMA|| ps.nt.kind == Tokens.FOR || ps.nt.kind == Tokens.DO)))
+    (ps.closer.ws && (!isempty(ps.ws) && !((isoperator(ps.nt) && ps.nt.kind!=Tokens.EX_OR) || ps.nt.kind == Tokens.COMMA || ps.t.kind == Tokens.COMMA|| ps.nt.kind == Tokens.FOR || ps.nt.kind == Tokens.DO)))
 end
 
 """
@@ -75,7 +76,7 @@ macro default(ps, body)
     quote
         local tmp1 = $(esc(ps)).closer.newline
         local tmp2 = $(esc(ps)).closer.semicolon
-        local tmp3 = $(esc(ps)).closer.eof
+        # local tmp3 = $(esc(ps)).closer.eof
         local tmp4 = $(esc(ps)).closer.tuple
         local tmp5 = $(esc(ps)).closer.comma
         # local tmp6 = $(esc(ps)).closer.paren
@@ -89,7 +90,7 @@ macro default(ps, body)
         local tmp14 = $(esc(ps)).closer.precedence
         $(esc(ps)).closer.newline = true
         $(esc(ps)).closer.semicolon = true
-        $(esc(ps)).closer.eof = true
+        # $(esc(ps)).closer.eof = true
         $(esc(ps)).closer.tuple = false
         $(esc(ps)).closer.comma = false
         # $(esc(ps)).closer.paren = false
@@ -106,7 +107,7 @@ macro default(ps, body)
         
         $(esc(ps)).closer.newline = tmp1
         $(esc(ps)).closer.semicolon = tmp2
-        $(esc(ps)).closer.eof = tmp3
+        # $(esc(ps)).closer.eof = tmp3
         $(esc(ps)).closer.tuple = tmp4
         $(esc(ps)).closer.comma = tmp5
         # $(esc(ps)).closer.paren = tmp6
@@ -131,7 +132,7 @@ macro clear(ps, body)
     quote
         local tmp1 = $(esc(ps)).closer.newline
         local tmp2 = $(esc(ps)).closer.semicolon
-        local tmp3 = $(esc(ps)).closer.eof
+        # local tmp3 = $(esc(ps)).closer.eof
         local tmp4 = $(esc(ps)).closer.tuple
         local tmp5 = $(esc(ps)).closer.comma
         # local tmp6 = $(esc(ps)).closer.paren
@@ -145,7 +146,7 @@ macro clear(ps, body)
         local tmp14 = $(esc(ps)).closer.precedence
         $(esc(ps)).closer.newline = false
         $(esc(ps)).closer.semicolon = false
-        $(esc(ps)).closer.eof = false
+        # $(esc(ps)).closer.eof = false
         $(esc(ps)).closer.tuple = false
         $(esc(ps)).closer.comma = false
         # $(esc(ps)).closer.paren = false
@@ -162,7 +163,7 @@ macro clear(ps, body)
         
         $(esc(ps)).closer.newline = tmp1
         $(esc(ps)).closer.semicolon = tmp2
-        $(esc(ps)).closer.eof = tmp3
+        # $(esc(ps)).closer.eof = tmp3
         $(esc(ps)).closer.tuple = tmp4
         $(esc(ps)).closer.comma = tmp5
         # $(esc(ps)).closer.paren = tmp6

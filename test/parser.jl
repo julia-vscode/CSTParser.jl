@@ -487,6 +487,7 @@ end
                 "@inbounds @ncall a b c"
                 "(Base.@_pure_meta;)"
                 "@M a b->(@N c = @O d e f->g)"
+                "4x/y"
                 ]
         x = Parser.parse(str)
         @test Expr(x) == remlineinfo!(Base.parse(str))
@@ -505,6 +506,13 @@ end
                 # """Base.@__doc__(bitstype \$(sizeof(basetype) * 8) \$(esc(typename)) <: Enum{\$(basetype)})"""
                 "(a,b = c,d)"
                 "-(-x)^1"
+                "[@spawn f(R, first(c), last(c)) for c in splitrange(length(R), nworkers())]"
+                """
+                @spawnat(p,
+                    let m = a
+                        isa(m, Exception) ? m : nothing
+                    end)
+                """
                 ]
         x = Parser.parse(str)
         @test_broken Expr(x) == remlineinfo!(Base.parse(str))

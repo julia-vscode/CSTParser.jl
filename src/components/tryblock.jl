@@ -32,7 +32,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
             push!(ret.punctuation, INSTANCE(ps))
             caught = parse_expression(ps)
             catchblock = @closer ps trycatch parse_block(ps, start_col)
-            if !(caught isa INSTANCE)
+            if !(caught isa IDENTIFIER)
                 unshift!(catchblock.args, caught)
                 catchblock.span = caught.span
                 caught = FALSE
