@@ -124,7 +124,7 @@ function parse_juxtaposition(ps::ParseState, ret)
         end
     elseif ps.nt.kind==Tokens.LSQUARE
         if isempty(ps.ws)
-            ret = parse_ref(ps, ret)
+            ret = @nocloser ps block parse_ref(ps, ret)
         else
             error("space before \"[\" not allowed in \"$(Expr(ret)) {\"")
         end

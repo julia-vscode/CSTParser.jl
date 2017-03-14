@@ -1,4 +1,1 @@
-@spawnat(p,
-    let m = a
-        isa(m, Exception) ? m : nothing
-    end)
+try x catch; Any end

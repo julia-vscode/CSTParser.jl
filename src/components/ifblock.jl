@@ -8,7 +8,7 @@ Parse an `if` block.
 function parse_if(ps::ParseState, nested = false, puncs = [])
     start = ps.t.startbyte
     kw = INSTANCE(ps)
-    cond = @default ps @closer ps ws @closer ps block parse_expression(ps)
+    cond = @default ps @closer ps ws parse_expression(ps)
 
     if ps.nt.kind==Tokens.END
         next(ps)
