@@ -37,13 +37,10 @@ function Expr(x::LITERAL{Tokens.TRIPLE_STRING})
     x.val
 end
 
-
-# Expr(x::KEYWORD{Tokens.BAREMODULE}) = :module
-
 Expr(x::QUOTENODE) = QuoteNode(Expr(x.val))
 
 function Expr(x::EXPR)
-    if x.head==BLOCK && length(x.punctuation)==2 && first(x.punctuation) isa PUNCTUATION{Tokens.LPAREN} && length(x.args) ==1
+    if x.head isa HEAD{InvisibleBrackets}
         return Expr(x.args[1])
     elseif x.head isa KEYWORD{Tokens.BEGIN}
         return Expr(x.args[1])

@@ -234,7 +234,7 @@ ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
 function remlineinfo!(x)
     if isa(x,Expr)
         id = find(map(x->isa(x,Expr) && x.head==:line,x.args))
-        deleteat!(x.args,id)
+        deleteat!(x.args, id)
         for j in x.args
             remlineinfo!(j)
         end

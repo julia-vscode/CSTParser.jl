@@ -287,11 +287,12 @@ end
 
 @testset "Macros " begin
     for str in  [
+                "@mac"
                 "@mac a b c"
                 "@mac f(5)"
                 "(@mac x)"
                 "Mod.@mac a b c"
-                "[@mac a b]"
+                # "[@mac a b]"
                 "@inline get_chunks_id(i::Integer) = _div64(Int(i)-1)+1, _mod64(Int(i)-1)"
                 "@inline f() = (), ()"
                 ]
@@ -501,6 +502,9 @@ end
                 "(a,b = c,d)"
                 "-(-x)^1"
                 "(Base.@_pure_meta;)"
+                "@inbounds @ncall a b c"
+                "(Base.@_pure_meta;)"
+                "@M a b->(@N c = @O d e f->g)"
                 ]
         x = Parser.parse(str)
         @test_broken Expr(x) == remlineinfo!(Base.parse(str))

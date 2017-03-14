@@ -138,7 +138,7 @@ function parse_unary(ps::ParseState, op::OPERATOR{8,Tokens.COLON})
         return op
     else
         arg = @precedence ps 20 parse_expression(ps)
-        if arg isa EXPR && arg.head == BLOCK && length(arg.args) == 1
+        if arg isa EXPR && arg.head isa HEAD{InvisibleBrackets} && length(arg.args) == 1
             if (first(arg.args) isa OPERATOR || first(arg.args) isa LITERAL || first(arg.args) isa INSTANCE)
                 return QUOTENODE(arg.args[1], arg.span, arg.punctuation)
             end
@@ -285,8 +285,8 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
     elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA
         next(ps)
         nextarg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, ps.t.startbyte, Symbol(lowercase(string(ps.t.kind))))
-    elseif ps.nt.kind == Tokens.AT_SIGN
-        nextarg = @closer ps ws @precedence ps 15-LtoR(15) parse_expression(ps)
+    # elseif ps.nt.kind == Tokens.AT_SIGN
+    #     nextarg = @closer ps ws @precedence ps 15-LtoR(15) parse_expression(ps)
     else
         nextarg = @precedence ps 15-LtoR(15) parse_expression(ps)
     end

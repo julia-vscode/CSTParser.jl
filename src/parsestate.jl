@@ -5,6 +5,8 @@ typealias EmptyWS Tokens.begin_delimiters
 typealias SemiColonWS Tokens.end_delimiters
 typealias NewLineWS Tokens.begin_literal
 typealias WS Tokens.end_literal
+    
+typealias InvisibleBrackets Tokens.begin_invisble_keywords
 
 """
     Closer

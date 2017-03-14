@@ -73,15 +73,15 @@ function parse_expression(ps::ParseState)
         @assert isempty(ps.ws)
         next(ps)
         ret = LITERAL{Tokens.MACRO}(ps.nt.startbyte - ps.t.startbyte + 1, ps.t.startbyte - 1, string("@", ps.t.val))
-        if ps.ws.kind == SemiColonWS || ps.ws.kind == NewLineWS || ps.nt.kind == Tokens.ENDMARKER
-            ret = EXPR(MACROCALL, [ret], ret.span)
-        end
     else
         error("Expression started with $(ps)")
     end
 
-    while !closer(ps)
+    while !closer(ps) && !(ps.closer.precedence == 15 && ismacro(ret))
         ret = parse_juxtaposition(ps, ret)
+    end
+    if ps.closer.precedence != 15 && closer(ps) && ret isa LITERAL{Tokens.MACRO}
+        ret = EXPR(MACROCALL, [ret], ret.span)
     end
 
     return ret
@@ -216,33 +216,40 @@ function parse_paren(ps::ParseState)
     start = ps.t.startbyte
     openparen = INSTANCE(ps)
     format(ps)
+    # handle empty case
     if ps.nt.kind == Tokens.RPAREN
         next(ps)
         closeparen = INSTANCE(ps)
         return EXPR(TUPLE, [], ps.nt.startbyte - start, [openparen, closeparen])
-    else
-        ret = EXPR(BLOCK, [], -ps.nt.startbyte)
-        while ps.nt.kind != Tokens.RPAREN
-            a = @default ps @closer ps paren parse_expression(ps)
-            push!(ret.args, a)
-        end
-        ret.span +=ps.nt.startbyte
     end
+    
+    ret = EXPR(BLOCK, [], 0)
+    while ps.nt.kind != Tokens.RPAREN
+        a = @default ps @closer ps paren parse_expression(ps)
+        push!(ret.args, a)
+    end
+
+    if length(ret.args) == 1
+        if ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{0,Tokens.DDDOT} && ps.ws.kind != SemiColonWS
+            ret.args[1] = EXPR(TUPLE,[ret.args[1]], ret.args[1].span)
+        end
+
+        if ps.ws.kind != SemiColonWS
+            ret.head = HEAD{InvisibleBrackets}(0, 0)
+        end
+    elseif ret isa EXPR && (ret.head == TUPLE || ret.head == BLOCK)
+    else
+        ret = EXPR(BLOCK, [ret], ps.nt.startbyte - start)
+    end
+    # handle closing ')'
     next(ps)
     closeparen = INSTANCE(ps)
-    if length(ret.args)==1 && ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{0,Tokens.DDDOT}
-        ret.args[1] = EXPR(TUPLE,[ret.args[1]], ret.args[1].span)
-        unshift!(ret.punctuation, openparen)
-        push!(ret.punctuation, closeparen)
-        ret.span = ps.nt.startbyte - start
-    elseif ret isa EXPR && (ret.head == TUPLE || ret.head == BLOCK)
-        unshift!(ret.punctuation, openparen)
-        push!(ret.punctuation, closeparen)
-        format(ps)
-        ret.span += openparen.span + closeparen.span
-    else
-        ret = EXPR(BLOCK, [ret], ps.nt.startbyte - start, [openparen, closeparen])
-    end
+    format(ps)
+    
+    unshift!(ret.punctuation, openparen)
+    push!(ret.punctuation, closeparen)
+    ret.span = ps.nt.startbyte - start
+
     return ret
 end
 

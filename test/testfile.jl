@@ -1,1 +1,1 @@
-@inbounds C[ind] = @ncall $nargs f val
+@M a b->(@N c = @O d e f->g)
