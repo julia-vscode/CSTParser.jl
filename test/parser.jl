@@ -483,6 +483,10 @@ end
                          Core.getptls(), o)
                 """
                 "\$(x...)"
+                "(Base.@_pure_meta;)"
+                "@inbounds @ncall a b c"
+                "(Base.@_pure_meta;)"
+                "@M a b->(@N c = @O d e f->g)"
                 ]
         x = Parser.parse(str)
         @test Expr(x) == remlineinfo!(Base.parse(str))
@@ -501,10 +505,6 @@ end
                 # """Base.@__doc__(bitstype \$(sizeof(basetype) * 8) \$(esc(typename)) <: Enum{\$(basetype)})"""
                 "(a,b = c,d)"
                 "-(-x)^1"
-                "(Base.@_pure_meta;)"
-                "@inbounds @ncall a b c"
-                "(Base.@_pure_meta;)"
-                "@M a b->(@N c = @O d e f->g)"
                 ]
         x = Parser.parse(str)
         @test_broken Expr(x) == remlineinfo!(Base.parse(str))

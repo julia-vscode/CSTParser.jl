@@ -59,7 +59,7 @@ Acceptable starting tokens are:
 function parse_expression(ps::ParseState)
     next(ps)
     if Tokens.begin_keywords < ps.t.kind < Tokens.end_keywords && ps.t.kind != Tokens.DO
-        ret = parse_kw(ps, Val{ps.t.kind})
+        ret = @nocloser ps toplevel parse_kw(ps, Val{ps.t.kind})
     elseif ps.t.kind == Tokens.LPAREN
         ret = parse_paren(ps)
     elseif ps.t.kind == Tokens.LSQUARE
@@ -71,8 +71,7 @@ function parse_expression(ps::ParseState)
         end
     elseif ps.t.kind==Tokens.AT_SIGN
         @assert isempty(ps.ws)
-        next(ps)
-        ret = LITERAL{Tokens.MACRO}(ps.nt.startbyte - ps.t.startbyte + 1, ps.t.startbyte - 1, string("@", ps.t.val))
+        ret = parse_macrocall(ps)
     else
         error("Expression started with $(ps)")
     end
@@ -105,18 +104,7 @@ Handles cases where an expression - `ret` - is not followed by
 + A number followed by an expression (with no seperating white space)
 """
 function parse_juxtaposition(ps::ParseState, ret)
-    if ismacro(ret)
-        if ps.nt.kind ==Tokens.LPAREN && isempty(ps.ws)
-            ret = @default ps @closer ps paren parse_call(ps, ret)
-        else
-            ret = EXPR(MACROCALL, [ret], -ps.nt.startbyte + ret.span)
-            while !closer(ps)
-                a = @closer ps ws parse_expression(ps)
-                push!(ret.args, a)
-            end
-            ret.span += ps.nt.startbyte
-        end
-    elseif ps.nt.kind == Tokens.FOR
+    if ps.nt.kind == Tokens.FOR
         ret = parse_generator(ps, ret)
     elseif ps.nt.kind == Tokens.DO
         ret = parse_do(ps, ret)

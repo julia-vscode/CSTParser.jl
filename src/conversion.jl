@@ -81,12 +81,12 @@ function Expr(x::EXPR)
                 push!(ret.args, Expr(a))
             end
             return ret
-        else
-            ret =  Expr(:macrocall)
-            for a in x.args
-                push!(ret.args, Expr(a))
-            end
-            return ret
+        # else
+        #     ret =  Expr(:macrocall)
+        #     for a in x.args
+        #         push!(ret.args, Expr(a))
+        #     end
+        #     return ret
         end
     elseif x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL} || x.head isa KEYWORD{Tokens.USING}
         ret = Expr(Expr(x.head))

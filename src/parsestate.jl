@@ -17,7 +17,6 @@ type Closer
     toplevel::Bool
     newline::Bool
     semicolon::Bool
-    eof::Bool
     tuple::Bool
     comma::Bool
     dot::Bool
@@ -33,7 +32,7 @@ type Closer
     precedence::Int
 end
 
-Closer() = Closer(true, true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, -1)
+Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, -1)
 
 """
     ParseState

@@ -285,14 +285,15 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
     elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA
         next(ps)
         nextarg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, ps.t.startbyte, Symbol(lowercase(string(ps.t.kind))))
-    # elseif ps.nt.kind == Tokens.AT_SIGN
-    #     nextarg = @closer ps ws @precedence ps 15-LtoR(15) parse_expression(ps)
     else
         nextarg = @precedence ps 15-LtoR(15) parse_expression(ps)
     end
 
     if nextarg isa INSTANCE
         ret = EXPR(op, SyntaxNode[ret, QUOTENODE(nextarg, nextarg.span, [])], op.span + ret.span + nextarg.span)
+    elseif nextarg isa EXPR && nextarg.head == MACROCALL
+        mname = EXPR(op,[ret, QUOTENODE(nextarg.args[1], nextarg.args[1].span, [])], ret.span + op.span + nextarg.args[1].span)
+        ret = EXPR(MACROCALL, [mname , nextarg.args[2:end]...], ret.span + op.span + nextarg.span)
     else
         ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
     end
