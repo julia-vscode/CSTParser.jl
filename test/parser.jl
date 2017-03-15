@@ -488,6 +488,14 @@ end
                 "(Base.@_pure_meta;)"
                 "@M a b->(@N c = @O d e f->g)"
                 "4x/y"
+                """
+                A[if n == d
+                    i
+                else
+                    (indices(A,n) for n = 1:nd)
+                end...]
+                """
+                """Base.@__doc__(bitstype \$(sizeof(basetype) * 8) \$(esc(typename)) <: Enum{\$(basetype)})"""
                 ]
         x = Parser.parse(str)
         @test Expr(x) == remlineinfo!(Base.parse(str))
@@ -496,14 +504,7 @@ end
 
 @testset "Broken things" begin
     for str in [
-                # """
-                # A[if n == d
-                #     i
-                # else
-                #     (indices(A,n) for n = 1:nd)
-                # end...]
-                # """
-                # """Base.@__doc__(bitstype \$(sizeof(basetype) * 8) \$(esc(typename)) <: Enum{\$(basetype)})"""
+                
                 "(a,b = c,d)"
                 "-(-x)^1"
                 "[@spawn f(R, first(c), last(c)) for c in splitrange(length(R), nworkers())]"

@@ -169,6 +169,9 @@ function Base.setindex!(x::EXPR, y, i::Int)
 end
 
 function _find(x::EXPR, n, path, ind)
+    if x.head == STRING || x.head == TOPLEVEL && x.args[1] isa EXPR && (ex.args[1].head isa KEYWORD{Tokens.IMPORT} || ex.args[1].head isa KEYWORD{Tokens.IMPORTALL} || ex.args[1].head isa KEYWORD{Tokens.USING})
+        return x
+    end
     offset = 0
     @assert n <= x.span
     push!(path, x)
