@@ -130,7 +130,7 @@ function parse_juxtaposition(ps::ParseState, ret)
         end
     elseif ps.nt.kind == Tokens.COMMA
         ret = parse_tuple(ps, ret)
-    elseif isunaryop(ret)
+    elseif isunaryop(ret) && !isassignment(ps.nt)
         ret = parse_unary(ps, ret)
     elseif isoperator(ps.nt)
         next(ps)

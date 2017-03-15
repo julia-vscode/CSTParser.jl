@@ -44,7 +44,15 @@ function parse_block(ps::ParseState, start_col = 0, ret::EXPR = EXPR(BLOCK, [], 
 end
 
 
-
+function next(x::EXPR, s::Iterator{:invisiblebrackets})
+    if s.i == 1
+        return first(x.punctuation), +s
+    elseif s.i == 2
+        return x.args[1], +s
+    elseif s.i == 3
+        return last(x.punctuation), +s
+    end
+end
 
 function next(x::EXPR, s::Iterator{:block})
     if !isempty(x.punctuation) && first(x.punctuation) isa PUNCTUATION{Tokens.COMMA}

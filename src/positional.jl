@@ -26,7 +26,7 @@ function start(x::EXPR)
         else
             return Iterator{:call}(1, length(x.args) + length(x.punctuation))
         end
-    elseif issyntaxcall(x.head)
+    elseif issyntaxcall(x.head) || x.head isa OPERATOR{20, Tokens.ANON_FUNC}
         if x.head isa OPERATOR{8,Tokens.COLON}
             return Iterator{:(:)}(1, length(x.args) == 2 ? 3 : 5)
         end
@@ -41,6 +41,8 @@ function start(x::EXPR)
         return Iterator{:?}(1, 5)
     elseif x.head == BLOCK
         return Iterator{:block}(1, length(x.args) + length(x.punctuation))
+    elseif x.head isa HEAD{InvisibleBrackets}
+        return Iterator{:invisiblebrackets}(1, 3)
     elseif x.head == GENERATOR
         return _start_generator(x)
     elseif x.head == COMPREHENSION

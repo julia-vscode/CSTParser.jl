@@ -1,1 +1,3 @@
-try x catch; Any end
+begin
+    @_inline_meta
+end

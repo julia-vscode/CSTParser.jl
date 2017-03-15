@@ -40,7 +40,13 @@ function parse_array(ps::ParseState)
             elseif first_arg isa EXPR && first_arg.head == GENERATOR
                 next(ps)
                 push!(puncs, INSTANCE(ps))
-                return EXPR(COMPREHENSION, [first_arg], ps.nt.startbyte - start, puncs)
+                if first_arg.args[1] isa EXPR && first_arg.args[1].head isa OPERATOR{1, Tokens.PAIR_ARROW}
+                    return EXPR(DICT_COMPREHENSION, [first_arg], ps.nt.startbyte - 
+                    start, puncs)
+                else
+                    return EXPR(COMPREHENSION, [first_arg], ps.nt.startbyte - 
+                    start, puncs)
+                end
             elseif ps.ws.kind== SemiColonWS
                 next(ps)
                 push!(puncs, INSTANCE(ps))

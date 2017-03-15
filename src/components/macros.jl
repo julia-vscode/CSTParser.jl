@@ -21,8 +21,8 @@ Parses a macro call. Expects to start on the `@`.
 function parse_macrocall(ps::ParseState)
     start = ps.t.startbyte
     next(ps)
-    mname = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte + 1, ps.t.startbyte - 1, string("@", ps.t.val))
-    ret = EXPR(MACROCALL, [mname], -start, [AT_SIGN])
+    mname = IDENTIFIER(ps.nt.startbyte - ps.lt.startbyte + 1 , ps.lt.startbyte, string("@", ps.t.val))
+    ret = EXPR(MACROCALL, [mname], 0)
     if isempty(ps.ws) && ps.nt.kind == Tokens.LPAREN
         next(ps)
         push!(ret.punctuation, INSTANCE(ps))
@@ -35,8 +35,8 @@ function parse_macrocall(ps::ParseState)
             a = @closer ps ws parse_expression(ps)
             push!(ret.args, a)
         end
-        ret.span += ps.t.endbyte + 1
     end
+    ret.span = ps.nt.startbyte - start
     return ret
 end
 
