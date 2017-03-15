@@ -1,22 +1,6 @@
 using Parser
-for n in names(Parser, true, true)
-    eval(:(import Parser.$n))
-end
-
-function test_span(x)
-    if x isa EXPR
-        cnt = 0
-        for a in x
-            test_span(a)
-        end
-        @assert x.span == (length(x) == 0 ? 0 : sum(a.span for a in x)) "$(x.head)  $(x.span)  $(sum(a.span for a in x))"
-    end
-    true
-end
-
 
 include("parser.jl")
-
 
 const examplemodule = readstring("fullspecexample.jl")
 

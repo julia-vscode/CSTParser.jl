@@ -332,3 +332,15 @@ function compare(x::Expr,y::Expr)
     end
 end
 
+function span(x, neq = [])
+    if x isa EXPR
+        cnt = 0
+        for a in x
+            span(a, neq)
+        end
+        if x.span != (length(x) == 0 ? 0 : sum(a.span for a in x))
+            push!(neq, x)
+        end
+    end
+    neq
+end

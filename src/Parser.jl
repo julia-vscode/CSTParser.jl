@@ -8,7 +8,7 @@ import Tokenize.Tokens
 import Tokenize.Tokens: Token, iskeyword, isliteral, isoperator
 import Tokenize.Lexers: Lexer, peekchar, iswhitespace
 
-export ParseState
+export ParseState, parse_expression
 
 include("hints.jl")
 import .Hints: Hint, LintCodes, FormatCodes
@@ -331,18 +331,18 @@ function parse(ps::ParseState, cont = false)
             ret = parse_doc(ps, ret)
             push!(top.args, ret)
         end
-        ret.span += ps.nt.startbyte
+        top.span += ps.nt.startbyte
     else
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
-            ret = LITERAL{nothing}(ps.nt.startbyte, ps.nt.startbyte, :nothing)
+            top = LITERAL{nothing}(ps.nt.startbyte, ps.nt.startbyte, :nothing)
         else
-            ret = parse_expression(ps)
-            ret = parse_doc(ps, ret)
+            top = parse_expression(ps)
+            top = parse_doc(ps, top)
         end
     end
 
-    return ret, ps
+    return top, ps
 end
 
 
