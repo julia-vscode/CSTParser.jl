@@ -34,8 +34,7 @@ function parse_array(ps::ParseState)
                 unshift!(first_arg.punctuation, first(puncs))
                 next(ps)
                 push!(first_arg.punctuation, INSTANCE(ps))
-                first_arg.span += first(first_arg.punctuation).span
-                first_arg.span += last(first_arg.punctuation).span
+                first_arg.span = ps.nt.startbyte - start
                 return first_arg
             elseif first_arg isa EXPR && first_arg.head == GENERATOR
                 next(ps)
@@ -75,10 +74,50 @@ end
 
 _start_vect(x::EXPR) = Iterator{:vect}(1, length(x.args) + length(x.punctuation))
 
+_start_vcat(x::EXPR) = Iterator{:vcat}(1, length(x.args) + length(x.punctuation))
+
+_start_typed_vcat(x::EXPR) = Iterator{:typed_vcat}(1, length(x.args) + length(x.punctuation))
+
+
 function next(x::EXPR, s::Iterator{:vect})
     if isodd(s.i)
         return x.punctuation[div(s.i + 1, 2)], +s
+    elseif s.i == s.n
+        return last(x.punctuation), +s
     else
         return x.args[div(s.i, 2)], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:vcat})
+    if s.i == 1
+        return first(x.punctuation), +s
+    elseif s.i == s.n
+        return last(x.punctuation), +s
+    else
+        return x.args[s.i - 1], +s
+    end
+end
+
+# function next(x::EXPR, s::Iterator{:typed_vcat})
+#     if s.i == 1
+#         return x.args[1], +s
+#     elseif s.i == s.n
+#         return last(x.punctuation), +s
+#     elseif iseven(s.i)
+#         return x.punctuation[div(s.i, 2)], +s
+#     else
+#         return x.args[div(s.i + 1, 2)], +s
+#     end
+# end
+function next(x::EXPR, s::Iterator{:typed_vcat})
+    if s.i == 1
+        return x.args[1], +s
+    elseif s.i == 2
+        return first(x.punctuation), +s
+    elseif s.i == s.n
+        return last(x.punctuation), +s
+    else
+        return x.args[s.i - 1], +s
     end
 end

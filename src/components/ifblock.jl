@@ -39,11 +39,11 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
         @default ps parse_block(ps, start_col, elseblock)
         elseblock.span = ps.nt.startbyte - startelseblock
     end
+    !nested && next(ps)
+    !nested && push!(puncs, INSTANCE(ps))
     ret = isempty(elseblock.args) && !elsekw ? 
         EXPR(kw, SyntaxNode[cond, ifblock], ps.nt.startbyte - start, puncs) : 
         EXPR(kw, SyntaxNode[cond, ifblock, elseblock], ps.nt.startbyte - start, puncs)
-    !nested && next(ps)
-    !nested && push!(ret.punctuation, INSTANCE(ps))
     return ret
 end
 

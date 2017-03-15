@@ -24,6 +24,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
             caught = FALSE
             catchblock = EXPR(BLOCK, SyntaxNode[])
         else
+            start1 = ps.nt.startbyte
             start_col = ps.t.startpos[2]
             push!(ret.punctuation, INSTANCE(ps))
             if ps.ws.kind == SemiColonWS
@@ -34,7 +35,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
             catchblock = @closer ps trycatch parse_block(ps, start_col)
             if !(caught isa IDENTIFIER || caught == FALSE)
                 unshift!(catchblock.args, caught)
-                catchblock.span = caught.span
+                catchblock.span += caught.span
                 caught = FALSE
             end
         end

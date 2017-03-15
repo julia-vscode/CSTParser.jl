@@ -141,39 +141,43 @@ function parse_export(ps::ParseState)
 end
 
 function _start_imports(x::EXPR)
-    return Iterator{:imports}(1, (x.head.span>0) + length(x.args) + length(x.punctuation)) 
+    # return Iterator{:imports}(1, (x.head.span>0) + length(x.args) + length(x.punctuation)) 
+    return Iterator{:imports}(1,1)
 end
 
 function _start_toplevel(x::EXPR)
     if !(x.args[1] isa EXPR && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING})) 
         return Iterator{:toplevelblock}(1, length(x.args) + length(x.punctuation))
     else
-        return Iterator{:toplevel}(1, length(x.args) + length(x.punctuation))
+        # return Iterator{:toplevel}(1, length(x.args) + length(x.punctuation))
+        return Iterator{:toplevel}(1,1)
     end
 end
 
-function next(x::EXPR, s::Iterator{:imports})
-    ndots = length(x.punctuation) - length(x.args) + 1
-    if x.head.span == 0
-        if s.i <= ndots
-            return x.punctuation[s.i], +s
-        elseif isodd(s.i + ndots)
-            return x.args[div(s.i + 1 - ndots, 2)], +s
-        else
-            return PUNCTUATION{Tokens.DOT}(1,0), +s
-        end
-    else
-        if s.i == 1
-            return x.head, +s
-        elseif s.i <=ndots+1
-            return x.punctuation[s.i - 1], +s
-        elseif isodd(s.i+ndots) 
-            return PUNCTUATION{Tokens.DOT}(1,0), +s
-        else
-            return x.args[div(s.i - ndots, 2)], +s
-        end
-    end
-end
+next(x::EXPR, s::Iterator{:imports}) = x, +s
+
+# function next(x::EXPR, s::Iterator{:imports})
+#     ndots = length(x.punctuation) - length(x.args) + 1
+#     if x.head.span == 0
+#         if s.i <= ndots
+#             return x.punctuation[s.i], +s
+#         elseif isodd(s.i + ndots)
+#             return x.args[div(s.i + 1 - ndots, 2)], +s
+#         else
+#             return PUNCTUATION{Tokens.DOT}(1,0), +s
+#         end
+#     else
+#         if s.i == 1
+#             return x.head, +s
+#         elseif s.i <=ndots+1
+#             return x.punctuation[s.i - 1], +s
+#         elseif isodd(s.i+ndots) 
+#             return PUNCTUATION{Tokens.DOT}(1,0), +s
+#         else
+#             return x.args[div(s.i - ndots, 2)], +s
+#         end
+#     end
+# end
 
 function next(x::EXPR, s::Iterator{:export})
     if s.i == 1

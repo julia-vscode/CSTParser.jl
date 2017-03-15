@@ -62,6 +62,14 @@ function Expr(x::EXPR)
             push!(ret.args, Expr(a))
         end
         return ret
+    elseif x.head isa HEAD{Tokens.QUOTE} && 
+           x.args[1] isa EXPR && 
+           x.args[1].head isa HEAD{InvisibleBrackets} && 
+           length(x.args[1].args[1]) == 1 &&
+           (first(x.args[1].args[1]) isa OPERATOR || first(x.args[1].args[1]) isa LITERAL || first(x.args[1].args[1]) isa INSTANCE)
+           return QuoteNode(Expr(x.args[1].args[1]))
+    elseif (x.head isa KEYWORD{Tokens.GLOBAL} || x.head isa KEYWORD{Tokens.LOCAL}) && x.args[1] isa EXPR && x.args[1].head isa KEYWORD{Tokens.CONST}
+        return Expr(:const, Expr(Expr(x.head), Expr.(x.args[1].args)...))
     elseif x.head isa KEYWORD{Tokens.BAREMODULE}
         ret = Expr(:module)
         for a in x.args

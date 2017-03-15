@@ -14,14 +14,6 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BEGIN}})
     return EXPR(kw, SyntaxNode[arg], ps.nt.startbyte - start, [INSTANCE(ps)])
 end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.QUOTE}})
-    start = ps.t.startbyte
-    start_col = ps.t.startpos[2]
-    kw = INSTANCE(ps)
-    arg = @default ps parse_block(ps, start_col)
-    next(ps)
-    return EXPR(kw, SyntaxNode[arg], ps.nt.startbyte - start, [INSTANCE(ps)])
-end
 
 """
     parseblocks(ps, ret = EXPR(BLOCK,...))
@@ -84,28 +76,17 @@ function next(x::EXPR, s::Iterator{:begin})
     end
 end
 
-
-function next(x::EXPR, s::Iterator{:quote})
-    if s.i == 1
-        return x.punctuation[1], +s
-    elseif s.i == s.n
-        return x.punctuation[end], +s
-    elseif s.i == 2
-        if s.n == 4
-            return x.punctuation[2], +s
-        else
-            return x.args[1], +s
-        end
-    elseif s.i == 3
-        return x.args[1], +s
-    end
-end
-
 function next(x::EXPR, s::Iterator{:toplevelblock})
-    if isodd(s.i)
-        return x.args[div(s.i+1, 2)], +s
-    else
-        return x.punctuation[div(s.i, 2)], +s
+    if isempty(x.punctuation)
+        return x.args[s.i], +s
+    else     
+        if isodd(s.i)
+            return x.args[div(s.i+1, 2)], +s
+        else
+            return x.punctuation[div(s.i, 2)], +s
+        end
     end
 end
+
+
 

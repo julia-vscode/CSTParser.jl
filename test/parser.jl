@@ -513,6 +513,7 @@ end
                         isa(m, Exception) ? m : nothing
                     end)
                 """
+                "a - b .- c"
                 ]
         x = Parser.parse(str)
         @test_broken Expr(x) == remlineinfo!(Base.parse(str))

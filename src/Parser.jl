@@ -3,7 +3,7 @@ module Parser
 global debug = true
 
 using Tokenize
-import Base: next, start, done, length, first, last, +, isempty
+import Base: next, start, done, length, first, last, +, isempty, getindex, setindex!
 import Tokenize.Tokens
 import Tokenize.Tokens: Token, iskeyword, isliteral, isoperator
 import Tokenize.Lexers: Lexer, peekchar, iswhitespace
@@ -16,7 +16,7 @@ import .Hints: Hint, LintCodes, FormatCodes
 include("parsestate.jl")
 include("spec.jl")
 include("utils.jl")
-include("positional.jl")
+include("iterators.jl")
 include("scoping.jl")
 include("components/array.jl")
 include("components/curly.jl")
@@ -31,6 +31,7 @@ include("components/generators.jl")
 include("components/macros.jl")
 include("components/modules.jl")
 include("components/prefixkw.jl")
+include("components/quote.jl")
 include("components/refs.jl")
 include("components/strings.jl")
 include("components/tryblock.jl")
@@ -141,10 +142,11 @@ function parse_juxtaposition(ps::ParseState, ret)
         next(ps)
         arg = parse_string(ps, ret)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
-    elseif ret isa EXPR && ret.head isa HEAD{Tokens.KEYWORD} && ps.nt.kind == Tokens.IDENTIFIER
+    elseif ret isa EXPR && ret.head == x_STR && ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         arg = INSTANCE(ps)
         push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.offset, arg.val))
+        ret.span += arg.span
     elseif ret isa EXPR && ret.head isa OPERATOR{20, Tokens.PRIME} 
         nextarg = @precedence ps 11 parse_expression(ps)
         ret = EXPR(CALL, [OPERATOR{11, Tokens.STAR, false}(0, 0), ret, nextarg], ret.span + nextarg.span)

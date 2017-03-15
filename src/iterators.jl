@@ -19,18 +19,22 @@ punctuation.
 """
 function start(x::EXPR)
     if x.head == CALL
-        if x.args[1] isa OPERATOR{9,Tokens.PLUS} || x.args[1] isa OPERATOR{11,Tokens.STAR}
+        if (x.args[1] isa OPERATOR{9,Tokens.PLUS} || x.args[1] isa OPERATOR{11,Tokens.STAR}) && length(x.args)>3
             return Iterator{:opchain}(1, max(2, length(x.args)*2-3))
-        elseif x.args[1] isa OPERATOR
+        elseif x.args[1] isa OPERATOR && isempty(x.punctuation)
             return Iterator{:op}(1, length(x.args) + length(x.punctuation))
         else
             return Iterator{:call}(1, length(x.args) + length(x.punctuation))
         end
+    elseif x.head isa HEAD{Tokens.CCALL}
+        return _start_ccall(x)
     elseif issyntaxcall(x.head) || x.head isa OPERATOR{20, Tokens.ANON_FUNC}
         if x.head isa OPERATOR{8,Tokens.COLON}
             return Iterator{:(:)}(1, length(x.args) == 2 ? 3 : 5)
         end
         return Iterator{:syntaxcall}(1, length(x.args) + 1)
+    elseif x.head isa OPERATOR{20, Tokens.PRIME}
+        return Iterator{:prime}(1, 2)
     elseif x.head == COMPARISON
         return Iterator{:comparison}(1, length(x.args))
     elseif x.head isa HEAD{Tokens.KW}
@@ -49,19 +53,28 @@ function start(x::EXPR)
         return _start_comprehension(x)
     elseif x.head == PARAMETERS
         return _start_parameters(x)
-    elseif x.head == TYPED_COMPREHENSION
-        return _start_typed_comprehension(x)
-    # elseif x.head == TOPLEVEL
+    elseif x.head == STRING
+        return _start_string(x)
+    elseif x.head == x_STR
+        return Iterator{:x_str}(1, length(x.args))
     elseif x.head isa HEAD{Tokens.TOPLEVEL}
         return _start_toplevel(x)
     elseif x.head == CURLY
         return _start_curly(x)
-    elseif x.head == QUOTE
-        return Iterator{:quote}(1, length(x.args) + length(x.punctuation))
+    elseif x.head isa IDENTIFIER && (x.head.val == :stdcall || x.head.val == :cdelc || x.head.val == :fastcall || x.head.val == :thiscall)
+        return Iterator{:stdcall}(1,1)
+    elseif x.head isa KEYWORD{Tokens.QUOTE} || x.head isa HEAD{Tokens.QUOTE}
+        return _start_quote(x)
     elseif x.head == REF
         return _start_ref(x)
     elseif x.head == VECT
         return _start_vect(x)
+    elseif x.head == TYPED_COMPREHENSION
+        return _start_typed_comprehension(x)
+    elseif x.head == VCAT
+        return _start_vcat(x)
+    elseif x.head == TYPED_VCAT
+        return _start_typed_vcat(x)
     elseif x.head == TUPLE
         if isempty(x.punctuation) || first(x.punctuation) isa PUNCTUATION{Tokens.COMMA}
             return Iterator{:tuplenoparen}(1, length(x.args) + length(x.punctuation))
@@ -91,22 +104,20 @@ function start(x::EXPR)
             return _start_for(x)
         elseif x.head isa KEYWORD{Tokens.FUNCTION}
             return _start_function(x)
-        elseif x.head isa KEYWORD{Tokens.GLOBAL}
-            return Iterator{:global}(1, 2)
         elseif x.head isa KEYWORD{Tokens.IF}
             return _start_if(x)
         elseif x.head isa KEYWORD{Tokens.IMMUTABLE}
             return Iterator{:type}(1, 4)
         elseif x.head isa KEYWORD{Tokens.LET}
             return _start_let(x)
-        elseif x.head isa KEYWORD{Tokens.LOCAL}
-            return Iterator{:local}(1, 2)
+        elseif x.head isa KEYWORD{Tokens.LOCAL} || x.head isa KEYWORD{Tokens.GLOBAL}
+            return Iterator{:local}(1, 1 + length(x.args) + length(x.punctuation))
         elseif x.head isa KEYWORD{Tokens.IMPORT} || 
                x.head isa KEYWORD{Tokens.IMPORTALL} || 
                x.head isa KEYWORD{Tokens.USING}
             return _start_imports(x)
         elseif x.head isa KEYWORD{Tokens.MACRO}
-            return Iterator{:module}(1, 4)
+            return Iterator{:macro}(1, 4)
         elseif x.head isa KEYWORD{Tokens.MODULE}
             return Iterator{:module}(1, 4)
         elseif x.head isa KEYWORD{Tokens.RETURN}
@@ -122,6 +133,7 @@ function start(x::EXPR)
         end
     end
 end
+
 
 done(x::EXPR, s::Iterator) = s.i > s.n
 length(x::EXPR) = start(x).n

@@ -92,3 +92,10 @@ function unindent_triple_string(ps::ParseState)
     end
     lit = LITERAL{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte, ps.t.startbyte, val)
 end
+
+_start_string(x::EXPR) = Iterator{:string}(1, 1)
+next(x::EXPR, s::Iterator{:string}) = x, +s
+
+next(x::EXPR, s::Iterator{:x_str}) = x.args[s.i], +s
+
+

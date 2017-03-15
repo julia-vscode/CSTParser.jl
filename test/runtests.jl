@@ -1,5 +1,5 @@
 using Parser
-
+import Parser: remlineinfo!
 include("parser.jl")
 
 const examplemodule = readstring("fullspecexample.jl")
@@ -44,7 +44,7 @@ if VERSION.major <=6 && VERSION.prerelease[1] == "dev" && VERSION.prerelease[2]<
         ps = ParseState(str)
         try
             next(ps)
-            while ps.nt.kind != Tokens.ENDMARKER 
+            while ps.nt.kind != Tokenize.Tokens.ENDMARKER 
                 x = Expr(parse_expression(ps))
             end
             # failed, cnt = check_file(joinpath(p,f))

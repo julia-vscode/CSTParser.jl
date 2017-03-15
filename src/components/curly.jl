@@ -24,7 +24,7 @@ function parse_curly(ps::ParseState, ret)
     return ret
 end
 
-_start_curly(x::EXPR) = Iterator{:curly}(1, length(x.args)*2)
+_start_curly(x::EXPR) = Iterator{:curly}(1, length(x.args) + length(x.punctuation))
 
 function next(x::EXPR, s::Iterator{:curly})
     if s.i==1

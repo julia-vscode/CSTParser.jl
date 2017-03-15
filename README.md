@@ -51,6 +51,11 @@ The `K` parameterisation refers to the `kind` of the associated token as specifi
 - Failure to parse `Array{T,N>1}` constructors.
 - Find/fix iteration errors.
 
+### Problems with `span`
+- STRING expressions
+- import/toplevel import statements
+- mix of const and global/local
+
 ### TODO
 - rethink approach to handling of semicolons.
 - cleanup @closer usage.

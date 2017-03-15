@@ -9,16 +9,16 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.GLOBAL}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     arg = parse_expression(ps)
-    if arg isa EXPR && arg.head isa KEYWORD{Tokens.CONST}
-        ret = EXPR(arg.head, [arg], ps.nt.startbyte - start)
-        arg.head = kw
-    else
+    # if arg isa EXPR && arg.head isa KEYWORD{Tokens.CONST}
+    #     ret = EXPR(arg.head, [arg], ps.nt.startbyte - start)
+    #     arg.head = kw
+    # else
         if arg isa EXPR && arg.head == TUPLE && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
             ret = EXPR(kw, [arg.args...], ps.nt.startbyte - start, arg.punctuation)
         else
             ret = EXPR(kw, [arg], ps.nt.startbyte - start)
         end
-    end
+    # end
     return ret
 end
 
@@ -26,16 +26,16 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LOCAL}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     arg = @default ps parse_expression(ps)
-    if arg isa EXPR && arg.head isa KEYWORD{Tokens.CONST}
-        ret = EXPR(arg.head, [arg], ps.nt.startbyte - start)
-        arg.head = kw
-    else
+    # if arg isa EXPR && arg.head isa KEYWORD{Tokens.CONST}
+    #     ret = EXPR(arg.head, [arg], ps.nt.startbyte - start)
+    #     arg.head = kw
+    # else
         if arg isa EXPR && arg.head == TUPLE && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
             ret = EXPR(kw, [arg.args...], ps.nt.startbyte - start, arg.punctuation)
         else
             ret = EXPR(kw, [arg], ps.nt.startbyte - start)
         end
-    end
+    # end
     return ret
 end
 
@@ -62,19 +62,13 @@ function next(x::EXPR, s::Iterator{:const})
     end
 end
 
-function next(x::EXPR, s::Iterator{:global})
-    if s.i == 1
-        return x.head, +s
-    elseif s.i == 2
-        return x.args[1], +s
-    end
-end
-
 function next(x::EXPR, s::Iterator{:local})
     if s.i == 1
         return x.head, +s
-    elseif s.i == 2
-        return x.args[1], +s
+    elseif iseven(s.i)
+        return x.args[div(s.i, 2)], +s
+    else
+        return x.punctuation[div(s.i - 1, 2)], +s
     end
 end
 

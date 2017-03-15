@@ -333,10 +333,14 @@ function compare(x::Expr,y::Expr)
 end
 
 function span(x, neq = [])
-    if x isa EXPR
+    if x isa EXPR && x.head != STRING && !(x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL} || x.head isa KEYWORD{Tokens.USING} || (x.head == TOPLEVEL && x.args[1] isa EXPR && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING})))
         cnt = 0
         for a in x
-            span(a, neq)
+            try
+                span(a, neq)
+            catch
+                push!(neq, a)
+            end
         end
         if x.span != (length(x) == 0 ? 0 : sum(a.span for a in x))
             push!(neq, x)

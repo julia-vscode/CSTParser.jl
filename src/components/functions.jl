@@ -28,6 +28,7 @@ Parses a function call. Expects to start before the opening parentheses and is p
 function parse_call(ps::ParseState, ret)
     next(ps)
     if ret isa IDENTIFIER && ret.val == :ccall
+        ret = HEAD{Tokens.CCALL}(ret.span, ret.offset)
         ret = EXPR(ret, [], ret.span - ps.t.startbyte, [INSTANCE(ps)])
     else
         ret = EXPR(CALL, [ret], ret.span - ps.t.startbyte, [INSTANCE(ps)])
@@ -80,7 +81,7 @@ function parse_call(ps::ParseState, ret)
     if length(ret.args)>0 && ismacro(ret.args[1]) #ret.args[1] isa LITERAL{Tokens.MACRO}
         ret.head = MACROCALL
     end
-    if ret.head isa IDENTIFIER && ret.head.val == :ccall && 
+    if ret.head isa HEAD{Tokens.CCALL} && 
        length(ret.args) > 1 && 
        ret.args[2] isa IDENTIFIER &&
        (ret.args[2].val == :stdcall || ret.args[2].val == :fastcall || ret.args[2].val == :cdecl || ret.args[2].val == :thiscall)
@@ -96,6 +97,7 @@ end
 _start_function(x::EXPR) = Iterator{:function}(1, 1 + length(x.args) + length(x.punctuation))
 
 _start_parameters(x::EXPR) = Iterator{:parameters}(1, length(x.args) + length(x.punctuation))
+
 
 function next(x::EXPR, s::Iterator{:function})    
     if s.i == 1
@@ -127,6 +129,25 @@ function next(x::EXPR, s::Iterator{:parameters})
         return x.punctuation[div(s.i, 2)], +s
     end
 end
+
+_start_ccall(x::EXPR) = Iterator{:ccall}(1, 1 + length(x.args) + length(x.punctuation))
+
+function next(x::EXPR, s::Iterator{:ccall})
+    # if length(x.args)>0 && last(x.args) isa EXPR && last(x.args).head == PARAMETERS && s.i == (s.n-1)
+    #     return last(x.args), +s
+    # end
+    if s.i == 1
+        return x.head, +s
+    elseif s.i == s.n
+        return last(x.punctuation), +s
+    elseif iseven(s.i)
+        return x.punctuation[div(s.i, 2)], +s
+    else
+        return x.args[div(s.i-1, 2)], +s
+    end
+end
+
+next(x::EXPR, s::Iterator{:stdcall}) = x.head, +s
 
 
 # Linting

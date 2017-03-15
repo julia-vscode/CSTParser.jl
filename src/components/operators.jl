@@ -150,17 +150,17 @@ function parse_unary(ps::ParseState, op::OPERATOR{8,Tokens.COLON})
         ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         arg = INSTANCE(ps)
-        return QUOTENODE(arg, arg.span, [])
+        return QUOTENODE(arg, op.span + arg.span, [op])
     elseif closer(ps)
         return op
     else
         arg = @precedence ps 20 parse_expression(ps)
-        if arg isa EXPR && arg.head isa HEAD{InvisibleBrackets} && length(arg.args) == 1
-            if (first(arg.args) isa OPERATOR || first(arg.args) isa LITERAL || first(arg.args) isa INSTANCE)
-                return QUOTENODE(arg.args[1], arg.span, arg.punctuation)
-            end
-        end
-        return EXPR(QUOTE, [arg], arg.span, [])
+        # if arg isa EXPR && arg.head isa HEAD{InvisibleBrackets} && length(arg.args) == 1
+        #     if (first(arg.args) isa OPERATOR || first(arg.args) isa LITERAL || first(arg.args) isa INSTANCE)
+        #         return QUOTENODE(arg.args[1], op.span + arg.span, [op, arg.punctuation...])
+        #     end
+        # end
+        return EXPR(QUOTE, [arg], op.span + arg.span, [op])
     end
 end
 
@@ -312,7 +312,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
         ret = EXPR(op, SyntaxNode[ret, QUOTENODE(nextarg, nextarg.span, [])], op.span + ret.span + nextarg.span)
     elseif nextarg isa EXPR && nextarg.head == MACROCALL
         mname = EXPR(op,[ret, QUOTENODE(nextarg.args[1], nextarg.args[1].span, [])], ret.span + op.span + nextarg.args[1].span)
-        ret = EXPR(MACROCALL, [mname , nextarg.args[2:end]...], ret.span + op.span + nextarg.span)
+        ret = EXPR(MACROCALL, [mname , nextarg.args[2:end]...], ret.span + op.span + nextarg.span, nextarg.punctuation)
     else
         ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
     end
@@ -414,4 +414,8 @@ end
 
 function next(x::EXPR, s::Iterator{:comparison})
     return x.args[s.i], +s
+end
+
+function next(x::EXPR, s::Iterator{:prime})
+    return (s.i == 1 ? x.args[s.i] : x.head), +s
 end

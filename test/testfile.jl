@@ -1,3 +1,1 @@
-begin
-    @_inline_meta
-end
+a - b .- c

@@ -11,11 +11,12 @@ function parse_tuple(ps::ParseState, ret)
     start = ps.t.startbyte
     if isassignment(ps.nt)
         if ret isa EXPR && ret.head!=TUPLE
-            ret =  EXPR(TUPLE, SyntaxNode[ret], ps.t.endbyte - start + 1, INSTANCE[op])
+            ret =  EXPR(TUPLE, SyntaxNode[ret], ps.nt.startbyte - start, INSTANCE[op])
         end
     elseif closer(ps)
         if ret isa EXPR && ret.head==TUPLE && (length(ret.punctuation)==0 || !(first(ret.punctuation) isa PUNCTUATION{Tokens.LPAREN}))
             push!(ret.punctuation, op)
+            ret.span += op.span
         else
             ret = EXPR(TUPLE, SyntaxNode[ret], ret.span + op.span, INSTANCE[op])
         end
