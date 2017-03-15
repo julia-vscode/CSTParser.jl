@@ -260,7 +260,7 @@ end
 
 
 # Parse chained +
-function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{9,Tokens.PLUS})
+function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{9,Tokens.PLUS,false})
     if ret.head==CALL && ret.args[1] isa OPERATOR{9,Tokens.PLUS,false}
         nextarg = @precedence ps 9-LtoR(9) parse_expression(ps)
         push!(ret.args, nextarg)
@@ -273,7 +273,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{9,Tokens.PLUS})
 end
 
 # Parse chained *
-function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{11,Tokens.STAR})
+function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{11,Tokens.STAR,false})
     if ret.head==CALL && ret.args[1] isa OPERATOR{11,Tokens.STAR,false}
         nextarg = @precedence ps 11-LtoR(11) parse_expression(ps)
         push!(ret.args, nextarg)

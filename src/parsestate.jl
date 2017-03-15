@@ -52,10 +52,13 @@ type ParseState
     lt::Token
     t::Token
     nt::Token
+    nnt::Token
     lws::Token
     ws::Token
     nws::Token
+    nnws::Token
     dot::Bool
+    ndot::Bool
     trackscope::Bool
     formatcheck::Bool
     ids::Dict{String,Any}
@@ -64,8 +67,8 @@ type ParseState
     current_scope
 end
 function ParseState(str::String)
-    ps = ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), true, true, true, Dict(), [], Closer(), Scope{Tokens.TOPLEVEL}(TOPLEVEL, []))
-    return next(ps)
+    ps = ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), Token(), Token(), true, true, true, true, Dict(), [], Closer(), Scope{Tokens.TOPLEVEL}(TOPLEVEL, []))
+    return next(next(ps))
 end
 
 function Base.show(io::IO, ps::ParseState)
@@ -83,30 +86,34 @@ function next(ps::ParseState)
     #  shift old tokens
     ps.lt = ps.t
     ps.t = ps.nt
+    ps.nt = ps.nnt
     ps.lws = ps.ws
     ps.ws = ps.nws
+    ps.nws = ps.nnws
+    ps.dot = ps.ndot
     
-    ps.nt, ps.done  = next(ps.l, ps.done)
+    
+    ps.nnt, ps.done  = next(ps.l, ps.done)
 
     # Handle dotted operators
-    if ps.t.kind == Tokens.DOT && ps.ws.kind == EmptyWS && isoperator(ps.nt) && !non_dotted_op(ps.nt)
-        ps.t = ps.nt
-        ps.dot = true
+    if ps.nt.kind == Tokens.DOT && ps.nws.kind == EmptyWS && isoperator(ps.nnt) && !non_dotted_op(ps.nnt)
+        ps.nt = ps.nnt
+        ps.ndot = true
         # combines whitespace, comments and semicolons
         if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#' || peekchar(ps.l) == ';'
-            ps.ws = lex_ws_comment(ps.l, readchar(ps.l))
+            ps.nws = lex_ws_comment(ps.l, readchar(ps.l))
         else
-            ps.ws = Token(EmptyWS, (0, 0), (0, 0), ps.nt.endbyte, ps.nt.endbyte, "")
+            ps.nws = Token(EmptyWS, (0, 0), (0, 0), ps.nnt.endbyte, ps.nnt.endbyte, "")
         end
-        ps.nt, ps.done = next(ps.l, ps.done)
+        ps.nnt, ps.done = next(ps.l, ps.done)
     else
-        ps.dot = false
+        ps.ndot = false
     end
     # combines whitespace, comments and semicolons
     if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#' || peekchar(ps.l) == ';'
-        ps.nws = lex_ws_comment(ps.l, readchar(ps.l))
+        ps.nnws = lex_ws_comment(ps.l, readchar(ps.l))
     else
-        ps.nws = Token(EmptyWS, (0, 0), (0, 0), ps.nt.endbyte, ps.nt.endbyte, "")
+        ps.nnws = Token(EmptyWS, (0, 0), (0, 0), ps.nnt.endbyte, ps.nnt.endbyte, "")
     end
     return ps
 end
