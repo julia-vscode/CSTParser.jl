@@ -31,6 +31,10 @@ function parse_macrocall(ps::ParseState)
         next(ps)
         push!(ret.punctuation, INSTANCE(ps))
     else
+        @default ps if !closer(ps)
+            first_arg = @closer ps ws @closer ps inmacro parse_expression(ps)
+            push!(ret.args, first_arg)
+        end
         @default ps @closer ps inmacro while !closer(ps)
             a = @closer ps ws parse_expression(ps)
             push!(ret.args, a)

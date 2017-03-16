@@ -109,10 +109,15 @@ function Expr(x::EXPR)
 
         if length(x.args) == 1
             a = first(x.args)
-            return Expr(Expr(a.head), (:. for i = 1:ndots)..., Expr.(x.punctuation[ndots + 2:2:col])..., Expr.(a.args)...)
+            aa = Expr(a)
+            return Expr(Expr(a.head), (:. for i = 1:ndots)..., Expr.(x.punctuation[ndots + 2:2:col])..., aa.args...)
+            # return Expr(Expr(a.head), (:. for i = 1:ndots)..., Expr.(x.punctuation[ndots + 2:2:col])..., Expr.(a.args)...)
         end
         for a in x.args
-            push!(ret.args, Expr(Expr(a.head), (:. for i = 1:ndots)..., Expr.(x.punctuation[ndots + 2:2:col])..., Expr.(a.args)...))
+            aa = Expr(a)
+            push!(ret.args, Expr(Expr(a.head), (:. for i = 1:ndots)..., Expr.(x.punctuation[ndots + 2:2:col])..., aa.args...))
+            # push!(ret.args, Expr(Expr(a.head), (:. for i = 1:ndots)..., Expr.(x.punctuation[ndots + 2:2:col])..., Expr.(a.args)...))
+
         end 
         return ret
     elseif x.head == CALL

@@ -2,7 +2,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
     start_col = ps.t.startpos[2]
     ret = EXPR(INSTANCE(ps), [], -ps.t.startbyte)
     args = []
-    @closer ps comma @closer ps block while !closer(ps)
+    @default ps @closer ps comma @closer ps block while !closer(ps)
         a = parse_expression(ps)
         push!(args, a)
         if ps.nt.kind == Tokens.COMMA

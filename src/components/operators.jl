@@ -128,7 +128,7 @@ issyntaxcall(op) = false
 Having hit a unary operator at the start of an expression return a call.
 """
 function parse_unary{P,K}(ps::ParseState, op::OPERATOR{P,K})
-    arg = @precedence ps 14 parse_expression(ps)
+    arg = @precedence ps 12 parse_expression(ps)
     if (op isa OPERATOR{9, Tokens.PLUS} || op isa OPERATOR{9, Tokens.MINUS}) && (arg isa LITERAL{Tokens.INTEGER} || arg isa LITERAL{Tokens.FLOAT})
         arg.span += op.span
         arg.offset = op.offset
@@ -155,11 +155,6 @@ function parse_unary(ps::ParseState, op::OPERATOR{8,Tokens.COLON})
         return op
     else
         arg = @precedence ps 20 parse_expression(ps)
-        # if arg isa EXPR && arg.head isa HEAD{InvisibleBrackets} && length(arg.args) == 1
-        #     if (first(arg.args) isa OPERATOR || first(arg.args) isa LITERAL || first(arg.args) isa INSTANCE)
-        #         return QUOTENODE(arg.args[1], op.span + arg.span, [op, arg.punctuation...])
-        #     end
-        # end
         return EXPR(QUOTE, [arg], op.span + arg.span, [op])
     end
 end
@@ -302,6 +297,15 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
     elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA
         next(ps)
         nextarg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, ps.t.startbyte, Symbol(lowercase(string(ps.t.kind))))
+    elseif ps.nt.kind == Tokens.COLON
+        next(ps)
+        op2 = INSTANCE(ps)
+        if ps.nt.kind == Tokens.LPAREN
+            nextarg = @precedence ps 15-LtoR(15) parse_expression(ps)
+            nextarg = EXPR(QUOTE, [nextarg], op2.span + nextarg.span, [op2])
+        else
+            nextarg = @precedence ps 15-LtoR(15) parse_unary(ps, op2)
+        end
     else
         nextarg = @precedence ps 15-LtoR(15) parse_expression(ps)
     end

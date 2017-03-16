@@ -16,7 +16,7 @@ function parse_array(ps::ParseState)
         format(ps)
         return EXPR(VECT, [], ps.nt.startbyte - start, puncs)
     else
-        first_arg = @default ps @nocloser ps newline @closer ps square @closer ps ws parse_expression(ps)
+        first_arg = @default ps @closer ps square @closer ps ws parse_expression(ps)
 
         # Handle macros
         if first_arg isa LITERAL{Tokens.MACRO}
@@ -25,6 +25,13 @@ function parse_array(ps::ParseState)
                 a = @closer ps ws parse_expression(ps)
                 push!(first_arg.args, a)
                 first_arg.span += a.span
+            end
+        end
+        # Handle generator split over lines
+        if ps.nt.kind == Tokens.FOR && ps.ws.kind == NewLineWS
+            first_arg = parse_juxtaposition(ps, first_arg)
+            if ps.nt.kind!= Tokens.RSQUARE
+                error("expected \"[\"")
             end
         end
         
@@ -49,7 +56,7 @@ function parse_array(ps::ParseState)
             elseif ps.ws.kind== SemiColonWS
                 next(ps)
                 push!(puncs, INSTANCE(ps))
-                ret = EXPR(VCAT, [first_arg], ps.nt.startbyte - start, puncs)
+                return EXPR(VCAT, [first_arg], ps.nt.startbyte - start, puncs)
             else
                 next(ps)
                 push!(puncs, INSTANCE(ps))
@@ -67,6 +74,16 @@ function parse_array(ps::ParseState)
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
             ret.span = ps.nt.startbyte - start
+            return ret
+        elseif ps.ws.kind == NewLineWS
+            ret = EXPR(VCAT, [first_arg], - start, puncs)
+            while ps.nt.kind != Tokens.RSQUARE
+                a = @default ps @closer ps square parse_expression(ps)
+                push!(ret.args, a)
+            end
+            next(ps)
+            push!(ret.punctuation, INSTANCE(ps))
+            ret.span += ps.nt.startbyte
             return ret
         end
     end
@@ -99,17 +116,6 @@ function next(x::EXPR, s::Iterator{:vcat})
     end
 end
 
-# function next(x::EXPR, s::Iterator{:typed_vcat})
-#     if s.i == 1
-#         return x.args[1], +s
-#     elseif s.i == s.n
-#         return last(x.punctuation), +s
-#     elseif iseven(s.i)
-#         return x.punctuation[div(s.i, 2)], +s
-#     else
-#         return x.args[div(s.i + 1, 2)], +s
-#     end
-# end
 function next(x::EXPR, s::Iterator{:typed_vcat})
     if s.i == 1
         return x.args[1], +s

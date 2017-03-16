@@ -496,6 +496,14 @@ end
                 end...]
                 """
                 """Base.@__doc__(bitstype \$(sizeof(basetype) * 8) \$(esc(typename)) <: Enum{\$(basetype)})"""
+                """
+                @spawnat(p,
+                    let m = a
+                        isa(m, Exception) ? m : nothing
+                    end)
+                """
+                "[@spawn f(R, first(c), last(c)) for c in splitrange(length(R), nworkers())]"
+                "M.:(a)"
                 ]
         x = Parser.parse(str)
         @test Expr(x) == remlineinfo!(Base.parse(str))
@@ -504,16 +512,9 @@ end
 
 @testset "Broken things" begin
     for str in [
-                
-                "(a,b = c,d)"
                 "-(-x)^1"
-                "[@spawn f(R, first(c), last(c)) for c in splitrange(length(R), nworkers())]"
-                """
-                @spawnat(p,
-                    let m = a
-                        isa(m, Exception) ? m : nothing
-                    end)
-                """
+                "(a,b = c,d)"
+                
                 ]
         x = Parser.parse(str)
         @test_broken Expr(x) == remlineinfo!(Base.parse(str))
