@@ -1,11 +1,3 @@
-abstract FormatHintType
-abstract AddWhiteSpace <: FormatHintType
-abstract DeleteWhiteSpace <: FormatHintType
-abstract Useelseif <: FormatHintType
-type FormatHint{T<: FormatHintType}
-    loc
-end
-
 function format(ps::ParseState)
     if ps.formatcheck
         if isoperator(ps.t)
@@ -17,6 +9,7 @@ function format(ps::ParseState)
                 if ps.ws.kind != EmptyWS
                     push!(ps.hints, Hint{Hints.DeleteWhiteSpace}(ps.ws.startbyte+1:ps.ws.endbyte+1))
                 end
+            elseif ps.t.kind == Tokens.ISSUBTYPE || ps.t.kind == Tokens.DDDOT
             else
                 if ps.lws.kind == EmptyWS
                     push!(ps.hints, Hint{Hints.AddWhiteSpace}(ps.t.startbyte))
@@ -27,10 +20,10 @@ function format(ps::ParseState)
             end
         elseif ps.t.kind == Tokens.COMMA
             if ps.lws.kind != EmptyWS
-                push!(ps.hints, FormatHint{DeleteWhiteSpace}(ps.lws.startbyte+1:ps.lws.endbyte+1))
+                push!(ps.hints, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte+1:ps.lws.endbyte+1))
             end
             if ps.ws.kind == EmptyWS
-                push!(ps.hints, Hint{Hints.AddWhiteSpace}(ps.t.startbyte))
+                push!(ps.hints, Hint{Hints.AddWhiteSpace}(ps.nt.startbyte))
             end
         elseif ps.t.kind == Tokens.LPAREN || ps.t.kind == Tokens.LBRACE || ps.t.kind == Tokens.LSQUARE
             if ps.ws.kind != EmptyWS

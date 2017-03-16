@@ -1,11 +1,9 @@
 import Tokenize.Lexers: peekchar, prevchar, readchar, iswhitespace, emit, emit_error, backup!, accept_batch, eof
 
-# Types of white space
 typealias EmptyWS Tokens.begin_delimiters
 typealias SemiColonWS Tokens.end_delimiters
 typealias NewLineWS Tokens.begin_literal
 typealias WS Tokens.end_literal
-    
 typealias InvisibleBrackets Tokens.begin_invisble_keywords
 
 """
@@ -32,7 +30,6 @@ type Closer
     ws::Bool
     precedence::Int
 end
-
 Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, -1)
 
 """
@@ -62,7 +59,7 @@ type ParseState
     trackscope::Bool
     formatcheck::Bool
     ids::Dict{String,Any}
-    hints::Vector{Any}
+    hints::Vector{Hints.Hint}
     closer::Closer
     current_scope
 end

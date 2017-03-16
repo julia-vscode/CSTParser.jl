@@ -13,11 +13,11 @@ export ParseState, parse_expression
 include("hints.jl")
 import .Hints: Hint, LintCodes, FormatCodes
 
-include("parsestate.jl")
+include("lexer.jl")
 include("spec.jl")
 include("utils.jl")
 include("iterators.jl")
-include("scoping.jl")
+include("scoping/scoping.jl")
 include("components/array.jl")
 include("components/curly.jl")
 include("components/operators.jl")

@@ -1,3 +1,22 @@
+function function_name(sig::SyntaxNode)
+    if sig isa EXPR
+        if sig.head == CALL || sig.head == CURLY
+            return function_name(sig.args[1])
+        elseif sig.head isa OPERATOR{15,Tokens.DOT}
+            return function_name(sig.args[2])
+        end
+    elseif sig isa QUOTENODE
+        function_name(sig.val)
+    elseif sig isa IDENTIFIER
+        return sig.val
+    elseif sig isa OPERATOR
+        return UNICODE_OPS_REVERSE[typeof(sig).parameters[2]]
+    else
+        error("$(Expr(sig)) is not a valid function name")
+    end
+end
+
+
 function declares_function(x::SyntaxNode)
     if x isa EXPR
         if x.head isa KEYWORD{Tokens.FUNCTION}
