@@ -195,14 +195,14 @@ function Base.find(x::EXPR, n::Int)
 end
 
 
-Base.find(x, n::Symbol, loc = 0, list = []) = nothing
+Base.find(x, n::Symbol, loc = 0, list = Int[]) = nothing
 function Base.find(x::IDENTIFIER, n::Symbol, loc = 0, list = [])
     if x.val == n
-        push!(list, (loc, x))
+        push!(list, loc)
     end
 end
 
-function Base.find(x::EXPR, n::Symbol, loc = 0, list = [])
+function Base.find(x::EXPR, n::Symbol, loc = 0, list = Int[])
     for a in x
         find(a, n, loc, list)
         loc += a.span
