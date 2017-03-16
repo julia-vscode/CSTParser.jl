@@ -131,7 +131,6 @@ function parse_unary{P,K}(ps::ParseState, op::OPERATOR{P,K})
     arg = @precedence ps 12 parse_expression(ps)
     if (op isa OPERATOR{9, Tokens.PLUS} || op isa OPERATOR{9, Tokens.MINUS}) && (arg isa LITERAL{Tokens.INTEGER} || arg isa LITERAL{Tokens.FLOAT})
         arg.span += op.span
-        arg.offset = op.offset
         if op isa OPERATOR{9, Tokens.MINUS}
             arg.val = string("-", arg.val)
         end
@@ -296,7 +295,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
         nextarg = EXPR(TUPLE, args, ps.nt.startbyte - start, puncs)
     elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA
         next(ps)
-        nextarg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, ps.t.startbyte, Symbol(lowercase(string(ps.t.kind))))
+        nextarg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, Symbol(lowercase(string(ps.t.kind))))
     elseif ps.nt.kind == Tokens.COLON
         next(ps)
         op2 = INSTANCE(ps)

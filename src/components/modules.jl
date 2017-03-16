@@ -33,7 +33,7 @@ function parse_dot_mod(ps::ParseState)
         next(ps)
         d = INSTANCE(ps)
         for i = 1:d.span
-            push!(puncs, OPERATOR{15,Tokens.DOT,false}(1, ps.nt.startbyte+i))
+            push!(puncs, OPERATOR{15,Tokens.DOT,false}(1))
         end
     end
 
@@ -44,10 +44,9 @@ function parse_dot_mod(ps::ParseState)
             a = INSTANCE(ps)
             a.val = Symbol('@', a.val)
             a.span +=1
-            a.offset -=1
             push!(args, a)
         elseif ps.t.kind == Tokens.LPAREN
-            a = EXPR(HEAD{InvisibleBrackets}(0, 0), [], -ps.t.startbyte, [INSTANCE(ps)])
+            a = EXPR(HEAD{InvisibleBrackets}(0), [], -ps.t.startbyte, [INSTANCE(ps)])
             push!(a.args, @default ps @closer ps paren parse_expression(ps))
             next(ps)
             push!(a.punctuation, INSTANCE(ps))
@@ -93,27 +92,27 @@ function parse_imports(ps::ParseState)
         
         M = arg
         arg, puncs = parse_dot_mod(ps)
-        push!(ret.args, EXPR(KEYWORD{tk}(0,0), arg, sum(x.span for x in arg) + length(arg)-1, puncs))
+        push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg)-1, puncs))
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
             arg, puncs = parse_dot_mod(ps)
-            push!(ret.args, EXPR(KEYWORD{tk}(0,0), arg, sum(x.span for x in arg) + length(arg)-1, puncs))
+            push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg)-1, puncs))
         end
     else
         ret = EXPR(TOPLEVEL,[], 0, [kw])
-        push!(ret.args, EXPR(KEYWORD{tk}(0,0), arg, sum(x.span for x in arg) + length(arg)-1, puncs))
+        push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg)-1, puncs))
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
             arg, puncs = parse_dot_mod(ps)
-            push!(ret.args, EXPR(KEYWORD{tk}(0,0), arg, sum(x.span for x in arg) + length(arg)-1, puncs))
+            push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg)-1, puncs))
         end
     end
     
     # Linting
     if ps.current_scope isa Scope{Tokens.FUNCTION}
-        push!(ps.hints, Hint{Hints.ImportInFunction}(kw.offset + (1:ret.span)))
+        push!(ps.hints, Hint{Hints.ImportInFunction}(start:ps.nt.startbyte))
     end
 
     ret.span = ps.nt.startbyte - start
@@ -133,10 +132,10 @@ function parse_export(ps::ParseState)
         push!(ret.args, arg)
     end
     
-    if ps.current_scope isa Scope{Tokens.FUNCTION}
-        push!(ps.hints, Hint{Hints.ImportInFunction}(kw.offset + (1:ret.span)))
-    end
     ret.span = ps.nt.startbyte - start
+    if ps.current_scope isa Scope{Tokens.FUNCTION}
+        push!(ps.hints, Hint{Hints.ImportInFunction}(start:ps.nt.startbyte))
+    end
     return ret
 end
 

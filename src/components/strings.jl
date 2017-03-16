@@ -11,7 +11,7 @@ function parse_string(ps::ParseState, prefixed = false)
     if istrip
         lit = unindent_triple_string(ps)
     else
-        lit = LITERAL{ps.t.kind}(span, offset, ps.t.val[2:end-1])
+        lit = LITERAL{ps.t.kind}(span, ps.t.val[2:end-1])
     end
 
     # there are interpolations in the string
@@ -39,7 +39,7 @@ function parse_string(ps::ParseState, prefixed = false)
             pos+=endof(str1)
 
             if length(str1)>0 && last(str1) === '$' && (length(str1) == 1 || str1[end-1] != '\\')
-                lit2 = LITERAL{Tokens.STRING}(endof(str1) - 1, 0, unescape_string(str1[1:end-1]))
+                lit2 = LITERAL{Tokens.STRING}(endof(str1) - 1, unescape_string(str1[1:end-1]))
                 if !isempty(lit2.val)
                     push!(ret.args, lit2)
                 end
@@ -60,7 +60,7 @@ function parse_string(ps::ParseState, prefixed = false)
                 end
                 # !eof(io) && skip(io, 1)
             else
-                push!(ret.args, LITERAL{Tokens.STRING}(sizeof(str1) - 1, 0, unescape_string(str1)))
+                push!(ret.args, LITERAL{Tokens.STRING}(sizeof(str1) - 1, unescape_string(str1)))
             end
         end
         return ret
@@ -90,7 +90,7 @@ function unindent_triple_string(ps::ParseState)
     if indent>-1
         val = Base.unindent(val, indent)
     end
-    lit = LITERAL{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte, ps.t.startbyte, val)
+    lit = LITERAL{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte, val)
 end
 
 _start_string(x::EXPR) = Iterator{:string}(1, 1)

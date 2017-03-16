@@ -21,7 +21,7 @@ Parses a macro call. Expects to start on the `@`.
 function parse_macrocall(ps::ParseState)
     start = ps.t.startbyte
     next(ps)
-    mname = IDENTIFIER(ps.nt.startbyte - ps.lt.startbyte , ps.lt.startbyte, string("@", ps.t.val))
+    mname = IDENTIFIER(ps.nt.startbyte - ps.lt.startbyte , string("@", ps.t.val))
     ret = EXPR(MACROCALL, [mname], 0)
     if isempty(ps.ws) && ps.nt.kind == Tokens.LPAREN
         next(ps)

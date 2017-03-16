@@ -109,7 +109,7 @@ function parse_compound(ps::ParseState, ret)
     elseif ps.nt.kind == Tokens.DO
         ret = parse_do(ps, ret)
     elseif (ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN)
-        op = OPERATOR{11,Tokens.STAR,false}(0, 0)
+        op = OPERATOR{11,Tokens.STAR,false}(0)
         ret = parse_operator(ps, ret, op)
     elseif ps.nt.kind==Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR}) #&& !isunaryop(ret)
         if isempty(ps.ws) 
@@ -146,11 +146,11 @@ function parse_compound(ps::ParseState, ret)
     elseif ret isa EXPR && ret.head == x_STR && ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         arg = INSTANCE(ps)
-        push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.offset, arg.val))
+        push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.val))
         ret.span += arg.span
     elseif ret isa EXPR && ret.head isa OPERATOR{20, Tokens.PRIME} 
         nextarg = @precedence ps 11 parse_expression(ps)
-        ret = EXPR(CALL, [OPERATOR{11, Tokens.STAR, false}(0, 0), ret, nextarg], ret.span + nextarg.span)
+        ret = EXPR(CALL, [OPERATOR{11, Tokens.STAR, false}(0), ret, nextarg], ret.span + nextarg.span)
     else
         println(first(stacktrace()))
         print_with_color(:green, string("Failed at: ", position(ps.l.io), "\n"))
@@ -225,7 +225,7 @@ function parse_paren(ps::ParseState)
         end
 
         if ps.ws.kind != SemiColonWS
-            ret.head = HEAD{InvisibleBrackets}(0, 0)
+            ret.head = HEAD{InvisibleBrackets}(0)
         end
     elseif ret isa EXPR && (ret.head == TUPLE || ret.head == BLOCK)
     else
@@ -260,7 +260,7 @@ function parse_quote(ps::ParseState)
         return QUOTENODE(arg, arg.span, puncs)
     elseif iskw(ps.nt)
         next(ps)
-        arg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, ps.t.startbyte, Symbol(ps.val))
+        arg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, Symbol(ps.val))
         return QUOTENODE(arg, arg.span, puncs)
     elseif isliteral(ps.nt)
         return INSTANCE(next(ps))
@@ -327,7 +327,7 @@ function parse(ps::ParseState, cont = false)
         top = EXPR(TOPLEVEL, [], 0)
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
-            push!(top.args, LITERAL{nothing}(ps.nt.startbyte, ps.nt.startbyte, :nothing))
+            push!(top.args, LITERAL{nothing}(ps.nt.startbyte, :nothing))
         end
         while !ps.done
             ret = parse_expression(ps)
@@ -338,7 +338,7 @@ function parse(ps::ParseState, cont = false)
     else
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
-            top = LITERAL{nothing}(ps.nt.startbyte, ps.nt.startbyte, :nothing)
+            top = LITERAL{nothing}(ps.nt.startbyte, :nothing)
         else
             top = parse_expression(ps)
             top = parse_doc(ps, top)

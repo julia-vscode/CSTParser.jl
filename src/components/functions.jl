@@ -28,7 +28,7 @@ Parses a function call. Expects to start before the opening parentheses and is p
 function parse_call(ps::ParseState, ret)
     next(ps)
     if ret isa IDENTIFIER && ret.val == :ccall
-        ret = HEAD{Tokens.CCALL}(ret.span, ret.offset)
+        ret = HEAD{Tokens.CCALL}(ret.span)
         ret = EXPR(ret, [], ret.span - ps.t.startbyte, [INSTANCE(ps)])
     else
         ret = EXPR(CALL, [ret], ret.span - ps.t.startbyte, [INSTANCE(ps)])
@@ -38,7 +38,7 @@ function parse_call(ps::ParseState, ret)
     @noscope ps @nocloser ps newline @closer ps comma @closer ps paren while !closer(ps)
         a = parse_expression(ps)
         if a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
-            a.head = HEAD{Tokens.KW}(a.head.span, a.head.offset)
+            a.head = HEAD{Tokens.KW}(a.head.span)
         end
         push!(ret.args, a)
         if ps.nt.kind == Tokens.COMMA
@@ -58,7 +58,7 @@ function parse_call(ps::ParseState, ret)
         @nocloser ps newline @nocloser ps semicolon @closer ps comma @closer ps brace while !closer(ps)
             a = parse_expression(ps)
             if a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
-                a.head = HEAD{Tokens.KW}(a.head.span, a.head.offset)
+                a.head = HEAD{Tokens.KW}(a.head.span)
             end
             push!(paras.args, a)
             if ps.nt.kind == Tokens.COMMA
@@ -151,10 +151,16 @@ next(x::EXPR, s::Iterator{:stdcall}) = x.head, +s
 
 
 # Linting
+"""
+    _lint_func_sig(ps, sig)
 
+Runs linting on function argument, assumes `sig` has just been parsed such that 
+the byte offset is `ps.nt.startbyte - sig.span`.
+"""
 function _lint_func_sig(ps::ParseState, sig::IDENTIFIER) end
     
 function _lint_func_sig(ps::ParseState, sig::EXPR)
+    loc = ps.nt.startbyte + (-sig.span:0)
     if sig isa EXPR && sig.head isa OPERATOR{14, Tokens.DECLARATION}
         return _lint_func_sig(ps, sig.args[1])
     end
@@ -168,34 +174,38 @@ function _lint_func_sig(ps::ParseState, sig::EXPR)
             continue
         elseif arg isa EXPR && arg.head == PARAMETERS
             for (i1, arg1) in enumerate(arg.args)
-                _lint_arg(ps, arg1, args, i + i1 -1, fname, nargs, i-1)
+                _lint_arg(ps, arg1, args, i + i1 -1, fname, nargs, i-1, loc)
             end
         else
-            _lint_arg(ps, arg, args, i, fname, nargs, firstkw)
+            _lint_arg(ps, arg, args, i, fname, nargs, firstkw, loc)
         end
     end
 end
     
-function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw)
+function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
     a = _arg_id(arg)
     !(a isa IDENTIFIER) && return
     push!(ps.current_scope.args, Variable(a, :Any, :argument))
     if !(a.val in args)
         push!(args, a.val)
     else 
-        push!(ps.hints, Hint{Hints.DuplicateArgumentName}(a.offset + (1:arg.span)))
+        # push!(ps.hints, Hint{Hints.DuplicateArgumentName}(a.offset + (1:arg.span)))
+        push!(ps.hints, Hint{Hints.DuplicateArgumentName}(loc))
     end
     if a.val == Expr(fname)
-        push!(ps.hints, Hint{Hints.ArgumentFunctionNameConflict}(a.offset + (1:arg.span)))
+        # push!(ps.hints, Hint{Hints.ArgumentFunctionNameConflict}(a.offset + (1:arg.span)))
+        push!(ps.hints, Hint{Hints.ArgumentFunctionNameConflict}(loc))
     end
     if arg isa EXPR && arg.head isa OPERATOR{0,Tokens.DDDOT} && i!=nargs
-        push!(ps.hints, Hint{Hints.SlurpingPosition}(a.offset + (1:arg.span)))
+        # push!(ps.hints, Hint{Hints.SlurpingPosition}(a.offset + (1:arg.span)))
+        push!(ps.hints, Hint{Hints.SlurpingPosition}(loc))
     end
     if arg isa EXPR && arg.head isa HEAD{Tokens.KW} && i < firstkw
         firstkw = i
     end
     if !(arg isa EXPR && arg.head isa HEAD{Tokens.KW}) && i> firstkw
-        push!(ps.hints, Hint{Hints.KWPosition}(a.offset + (1:arg.span)))
+        # push!(ps.hints, Hint{Hints.KWPosition}(a.offset + (1:arg.span)))
+        push!(ps.hints, Hint{Hints.KWPosition}(loc))
     end
 end
 

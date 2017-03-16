@@ -48,7 +48,7 @@ end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.END}})
     # if ps.closer.square
-        return IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, ps.t.startbyte, :end)
+        return IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :end)
     # else
     #     error("unexpected `end`")
     # end
