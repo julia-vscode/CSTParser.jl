@@ -1,5 +1,5 @@
 """
-    parse_juxtaposition(ps, ret)
+    parse_ref(ps, ret)
 
 Handles cases where an expression - `ret` - is followed by 
 `[`. Parses the following bracketed expression and modifies it's

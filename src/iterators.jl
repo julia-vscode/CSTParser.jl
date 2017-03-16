@@ -169,7 +169,7 @@ function Base.setindex!(x::EXPR, y, i::Int)
 end
 
 function _find(x::EXPR, n, path, ind)
-    if x.head == STRING || x.head == TOPLEVEL && x.args[1] isa EXPR && (ex.args[1].head isa KEYWORD{Tokens.IMPORT} || ex.args[1].head isa KEYWORD{Tokens.IMPORTALL} || ex.args[1].head isa KEYWORD{Tokens.USING})
+    if x.head == STRING || x.head == TOPLEVEL && x.args[1] isa EXPR && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING})
         return x
     end
     offset = 0
@@ -195,16 +195,27 @@ function Base.find(x::EXPR, n::Int)
 end
 
 
-Base.find(x, n::Symbol, list) = nothing
-function Base.find(x::IDENTIFIER, n::Symbol, list)
+Base.find(x, n::Symbol, loc = 0, list = []) = nothing
+function Base.find(x::IDENTIFIER, n::Symbol, loc = 0, list = [])
     if x.val == n
-        push!(list, x)
+        push!(list, (loc, x))
     end
 end
 
-function Base.find(x::EXPR, n::Symbol, list = [])
+function Base.find(x::EXPR, n::Symbol, loc = 0, list = [])
     for a in x
-        find(a, n, list)
+        find(a, n, loc, list)
+        loc += a.span
     end
     list
+end
+
+function expr_cnt(x)
+    cnt = 1
+    if x isa EXPR
+        for a in x
+            cnt += ecnt(a)
+        end
+    end
+    cnt
 end

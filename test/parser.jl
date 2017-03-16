@@ -45,7 +45,7 @@ randop() = rand(["-->", "→",
         end
     end
 
-    @testset "Dot Operator" begin
+    @testset "Unary Operator" begin
         for op in ["+", "-", "!", "~", "&", "::", "<:", ">:", "¬", "√", "∛", "∜"]
             x = Parser.parse("$op x")
             @test Expr(x) == remlineinfo!(Base.parse("$op x"))
@@ -512,9 +512,8 @@ end
 
 @testset "Broken things" begin
     for str in [
-                "-(-x)^1"
                 "(a,b = c,d)"
-                
+                "-(-x)^1"
                 ]
         x = Parser.parse(str)
         @test_broken Expr(x) == remlineinfo!(Base.parse(str))

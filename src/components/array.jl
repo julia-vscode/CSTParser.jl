@@ -29,7 +29,7 @@ function parse_array(ps::ParseState)
         end
         # Handle generator split over lines
         if ps.nt.kind == Tokens.FOR && ps.ws.kind == NewLineWS
-            first_arg = parse_juxtaposition(ps, first_arg)
+            first_arg = parse_compound(ps, first_arg)
             if ps.nt.kind!= Tokens.RSQUARE
                 error("expected \"[\"")
             end

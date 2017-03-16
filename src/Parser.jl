@@ -77,7 +77,7 @@ function parse_expression(ps::ParseState)
     end
 
     while !closer(ps) && !(ps.closer.precedence == 15 && ismacro(ret))
-        ret = parse_juxtaposition(ps, ret)
+        ret = parse_compound(ps, ret)
     end
     if ps.closer.precedence != 15 && closer(ps) && ret isa LITERAL{Tokens.MACRO}
         ret = EXPR(MACROCALL, [ret], ret.span)
@@ -88,7 +88,7 @@ end
 
 
 """
-    parse_juxtaposition(ps, ret)
+    parse_compound(ps, ret)
 
 Handles cases where an expression - `ret` - is not followed by 
 `closer(ps) == true`. Possible juxtapositions are: 
@@ -103,7 +103,7 @@ Handles cases where an expression - `ret` - is not followed by
 + an expression preceded by a unary operator
 + A number followed by an expression (with no seperating white space)
 """
-function parse_juxtaposition(ps::ParseState, ret)
+function parse_compound(ps::ParseState, ret)
     if ps.nt.kind == Tokens.FOR
         ret = parse_generator(ps, ret)
     elseif ps.nt.kind == Tokens.DO
