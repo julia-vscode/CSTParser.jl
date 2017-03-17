@@ -350,6 +350,23 @@ function parse(ps::ParseState, cont = false)
     return top, ps
 end
 
+function parse_directory(path::String, proj = Project(path,[]))
+    for f in readdir(path)
+        if isfile(joinpath(path, f)) && endswith(f, ".jl")
+            try
+                x = parse(readstring(joinpath(path, f)), true)
+                push!(proj.files, File([], [], joinpath(path, f), x))
+            catch
+                print("$f")
+            end
+        elseif isdir(joinpath(path, f))
+            parse_directory(joinpath(path, f), proj)
+        end
+    end
+    proj
+end
+
+
 
 ischainable(t::Token) = t.kind == Tokens.PLUS || t.kind == Tokens.STAR || t.kind == Tokens.APPROX
 LtoR(prec::Int) = 1 ≤ prec ≤ 5 || prec == 13

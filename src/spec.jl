@@ -95,6 +95,19 @@ type Scope{t}
     args::Vector
 end
 
+type File
+    imports
+    includes
+    path::String
+    ast::SyntaxNode
+end
+
+type Project
+    path::String
+    files::Vector{File}
+end
+
+
 Scope() = Scope{nothing}(nothing, [])
 
 type Variable

@@ -56,6 +56,4 @@ function _get_full_scope(x::EXPR, n::Int)
 end
 
 is_func_call(x) = false
-function is_func_call(x::EXPR)
-    x.head == CALL
-end
+is_func_call(x::EXPR) = x.head == CALL
