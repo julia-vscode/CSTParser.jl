@@ -9,7 +9,7 @@ function parse_do(ps::ParseState, ret)
         push!(args.args, a)
         if ps.nt.kind == Tokens.COMMA
             next(ps)
-            format(ps)
+            format_comma(ps)
             push!(args.punctuation, INSTANCE(ps))
         end
     end

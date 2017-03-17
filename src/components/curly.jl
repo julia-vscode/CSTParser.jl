@@ -6,19 +6,19 @@ seperated list.
 """
 function parse_curly(ps::ParseState, ret)
     next(ps)
-    format(ps)
+    format_lbracket(ps)
     ret = EXPR(CURLY, [ret], ret.span - ps.t.startbyte, [INSTANCE(ps)])
 
     @default ps @nocloser ps newline @closer ps comma @closer ps brace while !closer(ps)
         push!(ret.args, parse_expression(ps))
         if ps.nt.kind == Tokens.COMMA
             next(ps)
-            format(ps)
+            format_rbracket(ps)
             push!(ret.punctuation, INSTANCE(ps))
         end
     end
     next(ps)
-    format(ps)
+    format_rbracket(ps)
     push!(ret.punctuation, INSTANCE(ps))
     ret.span += ps.nt.startbyte
     return ret

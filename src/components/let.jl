@@ -7,8 +7,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
         push!(args, a)
         if ps.nt.kind == Tokens.COMMA
             next(ps)
-            format(ps)
             push!(ret.punctuation, INSTANCE(ps))
+            format_comma(ps)
         end
     end
 

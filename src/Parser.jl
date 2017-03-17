@@ -39,7 +39,6 @@ include("components/types.jl")
 include("components/tuples.jl")
 include("conversion.jl")
 include("display.jl")
-include("formatting.jl")
 
 
 """
@@ -132,12 +131,12 @@ function parse_compound(ps::ParseState, ret)
     elseif ps.nt.kind == Tokens.COMMA
         ret = parse_tuple(ps, ret)
     elseif isunaryop(ret) && !isassignment(ps.nt)
-        # op = OPERATOR{12,typeof(ret).parameters[2:end]...}(ret.span, ret.offset)
         ret = parse_unary(ps, ret)
     elseif isoperator(ps.nt)
         next(ps)
-        format(ps)
         op = INSTANCE(ps)
+        format_op(ps, precedence(ps.t))
+
         ret = parse_operator(ps, ret, op)
     elseif ret isa IDENTIFIER && ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
         next(ps)
@@ -183,13 +182,14 @@ function parse_list(ps::ParseState, puncs)
         a = @nocloser ps newline @closer ps comma parse_expression(ps)
         push!(args, a)
         if ps.nt.kind==Tokens.COMMA
-            push!(puncs, INSTANCE(next(ps)))
-            format(ps)
+            next(ps)
+            push!(puncs, INSTANCE(ps))
+            format_comma(ps)
         end
     end
 
     if ps.t.kind == Tokens.COMMA
-        format(ps)
+        format_comma(ps)
     end
     return args
 end
@@ -205,11 +205,13 @@ seperated list.
 function parse_paren(ps::ParseState)
     start = ps.t.startbyte
     openparen = INSTANCE(ps)
-    format(ps)
+    format_lbracket(ps)
+    
     # handle empty case
     if ps.nt.kind == Tokens.RPAREN
         next(ps)
         closeparen = INSTANCE(ps)
+        format_rbracket(ps)
         return EXPR(TUPLE, [], ps.nt.startbyte - start, [openparen, closeparen])
     end
     
@@ -234,7 +236,7 @@ function parse_paren(ps::ParseState)
     # handle closing ')'
     next(ps)
     closeparen = INSTANCE(ps)
-    format(ps)
+    format_rbracket(ps)
     
     unshift!(ret.punctuation, openparen)
     push!(ret.punctuation, closeparen)

@@ -203,6 +203,9 @@ function Base.find(x::IDENTIFIER, n::Symbol, loc = 0, list = [])
 end
 
 function Base.find(x::EXPR, n::Symbol, loc = 0, list = Int[])
+    if x.head == STRING
+        return list
+    end
     for a in x
         find(a, n, loc, list)
         loc += a.span
@@ -214,7 +217,7 @@ function expr_cnt(x)
     cnt = 1
     if x isa EXPR
         for a in x
-            cnt += ecnt(a)
+            cnt += expr_cnt(a)
         end
     end
     cnt

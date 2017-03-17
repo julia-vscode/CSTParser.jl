@@ -28,7 +28,7 @@ type HEAD{K} <: INSTANCE
 end
 
 function LITERAL(ps::ParseState)
-    span = ps.nt.startbyte - ps.t.startbyte
+    span = ps.nt.startbyte - ps.t.startbyte - ps.ndot
     if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING
         return parse_string(ps)
     else
@@ -37,7 +37,7 @@ function LITERAL(ps::ParseState)
 end
 
 function INSTANCE(ps::ParseState)
-    span = ps.nt.startbyte - ps.t.startbyte
+    span = ps.nt.startbyte - ps.t.startbyte - ps.ndot
     return isidentifier(ps.t) ? IDENTIFIER(span, Symbol(ps.t.val)) : 
         isliteral(ps.t) ? LITERAL(ps) :
         iskw(ps.t) ? KEYWORD{ps.t.kind}(span) :

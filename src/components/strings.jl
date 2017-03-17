@@ -5,8 +5,7 @@ When trying to make an `INSTANCE` from a string token we must check for
 interpolating operators.
 """
 function parse_string(ps::ParseState, prefixed = false)
-    span = ps.nt.startbyte - ps.t.startbyte
-    offset = ps.t.startbyte
+    span = ps.nt.startbyte - ps.t.startbyte - ps.ndot
     istrip = ps.t.kind == Tokens.TRIPLE_STRING
     if istrip
         lit = unindent_triple_string(ps)
@@ -90,7 +89,7 @@ function unindent_triple_string(ps::ParseState)
     if indent>-1
         val = Base.unindent(val, indent)
     end
-    lit = LITERAL{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte, val)
+    lit = LITERAL{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte - ps.ndot, val)
 end
 
 _start_string(x::EXPR) = Iterator{:string}(1, 1)

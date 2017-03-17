@@ -33,7 +33,7 @@ function parse_call(ps::ParseState, ret)
     else
         ret = EXPR(CALL, [ret], ret.span - ps.t.startbyte, [INSTANCE(ps)])
     end
-    format(ps)
+    format_lbracket(ps)
     
     @noscope ps @nocloser ps newline @closer ps comma @closer ps paren while !closer(ps)
         a = parse_expression(ps)
@@ -43,8 +43,8 @@ function parse_call(ps::ParseState, ret)
         push!(ret.args, a)
         if ps.nt.kind == Tokens.COMMA
             next(ps)
-            format(ps)
             push!(ret.punctuation, INSTANCE(ps))
+            format_comma(ps)
         end
         if ps.ws.kind == SemiColonWS
             break
@@ -63,8 +63,8 @@ function parse_call(ps::ParseState, ret)
             push!(paras.args, a)
             if ps.nt.kind == Tokens.COMMA
                 next(ps)
-                format(ps)
                 push!(paras.punctuation, INSTANCE(ps))
+                format_comma(ps)
             end
         end
         paras.span += ps.nt.startbyte
@@ -72,7 +72,7 @@ function parse_call(ps::ParseState, ret)
     end
     next(ps)
     push!(ret.punctuation, INSTANCE(ps))
-    format(ps)
+    format_rbracket(ps)
     ret.span += ps.nt.startbyte
     # fix arbitrary $ case
     if ret.args[1] isa OPERATOR{9, Tokens.EX_OR}

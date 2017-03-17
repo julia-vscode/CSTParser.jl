@@ -5,9 +5,10 @@
 tuple.
 """
 function parse_tuple(ps::ParseState, ret)
-    format(ps)
     next(ps)
     op = INSTANCE(ps)
+    format_comma(ps)
+
     start = ps.t.startbyte
     if isassignment(ps.nt)
         if ret isa EXPR && ret.head!=TUPLE

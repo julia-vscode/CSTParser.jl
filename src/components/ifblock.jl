@@ -33,7 +33,7 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
     if ps.nt.kind==Tokens.ELSE
         next(ps)
         start_col = ps.t.startpos[2]
-        format(ps)
+        # format(ps)
         push!(puncs, INSTANCE(ps))
         startelseblock = ps.nt.startbyte
         @default ps parse_block(ps, start_col, elseblock)

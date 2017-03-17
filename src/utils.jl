@@ -232,6 +232,11 @@ ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
 
 
 # Testing functions
+
+"""
+    remlineinfo!(x)
+Removes line info expressions. (i.e. Expr(:line, 1))
+"""
 function remlineinfo!(x)
     if isa(x,Expr)
         id = find(map(x->isa(x,Expr) && x.head==:line,x.args))
@@ -257,7 +262,7 @@ function test_order(x, out = [])
 end
 
 function test_find(str)
-    x = Parser.parse(str)
+    x = Parser.parse(str, true)
     for i = 1:sizeof(str)
         find(x, i)
     end
@@ -311,6 +316,12 @@ function check_file(f::String)
 end
 
 
+"""
+    compare(x,y)
+
+Recursively checks whether two Base.Expr are the same. Returns unequal sub-
+expressions.
+"""
 compare(x,y) = x == y ? true : (x,y)
 
 function compare(x::Expr,y::Expr)
@@ -332,6 +343,13 @@ function compare(x::Expr,y::Expr)
     end
 end
 
+
+"""
+    span(x, neq = [])
+
+Recursively checks whether the span of an expression equals the sum of the span
+of its components. Returns a vector of failing expressions.
+"""
 function span(x, neq = [])
     if x isa EXPR && x.head != STRING && !(x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL} || x.head isa KEYWORD{Tokens.USING} || (x.head == TOPLEVEL && x.args[1] isa EXPR && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING})))
         cnt = 0
@@ -347,4 +365,28 @@ function span(x, neq = [])
         end
     end
     neq
+end
+
+
+"""
+    check_reformat()
+
+Reads and parses all files in current directory, applys formatting fixes and checks that the output AST remains the same.
+"""
+function check_reformat()
+    fs = filter(f->endswith(f, ".jl"), readdir())
+    for (i,f) in enumerate(fs)
+        f == "deprecated.jl" && continue
+        str = readstring(f)
+        x, ps = Parser.parse(ParseState(str), true);
+        cnt = 0
+        for i = 1:length(x) - 1
+            y = x[i]
+            sstr = str[cnt + (1:y.span)]
+            
+            y1 = Parser.parse(sstr)
+            @assert Expr(y) == Expr(y1)
+            cnt += y.span
+        end
+    end
 end

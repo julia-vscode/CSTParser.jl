@@ -16,8 +16,9 @@ function parse_ranges(ps::ParseState)
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(indices.punctuation, INSTANCE(ps))
+            format_comma(ps)
+                
             indices.span += last(indices.punctuation).span
-            format(ps)
             push!(indices.args, @closer ps comma @closer ps ws parse_expression(ps))
             indices.span += last(indices.args).span
         end
