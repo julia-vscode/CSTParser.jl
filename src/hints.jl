@@ -9,7 +9,9 @@ end
 AddWhiteSpace,
 DeleteWhiteSpace,
 Useelseif,
-Indents)
+Indents,
+CamelCase,
+LowerCase)
 
 @enum(LintCodes,
 DuplicateArgumentName,
@@ -26,6 +28,8 @@ function apply(hints::Vector{Hint}, str)
     end
     str1
 end
+
+function apply(h::Hint, str) end
 
 function apply(h::Hint{AddWhiteSpace}, str)
     if h.loc isa Tuple
@@ -106,3 +110,22 @@ function format_indent(ps, start_col)
     end
 end
 
+function format_typename(ps, sig)
+    start_loc = ps.nt.startbyte - sig.span
+    id = get_id(sig)
+    sig isa EXPR && return
+    val = string(id.val)
+    # Abitrary limit of 3 for uppercase acronym
+    if islower(first(val)) || (length(val) > 3 && isupper(val))
+        push!(ps.hints, Hint{Hints.CamelCase}(start_loc + (1:sizeof(val))))
+    end
+end
+
+function format_funcname(ps, id, offset)
+    start_loc = ps.nt.startbyte - offset
+    !(id isa Symbol) && return
+    val = string(id)
+    if !islower(val)
+        push!(ps.hints, Hint{Hints.LowerCase}(start_loc + (1:sizeof(val))))
+    end
+end

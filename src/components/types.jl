@@ -11,7 +11,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     arg = parse_expression(ps)
-    
+    format_typename(ps, arg)
+
     scope = Scope{Tokens.ABSTRACT}(get_id(arg), [])
     # push!(ps.current_scope.args, scope)
 
@@ -23,6 +24,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
     kw = INSTANCE(ps)
     arg1 = @closer ps ws parse_expression(ps) 
     arg2 = parse_expression(ps)
+    format_typename(ps, arg2)
     
     scope = Scope{Tokens.BITSTYPE}(get_id(arg2), [])
     push!(ps.current_scope.args, scope)
@@ -34,6 +36,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     arg1 = @closer ps ws parse_expression(ps) 
+    format_typename(ps, arg1)
     arg2 = parse_expression(ps)
 
     scope = Scope{Tokens.TYPEALIAS}(get_id(arg1), [])
@@ -53,6 +56,7 @@ function parse_struct(ps::ParseState, mutable)
     start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
     sig = @closer ps block @closer ps ws parse_expression(ps)
+    format_typename(ps, sig)
     block = parse_block(ps, start_col)
     next(ps)
 

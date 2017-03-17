@@ -11,7 +11,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     if sig isa EXPR && sig.head isa HEAD{InvisibleBrackets} && !(sig.args[1] isa EXPR && sig.args[1].head == TUPLE)
         sig.args[1] = EXPR(TUPLE, [sig.args[1]], sig.args[1].span)
     end
-    scope = Scope{Tokens.FUNCTION}(get_id(sig), [])
+    scope = Scope{Tokens.FUNCTION}(function_name(sig), [])
     @scope ps scope _lint_func_sig(ps, sig)
     block = @default ps @scope ps scope parse_block(ps, start_col)
     next(ps)
@@ -52,8 +52,6 @@ function parse_call(ps::ParseState, ret)
     end
 
     if ps.ws.kind == SemiColonWS
-        # next(ps)
-        # push!(ret.punctuation, INSTANCE(ps))
         paras = EXPR(PARAMETERS, [], -ps.nt.startbyte)
         @nocloser ps newline @nocloser ps semicolon @closer ps comma @closer ps brace while !closer(ps)
             a = parse_expression(ps)
@@ -165,6 +163,7 @@ function _lint_func_sig(ps::ParseState, sig::EXPR)
         return _lint_func_sig(ps, sig.args[1])
     end
     fname = _get_fname(sig)
+    format_funcname(ps, function_name(sig), sig.span)
     args = Symbol[]
     nargs = length(sig.args) - 1
     firstkw  = nargs + 1
@@ -243,5 +242,38 @@ function _get_fname(sig)
         get_id(sig.args[1].args[1])
     else
         get_id(sig.args[1])
+    end
+end
+
+function function_name(sig::SyntaxNode)
+    if sig isa EXPR
+        if sig.head == CALL || sig.head == CURLY
+            return function_name(sig.args[1])
+        elseif sig.head isa OPERATOR{15,Tokens.DOT}
+            return function_name(sig.args[2])
+        end
+    elseif sig isa QUOTENODE
+        function_name(sig.val)
+    elseif sig isa IDENTIFIER
+        return sig.val
+    elseif sig isa OPERATOR
+        return UNICODE_OPS_REVERSE[typeof(sig).parameters[2]]
+    else
+        error("$(Expr(sig)) is not a valid function name")
+    end
+end
+
+
+function declares_function(x::SyntaxNode)
+    if x isa EXPR
+        if x.head isa KEYWORD{Tokens.FUNCTION}
+            return true
+        elseif x.head isa OPERATOR{1,Tokens.EQ} && x.args[1] isa EXPR && x.args[1].head==CALL
+            return true
+        else
+            return false
+        end
+    else
+        return false
     end
 end

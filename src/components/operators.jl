@@ -169,9 +169,7 @@ end
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1, Tokens.EQ})
     nextarg = @precedence ps 1-LtoR(1) parse_expression(ps)
     if is_func_call(ret)
-        # if !(nextarg isa EXPR && nextarg.head == BLOCK)
-            nextarg = EXPR(BLOCK, SyntaxNode[nextarg], nextarg.span)
-        # end
+        nextarg = EXPR(BLOCK, SyntaxNode[nextarg], nextarg.span)
         scope = Scope{Tokens.FUNCTION}(get_id(ret), [])
         @scope ps scope _lint_func_sig(ps, ret)
         push!(ps.current_scope.args, scope)
