@@ -168,8 +168,8 @@ function Base.setindex!(x::EXPR, y, i::Int)
     error(BoundsError(x, i))
 end
 
-function _find(x::EXPR, n, path, ind)
-    if x.head == STRING || x.head == TOPLEVEL && x.args[1] isa EXPR && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING})
+function _find(x::EXPR, n, path, ind, offsets)
+    if x.head == STRING || x.head isa KEYWORD{Tokens.USING} || x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL} || (x.head == TOPLEVEL && x.args[1] isa EXPR && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING}))
         return x
     end
     offset = 0
@@ -180,18 +180,20 @@ function _find(x::EXPR, n, path, ind)
             offset += a.span
         else
             push!(ind, i)
-            return _find(a, n-offset, path, ind)
+            push!(offsets, offset)
+            return _find(a, n-offset, path, ind, offsets)
         end
     end
 end
 
-_find(x::Union{QUOTENODE,INSTANCE}, n, path, ind) = x
+_find(x::Union{QUOTENODE,INSTANCE,ERROR}, n, path, ind, offsets) = x
 
 function Base.find(x::EXPR, n::Int)
     path = []
     ind = Int[]
-    y = _find(x, n ,path, ind)
-    return y, path, ind
+    offsets = Int[]
+    y = _find(x, n ,path, ind, offsets)
+    return y, path, ind, offsets
 end
 
 
@@ -203,7 +205,7 @@ function Base.find(x::IDENTIFIER, n::Symbol, loc = 0, list = [])
 end
 
 function Base.find(x::EXPR, n::Symbol, loc = 0, list = Int[])
-    if x.head == STRING
+    if x.head == STRING 
         return list
     end
     for a in x

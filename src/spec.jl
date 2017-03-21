@@ -27,6 +27,10 @@ type HEAD{K} <: INSTANCE
     span::Int
 end
 
+type ERROR{K} <: SyntaxNode
+    span::Int
+end
+
 function LITERAL(ps::ParseState)
     span = ps.nt.startbyte - ps.t.startbyte - ps.ndot
     if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING
@@ -44,14 +48,14 @@ function INSTANCE(ps::ParseState)
         isoperator(ps.t) ? OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}(span + ps.dot) :
         ispunctuation(ps.t) ? PUNCTUATION{ps.t.kind}(span) :
         ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION{ps.t.kind}(span) :
-        error("Couldn't make an INSTANCE from $(ps)")
+        ERROR{ps.t.kind}(0)
 end
 
 
 type QUOTENODE <: SyntaxNode
     val::SyntaxNode
     span::Int
-    punctuation::Vector{INSTANCE}
+    punctuation::Vector{SyntaxNode}
 end
 
 # heads
@@ -120,7 +124,7 @@ type EXPR <: SyntaxNode
     head::SyntaxNode
     args::Vector{SyntaxNode}
     span::Int
-    punctuation::Vector{INSTANCE}
+    punctuation::Vector{SyntaxNode}
     scope::Scope
 end
 

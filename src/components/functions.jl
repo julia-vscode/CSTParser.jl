@@ -149,6 +149,12 @@ next(x::EXPR, s::Iterator{:stdcall}) = x.head, +s
 
 
 # Linting
+# Signature
+# [+] repeated argument names
+# [+] argument/function name conflict
+# [+] check slurping in last position only
+# [+] check kw arguments order
+# [] check all parameters are used specified
 """
     _lint_func_sig(ps, sig)
 
@@ -169,7 +175,7 @@ function _lint_func_sig(ps::ParseState, sig::EXPR)
     firstkw  = nargs + 1
     for (i, arg) in enumerate(sig.args[2:end])
         if arg isa EXPR && arg.head isa OPERATOR{14, Tokens.DECLARATION} && length(arg.args) == 1
-            #unhandled TYPE argument
+            #unhandled ::Type argument
             continue
         elseif arg isa EXPR && arg.head == PARAMETERS
             for (i1, arg1) in enumerate(arg.args)
@@ -188,24 +194,21 @@ function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
     if !(a.val in args)
         push!(args, a.val)
     else 
-        # push!(ps.hints, Hint{Hints.DuplicateArgumentName}(a.offset + (1:arg.span)))
         push!(ps.hints, Hint{Hints.DuplicateArgumentName}(loc))
     end
     if a.val == Expr(fname)
-        # push!(ps.hints, Hint{Hints.ArgumentFunctionNameConflict}(a.offset + (1:arg.span)))
         push!(ps.hints, Hint{Hints.ArgumentFunctionNameConflict}(loc))
     end
     if arg isa EXPR && arg.head isa OPERATOR{0,Tokens.DDDOT} && i!=nargs
-        # push!(ps.hints, Hint{Hints.SlurpingPosition}(a.offset + (1:arg.span)))
         push!(ps.hints, Hint{Hints.SlurpingPosition}(loc))
     end
     if arg isa EXPR && arg.head isa HEAD{Tokens.KW} && i < firstkw
         firstkw = i
     end
     if !(arg isa EXPR && arg.head isa HEAD{Tokens.KW}) && i> firstkw
-        # push!(ps.hints, Hint{Hints.KWPosition}(a.offset + (1:arg.span)))
         push!(ps.hints, Hint{Hints.KWPosition}(loc))
     end
+    # Check 
 end
 
 function _lint_func_body(ps::ParseState, body)
