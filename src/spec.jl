@@ -47,8 +47,8 @@ function INSTANCE(ps::ParseState)
         iskw(ps.t) ? KEYWORD{ps.t.kind}(span) :
         isoperator(ps.t) ? OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}(span + ps.dot) :
         ispunctuation(ps.t) ? PUNCTUATION{ps.t.kind}(span) :
-        ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION{ps.t.kind}(span) :
-        ERROR{ps.t.kind}(0)
+        ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION{ps.t.kind}(span) : error("Can't make a token from $(ps.t)")
+        # ERROR{ps.t.kind}(0)
 end
 
 
