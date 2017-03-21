@@ -31,6 +31,10 @@ function Base.show(io::IO, x::QUOTENODE,indent=0)
     println(io, " "^indent, " QUOTENODE")
 end
 
+function Base.show(io::IO, x::ERROR,indent=0)
+    println(io, " "^indent, " ERROR")
+end
+
 function Base.show(io::IO, x::EXPR,indent=0)
     name = sprint(show, x.head)
     println(io, " "^indent, "↘ ", name,"    [", x.span, "]")

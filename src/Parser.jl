@@ -71,11 +71,13 @@ function parse_expression(ps::ParseState)
         end
     elseif ps.t.kind==Tokens.AT_SIGN
         ret = parse_macrocall(ps)
+    elseif ps.t.kind == Tokens.ENDMARKER
+        ret = ERROR{Tokens.ENDMARKER}(0)
     else
         error("Expression started with $(ps)")
     end
 
-    while !closer(ps) && !(ps.closer.precedence == 15 && ismacro(ret))
+    while !closer(ps) && !(ps.closer.precedence == 15 && ismacro(ret)) && !(ret isa ERROR)
         ret = parse_compound(ps, ret)
     end
     if ps.closer.precedence != 15 && closer(ps) && ret isa LITERAL{Tokens.MACRO}
@@ -151,14 +153,15 @@ function parse_compound(ps::ParseState, ret)
         nextarg = @precedence ps 11 parse_expression(ps)
         ret = EXPR(CALL, [OPERATOR{11, Tokens.STAR, false}(0), ret, nextarg], ret.span + nextarg.span)
     else
-        println(first(stacktrace()))
-        print_with_color(:green, string("Failed at: ", position(ps.l.io), "\n"))
-        for f in fieldnames(ps.closer)
-            if getfield(ps.closer, f)==true
-                println(f, ": true")
-            end
-        end
-        error("infinite loop at $(ps)")
+        # println(first(stacktrace()))
+        # print_with_color(:green, string("Failed at: ", position(ps.l.io), "\n"))
+        # for f in fieldnames(ps.closer)
+        #     if getfield(ps.closer, f)==true
+        #         println(f, ": true")
+        #     end
+        # end
+        # error("infinite loop at $(ps)")
+        ret = ERROR{1}(ret.span)
     end
     return ret
 end
@@ -216,7 +219,7 @@ function parse_paren(ps::ParseState)
     end
     
     ret = EXPR(BLOCK, [], 0)
-    while ps.nt.kind != Tokens.RPAREN
+    while ps.nt.kind != Tokens.RPAREN && ps.nt.kind !=Tokens.ENDMARKER
         a = @default ps @closer ps paren parse_expression(ps)
         push!(ret.args, a)
     end

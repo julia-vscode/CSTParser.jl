@@ -38,20 +38,25 @@ function parse_dot_mod(ps::ParseState)
     end
 
     while true
-        next(ps)
-        if ps.t.kind == Tokens.AT_SIGN
+        if ps.nt.kind == Tokens.AT_SIGN
+            next(ps)
             next(ps)
             a = INSTANCE(ps)
             a.val = Symbol('@', a.val)
             a.span +=1
             push!(args, a)
-        elseif ps.t.kind == Tokens.LPAREN
+        elseif ps.nt.kind == Tokens.LPAREN
+            next(ps)
             a = EXPR(HEAD{InvisibleBrackets}(0), [], -ps.t.startbyte, [INSTANCE(ps)])
             push!(a.args, @default ps @closer ps paren parse_expression(ps))
             next(ps)
             push!(a.punctuation, INSTANCE(ps))
             push!(args, a)
+        elseif ps.nt.kind == Tokens.EX_OR
+            a = @closer ps comma parse_expression(ps)
+            push!(args, a)
         else
+            next(ps)
             push!(args, INSTANCE(ps))
         end
         if ps.nt.kind != Tokens.DOT

@@ -375,6 +375,13 @@ function next(x::EXPR, s::Iterator{:opchain})
 end
 
 function next(x::EXPR, s::Iterator{:syntaxcall})
+    if length(x.args) == 1
+        if s.i == 1 
+            return x.head, +s
+        else
+            return x.args[1], +s
+        end
+    end
     if s.i==1
         return x.args[1], +s
     elseif s.i==2

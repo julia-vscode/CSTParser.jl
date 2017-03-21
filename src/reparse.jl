@@ -31,6 +31,27 @@ function reparse(str, x::EXPR, dirty, n)
 end
 
 
+function reparse(x, str, loc)
+    # locate subexpression
+    y, path, inds, offsets = find(x, loc)
+
+    while !(y isa EXPR) && length(path)>0#y isa KEYWORD || y isa PUNCTUATION
+        y = last(path)
+        pop!(inds)
+        pop!(offsets)
+    end
+    ps = ParseState(str)
+    # start position
+    while ps.nt.startbyte < sum(offsets)
+        next(ps)
+    end
+    # stop position
+    ps.closer.stop = ps.nt.startbyte + y.span
+    y1 = parse_expression(ps)
+    @assert y.span == y1.span
+end
+
+
 
 
 str = """

@@ -29,8 +29,9 @@ type Closer
     trycatch::Bool
     ws::Bool
     precedence::Int
+    stop::Int
 end
-Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, -1)
+Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int))
 
 """
     ParseState
@@ -61,10 +62,11 @@ type ParseState
     ids::Dict{String,Any}
     hints::Vector{Hints.Hint}
     closer::Closer
+    errored::Bool
     current_scope
 end
 function ParseState(str::String)
-    ps = ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), Token(), Token(), true, true, true, true, Dict(), [], Closer(), Scope{Tokens.TOPLEVEL}(TOPLEVEL, []))
+    ps = ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), Token(), Token(), true, true, true, true, Dict(), [], Closer(), false, Scope{Tokens.TOPLEVEL}(TOPLEVEL, []))
     return next(next(ps))
 end
 
