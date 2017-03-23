@@ -504,6 +504,7 @@ end
                 """
                 "[@spawn f(R, first(c), last(c)) for c in splitrange(length(R), nworkers())]"
                 "M.:(a)"
+                "-(-x)^1"
                 ]
         x = Parser.parse(str)
         @test Expr(x) == remlineinfo!(Base.parse(str))
@@ -513,7 +514,6 @@ end
 @testset "Broken things" begin
     for str in [
                 "(a,b = c,d)"
-                "-(-x)^1"
                 ]
         x = Parser.parse(str)
         @test_broken Expr(x) == remlineinfo!(Base.parse(str))

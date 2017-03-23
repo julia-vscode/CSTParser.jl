@@ -24,16 +24,7 @@ assumed to handle the closer.
 """
 function parse_block(ps::ParseState, start_col = 0, ret::EXPR = EXPR(BLOCK, [], 0))
     start = ps.nt.startbyte
-    while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.CATCH && ps.nt.kind!==Tokens.FINALLY 
-        # if (start_col>0 && ps.nt.startpos[2]!=start_col+4)
-        #     dindent = start_col + 4 - ps.nt.startpos[2]
-        #     if dindent > 0
-        #         push!(ps.hints, Hint{Hints.AddWhiteSpace}((ps.nt.startbyte, dindent)))
-        #     else
-        #         push!(ps.hints, Hint{Hints.DeleteWhiteSpace}(ps.nt.startbyte+(dindent+1:0)))
-        #     end
-        #     # push!(ps.hints, Hint{Hints.Indents}(ps.nt.startbyte+(-ps.nt.startpos[2]+1:0)))
-        # end
+    while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.CATCH && ps.nt.kind!==Tokens.FINALLY
         format_indent(ps, start_col)
         push!(ret.args, @closer ps block parse_expression(ps))
     end

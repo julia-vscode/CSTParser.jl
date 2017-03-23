@@ -1,4 +1,4 @@
-function closer(ps::ParseState, ret=nothing)
+function closer(ps::ParseState)
     (ps.closer.newline && ps.ws.kind == NewLineWS && ps.t.kind != Tokens.COMMA) ||
     (ps.closer.semicolon && ps.ws.kind == SemiColonWS) ||
     (isoperator(ps.nt) && precedence(ps.nt)<=ps.closer.precedence) ||
@@ -18,7 +18,13 @@ function closer(ps::ParseState, ret=nothing)
     (ps.closer.ifelse && ps.nt.kind==Tokens.ELSEIF || ps.nt.kind==Tokens.ELSE) ||
     (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt)<=1 || ps.nt.kind==Tokens.COLON)) ||
     (ps.closer.trycatch && (ps.nt.kind==Tokens.CATCH || ps.nt.kind==Tokens.FINALLY || ps.nt.kind==Tokens.END)) ||
-    (ps.closer.ws && (!isempty(ps.ws) && !((isoperator(ps.nt) && ps.nt.kind!=Tokens.EX_OR) || ps.nt.kind == Tokens.COMMA || ps.t.kind == Tokens.COMMA|| ps.nt.kind == Tokens.FOR || ps.nt.kind == Tokens.DO))) ||
+    (ps.closer.ws && !isempty(ps.ws) && !(
+        (ps.nt.kind == Tokens.COMMA || 
+        ps.t.kind == Tokens.COMMA || 
+        ps.nt.kind == Tokens.FOR || 
+        ps.nt.kind == Tokens.DO) ||
+        (isbinaryop(ps.nt.kind) && (!isempty(ps.nws) || !isunaryop(ps.nt)))
+        )) ||
     (ps.nt.startbyte ≥ ps.closer.stop)
 end
 
@@ -180,20 +186,20 @@ macro clear(ps, body)
     end
 end
 
-"""
-    @scope ps scope body 
+    """
+        @scope ps scope body 
 
-Continues parsing closing on `rule`.
-"""
-macro scope(ps, new_scope, body)
-    quote
-        local tmp1 = $(esc(ps)).current_scope
-        $(esc(ps)).current_scope = $(esc(new_scope))
-        out = $(esc(body))
-        $(esc(ps)).current_scope = tmp1
-        out
+    Continues parsing closing on `rule`.
+    """
+    macro scope(ps, new_scope, body)
+        quote
+            local tmp1 = $(esc(ps)).current_scope
+            $(esc(ps)).current_scope = $(esc(new_scope))
+            out = $(esc(body))
+            $(esc(ps)).current_scope = tmp1
+            out
+        end
     end
-end
 
 """
     @noscope ps body
@@ -314,6 +320,27 @@ function check_file(f::String)
         end
     end
     failed, cnt
+end
+
+
+function check_folder(dir, N = 0, errs = [], failedfiles = [])
+    for f in readdir(dir)
+        if endswith(f, ".jl")
+            try
+                failed, cnt = check_file(joinpath(dir,f))
+                N+=cnt
+                append!(errs, failed)
+                if length(failed)!=0
+                    push!(failedfiles, f)
+                end
+            catch
+                push!(failedfiles, f)
+            end
+        elseif isdir(f)
+            N, _, errs, failedfiles =check_folder(joinpath(dir, f), N, errs, failedfiles)
+        end
+    end
+    N, length(errs), errs, failedfiles
 end
 
 

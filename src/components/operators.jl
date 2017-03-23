@@ -32,56 +32,49 @@ precedence(op::Token) = op.kind < Tokens.begin_assignments ? 0 :
 
 precedence(x) = 0
 
-isoperator(t::Token) = Tokens.begin_ops < t.kind < Tokens.end_ops
-
+isoperator(kind) = Tokens.begin_ops < kind < Tokens.end_ops
+isoperator(t::Token) = isoperator(t.kind)
 
 
 isunaryop{P,K,D}(op::OPERATOR{P,K,D}) = isunaryop(K)
 isunaryop(t::Token) = isunaryop(t.kind)
 
 isunaryop(kind) = kind == Tokens.PLUS ||
-                      kind == Tokens.MINUS ||
-                      kind == Tokens.NOT ||
-                      kind == Tokens.APPROX ||
-                      kind == Tokens.ISSUBTYPE ||
-                      kind == Tokens.NOT_SIGN ||
-                      kind == Tokens.AND ||
-                      kind == Tokens.GREATER_COLON ||
-                      kind == Tokens.SQUARE_ROOT ||
-                      kind == Tokens.CUBE_ROOT ||
-                      kind == Tokens.QUAD_ROOT ||
-                      kind == Tokens.DECLARATION ||
-                      kind == Tokens.EX_OR ||
-                      kind == Tokens.COLON
+                  kind == Tokens.MINUS ||
+                  kind == Tokens.NOT ||
+                  kind == Tokens.APPROX ||
+                  kind == Tokens.ISSUBTYPE ||
+                  kind == Tokens.NOT_SIGN ||
+                  kind == Tokens.AND ||
+                  kind == Tokens.GREATER_COLON ||
+                  kind == Tokens.SQUARE_ROOT ||
+                  kind == Tokens.CUBE_ROOT ||
+                  kind == Tokens.QUAD_ROOT ||
+                  kind == Tokens.DECLARATION ||
+                  kind == Tokens.EX_OR ||
+                  kind == Tokens.COLON
 
-isunaryandbinaryop(t::Token) = t.kind == Tokens.PLUS ||
-                               t.kind == Tokens.MINUS ||
-                               t.kind == Tokens.EX_OR ||
-                               t.kind == Tokens.AND ||
-                               t.kind == Tokens.APPROX ||
-                               t.kind == Tokens.DECLARATION
 
-isbinaryop(t::Token) = isoperator(t) && 
-                    !(t.kind == Tokens.SQUARE_ROOT || 
-                    t.kind == Tokens.CUBE_ROOT || 
-                    t.kind == Tokens.QUAD_ROOT || 
-                    t.kind == Tokens.APPROX || 
-                    t.kind == Tokens.NOT || 
-                    t.kind == Tokens.NOT_SIGN)
+isunaryandbinaryop(t::Token) = isunaryandbinaryop(t.kind)
+isunaryandbinaryop(kind) = kind == Tokens.PLUS ||
+                           kind == Tokens.MINUS ||
+                           kind == Tokens.EX_OR ||
+                           kind == Tokens.ISSUBTYPE ||
+                           kind == Tokens.GREATER_COLON ||
+                           kind == Tokens.AND ||
+                           kind == Tokens.APPROX ||
+                           kind == Tokens.DECLARATION ||
+                           kind == Tokens.COLON
+
+isbinaryop(t::Token) = isbinaryop(t.kind)
+isbinaryop(kind) = isoperator(kind) && 
+                    !(kind == Tokens.SQUARE_ROOT || 
+                    kind == Tokens.CUBE_ROOT || 
+                    kind == Tokens.QUAD_ROOT || 
+                    kind == Tokens.NOT || 
+                    kind == Tokens.NOT_SIGN)
 
 isassignment(t::Token) = Tokens.begin_assignments < t.kind < Tokens.end_assignments
-
-isconditional(t::Token) = t.kind = Tokens.CONDITIONAL
-
-isarrow(t::Token) = Tokens.begin_arrow < t.kind < Tokens.end_arrow
-
-iscomparison(t::Token) = Tokens.begin_comparison < t.kind < Tokens.end_comparison
-
-isplus(t::Token) = Tokens.begin_plus < t.kind < Tokens.end_plus
-
-istimes(t::Token) = Tokens.begin_times < t.kind < Tokens.end_times
-
-ispower(t::Token) = Tokens.begin_power < t.kind < Tokens.end_power
 
 function non_dotted_op(t::Token)
     k = t.kind
@@ -99,7 +92,8 @@ function non_dotted_op(t::Token)
             k == Tokens.COLON ||
             k == Tokens.DECLARATION ||
             k == Tokens.IN ||
-            k == Tokens.ISA)
+            k == Tokens.ISA ||
+            (isunaryop(k) && !isbinaryop(k)))
 end
 
 function issyntaxcall{P,K}(op::OPERATOR{P,K})
@@ -212,7 +206,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{5})
     return EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
 end
 
-
+# Parse comparisons
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{6})
     nextarg = @precedence ps 6-LtoR(6) parse_expression(ps)
     if ret isa EXPR && ret.head==COMPARISON
@@ -234,12 +228,7 @@ end
 # Parse ranges
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{8, Tokens.COLON})
     start = ps.t.startbyte
-    # if ps.nt.kind == Tokens.END
-    #     next(ps)
-    #     nextarg = INSTANCE(ps)
-    # else
-        nextarg = @precedence ps 8-LtoR(8) parse_expression(ps)
-    # end
+    nextarg = @precedence ps 8-LtoR(8) parse_expression(ps)
     if ret isa EXPR && ret.head isa OPERATOR{8,Tokens.COLON} && length(ret.args)==2
         push!(ret.punctuation, op)
         push!(ret.args, nextarg)
@@ -273,6 +262,18 @@ function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{11,Tokens.STAR,f
         push!(ret.punctuation, op)
     else
         ret = invoke(parse_operator, Tuple{ParseState,SyntaxNode,OPERATOR}, ps, ret, op)
+    end
+    return ret
+end
+
+# Parse power (special case for preceding unary ops)
+function parse_operator{K}(ps::ParseState, ret::SyntaxNode, op::OPERATOR{13, K})
+    nextarg = @precedence ps 13-LtoR(13) parse_expression(ps)
+    if ret isa EXPR && ret.head == CALL && ret.args[1] isa OPERATOR && isunaryop(ret.args[1])
+        nextarg = EXPR(CALL, [op, ret.args[2], nextarg], op.span + ret.args[2].span + nextarg.span)
+        ret = EXPR(CALL, [ret.args[1], nextarg], ret.args[1].span + nextarg.span)
+    else
+        ret = EXPR(CALL, SyntaxNode[op, ret, nextarg], op.span + ret.span + nextarg.span)
     end
     return ret
 end

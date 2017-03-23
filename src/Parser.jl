@@ -112,9 +112,13 @@ function parse_compound(ps::ParseState, ret)
     elseif (ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN)
         op = OPERATOR{11,Tokens.STAR,false}(0)
         ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind==Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR}) #&& !isunaryop(ret)
+    elseif ps.nt.kind==Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR})# && !isunaryop(ret)
         if isempty(ps.ws) 
-            ret = @default ps @closer ps paren parse_call(ps, ret)
+            if isunaryop(ret)
+                ret = @default ps @closer ps paren parse_call(ps, ret)
+            else
+                ret = @default ps @closer ps paren parse_call(ps, ret)
+            end
         else
             error("space before \"(\" not allowed in \"$(Expr(ret)) (\"")
         end
@@ -283,21 +287,21 @@ function parse_quote(ps::ParseState)
     end
 end
 
-"""
-    parse_doc(ps)
+# """
+#     parse_doc(ps)
 
-Handles the case where an expression starts with a single or triple quoted
-string.
-"""
-function parse_doc(ps::ParseState)
-    start = ps.t.startbyte
-    doc = INSTANCE(ps)
-    if ps.nt.kind == Tokens.ENDMARKER
-        return doc
-    end
-    arg = parse_expression(ps)
-    return EXPR(MACROCALL, [GlobalRefDOC, doc, arg], ps.nt.startbyte - start)
-end
+# Handles the case where an expression starts with a single or triple quoted
+# string.
+# """
+# function parse_doc(ps::ParseState)
+#     start = ps.t.startbyte
+#     doc = INSTANCE(ps)
+#     if ps.nt.kind == Tokens.ENDMARKER
+#         return doc
+#     end
+#     arg = parse_expression(ps)
+#     return EXPR(MACROCALL, [GlobalRefDOC, doc, arg], ps.nt.startbyte - start)
+# end
 
 
 
