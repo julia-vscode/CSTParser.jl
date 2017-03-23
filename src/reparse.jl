@@ -52,6 +52,26 @@ function reparse(x, str, loc)
 end
 
 
+function reparse(x, str, loc)
+    # locate subexpression
+    y, path, inds, offsets = find(x, loc)
+    y isa LITERAL{nothing} && (return true)
+    while !(y isa EXPR) || (y isa EXPR && y.head == BLOCK)
+        y = last(path)
+        pop!(inds)
+        pop!(path)
+        pop!(offsets)
+    end
+    ps = ParseState(str)
+    # start position
+    while ps.nt.startbyte < sum(offsets)
+        next(ps)
+    end
+    # stop position
+    ps.closer.stop = ps.nt.startbyte + y.span
+    y1 = parse_expression(ps)
+    @assert y.span == y1.span
+end
 
 
 str = """
