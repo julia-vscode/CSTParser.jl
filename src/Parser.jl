@@ -77,7 +77,7 @@ function parse_expression(ps::ParseState)
         error("Expression started with $(ps)")
     end
 
-    while !closer(ps) && !(ps.closer.precedence == 15 && ismacro(ret)) #&& !(ret isa ERROR)
+    while !closer(ps) && !(ps.closer.precedence == 15 && ismacro(ret))
         ret = parse_compound(ps, ret)
     end
     if ps.closer.precedence != 15 && closer(ps) && ret isa LITERAL{Tokens.MACRO}
@@ -109,16 +109,12 @@ function parse_compound(ps::ParseState, ret)
         ret = parse_generator(ps, ret)
     elseif ps.nt.kind == Tokens.DO
         ret = parse_do(ps, ret)
-    elseif (ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN)
+    elseif ((ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN)) || (ret isa EXPR && ret.head isa OPERATOR{15, Tokens.PRIME} && ps.nt.kind == Tokens.IDENTIFIER)
         op = OPERATOR{11,Tokens.STAR,false}(0)
         ret = parse_operator(ps, ret, op)
     elseif ps.nt.kind==Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR})# && !isunaryop(ret)
         if isempty(ps.ws) 
-            if isunaryop(ret)
-                ret = @default ps @closer ps paren parse_call(ps, ret)
-            else
-                ret = @default ps @closer ps paren parse_call(ps, ret)
-            end
+            ret = @default ps @closer ps paren parse_call(ps, ret)
         else
             error("space before \"(\" not allowed in \"$(Expr(ret)) (\"")
         end

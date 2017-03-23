@@ -28,7 +28,8 @@ precedence(op::Token) = op.kind < Tokens.begin_assignments ? 0 :
                        op.kind < Tokens.end_rational ? 12 :
                        op.kind < Tokens.end_power ? 13 :
                        op.kind < Tokens.end_decl ? 14 : 
-                       op.kind < Tokens.end_dot ? 15 : 20
+                       op.kind < Tokens.end_dot ? 15 : 
+                       op.kind == Tokens.PRIME ? 15 :20
 
 precedence(x) = 0
 
@@ -66,6 +67,7 @@ isunaryandbinaryop(kind) = kind == Tokens.PLUS ||
                            kind == Tokens.DECLARATION ||
                            kind == Tokens.COLON
 
+isbinaryop{P,K,D}(op::OPERATOR{P,K,D}) = isbinaryop(K)
 isbinaryop(t::Token) = isbinaryop(t.kind)
 isbinaryop(kind) = isoperator(kind) && 
                     !(kind == Tokens.SQUARE_ROOT || 
@@ -184,7 +186,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{2})
     start = ps.t.startbyte
     nextarg = @closer ps ifop parse_expression(ps)
     op2 = INSTANCE(next(ps))
-    nextarg2 = @precedence ps 2-LtoR(2) parse_expression(ps)
+    nextarg2 = @precedence ps 0 parse_expression(ps)
     return EXPR(IF, SyntaxNode[ret, nextarg, nextarg2], ret.span + ps.nt.startbyte - start, INSTANCE[op, op2])
 end
 
@@ -326,7 +328,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{0, Tokens.
     return  EXPR(op, SyntaxNode[ret], op.span + ret.span)
 end
 
-function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{20, Tokens.PRIME})
+function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15, Tokens.PRIME})
     return  EXPR(op, SyntaxNode[ret], op.span + ret.span)
 end
 
