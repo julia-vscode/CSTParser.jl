@@ -29,7 +29,9 @@ function apply(hints::Vector{Hint}, str)
     str1
 end
 
-function apply(h::Hint, str) end
+function apply(h::Hint, str) 
+    return str
+end
 
 function apply(h::Hint{AddWhiteSpace}, str)
     if h.loc isa Tuple
