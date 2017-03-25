@@ -32,7 +32,7 @@ type ERROR{K} <: SyntaxNode
 end
 
 function LITERAL(ps::ParseState)
-    span = ps.nt.startbyte - ps.t.startbyte - ps.ndot
+    span = ps.nt.startbyte - ps.t.startbyte
     if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING
         return parse_string(ps)
     else
@@ -41,11 +41,11 @@ function LITERAL(ps::ParseState)
 end
 
 function INSTANCE(ps::ParseState)
-    span = ps.nt.startbyte - ps.t.startbyte - ps.ndot
+    span = ps.nt.startbyte - ps.t.startbyte
     return isidentifier(ps.t) ? IDENTIFIER(span, Symbol(ps.t.val)) : 
         isliteral(ps.t) ? LITERAL(ps) :
         iskw(ps.t) ? KEYWORD{ps.t.kind}(span) :
-        isoperator(ps.t) ? OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}(span + ps.dot) :
+        isoperator(ps.t) ? OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}(span) :
         ispunctuation(ps.t) ? PUNCTUATION{ps.t.kind}(span) :
         ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION{ps.t.kind}(span) : error("Can't make a token from $(ps.t)")
         # ERROR{ps.t.kind}(0)
@@ -68,6 +68,7 @@ const COMPARISON = HEAD{Tokens.COMPARISON}(0)
 const COMPREHENSION = HEAD{Tokens.COMPREHENSION}(0)
 const CURLY = HEAD{Tokens.CURLY}(0)
 const DICT_COMPREHENSION = HEAD{Tokens.DICT_COMPREHENSION}(0)
+const FILTER = HEAD{Tokens.FILTER}(0)
 const GENERATOR = HEAD{Tokens.GENERATOR}(0)
 const HCAT = HEAD{Tokens.HCAT}(0)
 const IF = HEAD{Tokens.IF}(0)

@@ -100,7 +100,8 @@ function next(ps::ParseState)
 
     # Handle dotted operators
     if ps.nt.kind == Tokens.DOT && ps.nws.kind == EmptyWS && isoperator(ps.nnt) && !non_dotted_op(ps.nnt)
-        ps.nt = ps.nnt
+        # ps.nt = ps.nnt
+        ps.nt = Token(ps.nnt.kind, (ps.nnt.startpos[1], ps.nnt.startpos[2]-1), ps.nnt.endpos, ps.nnt.startbyte - 1, ps.nnt.endbyte, ps.nnt.val)
         ps.ndot = true
         # combines whitespace, comments and semicolons
         if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#' || peekchar(ps.l) == ';'

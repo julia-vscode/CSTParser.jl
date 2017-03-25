@@ -9,11 +9,25 @@ function parse_generator(ps::ParseState, ret)
     next(ps)
     push!(ret.punctuation, INSTANCE(ps))
     ranges = @closer ps paren @closer ps square parse_ranges(ps)
-    if ranges isa EXPR && ranges.head == BLOCK
-        append!(ret.args, ranges.args)
-        append!(ret.punctuation, ranges.punctuation)
-    else
+    if ps.nt.kind == Tokens.IF
+        if ranges isa EXPR && ranges.head == BLOCK
+            ranges = EXPR(FILTER, [ranges.args...], ranges.span, ranges.punctuation)
+        else
+            ranges = EXPR(FILTER, [ranges], ranges.span)
+        end
+        next(ps)
+        unshift!(ranges.punctuation, INSTANCE(ps))
+        cond = @closer ps paren parse_expression(ps)
+        unshift!(ranges.args, cond)
+        ranges.span = sum(a.span for a in ranges.args) + sum(a.span for a in ranges.punctuation)
         push!(ret.args, ranges)
+    else
+        if ranges isa EXPR && ranges.head == BLOCK
+            append!(ret.args, ranges.args)
+            append!(ret.punctuation, ranges.punctuation)
+        else
+            push!(ret.args, ranges)
+        end
     end
     ret.span += ps.nt.startbyte
     return ret
@@ -35,6 +49,22 @@ function next(x::EXPR, s::Iterator{:generator})
         return x.args[div(s.i+1, 2)], +s
     else
         return x.punctuation[div(s.i, 2)], +s
+    end
+end
+
+function _start_filter(x::EXPR)
+    return Iterator{:filter}(1, length(x.args) + length(x.punctuation))
+end
+
+function next(x::EXPR, s::Iterator{:filter})
+    if s.i == s.n
+        return first(x.args), +s
+    elseif s.i == s.n - 1
+        return first(x.punctuation), +s
+    elseif isodd(s.i)
+        return x.args[div(s.i + 1, 2) + 1], +s
+    else
+        return x.punctuation[div(s.i, 2) + 1], +s
     end
 end
 

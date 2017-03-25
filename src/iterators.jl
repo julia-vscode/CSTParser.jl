@@ -28,6 +28,8 @@ function start(x::EXPR)
         end
     elseif x.head isa HEAD{Tokens.CCALL}
         return _start_ccall(x)
+    elseif x.head isa OPERATOR{15, Tokens.PRIME}
+        return Iterator{:prime}(1,2)
     elseif issyntaxcall(x.head) || x.head isa OPERATOR{20, Tokens.ANON_FUNC}
         if x.head isa OPERATOR{8,Tokens.COLON}
             return Iterator{:(:)}(1, length(x.args) == 2 ? 3 : 5)
@@ -49,6 +51,8 @@ function start(x::EXPR)
         return Iterator{:invisiblebrackets}(1, 3)
     elseif x.head == GENERATOR
         return _start_generator(x)
+    elseif x.head == FILTER
+        return _start_filter(x)
     elseif x.head == COMPREHENSION
         return _start_comprehension(x)
     elseif x.head == PARAMETERS
@@ -73,6 +77,10 @@ function start(x::EXPR)
         return _start_typed_comprehension(x)
     elseif x.head == VCAT
         return _start_vcat(x)
+    elseif x.head == HCAT
+        return _start_hcat(x)
+    elseif x.head == ROW
+        return _start_row(x)
     elseif x.head == TYPED_VCAT
         return _start_typed_vcat(x)
     elseif x.head == TUPLE

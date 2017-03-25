@@ -50,12 +50,13 @@ function Expr(x::EXPR)
             push!(ret.args, Expr(a))
         end
         return ret
-    elseif x.head isa HEAD{Tokens.GENERATOR}
-        ret = Expr(:generator, Expr(x.args[1]))
+    elseif x.head isa HEAD{Tokens.GENERATOR} ||  x.head isa HEAD{Tokens.FILTER}
+        ret = Expr(Expr(x.head), Expr(x.args[1]))
         for a in x.args[2:end]
             push!(ret.args, fixranges(a))
         end
         return ret
+
     elseif x.head isa KEYWORD{Tokens.IMMUTABLE}
         ret = Expr(:type, false)
         for a in x.args[2:end]

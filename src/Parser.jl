@@ -220,7 +220,7 @@ function parse_paren(ps::ParseState)
     
     ret = EXPR(BLOCK, [], 0)
     while ps.nt.kind != Tokens.RPAREN && ps.nt.kind !=Tokens.ENDMARKER
-        a = @default ps @closer ps paren parse_expression(ps)
+        a = @default ps @nocloser ps newline @closer ps paren parse_expression(ps)
         push!(ret.args, a)
     end
 
@@ -360,7 +360,7 @@ function parse_directory(path::String, proj = Project(path,[]))
                 x = parse(readstring(joinpath(path, f)), true)
                 push!(proj.files, File([], [], joinpath(path, f), x))
             catch
-                print("$f")
+                println("$f")
             end
         elseif isdir(joinpath(path, f))
             parse_directory(joinpath(path, f), proj)

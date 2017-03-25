@@ -110,9 +110,10 @@ function issyntaxcall{P,K}(op::OPERATOR{P,K})
     K == Tokens.DECLARATION ||
     K == Tokens.DOT ||
     K == Tokens.DDDOT ||
-    K == Tokens.EX_OR
+    K == Tokens.EX_OR || 
+    K == Tokens.PRIME
 end
-    
+
 
 
 issyntaxcall(op) = false
@@ -186,7 +187,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{2})
     start = ps.t.startbyte
     nextarg = @closer ps ifop parse_expression(ps)
     op2 = INSTANCE(next(ps))
-    nextarg2 = @precedence ps 0 parse_expression(ps)
+    nextarg2 = @closer ps comma @precedence ps 0 parse_expression(ps)
     return EXPR(IF, SyntaxNode[ret, nextarg, nextarg2], ret.span + ps.nt.startbyte - start, INSTANCE[op, op2])
 end
 

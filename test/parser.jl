@@ -505,6 +505,7 @@ end
                 "[@spawn f(R, first(c), last(c)) for c in splitrange(length(R), nworkers())]"
                 "M.:(a)"
                 "-(-x)^1"
+                "f(a for a in A if cond)"
                 ]
         x = Parser.parse(str)
         @test Expr(x) == remlineinfo!(Base.parse(str))

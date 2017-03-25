@@ -12,7 +12,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
         end
     end
 
-    block = parse_block(ps, start_col)
+    block = @default ps parse_block(ps, start_col)
     push!(ret.args, block)
     for a in args
         push!(ret.args, a)

@@ -138,6 +138,8 @@ end
 _start_vect(x::EXPR) = Iterator{:vect}(1, length(x.args) + length(x.punctuation))
 
 _start_vcat(x::EXPR) = Iterator{:vcat}(1, length(x.args) + length(x.punctuation))
+_start_hcat(x::EXPR) = Iterator{:hcat}(1, length(x.args) + length(x.punctuation))
+_start_row(x::EXPR) = Iterator{:row}(1, length(x.args))
 
 _start_typed_vcat(x::EXPR) = Iterator{:typed_vcat}(1, length(x.args) + length(x.punctuation))
 
@@ -161,6 +163,18 @@ function next(x::EXPR, s::Iterator{:vcat})
         return x.args[s.i - 1], +s
     end
 end
+
+function next(x::EXPR, s::Iterator{:hcat})
+    if s.i == 1
+        return first(x.punctuation), +s
+    elseif s.i == s.n
+        return last(x.punctuation), +s
+    else
+        return x.args[s.i - 1], +s
+    end
+end
+
+next(x::EXPR, s::Iterator{:row}) = x.args[s.i], +s
 
 function next(x::EXPR, s::Iterator{:typed_vcat})
     if s.i == 1
