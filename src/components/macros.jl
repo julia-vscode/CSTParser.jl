@@ -22,7 +22,21 @@ function parse_macrocall(ps::ParseState)
     start = ps.t.startbyte
     next(ps)
     mname = IDENTIFIER(ps.nt.startbyte - ps.lt.startbyte , string("@", ps.t.val))
+    # Handle cases with @ at start of dotted expressions
+    if ps.nt.kind == Tokens.DOT
+        while ps.nt.kind == Tokens.DOT
+            next(ps)
+            op = INSTANCE(ps)
+            if ps.nt.kind != Tokens.IDENTIFIER
+                error("invalid macro name specification")
+            end
+            next(ps)
+            nextarg = INSTANCE(ps)
+            mname = EXPR(op,[mname, QUOTENODE(nextarg)], mname.span + op.span + nextarg.span)
+        end
+    end
     ret = EXPR(MACROCALL, [mname], 0)
+
     if ps.nt.kind == Tokens.COMMA
         ret.span = ps.nt.startbyte - start
         return ret

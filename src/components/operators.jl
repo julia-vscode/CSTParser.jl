@@ -311,12 +311,10 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
         nextarg = @precedence ps 15-LtoR(15) parse_expression(ps)
     end
 
-    if nextarg isa INSTANCE
-        ret = EXPR(op, SyntaxNode[ret, QUOTENODE(nextarg, nextarg.span, [])], op.span + ret.span + nextarg.span)
-    elseif nextarg isa EXPR && nextarg.head isa OPERATOR{9, Tokens.EX_OR}
-        ret = EXPR(op, SyntaxNode[ret, QUOTENODE(nextarg, nextarg.span, [])], op.span + ret.span + nextarg.span)
+    if nextarg isa INSTANCE || (nextarg isa EXPR && nextarg.head == VECT) || nextarg isa EXPR && nextarg.head isa OPERATOR{9, Tokens.EX_OR}
+        ret = EXPR(op, SyntaxNode[ret, QUOTENODE(nextarg)], op.span + ret.span + nextarg.span)
     elseif nextarg isa EXPR && nextarg.head == MACROCALL
-        mname = EXPR(op,[ret, QUOTENODE(nextarg.args[1], nextarg.args[1].span, [])], ret.span + op.span + nextarg.args[1].span)
+        mname = EXPR(op,[ret, QUOTENODE(nextarg.args[1])], ret.span + op.span + nextarg.args[1].span)
         ret = EXPR(MACROCALL, [mname , nextarg.args[2:end]...], ret.span + op.span + nextarg.span, nextarg.punctuation)
     else
         ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)

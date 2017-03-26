@@ -90,6 +90,11 @@ function Expr(x::EXPR)
                 push!(ret.args, Expr(a))
             end
             return ret
+        elseif x.args[1] isa EXPR && x.args[1].head isa OPERATOR{15, Tokens.DOT} && string(x.args[1].args[2].val.val)[1] != '@'
+            x1 = deepcopy(x)
+            x1.args[1].args[2].val.val = Symbol("@",x1.args[1].args[2].val.val)
+            remove_first_at!(x1.args[1])
+            return Expr(x1)
         end
     elseif x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL} || x.head isa KEYWORD{Tokens.USING}
         ret = Expr(Expr(x.head))
@@ -112,12 +117,10 @@ function Expr(x::EXPR)
             a = first(x.args)
             aa = Expr(a)
             return Expr(Expr(a.head), (:. for i = 1:ndots)..., Expr.(x.punctuation[ndots + 2:2:col])..., aa.args...)
-            # return Expr(Expr(a.head), (:. for i = 1:ndots)..., Expr.(x.punctuation[ndots + 2:2:col])..., Expr.(a.args)...)
         end
         for a in x.args
             aa = Expr(a)
             push!(ret.args, Expr(Expr(a.head), (:. for i = 1:ndots)..., Expr.(x.punctuation[ndots + 2:2:col])..., aa.args...))
-            # push!(ret.args, Expr(Expr(a.head), (:. for i = 1:ndots)..., Expr.(x.punctuation[ndots + 2:2:col])..., Expr.(a.args)...))
 
         end 
         return ret
@@ -157,6 +160,13 @@ function Expr(x::EXPR)
     return ret
 end
 
+function remove_first_at!(x)
+    if x isa EXPR && x.head isa OPERATOR{15, Tokens.DOT}
+        return remove_first_at!(x.args[1])
+    else
+        return x.val = Symbol(string(x.val)[2:end])
+    end
+end
 
 
 fixranges(a::INSTANCE) = Expr(a)

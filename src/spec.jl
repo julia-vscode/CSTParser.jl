@@ -57,6 +57,7 @@ type QUOTENODE <: SyntaxNode
     span::Int
     punctuation::Vector{SyntaxNode}
 end
+QUOTENODE(val::SyntaxNode) = QUOTENODE(val, val.span, [])
 
 # heads
 

@@ -5,6 +5,8 @@ function closer(ps::ParseState)
     (ps.nt.kind == Tokens.LPAREN && ps.closer.precedence>14) ||
     (ps.nt.kind == Tokens.LBRACE && ps.closer.precedence>14) ||
     (ps.nt.kind == Tokens.LSQUARE && ps.closer.precedence>14) ||
+    (ps.closer.precedence>14 && ps.t.kind == Tokens.RPAREN && ps.nt.kind == Tokens.IDENTIFIER) ||
+    (ps.closer.precedence>14 && ps.t.kind == Tokens.RSQUARE && ps.nt.kind == Tokens.IDENTIFIER) ||
     (ps.nt.kind == Tokens.COMMA && ps.closer.precedence>0) ||
     ps.nt.kind==Tokens.ENDMARKER ||
     (ps.closer.comma && iscomma(ps.nt)) || 
@@ -390,6 +392,29 @@ function span(x, neq = [])
         end
         if x.span != (length(x) == 0 ? 0 : sum(a.span for a in x))
             push!(neq, x)
+        end
+    end
+    neq
+end
+
+function span1(x, neq = [])
+    if x isa EXPR && x.head != STRING && !(x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL} || x.head isa KEYWORD{Tokens.USING} || (x.head == TOPLEVEL && x.args[1] isa EXPR && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING})))
+        cnt = 0
+        for a in x
+            try
+                span(a, neq)
+            catch
+                push!(neq, a)
+            end
+        end
+        if x isa EXPR
+            if x.span != x.head.span + (isempty(x.args) ? 0 :sum(a.span for a in x.args)) +  + (isempty(x.punctuation) ? 0 :sum(a.span for a in x.punctuation))
+                push!(neq, x)
+            end
+        else
+            if x.span != (length(x) == 0 ? 0 : sum(a.span for a in x))
+                push!(neq, x)
+            end
         end
     end
     neq
