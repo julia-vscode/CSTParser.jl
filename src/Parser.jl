@@ -138,7 +138,6 @@ function parse_compound(ps::ParseState, ret)
         next(ps)
         op = INSTANCE(ps)
         format_op(ps, precedence(ps.t))
-
         ret = parse_operator(ps, ret, op)
     elseif ret isa IDENTIFIER && ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
         next(ps)
@@ -323,6 +322,19 @@ function parse_doc(ps::ParseState, ret)
     return ret
 end
 
+function parse_doc(ps::ParseState)
+    if ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
+        next(ps)
+        doc = INSTANCE(ps)
+        (ps.nt.kind == Tokens.ENDMARKER) && return doc
+        ret = parse_expression(ps)
+        ret = EXPR(MACROCALL, [GlobalRefDOC, doc, ret], doc.span + ret.span)
+    else
+        ret = parse_expression(ps)
+    end
+    return ret
+end
+
 """
     parse(str, cont = false)
 
@@ -335,8 +347,9 @@ function parse(ps::ParseState, cont = false)
             push!(top.args, LITERAL{nothing}(ps.nt.startbyte, :nothing))
         end
         while !ps.done
-            ret = parse_expression(ps)
-            ret = parse_doc(ps, ret)
+            # ret = parse_expression(ps)
+            # ret = parse_doc(ps, ret)
+            ret = parse_doc(ps)
             push!(top.args, ret)
         end
         top.span += ps.nt.startbyte
@@ -345,8 +358,9 @@ function parse(ps::ParseState, cont = false)
             next(ps)
             top = LITERAL{nothing}(ps.nt.startbyte, :nothing)
         else
-            top = parse_expression(ps)
-            top = parse_doc(ps, top)
+            # top = parse_expression(ps)
+            # top = parse_doc(ps, top)
+            top = parse_doc(ps)
         end
     end
 

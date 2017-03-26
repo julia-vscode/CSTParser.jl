@@ -8,7 +8,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
     kw = INSTANCE(ps)
     arg = @closer ps block @closer ps ws parse_expression(ps)
     scope = Scope{Tokens.MACRO}(get_id(arg), [])
-    block = parse_block(ps, start_col)
+    block = @default ps parse_block(ps, start_col)
     next(ps)
     return EXPR(kw, SyntaxNode[arg, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
 end
@@ -23,6 +23,10 @@ function parse_macrocall(ps::ParseState)
     next(ps)
     mname = IDENTIFIER(ps.nt.startbyte - ps.lt.startbyte , string("@", ps.t.val))
     ret = EXPR(MACROCALL, [mname], 0)
+    if ps.nt.kind == Tokens.COMMA
+        ret.span = ps.nt.startbyte - start
+        return ret
+    end
     if isempty(ps.ws) && ps.nt.kind == Tokens.LPAREN
         next(ps)
         push!(ret.punctuation, INSTANCE(ps))
