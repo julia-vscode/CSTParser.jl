@@ -118,12 +118,13 @@ function parse_array(ps::ParseState)
                 ret = EXPR(VCAT, [first_row], 0)
                 while ps.nt.kind != Tokens.RSQUARE
                     first_arg = @default ps @closer ps square @closer ps ws parse_expression(ps)
-                    push!(ret.args, EXPR(ROW, [first_arg], -ps.nt.startbyte))
+                    push!(ret.args, EXPR(ROW, [first_arg], first_arg.span))
                     while ps.nt.kind != Tokens.RSQUARE && ps.ws.kind != NewLineWS && ps.ws.kind != SemiColonWS
                         a = @default ps @closer ps square @closer ps ws parse_expression(ps)
                         push!(last(ret.args).args, a)
+                        last(ret.args).span += a.span
                     end
-                    last(ret.args).span += ps.nt.startbyte
+                    # last(ret.args).span += ps.nt.startbyte
                 end
                 next(ps)
                 push!(puncs, INSTANCE(ps))

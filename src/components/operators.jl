@@ -273,7 +273,12 @@ end
 function parse_operator{K}(ps::ParseState, ret::SyntaxNode, op::OPERATOR{13, K})
     nextarg = @precedence ps 13-LtoR(13) parse_expression(ps)
     if ret isa EXPR && ret.head == CALL && ret.args[1] isa OPERATOR && isunaryop(ret.args[1])
-        nextarg = EXPR(CALL, [op, ret.args[2], nextarg], op.span + ret.args[2].span + nextarg.span)
+        if !isempty(ret.punctuation)
+            xx = EXPR(HEAD{InvisibleBrackets}(0), [ret.args[2]], ret.args[2].span + sum(p.span for p in ret.punctuation), ret.punctuation)
+            nextarg = EXPR(CALL, [op, xx, nextarg], op.span + xx.span + nextarg.span) 
+        else
+            nextarg = EXPR(CALL, [op, ret.args[2], nextarg], op.span + ret.args[2].span + nextarg.span)
+        end
         ret = EXPR(CALL, [ret.args[1], nextarg], ret.args[1].span + nextarg.span)
     else
         ret = EXPR(CALL, SyntaxNode[op, ret, nextarg], op.span + ret.span + nextarg.span)

@@ -71,8 +71,6 @@ function parse_expression(ps::ParseState)
         end
     elseif ps.t.kind==Tokens.AT_SIGN
         ret = parse_macrocall(ps)
-    # elseif ps.t.kind == Tokens.ENDMARKER
-    #     ret = ERROR{Tokens.ENDMARKER}(0)
     else
         error("Expression started with $(ps)")
     end
