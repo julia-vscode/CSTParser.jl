@@ -132,7 +132,7 @@ function format_funcname(ps, id, offset)
     start_loc = ps.nt.startbyte - offset
     !(id isa Symbol) && return
     val = string(id)
-    if !islower(val)
+    if !all(c-> islower(c) || c == '!', val)#!islower(val)
         push!(ps.hints, Hint{Hints.LowerCase}(start_loc + (1:sizeof(val))))
     end
 end
