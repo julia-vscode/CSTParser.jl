@@ -92,7 +92,7 @@ function parse_call(ps::ParseState, ret)
        push!(ret.args, EXPR(arg, [], arg.span))
     end
     if (ret.args[1] isa IDENTIFIER && ret.args[1].val==:Dict) || (ret.args[1] isa EXPR && ret.args[1].head == CURLY && ret.args[1].args[1] isa IDENTIFIER && ret.args[1].args[1].val == :Dict)
-        _lint_dict(ps, ret, loc)
+        _lint_dict(ps, ret)
     end
     return ret
 end
@@ -286,5 +286,35 @@ function declares_function(x::SyntaxNode)
         end
     else
         return false
+    end
+end
+
+function _lint_dict(ps::ParseState, x::EXPR)
+    # paramaterised case
+    if x.args[1] isa EXPR && x.args[1].head == CURLY
+        # expect 2 parameters (+ :Dict)
+        if length(x.args[1].args) != 3
+            push!(ps.hints, Hint{Hints.DictParaMisSpec}(ps.nt.startbyte - x.span + (0:x[1].span)))
+        end
+    else
+    end
+    # Handle generators
+    if length(x.args)>1 
+        if x.args[2] isa EXPR && x.args[2].head == GENERATOR
+            gen = x.args[2]
+            if gen.args[1].head isa OPERATOR{1} && !(gen.args[1].head isa OPERATOR{1, Tokens.PAIR_ARROW})
+                push!(ps.hints, Hint{Hints.DictGenAssignment}(ps.nt.startbyte - x.span + (0:x.span)))
+            end
+        # Lint items
+        else
+            locstart = ps.nt.startbyte - x.span + x.args[1].span + first(x.punctuation).span
+            for (i, a) in enumerate(x.args[2:end])
+                # non pair arrow assignment
+                if a isa EXPR && a.head isa OPERATOR{1} && !(a.head isa OPERATOR{1, Tokens.PAIR_ARROW})
+                    push!(ps.hints, Hint{Hints.DictGenAssignment}(locstart + (0:a.span)))
+                end
+                locstart += a.span + x.punctuation[i+1].span
+            end
+        end
     end
 end
