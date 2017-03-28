@@ -17,7 +17,7 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
 
     ifblock = EXPR(BLOCK, SyntaxNode[], -ps.nt.startbyte)
     while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.ELSE && ps.nt.kind!==Tokens.ELSEIF
-        push!(ifblock.args, @default ps @closer ps ifelse parse_expression(ps))
+        push!(ifblock.args, @default ps @closer ps block @closer ps ifelse parse_expression(ps))
     end
     ifblock.span += ps.nt.startbyte
 

@@ -335,17 +335,17 @@ end
 
 @testset "Keyword Blocks" begin
     @testset "If" begin
-        for str in ["if a end"
-                    """if a
+        for str in ["if cond end"
+                    """if cond
                         1
                         1
                     end"""
-                    """if a
+                    """if cond
                     else
                         2
                         2
                     end"""
-                    """if a
+                    """if cond
                         1
                         1
                     else
@@ -368,7 +368,8 @@ end
                         f(2)
                     else
                         f(3)
-                    end"""]
+                    end"""
+                    "if cond a end"]
             x = Parser.parse(str)
             @test Expr(x) == remlineinfo!(Base.parse(str))
         end

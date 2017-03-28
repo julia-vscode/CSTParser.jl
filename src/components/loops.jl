@@ -18,7 +18,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
     return EXPR(kw, SyntaxNode[ranges, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
 end
 
-function _lint_range(ps::ParseState, x::EXPR, loc)
+function _lint_range(ps::ParseState, x, loc)
     if !(x isa EXPR && (x.head isa OPERATOR{1, Tokens.EQ} || (x.head == CALL && x.args[1] isa OPERATOR{6, Tokens.IN})))
         push!(ps.hints, Hint{Hints.RangeNonAssignment}(loc))
     end
