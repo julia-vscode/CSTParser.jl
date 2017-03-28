@@ -18,7 +18,12 @@ DuplicateArgumentName,
 ArgumentFunctionNameConflict,
 SlurpingPosition, 
 KWPosition,
-ImportInFunction)
+ImportInFunction,
+DuplicateArgument,
+LetNonAssignment,
+RangeNonAssignment,
+CondAssignment,
+DeadCode)
 
 function apply(hints::Vector{Hint}, str)
     str1 = deepcopy(str)

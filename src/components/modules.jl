@@ -1,7 +1,7 @@
 parse_kw(ps::ParseState, ::Type{Val{Tokens.IMPORT}}) = parse_imports(ps)
 parse_kw(ps::ParseState, ::Type{Val{Tokens.IMPORTALL}}) = parse_imports(ps)
 parse_kw(ps::ParseState, ::Type{Val{Tokens.USING}}) = parse_imports(ps)
-parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}}) = parse_export(ps)
+
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.MODULE}})
     start = ps.t.startbyte
@@ -136,7 +136,7 @@ function parse_imports(ps::ParseState)
     return ret
 end
 
-function parse_export(ps::ParseState)
+function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
     
@@ -148,13 +148,23 @@ function parse_export(ps::ParseState)
         arg = parse_dot_mod(ps)[1][1]
         push!(ret.args, arg)
     end
-    
     ret.span = ps.nt.startbyte - start
+
+    # Linting
+
+    # check for duplicates
+    let idargs = filter(a-> a isa IDENTIFIER, ret.args)
+        if length(idargs) != length(unique((a->a.val).(idargs)))
+            push!(ps.hints, Hint{Hints.DuplicateArgument}(start:ps.nt.startbyte))
+        end
+    end
     if ps.current_scope isa Scope{Tokens.FUNCTION}
         push!(ps.hints, Hint{Hints.ImportInFunction}(start:ps.nt.startbyte))
     end
     return ret
 end
+
+
 
 function _start_imports(x::EXPR)
     # return Iterator{:imports}(1, (x.head.span>0) + length(x.args) + length(x.punctuation)) 

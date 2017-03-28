@@ -5,7 +5,8 @@ Having hit `for` not at the beginning of an expression return a generator.
 Comprehensions are parsed as SQUAREs containing a generator.
 """
 function parse_generator(ps::ParseState, ret)
-    ret = EXPR(GENERATOR,[ret], ret.span - ps.nt.startbyte)
+    start = ps.nt.startbyte
+    ret = EXPR(GENERATOR,[ret], ret.span - start)
     next(ps)
     push!(ret.punctuation, INSTANCE(ps))
     ranges = @closer ps paren @closer ps square parse_ranges(ps)
@@ -30,6 +31,16 @@ function parse_generator(ps::ParseState, ret)
         end
     end
     ret.span += ps.nt.startbyte
+
+    # Linting
+    if ranges isa EXPR && ranges.head == BLOCK
+        for r in ranges.args
+            _lint_range(ps, r, start + first(ret.punctuation).span + (0:ranges.span))
+        end
+    else
+        _lint_range(ps, ranges, start + first(ret.punctuation).span + (0:ranges.span))
+    end
+
     return ret
 end
 

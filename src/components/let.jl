@@ -1,6 +1,7 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
+    start = ps.t.startbyte
     start_col = ps.t.startpos[2]
-    ret = EXPR(INSTANCE(ps), [], -ps.t.startbyte)
+    ret = EXPR(INSTANCE(ps), [], -start)
     args = []
     @default ps @closer ps comma @closer ps block while !closer(ps)
         a = parse_expression(ps)
@@ -20,6 +21,16 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
     next(ps)
     push!(ret.punctuation, INSTANCE(ps))
     ret.span += ps.nt.startbyte
+
+    # Linting
+    let span = start + ret.head.span
+        for (i, a) in enumerate(args)
+            if !(a isa EXPR && a.head isa OPERATOR{1})
+                push!(ps.hints, Hint{Hints.LetNonAssignment}(span:a.head))
+            end
+            span += a.span + ret.punctuation[i].span
+        end
+    end
     return ret
 end
 

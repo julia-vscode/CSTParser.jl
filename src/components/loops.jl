@@ -5,9 +5,24 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
     ranges = @default ps parse_ranges(ps)
     block = @default ps parse_block(ps, start_col)
     next(ps)
+
+    # Linting
+    if ranges isa EXPR && ranges.head == BLOCK
+        for r in ranges.args
+            _lint_range(ps, r, start + kw.span + (0:ranges.span))
+        end
+    else
+        _lint_range(ps, ranges, start + kw.span + (0:ranges.span))
+    end
+
     return EXPR(kw, SyntaxNode[ranges, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
 end
 
+function _lint_range(ps::ParseState, x::EXPR, loc)
+    if !(x isa EXPR && (x.head isa OPERATOR{1, Tokens.EQ} || (x.head == CALL && x.args[1] isa OPERATOR{6, Tokens.IN})))
+        push!(ps.hints, Hint{Hints.RangeNonAssignment}(loc))
+    end
+end
 
 function parse_ranges(ps::ParseState)
     arg = @closer ps comma @closer ps ws parse_expression(ps)
@@ -33,10 +48,20 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
     start = ps.t.startbyte
     start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
-    arg = @default ps @closer ps ws parse_expression(ps)
+    cond = @default ps @closer ps ws parse_expression(ps)
     block = @default ps parse_block(ps, start_col)
     next(ps)
-    return EXPR(kw, SyntaxNode[arg, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
+    ret = EXPR(kw, SyntaxNode[cond, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
+
+    # Linting
+    if cond isa EXPR && cond.head isa OPERATOR{1}
+        push!(ps.hints, Hint{Hints.CondAssignment}(start + kw.span + (0:cond.span)))
+    end
+    if cond isa LITERAL{Tokens.FALSE}
+        push!(ps.hints, Hint{Hints.DeadCode}(start:ps.nt.startbyte))
+    end
+
+    return ret
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.BREAK}})

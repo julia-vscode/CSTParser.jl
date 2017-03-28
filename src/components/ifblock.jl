@@ -44,6 +44,21 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
     ret = isempty(elseblock.args) && !elsekw ? 
         EXPR(kw, SyntaxNode[cond, ifblock], ps.nt.startbyte - start, puncs) : 
         EXPR(kw, SyntaxNode[cond, ifblock, elseblock], ps.nt.startbyte - start, puncs)
+
+    # Linting
+    if cond isa EXPR && cond.head isa OPERATOR{1}
+        push!(ps.hints, Hint{Hints.CondAssignment}(start + kw.span + (0:cond.span)))
+    end
+    if cond isa LITERAL{Tokens.TRUE}
+        if length(ret.args) == 3
+            push!(ps.hints, Hint{Hints.DeadCode}(start + kw.span + cond.span + ret.args[2].span + (0:ret.args[3].span)))
+        end
+    elseif cond isa LITERAL{Tokens.FALSE}
+        if length(ret.args) == 2
+            push!(ps.hints, Hint{Hints.DeadCode}(start + kw.span + cond.span + (0:ret.args[2].span)))
+        end
+    end
+
     return ret
 end
 
