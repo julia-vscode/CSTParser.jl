@@ -23,7 +23,9 @@ DuplicateArgument,
 LetNonAssignment,
 RangeNonAssignment,
 CondAssignment,
-DeadCode)
+DeadCode,
+DictParaMisSpec,
+DictGenAssignment)
 
 function apply(hints::Vector{Hint}, str)
     str1 = deepcopy(str)
@@ -134,5 +136,23 @@ function format_funcname(ps, id, offset)
     val = string(id)
     if !all(c-> islower(c) || c == '!', val)#!islower(val)
         push!(ps.hints, Hint{Hints.LowerCase}(start_loc + (1:sizeof(val))))
+    end
+end
+
+function _lint_dict(ps::ParseState, x::EXPR, loc)
+    # paramaterised case
+    if ret.args[1] isa EXPR && ret.args[1].head == CURLY
+        # expect 2 parameters (+ :Dict)
+        if length(ret.args[1].args) != 3
+            push!(ps.hints, Hint{Hints.DictParaMisSpec}(ps.nt.startbyte - x.span + (0:x[1].span)))
+        end
+    else
+    end
+    # Handle generators
+    if x.args[2] isa EXPR && x.args[2].head == GENERATOR
+        gen = x.args[2]
+        if gen.args[1].head isa OPERATOR{1} && !(gen.args[1].head isa OPERATOR{1, Tokens.PAIR_ARROW})
+            push!(ps.hints, Hint{Hints.DictGenAssignment}(ps.nt.startbyte - x.span + (0:x.span)))
+        end
     end
 end

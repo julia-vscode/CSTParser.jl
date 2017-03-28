@@ -15,7 +15,6 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     @scope ps scope _lint_func_sig(ps, sig)
     block = @default ps @scope ps scope parse_block(ps, start_col)
     next(ps)
-    # args = isempty(block.args) ? SyntaxNode[sig] : SyntaxNode[sig, block]
     if isempty(block.args)
         if sig isa EXPR
             args = SyntaxNode[sig, block]
@@ -85,15 +84,15 @@ function parse_call(ps::ParseState, ret)
     if ret.args[1] isa OPERATOR{9, Tokens.EX_OR}
         ret.head = shift!(ret.args)
     end
-    if length(ret.args)>0 && ismacro(ret.args[1]) #ret.args[1] isa LITERAL{Tokens.MACRO}
+    if length(ret.args)>0 && ismacro(ret.args[1])
         ret.head = MACROCALL
     end
-    if ret.head isa HEAD{Tokens.CCALL} && 
-       length(ret.args) > 1 && 
-       ret.args[2] isa IDENTIFIER &&
-       (ret.args[2].val == :stdcall || ret.args[2].val == :fastcall || ret.args[2].val == :cdecl || ret.args[2].val == :thiscall)
+    if ret.head isa HEAD{Tokens.CCALL} && length(ret.args) > 1 && ret.args[2] isa IDENTIFIER && (ret.args[2].val == :stdcall || ret.args[2].val == :fastcall || ret.args[2].val == :cdecl || ret.args[2].val == :thiscall)
        arg = splice!(ret.args, 2)
-       push!(ret.args, EXPR(arg, [], arg.span))    
+       push!(ret.args, EXPR(arg, [], arg.span))
+    end
+    if (ret.args[1] isa IDENTIFIER && ret.args[1].val==:Dict) || (ret.args[1] isa EXPR && ret.args[1].head == CURLY && ret.args[1].args[1] isa IDENTIFIER && ret.args[1].args[1].val == :Dict)
+        _lint_dict(ps, ret, loc)
     end
     return ret
 end
