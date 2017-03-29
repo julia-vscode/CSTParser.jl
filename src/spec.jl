@@ -104,7 +104,7 @@ end
 
 type File
     imports
-    includes
+    includes::Vector{String}
     path::String
     ast::SyntaxNode
 end

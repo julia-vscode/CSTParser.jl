@@ -57,3 +57,20 @@ end
 
 is_func_call(x) = false
 is_func_call(x::EXPR) = x.head == CALL
+
+function _get_includes(x, files = []) end
+
+function _get_includes(x::EXPR, files = [])
+    no_iter(x) && return files
+
+    if x.head == CALL && x[1] isa IDENTIFIER && x[1].val == :include
+        if x[3] isa LITERAL{Tokens.STRING} || x[3] isa LITERAL{Tokens.TRIPLE_STRING}
+            push!(files, x.args[2].val)
+        end
+    else
+        for a in x
+            _get_includes(a, files)
+        end
+    end
+    return files
+end

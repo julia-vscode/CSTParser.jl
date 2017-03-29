@@ -373,7 +373,6 @@ function compare(x::Expr,y::Expr)
     end
 end
 
-
 """
     span(x, neq = [])
 
@@ -381,7 +380,7 @@ Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
 function span(x, neq = [])
-    if x isa EXPR && x.head != STRING && !(x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL} || x.head isa KEYWORD{Tokens.USING} || (x.head == TOPLEVEL && x.args[1] isa EXPR && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING})))
+    if x isa EXPR && !no_iter(x)
         cnt = 0
         for a in x
             try
@@ -398,7 +397,7 @@ function span(x, neq = [])
 end
 
 function span1(x, neq = [])
-    if x isa EXPR && x.head != STRING && !(x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL} || x.head isa KEYWORD{Tokens.USING} || (x.head == TOPLEVEL && x.args[1] isa EXPR && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING})))
+    if x isa EXPR && !no_iter(x)
         cnt = 0
         for a in x
             try
@@ -419,7 +418,6 @@ function span1(x, neq = [])
     end
     neq
 end
-
 
 """
     check_reformat()
@@ -442,4 +440,8 @@ function check_reformat()
             cnt += y.span
         end
     end
+end
+
+function no_iter(x::EXPR)
+    (x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL} || x.head isa KEYWORD{Tokens.USING} || (x.head == TOPLEVEL && x.args[1] isa EXPR && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING}))) || x.head isa HEAD{Tokens.STRING}
 end

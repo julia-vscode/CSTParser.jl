@@ -280,22 +280,6 @@ function parse_quote(ps::ParseState)
     end
 end
 
-# """
-#     parse_doc(ps)
-
-# Handles the case where an expression starts with a single or triple quoted
-# string.
-# """
-# function parse_doc(ps::ParseState)
-#     start = ps.t.startbyte
-#     doc = INSTANCE(ps)
-#     if ps.nt.kind == Tokens.ENDMARKER
-#         return doc
-#     end
-#     arg = parse_expression(ps)
-#     return EXPR(MACROCALL, [GlobalRefDOC, doc, arg], ps.nt.startbyte - start)
-# end
-
 
 
 """
@@ -345,8 +329,6 @@ function parse(ps::ParseState, cont = false)
             push!(top.args, LITERAL{nothing}(ps.nt.startbyte, :nothing))
         end
         while !ps.done
-            # ret = parse_expression(ps)
-            # ret = parse_doc(ps, ret)
             ret = parse_doc(ps)
             push!(top.args, ret)
         end
@@ -356,8 +338,6 @@ function parse(ps::ParseState, cont = false)
             next(ps)
             top = LITERAL{nothing}(ps.nt.startbyte, :nothing)
         else
-            # top = parse_expression(ps)
-            # top = parse_doc(ps, top)
             top = parse_doc(ps)
         end
     end
@@ -370,7 +350,7 @@ function parse_directory(path::String, proj = Project(path,[]))
         if isfile(joinpath(path, f)) && endswith(f, ".jl")
             try
                 x = parse(readstring(joinpath(path, f)), true)
-                push!(proj.files, File([], [], joinpath(path, f), x))
+                push!(proj.files, File([], (f->joinpath(dirname(path), f)).(_get_includes(x)), joinpath(path, f), x))
             catch
                 println("$f")
             end
