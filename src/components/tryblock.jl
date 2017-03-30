@@ -15,7 +15,6 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
         return ret
     end
 
-    
     #  Catch block
     if ps.nt.kind==Tokens.CATCH
         next(ps)
@@ -98,8 +97,6 @@ function next(x::EXPR, s::Iterator{:try})
             return x.args[2], +s
         elseif x.punctuation[1] isa KEYWORD{Tokens.FINALLY}
             return x.args[4], +s
-        # elseif length(x.args) == 4 && s.n == 5
-        #     return x.args[4], +s
         else
             return x.args[3], +s
         end

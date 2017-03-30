@@ -1,10 +1,3 @@
-# Generic blocks
-#   begin
-#   quote
-#   do
-#   let
-#   toplevel (semicolon seperated expressions)
-
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.BEGIN}})
     start = ps.t.startbyte
     start_col = ps.t.startpos[2]
@@ -28,6 +21,8 @@ function parse_block(ps::ParseState, start_col = 0, ret::EXPR = EXPR(BLOCK, [], 
         format_indent(ps, start_col)
         push!(ret.args, @closer ps block parse_expression(ps))
     end
+    # check indent of block closer
+    format_indent(ps, start_col - 4)
     ret.span = ps.nt.startbyte - start
     return ret
 end

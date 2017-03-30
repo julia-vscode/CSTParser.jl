@@ -1,8 +1,3 @@
-# Functions
-#   definition
-#   short form definition
-#   call
-
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     start = ps.t.startbyte
     start_col = ps.t.startpos[2]
