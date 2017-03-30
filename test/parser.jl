@@ -14,6 +14,8 @@ randop() = rand(["-->", "→",
                  "::",
                  "."])
 
+test_expr(str) = Expr(Parser.parse(str)) == remlineinfo!(Base.parse(str))
+
 @testset "Operators" begin
     @testset "Binary Operators" begin
         for iter = 1:250
@@ -32,146 +34,113 @@ randop() = rand(["-->", "→",
         end
     end
 
+    
     @testset "Dot Operator" begin
-        strs = ["a.b"
-                "a.b.c"
-                "(a(b)).c"
-                "(a).(b).(c)"
-                "(a).b.(c)"
-                "(a).b.(c+d)"]
-        for str in strs
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "a.b"  |> test_expr
+        @test "a.b.c"  |> test_expr
+        @test "(a(b)).c"  |> test_expr
+        @test "(a).(b).(c)"  |> test_expr
+        @test "(a).b.(c)"  |> test_expr
+        @test "(a).b.(c+d)"  |> test_expr
     end
 
     @testset "Unary Operator" begin
-        for op in ["+", "-", "!", "~", "&", "::", "<:", ">:", "¬", "√", "∛", "∜"]
-            x = Parser.parse("$op x")
-            @test Expr(x) == remlineinfo!(Base.parse("$op x"))
-        end
+        @test "+" |> test_expr
+        @test "-" |> test_expr
+        @test "!" |> test_expr
+        @test "~" |> test_expr
+        @test "&" |> test_expr
+        @test "::" |> test_expr
+        @test "<:" |> test_expr
+        @test ">:" |> test_expr
+        @test "¬" |> test_expr
+        @test "√" |> test_expr
+        @test "∛" |> test_expr
+        @test "∜" |> test_expr
     end
 end
 
 
 @testset "Type Annotations" begin
     @testset "Curly" begin
-        for str in  ["x{T}"
-                    "x{T,S}"
-                    """x{T,
-                    S}"""
-                    "a.b{T}"
-                    "a(b){T}"
-                    "(a(b)){T}"
-                    "a{b}{T}"
-                    "a{b}(c){T}"
-                    "a{b}.c{T}"]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "x{T}" |> test_expr
+        @test "x{T,S}" |> test_expr
+        @test "a.b{T}" |> test_expr
+        @test "a(b){T}" |> test_expr
+        @test "(a(b)){T}" |> test_expr
+        @test "a{b}{T}" |> test_expr
+        @test "a{b}(c){T}" |> test_expr
+        @test "a{b}.c{T}" |> test_expr
+        @test """x{T, 
+        S}""" |> test_expr
     end
 end
 
 @testset "Tuples" begin
-    for str in [
-                "1,",
-                "1,2",
-                "1,2,3",
-                "()",
-                "(==)",
-                "(1)",
-                "(1,)",
-                "(1,2)",
-                "(a,b,c)",
-                "(a...)",
-                "((a,b)...)",
-                "a,b = c,d",
-                "(a,b) = (c,d)"
-                ]
-        x = Parser.parse(str)
-        @test Expr(x) == remlineinfo!(Base.parse(str))
-    end
+    @test "1," |> test_expr
+    @test "1,2" |> test_expr
+    @test "1,2,3" |> test_expr
+    @test "()" |> test_expr
+    @test "(==)" |> test_expr
+    @test "(1)" |> test_expr
+    @test "(1,)" |> test_expr
+    @test "(1,2)" |> test_expr
+    @test "(a,b,c)" |> test_expr
+    @test "(a...)" |> test_expr
+    @test "((a,b)...)" |> test_expr
+    @test "a,b = c,d" |> test_expr
+    @test "(a,b) = (c,d)" |> test_expr
 end
 
 @testset "Function Calls" begin
     @testset "Simple Calls" begin
-        for str in ["f(x)"
-                    "f(x,y)"
-                    "f(g(x))"
-                    "f((x,y))"
-                    "f((x,y), z)"
-                    "f(z, (x,y), z)"
-                    "f{a}(x)"
-                    "f{a<:T}(x::T)"]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "f(x)" |> test_expr
+        @test "f(x,y)" |> test_expr
+        @test "f(g(x))" |> test_expr
+        @test "f((x,y))" |> test_expr
+        @test "f((x,y), z)" |> test_expr
+        @test "f(z, (x,y), z)" |> test_expr
+        @test "f{a}(x)" |> test_expr
+        @test "f{a<:T}(x::T)" |> test_expr
     end
 
     @testset "Keyword Arguments" begin
-        for str in ["f(x=1)"
-                    "f(x=1,y::Int = 1)"]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "f(x=1)" |> test_expr
+        @test "f(x=1,y::Int = 1)" |> test_expr
     end
 
     @testset "Compact Declaration" begin
-        for str in ["f(x) = x"
-                    "f(x) = g(x)"
-                    "f(x) = (x)"
-                    "f(x) = (x;y)"
-                    "f(g(x)) = x"
-                    "f(g(x)) = h(x)"]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "f(x) = x" |> test_expr
+        @test "f(x) = g(x)" |> test_expr
+        @test "f(x) = (x)" |> test_expr
+        @test "f(x) = (x;y)" |> test_expr
+        @test "f(g(x)) = x" |> test_expr
+        @test "f(g(x)) = h(x)" |> test_expr
     end
 
     @testset "Standard Declaration" begin
-        for str in ["function f end"
-
-                    "function f(x) x end"
-
-                    "function f(x); x; end"
-
-                    "function f(x) x; end"
-
-                    "function f(x); x end"
-
-                    "function f(x) x;y end"
-                    
-                    """function f(x)
-                        x
-                    end
-                    """
-
-                    """function f(x,y =1)
-                        x
-                    end
-                    """
-
-                    """function f(x,y =1;z =2)
-                        x
-                    end
-                    """
-                    ]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "function f end" |> test_expr
+        @test "function f(x) x end" |> test_expr
+        @test "function f(x); x; end" |> test_expr
+        @test "function f(x) x; end" |> test_expr
+        @test "function f(x); x end" |> test_expr
+        @test "function f(x) x;y end" |> test_expr
+        @test """function f(x) 
+            x
+        end""" |> test_expr
+        @test """function f(x,y =1)
+            x
+        end""" |> test_expr
+        @test """function f(x,y =1;z =2)
+            x
+        end""" |> test_expr
     end
     @testset "Anonymous" begin
-        for str in [
-                    "x->y"
-                    "(x,y)->x*y"
-                    """
-                    function ()
-                        return 
-                    end
-                    """]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "x->y" |> test_expr
+        @test "(x,y)->x*y" |> test_expr
+        @test """function ()
+            return 
+        end""" |> test_expr
     end
 end
 
@@ -181,343 +150,262 @@ end
 
 @testset "Types" begin
     @testset "Abstract" begin
-        for str in ["abstract t"
-                    "abstract t{T}"
-                    "abstract t <: S"
-                    "abstract t{T} <: S"]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "abstract t" |> test_expr
+        @test "abstract t{T}" |> test_expr
+        @test "abstract t <: S" |> test_expr
+        @test "abstract t{T} <: S" |> test_expr
     end
 
-
     @testset "Bitstype" begin
-        for str in ["bitstype 64 Int"
-                    "bitstype 4*16 Int"]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "bitstype 64 Int" |> test_expr
+        @test "bitstype 4*16 Int" |> test_expr
     end
 
     @testset "Typealias" begin
-        for str in ["typealias name fsd"]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "typealias name fsd" |> test_expr
     end
 
     @testset "Structs" begin
-        for str in ["type a end"
-                    """type a
-                        arg1
-                    end"""
-                    """type a <: T
-                        arg1::Int
-                        arg2::Int
-                    end"""
-                    """type a
-                        arg1::T
-                    end"""
-                    """type a{T}
-                        arg1::T
-                        a(args) = new(args)
-                    end"""
-                    """type a <: Int
-                        arg1::Vector{Int}
-                    end"""
-                    """immutable a <: Int
-                        arg1::Vector{Int}
-                    end"""]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "type a end" |> test_expr
+        @test """type a
+            arg1
+        end""" |> test_expr
+        @test """type a <: T
+            arg1::Int
+            arg2::Int
+        end""" |> test_expr
+        @test """type a
+            arg1::T
+        end""" |> test_expr
+        @test """type a{T}
+            arg1::T
+            a(args) = new(args)
+        end""" |> test_expr
+        @test """type a <: Int
+            arg1::Vector{Int}
+        end""" |> test_expr
+        @test """immutable a <: Int
+            arg1::Vector{Int}
+        end""" |> test_expr
     end
 end
 
 
 @testset "Modules" begin
     @testset "Import/using " begin
-        for str in ["import ModA"
-                    "import .ModA"
-                    "import ..ModA.a"
-                    "import ModA.subModA"
-                    "import ModA.subModA: a"
-                    "import ModA.subModA: a, b"
-                    "import ModA.subModA: a, b.c"
-                    "import .ModA.subModA: a, b.c"
-                    "import ..ModA.subModA: a, b.c"
-                    ]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "import ModA" |> test_expr
+        @test "import .ModA" |> test_expr
+        @test "import ..ModA.a" |> test_expr
+        @test "import ModA.subModA" |> test_expr
+        @test "import ModA.subModA: a" |> test_expr
+        @test "import ModA.subModA: a, b" |> test_expr
+        @test "import ModA.subModA: a, b.c" |> test_expr
+        @test "import .ModA.subModA: a, b.c" |> test_expr
+        @test "import ..ModA.subModA: a, b.c" |> test_expr
     end
     @testset "Export " begin
-        for str in ["export ModA"
-                    "export a, b, c"]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "export ModA" |> test_expr
+        @test "export a, b, c" |> test_expr
     end
 end
 
 @testset "Generators" begin
-    for str in ["(y for y in X)"
-                "((x,y) for x in X, y in Y)"
-                "(y.x for y in X)"
-                "((y) for y in X)"
-                "(y,x for y in X)"
-                "((y,x) for y in X)"
-                "[y for y in X]"
-                "[(y) for y in X]"
-                "[(y,x) for y in X]"
-                "Int[y for y in X]"
-                "Int[(y) for y in X]"
-                "Int[(y,x) for y in X]"
-                """
-                [a
-                for a = 1:2]
-                """
-                "[ V[j][i]::T for i=1:length(V[1]), j=1:length(V) ]"
-                "all(d ≥ 0 for d in B.dims)"
-                ]
-        x = Parser.parse(str)
-        @test Expr(x) == remlineinfo!(Base.parse(str))
-    end
+    @test "(y for y in X)" |> test_expr
+    @test "((x,y) for x in X, y in Y)" |> test_expr
+    @test "(y.x for y in X)" |> test_expr
+    @test "((y) for y in X)" |> test_expr
+    @test "(y,x for y in X)" |> test_expr
+    @test "((y,x) for y in X)" |> test_expr
+    @test "[y for y in X]" |> test_expr
+    @test "[(y) for y in X]" |> test_expr
+    @test "[(y,x) for y in X]" |> test_expr
+    @test "Int[y for y in X]" |> test_expr
+    @test "Int[(y) for y in X]" |> test_expr
+    @test "Int[(y,x) for y in X]" |> test_expr
+    @test """
+    [a
+    for a = 1:2]
+    """ |> test_expr
+    @test "[ V[j][i]::T for i=1:length(V[1]), j=1:length(V) ]" |> test_expr
+    @test "all(d ≥ 0 for d in B.dims)" |> test_expr
 end
 
 @testset "Macros " begin
-    for str in  [
-                "@mac"
-                "@mac a b c"
-                "@mac f(5)"
-                "(@mac x)"
-                "Mod.@mac a b c"
-                # "[@mac a b]"
-                "@inline get_chunks_id(i::Integer) = _div64(Int(i)-1)+1, _mod64(Int(i)-1)"
-                "@inline f() = (), ()"
-                ]
-        x = Parser.parse(str)
-        @test Expr(x) == remlineinfo!(Base.parse(str))
-    end
+    @test "@mac" |> test_expr
+    @test "@mac a b c" |> test_expr
+    @test "@mac f(5)" |> test_expr
+    @test "(@mac x)" |> test_expr
+    @test "Mod.@mac a b c" |> test_expr
+    # @test "[@mac a b]" |> test_expr
+    @test "@inline get_chunks_id(i::Integer) = _div64(Int(i)-1)+1, _mod64(Int(i) -1)" |> test_expr
+    @test "@inline f() = (), ()" |> test_expr
 end
 
 @testset "Square " begin
     @testset "Vector" begin
-        for str in  [
-                    "[1,2,3,4,5]"
-                    ]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "[1,2,3,4,5]" |> test_expr
     end
 
     @testset "Comprehension" begin
-        for str in [
-                    "[i for i = 1:10]"
-                    "Int[i for i = 1:10]"
-                    ]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "[i for i = 1:10]" |> test_expr
+        @test "Int[i for i = 1:10]" |> test_expr
     end
 
     @testset "Ref" begin
-        for str in [
-                    "x[i]"
-                    "x[i + 1]"
-                    ]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "x[i]" |> test_expr
+        @test "x[i + 1]" |> test_expr
     end
 end
 
 
 @testset "Keyword Blocks" begin
     @testset "If" begin
-        for str in ["if cond end"
-                    """if cond
-                        1
-                        1
-                    end"""
-                    """if cond
-                    else
-                        2
-                        2
-                    end"""
-                    """if cond
-                        1
-                        1
-                    else
-                        2
-                        2
-                    end"""
-                    "if 1<2 end"
-                    """if 1<2
-                        f(1)
-                        f(2)
-                    end"""
-                    """if 1<2
-                        f(1)
-                    elseif 1<2
-                        f(2)
-                    end"""
-                    """if 1<2
-                        f(1)
-                    elseif 1<2
-                        f(2)
-                    else
-                        f(3)
-                    end"""
-                    "if cond a end"]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "if cond end" |> test_expr
+        @test """if cond
+            1
+            1
+        end""" |> test_expr
+        @test """if cond
+        else
+            2
+            2
+        end""" |> test_expr
+        @test """if cond
+            1
+            1
+        else
+            2
+            2
+        end""" |> test_expr
+        @test "if 1<2 end" |> test_expr
+        @test """if 1<2
+            f(1)
+            f(2)
+        end""" |> test_expr
+        @test """if 1<2
+            f(1)
+        elseif 1<2
+            f(2)
+        end""" |> test_expr
+        @test """if 1<2
+            f(1)
+        elseif 1<2
+            f(2)
+        else
+            f(3)
+        end""" |> test_expr
+        @test "if cond a end" |> test_expr
     end
 
 
     @testset "Try" begin
-        for str in ["try f(1) end"
-
-                    """try
-                        f(1)
-                    catch 
-                    end"""
-
-                    """try
-                        f(1)
-                    catch 
-                        error(err)
-                    end"""
-
-                    """try
-                        f(1)
-                    catch err
-                        error(err)
-                    end"""
-                    
-                    """try
-                        f(1)
-                    catch 
-                        error(err)
-                    finally
-                        stop(f)
-                    end"""
-
-                    """try
-                        f(1)
-                    catch err
-                        error(err)
-                    finally
-                        stop(f)
-                    end"""
-
-                    """try
-                        f(1)
-                    finally
-                        stop(f)
-                    end"""
-                    ]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test "try f(1) end" |> test_expr
+        @test """try
+            f(1)
+        catch 
+        end""" |> test_expr
+        @test """try
+            f(1)
+        catch 
+            error(err)
+        end""" |> test_expr
+        @test """try
+            f(1)
+        catch err
+            error(err)
+        end""" |> test_expr
+        @test """try
+            f(1)
+        catch 
+            error(err)
+        finally
+            stop(f)
+        end""" |> test_expr
+        @test """try
+            f(1)
+        catch err
+            error(err)
+        finally
+            stop(f)
+        end""" |> test_expr
+        @test """try
+            f(1)
+        finally
+            stop(f)
+        end""" |> test_expr
     end
     @testset "For" begin
-        for str in ["""for i = 1:10
-                        f(i)
-                    end"""
-                    """for i = 1:10, j = 1:20
-                        f(i)
-                    end"""]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test """for i = 1:10
+            f(i)
+        end""" |> test_expr
+        @test """for i = 1:10, j = 1:20
+            f(i)
+        end""" |> test_expr
     end
 
     @testset "Let" begin
-        for str in  ["""let x = 1
-                            f(x)
-                        end"""
-                    """let x = 1, y = 2
-                            f(x)
-                        end"""]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test """let x = 1
+            f(x)
+        end""" |> test_expr
+        @test """let x = 1, y = 2
+            f(x)
+        end""" |> test_expr
     end
 
     @testset "Do" begin
-        for str in ["""
-                    f(X) do x
-                        return x
-                    end
-                    """
-                    """
-                    f(X,Y) do x,y
-                        return x,y
-                    end
-                    """]
-            x = Parser.parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
-        end
+        @test """f(X) do x
+            return x
+        end""" |> test_expr
+        @test """f(X,Y) do x,y
+            return x,y
+        end""" |> test_expr
     end
 end
 
-@testset "No longer Broken things" begin
-    for str in [
-                "[ V[j][i]::T for i=1:length(V[1]), j=1:length(V) ]"
-                "all(d ≥ 0 for d in B.dims)"
-                ":(=)"
-                ":(1)"
-                ":(a)"
-                "\"dimension \$d is not 1 ≤ \$d ≤ \$nd\" "
-
-                "(@_inline_meta(); f(x))"
-                "isa(a,b) != c"
-                "isa(a,a) != isa(a,a)"
-                "@mac return x"
-                "ccall(:gethostname, stdcall, Int32, ())"
-                "a,b,"
-                "m!=m"
-                """
-                ccall(:jl_finalize_th, Void, (Ptr{Void}, Any,),
-                         Core.getptls(), o)
-                """
-                "\$(x...)"
-                "(Base.@_pure_meta;)"
-                "@inbounds @ncall a b c"
-                "(Base.@_pure_meta;)"
-                "@M a b->(@N c = @O d e f->g)"
-                "4x/y"
-                """
-                A[if n == d
-                    i
-                else
-                    (indices(A,n) for n = 1:nd)
-                end...]
-                """
-                """Base.@__doc__(bitstype \$(sizeof(basetype) * 8) \$(esc(typename)) <: Enum{\$(basetype)})"""
-                """
-                @spawnat(p,
-                    let m = a
-                        isa(m, Exception) ? m : nothing
-                    end)
-                """
-                "[@spawn f(R, first(c), last(c)) for c in splitrange(length(R), nworkers())]"
-                "M.:(a)"
-                "-(-x)^1"
-                "f(a for a in A if cond)"
-                ]
-        x = Parser.parse(str)
-        @test Expr(x) == remlineinfo!(Base.parse(str))
-    end
+@testset "No longer broken things" begin
+    @test "[ V[j][i]::T for i=1:length(V[1]), j=1:length(V) ]" |> test_expr
+    @test "all(d ≥ 0 for d in B.dims)" |> test_expr
+    @test ":(=)" |> test_expr
+    @test ":(1)" |> test_expr
+    @test ":(a)" |> test_expr
+    @test "\"dimension \$d is not 1 ≤ \$d ≤ \$nd\" " |> test_expr
+    @test "(@_inline_meta(); f(x))" |> test_expr
+    @test "isa(a,b) != c" |> test_expr
+    @test "isa(a,a) != isa(a,a)" |> test_expr
+    @test "@mac return x" |> test_expr
+    @test "ccall(:gethostname, stdcall, Int32, ())" |> test_expr
+    @test "a,b," |> test_expr
+    @test "m!=m" |> test_expr
+    @test """
+    ccall(:jl_finalize_th, Void, (Ptr{Void}, Any,),
+                Core.getptls(), o)
+    """ |> test_expr
+    @test "\$(x...)" |> test_expr
+    @test "(Base.@_pure_meta;)" |> test_expr
+    @test "@inbounds @ncall a b c" |> test_expr
+    @test "(Base.@_pure_meta;)" |> test_expr
+    @test "@M a b->(@N c = @O d e f->g)" |> test_expr
+    @test "4x/y" |> test_expr
+    @test """
+    A[if n == d
+        i
+    else
+        (indices(A,n) for n = 1:nd)
+    end...]
+    """ |> test_expr
+    @test """Base.@__doc__(bitstype \$(sizeof(basetype) * 8) \$(esc(typename)) <: Enum{\$(basetype)})""" |> test_expr
+    @test """
+    @spawnat(p,
+        let m = a
+            isa(m, Exception) ? m : nothing
+        end)
+    """ |> test_expr
+    @test "[@spawn f(R, first(c), last(c)) for c in splitrange(length(R), nworkers())]" |> test_expr
+    @test "M.:(a)" |> test_expr
+    @test "-(-x)^1" |> test_expr
+    @test "f(a for a in A if cond)"|> test_expr
 end
 
 @testset "Broken things" begin
-    for str in [
-                "(a,b = c,d)"
-                ]
-        x = Parser.parse(str)
-        @test_broken Expr(x) == remlineinfo!(Base.parse(str))
-    end
+    @test_broken "(a,b = c,d)" |> test_expr
 end
