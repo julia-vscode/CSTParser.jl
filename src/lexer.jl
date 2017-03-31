@@ -109,7 +109,7 @@ function next(ps::ParseState)
         else
             ps.nws = Token(EmptyWS, (0, 0), (0, 0), ps.nnt.endbyte, ps.nnt.endbyte, "")
         end
-        ps.nnt, ps.done = next(ps.l, ps.done)
+        ps.nnt, _ = next(ps.l, ps.done)
     else
         ps.ndot = false
     end
@@ -119,6 +119,7 @@ function next(ps::ParseState)
     else
         ps.nnws = Token(EmptyWS, (0, 0), (0, 0), ps.nnt.endbyte, ps.nnt.endbyte, "")
     end
+    ps.done = ps.nt.kind == Tokens.ENDMARKER
     return ps
 end
 

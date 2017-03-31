@@ -108,9 +108,13 @@ function parse_compound(ps::ParseState, ret)
     elseif ps.nt.kind == Tokens.DO
         ret = parse_do(ps, ret)
     elseif ((ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN)) || (ret isa EXPR && ret.head isa OPERATOR{15, Tokens.PRIME} && ps.nt.kind == Tokens.IDENTIFIER) || ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && ps.nt.kind == Tokens.IDENTIFIER)
+        # a literal number followed by an identifier or (
+        # a transpose call followed by an identifier
+        # a () or [] expression followed by an identifier
+        #  --> implicit multiplication
         op = OPERATOR{11,Tokens.STAR,false}(0)
         ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind==Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR})# && !isunaryop(ret)
+    elseif ps.nt.kind==Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR})
         if isempty(ps.ws) 
             ret = @default ps @closer ps paren parse_call(ps, ret)
         else
@@ -147,6 +151,7 @@ function parse_compound(ps::ParseState, ret)
         push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.val))
         ret.span += arg.span
     elseif ret isa EXPR && ret.head isa OPERATOR{20, Tokens.PRIME} 
+        # prime operator followed by an identifier has an implicit multiplication
         nextarg = @precedence ps 11 parse_expression(ps)
         ret = EXPR(CALL, [OPERATOR{11, Tokens.STAR, false}(0), ret, nextarg], ret.span + nextarg.span)
     else
@@ -158,7 +163,6 @@ function parse_compound(ps::ParseState, ret)
             end
         end
         error("infinite loop at $(ps)")
-        # ret = ERROR{1}(ret.span)
     end
     return ret
 end
@@ -169,7 +173,7 @@ end
     parse_list(ps)
 
 Parses a list of comma seperated expressions finishing when the parent state
-of `ps.closer` is met. Expects to start at the first item and ends on the last
+of `ps.closer` is met, newlines are ignored. Expects to start at the first item and ends on the last
 item so surrounding punctuation must be handled externally.
 
 **NOTE**
@@ -199,8 +203,7 @@ end
 """
     parse_paren(ps, ret)
 
-Parses the juxtaposition of `ret` with an opening parentheses. Parses a comma 
-seperated list.
+Parses an expression starting with a `(`.
 """
 function parse_paren(ps::ParseState)
     start = ps.t.startbyte
@@ -345,14 +348,20 @@ function parse(ps::ParseState, cont = false)
     return top, ps
 end
 
+
+function parse_file(path::String)
+    x = parse(readstring(path), true)
+    
+    File([], (f->joinpath(dirname(path), f)).(_get_includes(x)), path, x)
+end
+
 function parse_directory(path::String, proj = Project(path,[]))
     for f in readdir(path)
         if isfile(joinpath(path, f)) && endswith(f, ".jl")
             try
-                x = parse(readstring(joinpath(path, f)), true)
-                push!(proj.files, File([], (f->joinpath(dirname(path), f)).(_get_includes(x)), joinpath(path, f), x))
+                push!(proj.files, parse_file(joinpath(path, f)))
             catch
-                println("$f")
+                println("$f failed to parse")
             end
         elseif isdir(joinpath(path, f))
             parse_directory(joinpath(path, f), proj)

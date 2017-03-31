@@ -10,87 +10,6 @@ function dirty_blocks(x::EXPR, dirty)
     i1, p1, ind1 = find(x, last(dirty))
 end
 
-function reparse(str, x::EXPR, dirty, n)
-    @assert first(dirty) ≤ last(dirty)
-    i0, p0, ind0 = find(x, first(dirty))
-    i1, p1, ind1 = find(x, last(dirty))
-    if i0 == i1 && i0 isa INSTANCE
-        ps = ParseState(str)
-        while ps.nt.startbyte < i0.offset
-            next(ps)
-        end
-        new_instance = INSTANCE(next(ps))
-        if (n-length(dirty))==(i0.span-new_instance.span)
-            dspan = new_instance.span-i0.span
-            p0[end][ind0[end]] = new_instance
-            for p in p0
-                p.span += dspan
-            end
-        end
-    end
-end
-
-
-function reparse(x, str, loc)
-    # locate subexpression
-    y, path, inds, offsets = find(x, loc)
-
-    while !(y isa EXPR) && length(path)>0#y isa KEYWORD || y isa PUNCTUATION
-        y = last(path)
-        pop!(inds)
-        pop!(offsets)
-    end
-    ps = ParseState(str)
-    # start position
-    while ps.nt.startbyte < sum(offsets)
-        next(ps)
-    end
-    # stop position
-    ps.closer.stop = ps.nt.startbyte + y.span
-    y1 = parse_expression(ps)
-    @assert y.span == y1.span
-end
-
-
-function reparse(x, str, loc)
-    # locate subexpression
-    y, path, inds, offsets = find(x, loc)
-    y isa LITERAL{nothing} && (return true)
-    while !(y isa EXPR) || (y isa EXPR && y.head == BLOCK)
-        y = last(path)
-        pop!(inds)
-        pop!(path)
-        pop!(offsets)
-    end
-    ps = ParseState(str)
-    # start position
-    while ps.nt.startbyte < sum(offsets)
-        next(ps)
-    end
-    # stop position
-    ps.closer.stop = ps.nt.startbyte + y.span
-    y1 = parse_expression(ps)
-    @assert y.span == y1.span
-end
-
-
-str = """
-function fname(arg1,arg2::Int)
-    f(x) = safdsdfs(sfd)
-    out = 0
-    while true
-        out += arg1*arg2
-        x = 1+2-3*b ^ 3 || (x-3&4)
-        x = 1+2-3*b ^ 3 || (x-3&4)
-        x = 1+2-3*b ^ 3 || (x-3&4)
-
-    end
-end"""
-io = IOBuffer(str)
-ps = ParseState(str)
-y = Parser.parse(str)
-x = Parser.parse(str)
-
 function dirtyall()
     T = []
     for i = 1:length(str)
@@ -101,4 +20,96 @@ function dirtyall()
     end
     T
 end
-T =  dirtyall()
+
+
+"""
+    reparse(f::File, newstr, dirty)
+
+Reparses `File` `f` where `newstr` is the edited source file and `dirty`
+is the region (byte position range) of the previous version of the source file 
+that has changed.
+"""
+function reparse(f::File, newstr, dirty)
+    # find old token
+    oldtok, tree, ind = find(f.ast, startbyte)
+    success = false
+    if oldtok isa IDENTIFIER
+        ps = ParseState(newstr)
+        # skip to token before start of edit
+        while ps.nnt.startbyte < startbyte && !ps.done
+            next(ps)
+        end
+        if ps.nt.kind != Tokens.ENDMARKER
+            newtok = INSTANCE(next(ps))
+            if newtok isa IDENTIFIER && (oldtok.span - newtok.span) == (endbyte - startbyte - sizeof(newtext))
+                tree[end][ind[end]] = newtok
+                dspan = newtok.span - oldtok.span
+                for e in tree
+                    e.span += dspan
+                end
+                success = true
+            end
+        end
+    end
+
+    # fallback method, parse whole new string
+    # if !success
+    #     f.ast = parse(newstr, true)
+    #     success = true
+    # end
+    
+    # f.includes = (f->joinpath(dirname(path), f)).(_get_includes(f.ast))
+    return success
+end
+
+
+
+
+
+str = """
+function parse_directory(path::String, proj = Project(path,[]))
+    for f in readdir(path)
+        if isfile(joinpath(path, f)) && endswith(f, ".jl")
+            try
+                x = parse(readstring(joinpath(path, f)), true)
+                push!(proj.files, File([], (f->joinpath(dirname(path), f)).(_get_includes(x)), joinpath(path, f), x))
+            catch
+                println("f")
+            end
+        elseif isdir(joinpath(path, f))
+            parse_directory(joinpath(path, f), proj)
+        end
+    end
+    proj
+end
+"""
+
+newstr = """
+function parse_directory(path::String, proj = Project(path,[]))
+    for f in readdir(path)
+        if isfile(joinpath(path, f)) && endswith(f, ".jl")
+            try
+                x = parse(readstring(joinpath(path, f)), true)
+                push!(proj.files, File([], (f->joinpath(dirname(path), f)).(_get_includes(x)), joinpath(path, f), x))
+            catch
+                println("f")
+            end
+        elseif isdir(joinpath(path, f))
+            newfunc(joinpath(path, f), proj)
+        end
+    end
+    proj
+end
+"""
+
+str = "symbol + other"
+newstr = "symbol  + other"
+f = File([],[],"",parse(str,true))
+
+newtext = " "
+startbyte = 7
+endbyte = 7
+str[startbyte:endbyte]
+
+reparse(f, newstr, startbyte, endbyte, newtext)
+Expr(f.ast)
