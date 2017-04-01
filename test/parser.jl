@@ -404,6 +404,7 @@ end
     @test "M.:(a)" |> test_expr
     @test "-(-x)^1" |> test_expr
     @test "f(a for a in A if cond)"|> test_expr
+    @test "M.r\"str\" " |> test_expr
 end
 
 @testset "Broken things" begin

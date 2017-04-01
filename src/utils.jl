@@ -5,6 +5,7 @@ function closer(ps::ParseState)
     (ps.nt.kind == Tokens.LPAREN && ps.closer.precedence>14) ||
     (ps.nt.kind == Tokens.LBRACE && ps.closer.precedence>14) ||
     (ps.nt.kind == Tokens.LSQUARE && ps.closer.precedence>14) ||
+    (ps.nt.kind == Tokens.STRING && isempty(ps.ws) && ps.closer.precedence>14) ||
     (ps.closer.precedence>14 && ps.t.kind == Tokens.RPAREN && ps.nt.kind == Tokens.IDENTIFIER) ||
     (ps.closer.precedence>14 && ps.t.kind == Tokens.RSQUARE && ps.nt.kind == Tokens.IDENTIFIER) ||
     (ps.nt.kind == Tokens.COMMA && ps.closer.precedence>0) ||

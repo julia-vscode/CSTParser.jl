@@ -141,7 +141,7 @@ function parse_compound(ps::ParseState, ret)
         op = INSTANCE(ps)
         format_op(ps, precedence(ps.t))
         ret = parse_operator(ps, ret, op)
-    elseif ret isa IDENTIFIER && ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
+    elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{15,Tokens.DOT})) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
         next(ps)
         arg = parse_string(ps, ret)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)

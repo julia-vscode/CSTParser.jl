@@ -82,7 +82,15 @@ function Expr(x::EXPR)
         insert!(ret.args, 2, Expr(:->, Expr(x.args[2]), Expr(x.args[3])))
         return ret
     elseif x.head == x_STR
-        return Expr(:macrocall, Symbol('@', Expr(x.args[1]), "_str"), Expr.(x.args[2:end])...)
+        if x.args[1] isa IDENTIFIER
+            return Expr(:macrocall, Symbol('@', Expr(x.args[1]), "_str"), Expr.(x.args[2:end])...)
+        else
+            head = Expr(x.args[1])
+            if head.args[2] isa QuoteNode
+                head.args[2] = QuoteNode(Symbol('@',head.args[2].value,"_str"))
+            end
+            return Expr(:macrocall, head, Expr.(x.args[2:end])...)
+        end
     elseif x.head == MACROCALL
         if x.args[1] isa HEAD{:globalrefdoc}
             ret = Expr(:macrocall, GlobalRef(Core, Symbol("@doc")))

@@ -1,12 +1,3 @@
-# abstract
-# actions
-#   add to current_scope
-# linting
-#   `arg` declares a variable
-#   Capitalized
-#   doesn't conflict with existing names
-
-
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
     start = ps.t.startbyte
     kw = INSTANCE(ps)
