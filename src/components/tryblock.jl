@@ -1,11 +1,13 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
     start_col = ps.t.startpos[2]
+
+    # Parsing
     kw = INSTANCE(ps)
     ret = EXPR(kw, [EXPR(BLOCK, SyntaxNode[], -ps.nt.startbyte)], -ps.t.startbyte)
 
     @default ps @closer ps trycatch parse_block(ps, start_col, ret.args[1])
     
-    # If closing early
+    # try closing early
     if ps.nt.kind == Tokens.END
         next(ps)
         push!(ret.args, FALSE)
@@ -15,9 +17,10 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
         return ret
     end
 
-    #  Catch block
+    #  catch block
     if ps.nt.kind==Tokens.CATCH
         next(ps)
+        # catch closing early
         if ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END
             push!(ret.punctuation, INSTANCE(ps))
             caught = FALSE
@@ -45,7 +48,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
     push!(ret.args, caught)
     push!(ret.args, catchblock)
     
-    # Finally block
+    # finally block
     if ps.nt.kind == Tokens.FINALLY
         if isempty(catchblock.args)
             ret.args[3] = FALSE

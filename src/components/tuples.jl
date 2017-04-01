@@ -5,11 +5,13 @@
 tuple.
 """
 function parse_tuple(ps::ParseState, ret)
+    startbyte = ps.nt.startbyte
+
+    # Parsing
     next(ps)
     op = INSTANCE(ps)
     format_comma(ps)
 
-    startbyte = ps.t.startbyte
     if isassignment(ps.nt)
         if ret isa EXPR && ret.head==TUPLE
             push!(ret.punctuation, op)

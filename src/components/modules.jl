@@ -2,9 +2,13 @@ parse_kw(ps::ParseState, ::Type{Val{Tokens.IMPORT}}) = parse_imports(ps)
 parse_kw(ps::ParseState, ::Type{Val{Tokens.IMPORTALL}}) = parse_imports(ps)
 parse_kw(ps::ParseState, ::Type{Val{Tokens.USING}}) = parse_imports(ps)
 
+parse_kw(ps::ParseState, ::Type{Val{Tokens.MODULE}}) = parse_module(ps)
+parse_kw(ps::ParseState, ::Type{Val{Tokens.BAREMODULE}}) = parse_module(ps)
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.MODULE}})
+function parse_module(ps::ParseState)
     startbyte = ps.t.startbyte
+
+    # Parsing
     kw = INSTANCE(ps)
     arg = @closer ps block @closer ps ws parse_expression(ps)
     scope = Scope{Tokens.MODULE}(get_id(arg), [])
@@ -14,27 +18,12 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MODULE}})
         a = @closer ps block parse_doc(ps, a)
         push!(block.args, a)
     end
-    block.span += ps.nt.startbyte
-    next(ps)
-    push!(ps.current_scope.args, scope)
-    return EXPR(kw, [TRUE, arg, block], ps.nt.startbyte - startbyte, [INSTANCE(ps)], scope)
-end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.BAREMODULE}})
-    startbyte = ps.t.startbyte
-    kw = INSTANCE(ps)
-    arg = @closer ps block @closer ps ws parse_expression(ps)
-    scope = Scope{Tokens.MODULE}(get_id(arg), [])
-    block = EXPR(BLOCK, [], -ps.nt.startbyte)
-    @scope ps scope @default ps while ps.nt.kind!==Tokens.END
-        a = @closer ps block parse_expression(ps)
-        a = @closer ps block parse_doc(ps, a)
-        push!(block.args, a)
-    end
+    # Construction
     block.span += ps.nt.startbyte
     next(ps)
     push!(ps.current_scope.args, scope)
-    return EXPR(kw, [FALSE, arg, block], ps.nt.startbyte - startbyte, [INSTANCE(ps)], scope)
+    return EXPR(kw, [(kw isa KEYWORD{Tokens.MODULE} ? TRUE : FALSE), arg, block], ps.nt.startbyte - startbyte, [INSTANCE(ps)], scope)
 end
 
 function parse_dot_mod(ps::ParseState)
@@ -138,8 +127,9 @@ end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
     startbyte = ps.t.startbyte
+
+    # Parsing
     kw = INSTANCE(ps)
-    
     ret = EXPR(kw, parse_dot_mod(ps)[1], 0, [])
     
     while ps.nt.kind == Tokens.COMMA

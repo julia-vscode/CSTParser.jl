@@ -1,8 +1,11 @@
 function parse_do(ps::ParseState, ret)
+    startbyte = ps.nt.startbyte
+    start_col = ps.nt.startpos[2]-ret.span
+
+    # Parsing
     next(ps)
     kw = INSTANCE(ps)
-    start_col = ps.t.startpos[2]-ret.span
-    ret = EXPR(kw, [ret], ret.span - ps.t.startbyte)
+    
     args = EXPR(TUPLE,[], - ps.nt.startbyte)
     @default ps @closer ps comma @closer ps block while !closer(ps)
         a = parse_expression(ps)
@@ -15,6 +18,9 @@ function parse_do(ps::ParseState, ret)
     end
     args.span += ps.nt.startbyte
     block = @default ps parse_block(ps, start_col)
+
+    # Construction
+    ret = EXPR(kw, [ret], ret.span - startbyte)
     push!(ret.args, args)
     push!(ret.args, block)
     next(ps)

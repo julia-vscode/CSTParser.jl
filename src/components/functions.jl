@@ -1,15 +1,17 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2]
+
     kw = INSTANCE(ps)
     sig = @default ps @closer ps block @closer ps ws parse_expression(ps)
+
     if sig isa EXPR && sig.head isa HEAD{InvisibleBrackets} && !(sig.args[1] isa EXPR && sig.args[1].head == TUPLE)
         sig.args[1] = EXPR(TUPLE, [sig.args[1]], sig.args[1].span)
     end
     scope = Scope{Tokens.FUNCTION}(function_name(sig), [])
     @scope ps scope _lint_func_sig(ps, sig)
     block = @default ps @scope ps scope parse_block(ps, start_col)
-    next(ps)
+    
     if isempty(block.args)
         if sig isa EXPR
             args = SyntaxNode[sig, block]
@@ -20,6 +22,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
         args = SyntaxNode[sig, block]
     end
     push!(ps.current_scope.args, scope)
+    
+    next(ps)
     return EXPR(kw, args, ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)], scope)
 end
 

@@ -1,9 +1,12 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
     startbyte = ps.t.startbyte
+
+    # Parsing
     kw = INSTANCE(ps)
     arg = parse_expression(ps)
-    format_typename(ps, arg)
 
+    # Linting
+    format_typename(ps, arg)
     scope = Scope{Tokens.ABSTRACT}(get_id(arg), [])
     # push!(ps.current_scope.args, scope)
 
@@ -12,11 +15,14 @@ end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
     startbyte = ps.t.startbyte
+    
+    # Parsing
     kw = INSTANCE(ps)
     arg1 = @closer ps ws parse_expression(ps) 
     arg2 = parse_expression(ps)
+
+    # Linting
     format_typename(ps, arg2)
-    
     scope = Scope{Tokens.BITSTYPE}(get_id(arg2), [])
     push!(ps.current_scope.args, scope)
 
@@ -25,11 +31,14 @@ end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
     startbyte = ps.t.startbyte
+
+    # Parsing
     kw = INSTANCE(ps)
     arg1 = @closer ps ws parse_expression(ps) 
-    format_typename(ps, arg1)
     arg2 = parse_expression(ps)
 
+    # Linting
+    format_typename(ps, arg1)
     scope = Scope{Tokens.TYPEALIAS}(get_id(arg1), [])
     push!(ps.current_scope.args, scope)
 
@@ -45,12 +54,14 @@ parse_kw(ps::ParseState, ::Type{Val{Tokens.IMMUTABLE}}) = parse_struct(ps, FALSE
 function parse_struct(ps::ParseState, mutable)
     startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2]
+
+    # Parsing
     kw = INSTANCE(ps)
     sig = @closer ps block @closer ps ws parse_expression(ps)
-    format_typename(ps, sig)
     block = parse_block(ps, start_col)
-    next(ps)
 
+    # Linting
+    format_typename(ps, sig)
     T = mutable==TRUE ? Tokens.TYPE : Tokens.IMMUTABLE
     scope = Scope{T}(get_id(sig), [])
     for a in block.args
@@ -63,6 +74,7 @@ function parse_struct(ps::ParseState, mutable)
     end
     push!(ps.current_scope.args, scope)
 
+    next(ps)
     return EXPR(kw, SyntaxNode[mutable, sig, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)], scope)
 end
 

@@ -1,10 +1,16 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.QUOTE}})
     startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2]
+
+    # Parsing
     kw = INSTANCE(ps)
     arg = @default ps parse_block(ps, start_col)
     next(ps)
-    return EXPR(kw, SyntaxNode[arg], ps.nt.startbyte - startbyte, [INSTANCE(ps)])
+
+    # Construction
+    ret = EXPR(kw, SyntaxNode[arg], ps.nt.startbyte - startbyte, [INSTANCE(ps)])
+    
+    return ret
 end
 
 

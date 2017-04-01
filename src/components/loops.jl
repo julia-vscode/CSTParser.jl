@@ -1,10 +1,13 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
     startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2]
+
+    # Parsing
     kw = INSTANCE(ps)
     ranges = @default ps parse_ranges(ps)
     block = @default ps parse_block(ps, start_col)
     next(ps)
+    ret = EXPR(kw, SyntaxNode[ranges, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
 
     # Linting
     if ranges isa EXPR && ranges.head == BLOCK
@@ -15,7 +18,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
         _lint_range(ps, ranges, startbyte + kw.span + (0:ranges.span))
     end
 
-    return EXPR(kw, SyntaxNode[ranges, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
+    return ret
 end
 
 function _lint_range(ps::ParseState, x, loc)
@@ -47,10 +50,13 @@ end
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
     startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2]
+
+    # Parsing
     kw = INSTANCE(ps)
     cond = @default ps @closer ps ws parse_expression(ps)
     block = @default ps parse_block(ps, start_col)
     next(ps)
+
     ret = EXPR(kw, SyntaxNode[cond, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
 
     # Linting

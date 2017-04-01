@@ -7,6 +7,8 @@ Parse an `if` block.
 """
 function parse_if(ps::ParseState, nested = false, puncs = [])
     startbyte = ps.t.startbyte
+
+    # Parsing
     kw = INSTANCE(ps)
     cond = @default ps @closer ps ws parse_expression(ps)
 
@@ -39,6 +41,8 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
         @default ps parse_block(ps, start_col, elseblock)
         elseblock.span = ps.nt.startbyte - startelseblock
     end
+
+    # Construction
     !nested && next(ps)
     !nested && push!(puncs, INSTANCE(ps))
     ret = isempty(elseblock.args) && !elsekw ? 
