@@ -29,7 +29,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
             if ps.ws.kind == SemiColonWS
                 caught = FALSE
             else
-                caught = @default ps @closer ps trycatch parse_expression(ps)
+                caught = @default ps @closer ps ws @closer ps trycatch parse_expression(ps)
             end
             catchblock = @default ps @closer ps trycatch parse_block(ps, start_col)
             if !(caught isa IDENTIFIER || caught == FALSE)

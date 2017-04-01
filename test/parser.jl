@@ -167,6 +167,8 @@ end
 
     @testset "Structs" begin
         @test "type a end" |> test_expr
+        @test "type a; end" |> test_expr
+        @test "type a; b;end" |> test_expr
         @test """type a
             arg1
         end""" |> test_expr
@@ -261,6 +263,9 @@ end
 @testset "Keyword Blocks" begin
     @testset "If" begin
         @test "if cond end" |> test_expr
+        @test "if cond; a; end" |> test_expr
+        @test "if cond a; end" |> test_expr
+        @test "if cond; a end" |> test_expr
         @test """if cond
             1
             1
@@ -300,6 +305,11 @@ end
 
     @testset "Try" begin
         @test "try f(1) end" |> test_expr
+        @test "try; f(1) end" |> test_expr
+        @test "try; f(1); end" |> test_expr
+        @test "try; f(1); catch e; e; end" |> test_expr
+        @test "try; f(1); catch e; e end" |> test_expr
+        @test "try; f(1); catch e e; end" |> test_expr
         @test """try
             f(1)
         catch 
