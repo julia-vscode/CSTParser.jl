@@ -1,5 +1,5 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
     sig = @default ps @closer ps block @closer ps ws parse_expression(ps)
@@ -20,7 +20,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
         args = SyntaxNode[sig, block]
     end
     push!(ps.current_scope.args, scope)
-    return EXPR(kw, args, ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)], scope)
+    return EXPR(kw, args, ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)], scope)
 end
 
 """

@@ -7,7 +7,7 @@ Having hit '[' return either:
 + An array (vcat of hcats)
 """
 function parse_array(ps::ParseState)
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     puncs = INSTANCE[INSTANCE(ps)]
     format_lbracket(ps)
 
@@ -16,7 +16,7 @@ function parse_array(ps::ParseState)
         push!(puncs, INSTANCE(ps))
         format_rbracket(ps)
 
-        return EXPR(VECT, [], ps.nt.startbyte - start, puncs)
+        return EXPR(VECT, [], ps.nt.startbyte - startbyte, puncs)
     else
         first_arg = @default ps @closer ps square @closer ps ws parse_expression(ps)
 
@@ -46,7 +46,7 @@ function parse_array(ps::ParseState)
                 push!(first_arg.punctuation, INSTANCE(ps))
                 format_rbracket(ps)
 
-                first_arg.span = ps.nt.startbyte - start
+                first_arg.span = ps.nt.startbyte - startbyte
                 return first_arg
             elseif first_arg isa EXPR && first_arg.head == GENERATOR
                 next(ps)
@@ -55,26 +55,26 @@ function parse_array(ps::ParseState)
 
                 if first_arg.args[1] isa EXPR && first_arg.args[1].head isa OPERATOR{1, Tokens.PAIR_ARROW}
                     return EXPR(DICT_COMPREHENSION, [first_arg], ps.nt.startbyte - 
-                    start, puncs)
+                    startbyte, puncs)
                 else
                     return EXPR(COMPREHENSION, [first_arg], ps.nt.startbyte - 
-                    start, puncs)
+                    startbyte, puncs)
                 end
             elseif ps.ws.kind== SemiColonWS
                 next(ps)
                 push!(puncs, INSTANCE(ps))
                 format_rbracket(ps)
 
-                return EXPR(VCAT, [first_arg], ps.nt.startbyte - start, puncs)
+                return EXPR(VCAT, [first_arg], ps.nt.startbyte - startbyte, puncs)
             else
                 next(ps)
                 push!(puncs, INSTANCE(ps))
                 format_rbracket(ps)
 
-                ret = EXPR(VECT, [first_arg], ps.nt.startbyte - start, puncs)
+                ret = EXPR(VECT, [first_arg], ps.nt.startbyte - startbyte, puncs)
             end
         elseif ps.ws.kind == SemiColonWS
-            ret = EXPR(VCAT,[first_arg], -start, puncs)
+            ret = EXPR(VCAT,[first_arg], -startbyte, puncs)
             @default ps @closer ps square @closer ps ws @closer ps comma while ps.ws.kind == SemiColonWS
                 if ps.nt.kind == Tokens.COMMA
                     error("unexpected comma in matrix expression")
@@ -86,10 +86,10 @@ function parse_array(ps::ParseState)
             push!(ret.punctuation, INSTANCE(ps))
             format_rbracket(ps)
 
-            ret.span = ps.nt.startbyte - start
+            ret.span = ps.nt.startbyte - startbyte
             return ret
         elseif ps.ws.kind == NewLineWS
-            ret = EXPR(VCAT, [first_arg], - start, puncs)
+            ret = EXPR(VCAT, [first_arg], - startbyte, puncs)
             while ps.nt.kind != Tokens.RSQUARE
                 a = @default ps @closer ps square parse_expression(ps)
                 push!(ret.args, a)
@@ -129,7 +129,7 @@ function parse_array(ps::ParseState)
                 next(ps)
                 push!(puncs, INSTANCE(ps))
                 ret.punctuation = puncs
-                ret.span = ps.nt.startbyte - start
+                ret.span = ps.nt.startbyte - startbyte
                 return ret
             end
         end

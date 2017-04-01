@@ -9,7 +9,7 @@ function parse_tuple(ps::ParseState, ret)
     op = INSTANCE(ps)
     format_comma(ps)
 
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     if isassignment(ps.nt)
         if ret isa EXPR && ret.head==TUPLE
             push!(ret.punctuation, op)
@@ -29,9 +29,9 @@ function parse_tuple(ps::ParseState, ret)
         if ret isa EXPR && ret.head==TUPLE && (length(ret.punctuation)==0 || !(first(ret.punctuation) isa PUNCTUATION{Tokens.LPAREN}))
             push!(ret.args, nextarg) 
             push!(ret.punctuation, op)
-            ret.span += ps.nt.startbyte - start
+            ret.span += ps.nt.startbyte - startbyte
         else
-            ret =  EXPR(TUPLE, SyntaxNode[ret, nextarg], ret.span+ps.nt.startbyte - start, INSTANCE[op])
+            ret =  EXPR(TUPLE, SyntaxNode[ret, nextarg], ret.span+ps.nt.startbyte - startbyte, INSTANCE[op])
         end
     end
     return ret

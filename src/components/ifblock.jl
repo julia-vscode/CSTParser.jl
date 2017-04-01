@@ -6,13 +6,13 @@ parse_kw(ps::ParseState, ::Type{Val{Tokens.IF}}) = parse_if(ps)
 Parse an `if` block.
 """
 function parse_if(ps::ParseState, nested = false, puncs = [])
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     kw = INSTANCE(ps)
     cond = @default ps @closer ps ws parse_expression(ps)
 
     if ps.nt.kind==Tokens.END
         next(ps)
-        return EXPR(kw, SyntaxNode[cond, EXPR(BLOCK, SyntaxNode[], 0)], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
+        return EXPR(kw, SyntaxNode[cond, EXPR(BLOCK, SyntaxNode[], 0)], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
     end
 
     ifblock = EXPR(BLOCK, SyntaxNode[], -ps.nt.startbyte)
@@ -42,20 +42,20 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
     !nested && next(ps)
     !nested && push!(puncs, INSTANCE(ps))
     ret = isempty(elseblock.args) && !elsekw ? 
-        EXPR(kw, SyntaxNode[cond, ifblock], ps.nt.startbyte - start, puncs) : 
-        EXPR(kw, SyntaxNode[cond, ifblock, elseblock], ps.nt.startbyte - start, puncs)
+        EXPR(kw, SyntaxNode[cond, ifblock], ps.nt.startbyte - startbyte, puncs) : 
+        EXPR(kw, SyntaxNode[cond, ifblock, elseblock], ps.nt.startbyte - startbyte, puncs)
 
     # Linting
     if cond isa EXPR && cond.head isa OPERATOR{1}
-        push!(ps.hints, Hint{Hints.CondAssignment}(start + kw.span + (0:cond.span)))
+        push!(ps.hints, Hint{Hints.CondAssignment}(startbyte + kw.span + (0:cond.span)))
     end
     if cond isa LITERAL{Tokens.TRUE}
         if length(ret.args) == 3
-            push!(ps.hints, Hint{Hints.DeadCode}(start + kw.span + cond.span + ret.args[2].span + (0:ret.args[3].span)))
+            push!(ps.hints, Hint{Hints.DeadCode}(startbyte + kw.span + cond.span + ret.args[2].span + (0:ret.args[3].span)))
         end
     elseif cond isa LITERAL{Tokens.FALSE}
         if length(ret.args) == 2
-            push!(ps.hints, Hint{Hints.DeadCode}(start + kw.span + cond.span + (0:ret.args[2].span)))
+            push!(ps.hints, Hint{Hints.DeadCode}(startbyte + kw.span + cond.span + (0:ret.args[2].span)))
         end
     end
 

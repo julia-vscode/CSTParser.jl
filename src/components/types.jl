@@ -1,5 +1,5 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     kw = INSTANCE(ps)
     arg = parse_expression(ps)
     format_typename(ps, arg)
@@ -7,11 +7,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
     scope = Scope{Tokens.ABSTRACT}(get_id(arg), [])
     # push!(ps.current_scope.args, scope)
 
-    return EXPR(kw, SyntaxNode[arg], ps.nt.startbyte - start)
+    return EXPR(kw, SyntaxNode[arg], ps.nt.startbyte - startbyte)
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     kw = INSTANCE(ps)
     arg1 = @closer ps ws parse_expression(ps) 
     arg2 = parse_expression(ps)
@@ -20,11 +20,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
     scope = Scope{Tokens.BITSTYPE}(get_id(arg2), [])
     push!(ps.current_scope.args, scope)
 
-    return EXPR(kw, SyntaxNode[arg1, arg2], ps.nt.startbyte - start, [], scope)
+    return EXPR(kw, SyntaxNode[arg1, arg2], ps.nt.startbyte - startbyte, [], scope)
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     kw = INSTANCE(ps)
     arg1 = @closer ps ws parse_expression(ps) 
     format_typename(ps, arg1)
@@ -33,7 +33,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
     scope = Scope{Tokens.TYPEALIAS}(get_id(arg1), [])
     push!(ps.current_scope.args, scope)
 
-    return EXPR(kw, SyntaxNode[arg1, arg2], ps.nt.startbyte - start, [], scope)
+    return EXPR(kw, SyntaxNode[arg1, arg2], ps.nt.startbyte - startbyte, [], scope)
 end
 
 # for 0.6 the above two can be merged to a `parse_type` function as 
@@ -43,7 +43,7 @@ parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPE}}) = parse_struct(ps, TRUE)
 parse_kw(ps::ParseState, ::Type{Val{Tokens.IMMUTABLE}}) = parse_struct(ps, FALSE)
 
 function parse_struct(ps::ParseState, mutable)
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
     sig = @closer ps block @closer ps ws parse_expression(ps)
@@ -63,7 +63,7 @@ function parse_struct(ps::ParseState, mutable)
     end
     push!(ps.current_scope.args, scope)
 
-    return EXPR(kw, SyntaxNode[mutable, sig, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)], scope)
+    return EXPR(kw, SyntaxNode[mutable, sig, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)], scope)
 end
 
 function next(x::EXPR, s::Iterator{:abstract})

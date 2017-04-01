@@ -184,11 +184,11 @@ end
 
 # Parse conditionals
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{2})
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     nextarg = @closer ps ifop parse_expression(ps)
     op2 = INSTANCE(next(ps))
     nextarg2 = @closer ps comma @precedence ps 0 parse_expression(ps)
-    return EXPR(IF, SyntaxNode[ret, nextarg, nextarg2], ret.span + ps.nt.startbyte - start, INSTANCE[op, op2])
+    return EXPR(IF, SyntaxNode[ret, nextarg, nextarg2], ret.span + ps.nt.startbyte - startbyte, INSTANCE[op, op2])
 end
 
 # Parse arrows
@@ -230,14 +230,14 @@ end
 
 # Parse ranges
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{8, Tokens.COLON})
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     nextarg = @precedence ps 8-LtoR(8) parse_expression(ps)
     if ret isa EXPR && ret.head isa OPERATOR{8,Tokens.COLON} && length(ret.args)==2
         push!(ret.punctuation, op)
         push!(ret.args, nextarg)
-        ret.span += ps.nt.startbyte-start
+        ret.span += ps.nt.startbyte - startbyte
     else
-        ret = EXPR(op, SyntaxNode[ret, nextarg], ret.span + ps.nt.startbyte - start)
+        ret = EXPR(op, SyntaxNode[ret, nextarg], ret.span + ps.nt.startbyte - startbyte)
     end
     return ret
 end
@@ -295,11 +295,11 @@ end
 # parse dot access
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
     if ps.nt.kind==Tokens.LPAREN
-        start = ps.nt.startbyte
+        startbyte = ps.nt.startbyte
         puncs = INSTANCE[INSTANCE(next(ps))]
         args = @closer ps paren parse_list(ps, puncs)
         push!(puncs, INSTANCE(next(ps)))
-        nextarg = EXPR(TUPLE, args, ps.nt.startbyte - start, puncs)
+        nextarg = EXPR(TUPLE, args, ps.nt.startbyte - startbyte, puncs)
     elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA
         next(ps)
         nextarg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, Symbol(lowercase(string(ps.t.kind))))

@@ -4,7 +4,7 @@ parse_kw(ps::ParseState, ::Type{Val{Tokens.USING}}) = parse_imports(ps)
 
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.MODULE}})
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     kw = INSTANCE(ps)
     arg = @closer ps block @closer ps ws parse_expression(ps)
     scope = Scope{Tokens.MODULE}(get_id(arg), [])
@@ -17,11 +17,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MODULE}})
     block.span += ps.nt.startbyte
     next(ps)
     push!(ps.current_scope.args, scope)
-    return EXPR(kw, [TRUE, arg, block], ps.nt.startbyte - start, [INSTANCE(ps)], scope)
+    return EXPR(kw, [TRUE, arg, block], ps.nt.startbyte - startbyte, [INSTANCE(ps)], scope)
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.BAREMODULE}})
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     kw = INSTANCE(ps)
     arg = @closer ps block @closer ps ws parse_expression(ps)
     scope = Scope{Tokens.MODULE}(get_id(arg), [])
@@ -34,7 +34,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BAREMODULE}})
     block.span += ps.nt.startbyte
     next(ps)
     push!(ps.current_scope.args, scope)
-    return EXPR(kw, [FALSE, arg, block], ps.nt.startbyte - start, [INSTANCE(ps)], scope)
+    return EXPR(kw, [FALSE, arg, block], ps.nt.startbyte - startbyte, [INSTANCE(ps)], scope)
 end
 
 function parse_dot_mod(ps::ParseState)
@@ -83,14 +83,14 @@ end
 
 
 function parse_imports(ps::ParseState)
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     kw = INSTANCE(ps)
     tk = ps.t.kind
 
     arg, puncs = parse_dot_mod(ps)
 
     if ps.nt.kind!=Tokens.COMMA && ps.nt.kind!=Tokens.COLON
-        return EXPR(kw, arg, ps.nt.startbyte - start, puncs)
+        return EXPR(kw, arg, ps.nt.startbyte - startbyte, puncs)
     end
 
     if ps.nt.kind == Tokens.COLON
@@ -129,15 +129,15 @@ function parse_imports(ps::ParseState)
     
     # Linting
     if ps.current_scope isa Scope{Tokens.FUNCTION}
-        push!(ps.hints, Hint{Hints.ImportInFunction}(start:ps.nt.startbyte))
+        push!(ps.hints, Hint{Hints.ImportInFunction}(startbyte:ps.nt.startbyte))
     end
 
-    ret.span = ps.nt.startbyte - start
+    ret.span = ps.nt.startbyte - startbyte
     return ret
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     kw = INSTANCE(ps)
     
     ret = EXPR(kw, parse_dot_mod(ps)[1], 0, [])
@@ -148,18 +148,18 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
         arg = parse_dot_mod(ps)[1][1]
         push!(ret.args, arg)
     end
-    ret.span = ps.nt.startbyte - start
+    ret.span = ps.nt.startbyte - startbyte
 
     # Linting
 
     # check for duplicates
     let idargs = filter(a-> a isa IDENTIFIER, ret.args)
         if length(idargs) != length(unique((a->a.val).(idargs)))
-            push!(ps.hints, Hint{Hints.DuplicateArgument}(start:ps.nt.startbyte))
+            push!(ps.hints, Hint{Hints.DuplicateArgument}(startbyte:ps.nt.startbyte))
         end
     end
     if ps.current_scope isa Scope{Tokens.FUNCTION}
-        push!(ps.hints, Hint{Hints.ImportInFunction}(start:ps.nt.startbyte))
+        push!(ps.hints, Hint{Hints.ImportInFunction}(startbyte:ps.nt.startbyte))
     end
     return ret
 end

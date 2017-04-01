@@ -3,14 +3,14 @@
 #     calls (ws and tuple form)
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
     arg = @closer ps block @closer ps ws parse_expression(ps)
     scope = Scope{Tokens.MACRO}(get_id(arg), [])
     block = @default ps parse_block(ps, start_col)
     next(ps)
-    return EXPR(kw, SyntaxNode[arg, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
+    return EXPR(kw, SyntaxNode[arg, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
 end
 
 """
@@ -19,7 +19,7 @@ end
 Parses a macro call. Expects to start on the `@`.
 """
 function parse_macrocall(ps::ParseState)
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     next(ps)
     mname = IDENTIFIER(ps.nt.startbyte - ps.lt.startbyte , string("@", ps.t.val))
     # Handle cases with @ at start of dotted expressions
@@ -38,7 +38,7 @@ function parse_macrocall(ps::ParseState)
     ret = EXPR(MACROCALL, [mname], 0)
 
     if ps.nt.kind == Tokens.COMMA
-        ret.span = ps.nt.startbyte - start
+        ret.span = ps.nt.startbyte - startbyte
         return ret
     end
     if isempty(ps.ws) && ps.nt.kind == Tokens.LPAREN
@@ -58,7 +58,7 @@ function parse_macrocall(ps::ParseState)
             push!(ret.args, a)
         end
     end
-    ret.span = ps.nt.startbyte - start
+    ret.span = ps.nt.startbyte - startbyte
     return ret
 end
 

@@ -1,5 +1,5 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
     ranges = @default ps parse_ranges(ps)
@@ -9,13 +9,13 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
     # Linting
     if ranges isa EXPR && ranges.head == BLOCK
         for r in ranges.args
-            _lint_range(ps, r, start + kw.span + (0:ranges.span))
+            _lint_range(ps, r, startbyte + kw.span + (0:ranges.span))
         end
     else
-        _lint_range(ps, ranges, start + kw.span + (0:ranges.span))
+        _lint_range(ps, ranges, startbyte + kw.span + (0:ranges.span))
     end
 
-    return EXPR(kw, SyntaxNode[ranges, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
+    return EXPR(kw, SyntaxNode[ranges, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
 end
 
 function _lint_range(ps::ParseState, x, loc)
@@ -45,13 +45,13 @@ end
 
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
     cond = @default ps @closer ps ws parse_expression(ps)
     block = @default ps parse_block(ps, start_col)
     next(ps)
-    ret = EXPR(kw, SyntaxNode[cond, block], ps.nt.startbyte - start, INSTANCE[INSTANCE(ps)])
+    ret = EXPR(kw, SyntaxNode[cond, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
 
     # Linting
     if cond isa EXPR && cond.head isa OPERATOR{1}
@@ -65,13 +65,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.BREAK}})
-    start = ps.t.startbyte
-    return EXPR(INSTANCE(ps), SyntaxNode[], ps.nt.startbyte - start)
+    return EXPR(INSTANCE(ps), SyntaxNode[], ps.nt.startbyte - ps.t.startbyte)
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONTINUE}})
-    start = ps.t.startbyte
-    return EXPR(INSTANCE(ps), SyntaxNode[], ps.nt.startbyte - start)
+    return EXPR(INSTANCE(ps), SyntaxNode[], ps.nt.startbyte - ps.t.startbyte)
 end
 
 _start_for(x::EXPR) = Iterator{:for}(1, 4)

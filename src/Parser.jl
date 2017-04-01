@@ -206,7 +206,7 @@ end
 Parses an expression starting with a `(`.
 """
 function parse_paren(ps::ParseState)
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     openparen = INSTANCE(ps)
     format_lbracket(ps)
     
@@ -215,7 +215,7 @@ function parse_paren(ps::ParseState)
         next(ps)
         closeparen = INSTANCE(ps)
         format_rbracket(ps)
-        return EXPR(TUPLE, [], ps.nt.startbyte - start, [openparen, closeparen])
+        return EXPR(TUPLE, [], ps.nt.startbyte - startbyte, [openparen, closeparen])
     end
     
     ret = EXPR(BLOCK, [], 0)
@@ -234,7 +234,7 @@ function parse_paren(ps::ParseState)
         end
     elseif ret isa EXPR && (ret.head == TUPLE || ret.head == BLOCK)
     else
-        ret = EXPR(BLOCK, [ret], ps.nt.startbyte - start)
+        ret = EXPR(BLOCK, [ret], 0)
     end
     # handle closing ')'
     next(ps)
@@ -243,7 +243,7 @@ function parse_paren(ps::ParseState)
     
     unshift!(ret.punctuation, openparen)
     push!(ret.punctuation, closeparen)
-    ret.span = ps.nt.startbyte - start
+    ret.span = ps.nt.startbyte - startbyte
 
     return ret
 end
@@ -258,7 +258,7 @@ Handles the case where a colon is used as a unary operator on an
 expression. The output is a quoted expression.
 """
 function parse_quote(ps::ParseState)
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     puncs = INSTANCE[INSTANCE(ps)]
     if ps.nt.kind == Tokens.IDENTIFIER
         arg = INSTANCE(next(ps))
@@ -279,7 +279,7 @@ function parse_quote(ps::ParseState)
         arg = @closer ps paren parse_expression(ps)
         next(ps)
         push!(puncs, INSTANCE(ps))
-        return EXPR(QUOTE, [arg],  ps.nt.startbyte - start, puncs)
+        return EXPR(QUOTE, [arg],  ps.nt.startbyte - startbyte, puncs)
     end
 end
 

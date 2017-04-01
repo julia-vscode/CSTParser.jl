@@ -6,52 +6,38 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONST}})
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.GLOBAL}})
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     kw = INSTANCE(ps)
     arg = parse_expression(ps)
-    # if arg isa EXPR && arg.head isa KEYWORD{Tokens.CONST}
-    #     ret = EXPR(arg.head, [arg], ps.nt.startbyte - start)
-    #     arg.head = kw
-    # else
-        if arg isa EXPR && arg.head == TUPLE && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
-            ret = EXPR(kw, [arg.args...], ps.nt.startbyte - start, arg.punctuation)
-        else
-            ret = EXPR(kw, [arg], ps.nt.startbyte - start)
-        end
-    # end
+    if arg isa EXPR && arg.head == TUPLE && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
+        ret = EXPR(kw, [arg.args...], ps.nt.startbyte - startbyte, arg.punctuation)
+    else
+        ret = EXPR(kw, [arg], ps.nt.startbyte - startbyte)
+    end
     return ret
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.LOCAL}})
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     kw = INSTANCE(ps)
     arg = @default ps parse_expression(ps)
-    # if arg isa EXPR && arg.head isa KEYWORD{Tokens.CONST}
-    #     ret = EXPR(arg.head, [arg], ps.nt.startbyte - start)
-    #     arg.head = kw
-    # else
-        if arg isa EXPR && arg.head == TUPLE && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
-            ret = EXPR(kw, [arg.args...], ps.nt.startbyte - start, arg.punctuation)
-        else
-            ret = EXPR(kw, [arg], ps.nt.startbyte - start)
-        end
-    # end
+    if arg isa EXPR && arg.head == TUPLE && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
+        ret = EXPR(kw, [arg.args...], ps.nt.startbyte - startbyte, arg.punctuation)
+    else
+        ret = EXPR(kw, [arg], ps.nt.startbyte - startbyte)
+    end
     return ret
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.RETURN}})
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     kw = INSTANCE(ps)
     args = @default ps SyntaxNode[closer(ps) ? NOTHING : parse_expression(ps)]
-    return  EXPR(kw, args, ps.nt.startbyte - start)
+    return  EXPR(kw, args, ps.nt.startbyte - startbyte)
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.END}})
-    # if ps.closer.square
-        return IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :end)
-    # else
-    #     error("unexpected `end`")
-    # end
+    return IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :end)
 end
 
 function next(x::EXPR, s::Iterator{:const})
