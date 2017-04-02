@@ -25,7 +25,8 @@ RangeNonAssignment,
 CondAssignment,
 DeadCode,
 DictParaMisSpec,
-DictGenAssignment)
+DictGenAssignment,
+Deprecation)
 
 function apply(hints::Vector{Hint}, str)
     str1 = deepcopy(str)

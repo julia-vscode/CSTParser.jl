@@ -33,6 +33,7 @@ end
 Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
 """
 function parse_call(ps::ParseState, ret)
+    # Parsing
     next(ps)
     if ret isa IDENTIFIER && ret.val == :ccall
         ret = HEAD{Tokens.CCALL}(ret.span)
@@ -79,6 +80,8 @@ function parse_call(ps::ParseState, ret)
     push!(ret.punctuation, INSTANCE(ps))
     format_rbracket(ps)
     ret.span += ps.nt.startbyte
+
+    # Construction
     # fix arbitrary $ case
     if ret.args[1] isa OPERATOR{9, Tokens.EX_OR}
         ret.head = shift!(ret.args)
@@ -90,9 +93,14 @@ function parse_call(ps::ParseState, ret)
        arg = splice!(ret.args, 2)
        push!(ret.args, EXPR(arg, [], arg.span))
     end
+    # Linting
     if (ret.args[1] isa IDENTIFIER && ret.args[1].val==:Dict) || (ret.args[1] isa EXPR && ret.args[1].head == CURLY && ret.args[1].args[1] isa IDENTIFIER && ret.args[1].args[1].val == :Dict)
         _lint_dict(ps, ret)
     end
+    # fname = _get_fname(ret)
+    # if fname isa IDENTIFIER && fname.val in keys(deprecated_symbols)
+    #     push!(ps.hints, Hint{Hints.Deprecation}(ps.nt.startbyte - ret.span + (0:(fname.span))))
+    # end
     return ret
 end
 

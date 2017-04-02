@@ -1,14 +1,16 @@
 dep = parse(readstring(Base.functionloc(Base.depwarn)[1]),true)
 
-deprecated_symbols = []
-
 for x in dep
     if x isa EXPR && x.head == MACROCALL && x.args[1] isa IDENTIFIER && (x.args[1].val==Symbol("@deprecate") || x.args[1].val==Symbol("@deprecate_binding") )
         old = x.args[2]
-        if old isa IDENTIFIER
-            push!(deprecated_symbols, old.val)
+        replacement = x.args[3]
+        if old isa IDENTIFIER && replacement isa IDENTIFIER
+            deprecated_symbols[old.val] = replacement.val
+            # push!(deprecated_symbols, old.val)
         elseif x isa EXPR && x.head == CALL
-            push!(deprecated_symbols, _get_fname(old).val)
+            try 
+                deprecated_symbols[_get_fname(old).val] = _get_fname(replacement).val
+            end
         end
     # elseif x isa EXPR && x.head isa KEYWORD{Tokens.FOR}
     #     v = x[2][1].val
