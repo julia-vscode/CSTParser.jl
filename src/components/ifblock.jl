@@ -7,21 +7,13 @@ Parse an `if` block.
 """
 function parse_if(ps::ParseState, nested = false, puncs = [])
     startbyte = ps.t.startbyte
+    start_col = ps.t.startpos[2]
 
     # Parsing
     kw = INSTANCE(ps)
     cond = @default ps @closer ps ws parse_expression(ps)
 
-    if ps.nt.kind==Tokens.END
-        next(ps)
-        return EXPR(kw, SyntaxNode[cond, EXPR(BLOCK, SyntaxNode[], 0)], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
-    end
-
-    ifblock = EXPR(BLOCK, SyntaxNode[], -ps.nt.startbyte)
-    while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.ELSE && ps.nt.kind!==Tokens.ELSEIF
-        push!(ifblock.args, @default ps @closer ps block @closer ps ifelse parse_expression(ps))
-    end
-    ifblock.span += ps.nt.startbyte
+    ifblock = @default ps parse_block(ps, start_col, closers =[Tokens.END, Tokens.ELSE, Tokens.ELSEIF])
 
     elseblock = EXPR(BLOCK, SyntaxNode[], 0)
     if ps.nt.kind==Tokens.ELSEIF
@@ -37,9 +29,7 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
         start_col = ps.t.startpos[2]
         # format(ps)
         push!(puncs, INSTANCE(ps))
-        startelseblock = ps.nt.startbyte
-        @default ps parse_block(ps, start_col, elseblock)
-        elseblock.span = ps.nt.startbyte - startelseblock
+        @default ps parse_block(ps, start_col, ret = elseblock)
     end
 
     # Construction

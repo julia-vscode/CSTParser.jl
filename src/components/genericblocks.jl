@@ -12,17 +12,17 @@ end
 
 
 """
-    parseblocks(ps, ret = EXPR(BLOCK,...))
+    parse_block(ps, ret = EXPR(BLOCK,...))
 
 Parses an array of expressions (stored in ret) until 'end' is the next token. 
 Returns `ps` the token before the closing `end`, the calling function is 
 assumed to handle the closer.
 """
-function parse_block(ps::ParseState, start_col = 0, ret::EXPR = EXPR(BLOCK, [], 0))
+function parse_block(ps::ParseState, start_col = 0; ret::EXPR = EXPR(BLOCK, [], 0), closers = [Tokens.END, Tokens.CATCH, Tokens.FINALLY])
     startbyte = ps.nt.startbyte
 
     # Parsing
-    while ps.nt.kind!==Tokens.END && ps.nt.kind!==Tokens.CATCH && ps.nt.kind!==Tokens.FINALLY
+    while !(ps.nt.kind in closers)
         format_indent(ps, start_col)
         push!(ret.args, @closer ps block parse_expression(ps))
     end

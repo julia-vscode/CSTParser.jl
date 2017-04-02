@@ -321,6 +321,9 @@ function check_file(f::String)
         if !eq
             push!(failed, (x0, y0))
         end
+        if !isempty(span(x))
+            push!(failed, (x, span(x)))
+        end
     end
     failed, cnt
 end

@@ -3,9 +3,10 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
 
     # Parsing
     kw = INSTANCE(ps)
-    ret = EXPR(kw, [EXPR(BLOCK, SyntaxNode[], -ps.nt.startbyte)], -ps.t.startbyte)
+    ret = EXPR(kw, [], -ps.t.startbyte)
 
-    @default ps @closer ps trycatch parse_block(ps, start_col, ret.args[1])
+    tryblock = @default ps @closer ps trycatch parse_block(ps, start_col)
+    push!(ret.args, tryblock)
     
     # try closing early
     if ps.nt.kind == Tokens.END
@@ -56,8 +57,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
         next(ps)
         start_col = ps.t.startpos[2]
         push!(ret.punctuation, INSTANCE(ps))
-        finallyblock = EXPR(BLOCK, [])
-        parse_block(ps, start_col, finallyblock)
+        finallyblock = parse_block(ps, start_col)
         push!(ret.args, finallyblock)
     end
 
