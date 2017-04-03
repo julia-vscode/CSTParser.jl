@@ -325,6 +325,10 @@ end
 
 """
 function parse(ps::ParseState, cont = false)
+    if ps.l.io.size == 0
+        return (cont ? EXPR(TOPLEVEL, [], 0) : nothing), ps
+    end
+
     if cont
         top = EXPR(TOPLEVEL, [], 0)
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
