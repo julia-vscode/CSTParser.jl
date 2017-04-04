@@ -10,12 +10,12 @@ function parse_module(ps::ParseState)
 
     # Parsing
     kw = INSTANCE(ps)
-    arg = @closer ps block @closer ps ws parse_expression(ps)
+    @catcherror ps startbyte arg = @closer ps block @closer ps ws parse_expression(ps)
     scope = Scope{Tokens.MODULE}(get_id(arg), [])
     block = EXPR(BLOCK, [], -ps.nt.startbyte)
     @scope ps scope @default ps while ps.nt.kind!==Tokens.END
-        a = @closer ps block parse_expression(ps)
-        a = @closer ps block parse_doc(ps, a)
+        @catcherror ps startbyte a = @closer ps block parse_expression(ps)
+        @catcherror ps startbyte a = @closer ps block parse_doc(ps, a)
         push!(block.args, a)
     end
 
@@ -49,12 +49,12 @@ function parse_dot_mod(ps::ParseState)
         elseif ps.nt.kind == Tokens.LPAREN
             next(ps)
             a = EXPR(HEAD{InvisibleBrackets}(0), [], -ps.t.startbyte, [INSTANCE(ps)])
-            push!(a.args, @default ps @closer ps paren parse_expression(ps))
+            @catcherror ps startbyte push!(a.args, @default ps @closer ps paren parse_expression(ps))
             next(ps)
             push!(a.punctuation, INSTANCE(ps))
             push!(args, a)
         elseif ps.nt.kind == Tokens.EX_OR
-            a = @closer ps comma parse_expression(ps)
+            @catcherror ps startbyte a = @closer ps comma parse_expression(ps)
             push!(args, a)
         else
             next(ps)
@@ -97,12 +97,12 @@ function parse_imports(ps::ParseState)
         end
         
         M = arg
-        arg, puncs = parse_dot_mod(ps)
+        @catcherror ps startbyte arg, puncs = parse_dot_mod(ps)
         push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg)-1, puncs))
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
-            arg, puncs = parse_dot_mod(ps)
+            @catcherror ps startbyte arg, puncs = parse_dot_mod(ps)
             push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg)-1, puncs))
         end
     else
@@ -111,7 +111,7 @@ function parse_imports(ps::ParseState)
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
-            arg, puncs = parse_dot_mod(ps)
+            @catcherror ps startbyte arg, puncs = parse_dot_mod(ps)
             push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg)-1, puncs))
         end
     end
@@ -135,7 +135,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
     while ps.nt.kind == Tokens.COMMA
         next(ps)
         push!(ret.punctuation, INSTANCE(ps))
-        arg = parse_dot_mod(ps)[1][1]
+        @catcherror ps startbyte arg = parse_dot_mod(ps)[1][1]
         push!(ret.args, arg)
     end
     ret.span = ps.nt.startbyte - startbyte

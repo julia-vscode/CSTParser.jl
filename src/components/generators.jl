@@ -9,7 +9,8 @@ function parse_generator(ps::ParseState, ret)
     ret = EXPR(GENERATOR,[ret], ret.span - startbyte)
     next(ps)
     push!(ret.punctuation, INSTANCE(ps))
-    ranges = @closer ps paren @closer ps square parse_ranges(ps)
+    @catcherror ps startbyte ranges = @closer ps paren @closer ps square parse_ranges(ps)
+    
     if ps.nt.kind == Tokens.IF
         if ranges isa EXPR && ranges.head == BLOCK
             ranges = EXPR(FILTER, [ranges.args...], ranges.span, ranges.punctuation)
@@ -18,7 +19,7 @@ function parse_generator(ps::ParseState, ret)
         end
         next(ps)
         unshift!(ranges.punctuation, INSTANCE(ps))
-        cond = @closer ps paren parse_expression(ps)
+        @catcherror ps startbyte cond = @closer ps paren parse_expression(ps)
         unshift!(ranges.args, cond)
         ranges.span = sum(a.span for a in ranges.args) + sum(a.span for a in ranges.punctuation)
         push!(ret.args, ranges)
@@ -49,13 +50,6 @@ function _start_generator(x::EXPR)
 end
 
 function next(x::EXPR, s::Iterator{:generator})
-    # if s.i == 1
-    #     return x.args[1], +s
-    # elseif s.i == 2 
-    #     return x.punctuation[1], +s
-    # else
-    #     return x.args[s.i-1], +s
-    # end
     if isodd(s.i)
         return x.args[div(s.i+1, 2)], +s
     else

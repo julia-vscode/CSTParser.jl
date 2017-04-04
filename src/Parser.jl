@@ -170,6 +170,9 @@ function parse_compound(ps::ParseState, ret)
         # prime operator followed by an identifier has an implicit multiplication
         nextarg = @precedence ps 11 parse_expression(ps)
         ret = EXPR(CALL, [OPERATOR{11, Tokens.STAR, false}(0), ret, nextarg], ret.span + nextarg.span)
+################################################################################
+# Everything below here is an error
+################################################################################
     elseif ps.nt.kind == Tokens.ENDMARKER
         ps.errored = true
         return ERROR{UnexpectedEndmarker}(ret.span, ret)
@@ -182,15 +185,12 @@ function parse_compound(ps::ParseState, ret)
     elseif ps.nt.kind == Tokens.RSQUARE
         ps.errored = true
         return ERROR{UnexpectedRSquare}(ret.span, ret)
+    elseif ret isa OPERATOR
+        ps.errored = true
+        return ERROR{UnexpectedOperator}(ret.span, ret)
     else
-        println(first(stacktrace()))
-        print_with_color(:green, string("Failed at: ", position(ps.l.io), "\n"))
-        for f in fieldnames(ps.closer)
-            if getfield(ps.closer, f)==true
-                println(f, ": true")
-            end
-        end
-        error("infinite loop at $(ps)")
+        ps.errored = true
+        return ERROR{UnknownError}(ret.span, ret)
     end
     return ret
 end
@@ -321,6 +321,9 @@ Parses the passed string. If `cont` is true then will continue parsing until the
 function parse(str::String, cont = false)
     ps = Parser.ParseState(str)
     x, ps = parse(ps, cont)
+    if ps.errored
+        x = ERROR{0}(ps.nt.startbyte, x)
+    end
     return x
 end
 

@@ -5,6 +5,7 @@ typealias SemiColonWS Tokens.end_delimiters
 typealias NewLineWS Tokens.begin_literal
 typealias WS Tokens.end_literal
 typealias InvisibleBrackets Tokens.begin_invisble_keywords
+const EmptyWSToken = Token(EmptyWS, (0, 0), (0, 0), -1, -1, "")
 
 """
     Closer
@@ -117,7 +118,8 @@ function next(ps::ParseState)
     if iswhitespace(peekchar(ps.l)) || peekchar(ps.l)=='#' || peekchar(ps.l) == ';'
         ps.nnws = lex_ws_comment(ps.l, readchar(ps.l))
     else
-        ps.nnws = Token(EmptyWS, (0, 0), (0, 0), ps.nnt.endbyte, ps.nnt.endbyte, "")
+        # ps.nnws = Token(EmptyWS, (0, 0), (0, 0), ps.nnt.endbyte, ps.nnt.endbyte, "")
+        ps.nnws = EmptyWSToken
     end
     ps.done = ps.nt.kind == Tokens.ENDMARKER
     return ps

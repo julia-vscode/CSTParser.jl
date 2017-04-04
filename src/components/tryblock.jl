@@ -5,7 +5,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
     kw = INSTANCE(ps)
     ret = EXPR(kw, [], -ps.t.startbyte)
 
-    tryblock = @default ps @closer ps trycatch parse_block(ps, start_col)
+    @catcherror ps startbyte tryblock = @default ps @closer ps trycatch parse_block(ps, start_col)
     push!(ret.args, tryblock)
     
     # try closing early
@@ -33,9 +33,9 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
             if ps.ws.kind == SemiColonWS
                 caught = FALSE
             else
-                caught = @default ps @closer ps ws @closer ps trycatch parse_expression(ps)
+                @catcherror ps startbyte caught = @default ps @closer ps ws @closer ps trycatch parse_expression(ps)
             end
-            catchblock = @default ps @closer ps trycatch parse_block(ps, start_col)
+            @catcherror ps startbyte catchblock = @default ps @closer ps trycatch parse_block(ps, start_col)
             if !(caught isa IDENTIFIER || caught == FALSE)
                 unshift!(catchblock.args, caught)
                 catchblock.span += caught.span
@@ -57,7 +57,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
         next(ps)
         start_col = ps.t.startpos[2]
         push!(ret.punctuation, INSTANCE(ps))
-        finallyblock = parse_block(ps, start_col)
+        @catcherror ps startbyte finallyblock = parse_block(ps, start_col)
         push!(ret.args, finallyblock)
     end
 

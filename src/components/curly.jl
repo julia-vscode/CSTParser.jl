@@ -5,12 +5,13 @@ Parses the juxtaposition of `ret` with an opening brace. Parses a comma
 seperated list.
 """
 function parse_curly(ps::ParseState, ret)
+    startbyte = ps.nt.startbyte - ret.span
     next(ps)
     format_lbracket(ps)
     ret = EXPR(CURLY, [ret], ret.span - ps.t.startbyte, [INSTANCE(ps)])
 
     @default ps @nocloser ps newline @closer ps comma @closer ps brace while !closer(ps)
-        push!(ret.args, parse_expression(ps))
+        @catcherror ps startbyte push!(ret.args, parse_expression(ps))
         if ps.nt.kind == Tokens.COMMA
             next(ps)
             format_rbracket(ps)

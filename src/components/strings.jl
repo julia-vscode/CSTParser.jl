@@ -44,7 +44,7 @@ function parse_string(ps::ParseState, prefixed = false)
                 end
                 if peekchar(io) == '('
                     ps1 = ParseState(lit.val[pos+1:end])
-                    interp = @closer ps1 paren parse_expression(ps1)
+                    @catcherror ps startbyte interp = @closer ps1 paren parse_expression(ps1)
                     push!(ret.args, interp)
                     skip(io, interp.span + 2 - length(ps1.ws.val))
                     pos += interp.span + 2 - length(ps1.ws.val)

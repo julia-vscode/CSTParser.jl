@@ -4,8 +4,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
 
     # Parsing
     kw = INSTANCE(ps)
-    ranges = @default ps parse_ranges(ps)
-    block = @default ps parse_block(ps, start_col)
+    @catcherror ps startbyte ranges = @default ps parse_ranges(ps)
+    @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
     next(ps)
     ret = EXPR(kw, SyntaxNode[ranges, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
 
@@ -37,7 +37,7 @@ function parse_ranges(ps::ParseState)
             format_comma(ps)
                 
             indices.span += last(indices.punctuation).span
-            push!(indices.args, @closer ps comma @closer ps ws parse_expression(ps))
+            @catcherror ps startbyte push!(indices.args, @closer ps comma @closer ps ws parse_expression(ps))
             indices.span += last(indices.args).span
         end
     else
@@ -53,8 +53,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
 
     # Parsing
     kw = INSTANCE(ps)
-    cond = @default ps @closer ps ws parse_expression(ps)
-    block = @default ps parse_block(ps, start_col)
+    @catcherror ps startbyte cond = @default ps @closer ps ws parse_expression(ps)
+    @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
     next(ps)
 
     ret = EXPR(kw, SyntaxNode[cond, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
