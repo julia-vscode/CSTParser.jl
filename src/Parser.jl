@@ -366,7 +366,7 @@ function parse(ps::ParseState, cont = false)
             next(ps)
             push!(top.args, LITERAL{nothing}(ps.nt.startbyte, :nothing))
         end
-        while !ps.done
+        while !ps.done && !ps.errored
             ret = parse_doc(ps)
             push!(top.args, ret)
         end
