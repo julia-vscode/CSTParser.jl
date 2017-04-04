@@ -125,6 +125,7 @@ issyntaxcall(op) = false
 Having hit a unary operator at the start of an expression return a call.
 """
 function parse_unary{P,K}(ps::ParseState, op::OPERATOR{P,K})
+    startbyte = ps.nt.startbyte - op.span
     # Parsing
     @catcherror ps startbyte arg = @precedence ps 12 parse_expression(ps)
 
@@ -143,6 +144,7 @@ function parse_unary{P,K}(ps::ParseState, op::OPERATOR{P,K})
 end
 
 function parse_unary(ps::ParseState, op::OPERATOR{8,Tokens.COLON})
+    startbyte = ps.nt.startbyte - op.span
     if Tokens.begin_keywords < ps.nt.kind < Tokens.end_keywords || 
         Tokens.begin_literal < ps.nt.kind < Tokens.end_literal || 
         isoperator(ps.nt.kind) ||
@@ -162,6 +164,7 @@ end
 
 
 function parse_unary(ps::ParseState, op::OPERATOR{9,Tokens.EX_OR,false})
+    startbyte = ps.nt.startbyte - op.span
     # Parsing
     @catcherror ps startbyte arg = @precedence ps 20 parse_expression(ps)
     # Construction
@@ -172,6 +175,7 @@ end
 
 # Parse assignments
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1, Tokens.EQ})
+    startbyte = ps.nt.startbyte - op.span - ret.span
     # Parsing
     @catcherror ps startbyte nextarg = @precedence ps 1-LtoR(1) parse_expression(ps)
 
@@ -191,6 +195,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1, Tokens.
 end
 
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1})
+    startbyte = ps.nt.startbyte - op.span - ret.span
     # Parsing
     @catcherror ps startbyte nextarg = @precedence ps 1-LtoR(1) parse_expression(ps)
     # Construction 
@@ -200,7 +205,7 @@ end
 
 # Parse conditionals
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{2})
-    startbyte = ps.t.startbyte
+    startbyte = ps.nt.startbyte - op.span - ret.span
 
     # Parsing
     @catcherror ps startbyte nextarg = @closer ps ifop parse_expression(ps)
@@ -208,12 +213,14 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{2})
     @catcherror ps startbyte nextarg2 = @closer ps comma @precedence ps 0 parse_expression(ps)
 
     # Construction
-    ret = EXPR(IF, SyntaxNode[ret, nextarg, nextarg2], ret.span + ps.nt.startbyte - startbyte, INSTANCE[op, op2])
+    ret = EXPR(IF, SyntaxNode[ret, nextarg, nextarg2], ps.nt.startbyte - startbyte, INSTANCE[op, op2])
     return ret
 end
 
 # Parse arrows
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{3, Tokens.RIGHT_ARROW})
+    startbyte = ps.nt.startbyte - op.span - ret.span
+
     # Parsing
     @catcherror ps startbyte nextarg = @precedence ps 3-LtoR(3) parse_expression(ps)
     # Construction
@@ -223,6 +230,8 @@ end
 
 #  Parse ||
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{4})
+    startbyte = ps.nt.startbyte - op.span - ret.span
+
     # Parsing
     @catcherror ps startbyte nextarg = @precedence ps 4-LtoR(4) parse_expression(ps)
     # Construction
@@ -232,6 +241,8 @@ end
 
 #  Parse &&
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{5})
+    startbyte = ps.nt.startbyte - op.span - ret.span
+
     # Parsing
     @catcherror ps startbyte nextarg = @precedence ps 5-LtoR(5) parse_expression(ps)
     # Construction
@@ -241,6 +252,8 @@ end
 
 # Parse comparisons
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{6})
+    startbyte = ps.nt.startbyte - op.span - ret.span
+
     # Parsing
     @catcherror ps startbyte nextarg = @precedence ps 6-LtoR(6) parse_expression(ps)
 
@@ -266,7 +279,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{8, Tokens.
     startbyte = ps.t.startbyte
 
     # Parsing
-    @catcherror ps startbyte nextarg = @precedence ps 8-LtoR(8) parse_expression(ps)
+    @catcherror ps startbyte-op.span-ret.span nextarg = @precedence ps 8-LtoR(8) parse_expression(ps)
 
     # Construction
     if ret isa EXPR && ret.head isa OPERATOR{8,Tokens.COLON} && length(ret.args)==2
@@ -282,6 +295,8 @@ end
 
 # Parse chained +
 function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{9,Tokens.PLUS,false})
+    startbyte = ps.nt.startbyte - op.span - ret.span
+    
     if ret.head==CALL && ret.args[1] isa OPERATOR{9,Tokens.PLUS,false}
         # Parsing
         @catcherror ps startbyte nextarg = @precedence ps 9-LtoR(9) parse_expression(ps)
@@ -298,6 +313,8 @@ end
 
 # Parse chained *
 function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{11,Tokens.STAR,false})
+    startbyte = ps.nt.startbyte - op.span - ret.span
+
     if ret.head==CALL && ret.args[1] isa OPERATOR{11,Tokens.STAR,false}
         # Parsing
         @catcherror ps startbyte nextarg = @precedence ps 11-LtoR(11) parse_expression(ps)
@@ -314,6 +331,8 @@ end
 
 # Parse power (special case for preceding unary ops)
 function parse_operator{K}(ps::ParseState, ret::SyntaxNode, op::OPERATOR{13, K})
+    startbyte = ps.nt.startbyte - op.span - ret.span
+
     # Parsing
     @catcherror ps startbyte nextarg = @precedence ps 13-LtoR(13) parse_expression(ps)
 
@@ -334,6 +353,8 @@ end
 
 # parse declarations
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{14})
+    startbyte = ps.nt.startbyte - op.span - ret.span
+
     # Parsing
     @catcherror ps startbyte nextarg = @precedence ps 14-LtoR(14) parse_expression(ps)
     # Construction
@@ -343,6 +364,8 @@ end
 
 # parse dot access
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
+    startbyte = ps.nt.startbyte - op.span - ret.span
+
     # Parsing
     if ps.nt.kind==Tokens.LPAREN
         startbyte = ps.nt.startbyte
@@ -388,17 +411,19 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15, Tokens
 end
 
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{20, Tokens.ANON_FUNC})
-    startbyte = ps.nt.startbyte
+    startbyte = ps.nt.startbyte - op.span - ret.span
     # Parsing
     @catcherror ps startbyte arg = parse_expression(ps)
 
     # Construction
-    ret = EXPR(op, [ret, EXPR(BLOCK, [arg], arg.span)], op.span + ret.span + ps.nt.startbyte - startbyte)
+    ret = EXPR(op, [ret, EXPR(BLOCK, [arg], arg.span)], ps.nt.startbyte - startbyte)
     
     return ret
 end
 
 function parse_operator{op_prec,K}(ps::ParseState, ret::SyntaxNode, op::OPERATOR{op_prec, K})
+    startbyte = ps.nt.startbyte - op.span - ret.span
+    
     # Parsing
     @catcherror ps startbyte nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
     
