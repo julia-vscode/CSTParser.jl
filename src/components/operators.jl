@@ -125,7 +125,10 @@ issyntaxcall(op) = false
 Having hit a unary operator at the start of an expression return a call.
 """
 function parse_unary{P,K}(ps::ParseState, op::OPERATOR{P,K})
+    # Parsing
     arg = @precedence ps 12 parse_expression(ps)
+
+    # Construction
     if (op isa OPERATOR{9, Tokens.PLUS} || op isa OPERATOR{9, Tokens.MINUS}) && (arg isa LITERAL{Tokens.INTEGER} || arg isa LITERAL{Tokens.FLOAT})
         arg.span += op.span
         if op isa OPERATOR{9, Tokens.MINUS}
@@ -144,12 +147,14 @@ function parse_unary(ps::ParseState, op::OPERATOR{8,Tokens.COLON})
         Tokens.begin_literal < ps.nt.kind < Tokens.end_literal || 
         isoperator(ps.nt.kind) ||
         ps.nt.kind == Tokens.IDENTIFIER
+        # Parsing
         next(ps)
         arg = INSTANCE(ps)
         return QUOTENODE(arg, op.span + arg.span, [op])
     elseif closer(ps)
         return op
     else
+        # Parsing
         arg = @precedence ps 20 parse_expression(ps)
         return EXPR(QUOTE, [arg], op.span + arg.span, [op])
     end
@@ -157,16 +162,24 @@ end
 
 
 function parse_unary(ps::ParseState, op::OPERATOR{9,Tokens.EX_OR,false})
+    # Parsing
     arg = @precedence ps 20 parse_expression(ps)
-    return EXPR(op, [arg], op.span + arg.span)
+    # Construction
+    ret = EXPR(op, [arg], op.span + arg.span)
+    return ret
 end
 
 
 # Parse assignments
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1, Tokens.EQ})
+    # Parsing
     nextarg = @precedence ps 1-LtoR(1) parse_expression(ps)
+
+    
     if is_func_call(ret)
+        # Construction
         nextarg = EXPR(BLOCK, SyntaxNode[nextarg], nextarg.span)
+        # Linting
         scope = Scope{Tokens.FUNCTION}(get_id(ret), [])
         @scope ps scope _lint_func_sig(ps, ret)
         push!(ps.current_scope.args, scope)
@@ -178,40 +191,60 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1, Tokens.
 end
 
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1})
+    # Parsing
     nextarg = @precedence ps 1-LtoR(1) parse_expression(ps)
-    return EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
+    # Construction 
+    ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
+    return ret
 end
 
 # Parse conditionals
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{2})
     startbyte = ps.t.startbyte
+
+    # Parsing
     nextarg = @closer ps ifop parse_expression(ps)
     op2 = INSTANCE(next(ps))
     nextarg2 = @closer ps comma @precedence ps 0 parse_expression(ps)
-    return EXPR(IF, SyntaxNode[ret, nextarg, nextarg2], ret.span + ps.nt.startbyte - startbyte, INSTANCE[op, op2])
+
+    # Construction
+    ret = EXPR(IF, SyntaxNode[ret, nextarg, nextarg2], ret.span + ps.nt.startbyte - startbyte, INSTANCE[op, op2])
+    return ret
 end
 
 # Parse arrows
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{3, Tokens.RIGHT_ARROW})
+    # Parsing
     nextarg = @precedence ps 3-LtoR(3) parse_expression(ps)
-    return EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
+    # Construction
+    ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
+    return ret
 end
 
 #  Parse ||
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{4})
+    # Parsing
     nextarg = @precedence ps 4-LtoR(4) parse_expression(ps)
-    return EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
+    # Construction
+    ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
+    return ret
 end
 
 #  Parse &&
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{5})
+    # Parsing
     nextarg = @precedence ps 5-LtoR(5) parse_expression(ps)
-    return EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
+    # Construction
+    ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
+    return ret
 end
 
 # Parse comparisons
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{6})
+    # Parsing
     nextarg = @precedence ps 6-LtoR(6) parse_expression(ps)
+
+    # Construction
     if ret isa EXPR && ret.head==COMPARISON
         push!(ret.args, op)
         push!(ret.args, nextarg)
@@ -231,7 +264,11 @@ end
 # Parse ranges
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{8, Tokens.COLON})
     startbyte = ps.t.startbyte
+
+    # Parsing
     nextarg = @precedence ps 8-LtoR(8) parse_expression(ps)
+
+    # Construction
     if ret isa EXPR && ret.head isa OPERATOR{8,Tokens.COLON} && length(ret.args)==2
         push!(ret.punctuation, op)
         push!(ret.args, nextarg)
@@ -246,7 +283,10 @@ end
 # Parse chained +
 function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{9,Tokens.PLUS,false})
     if ret.head==CALL && ret.args[1] isa OPERATOR{9,Tokens.PLUS,false}
+        # Parsing
         nextarg = @precedence ps 9-LtoR(9) parse_expression(ps)
+
+        # Construction
         push!(ret.args, nextarg)
         ret.span += nextarg.span + op.span
         push!(ret.punctuation, op)
@@ -259,7 +299,10 @@ end
 # Parse chained *
 function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{11,Tokens.STAR,false})
     if ret.head==CALL && ret.args[1] isa OPERATOR{11,Tokens.STAR,false}
+        # Parsing
         nextarg = @precedence ps 11-LtoR(11) parse_expression(ps)
+
+        # Construction
         push!(ret.args, nextarg)
         ret.span += nextarg.span + op.span
         push!(ret.punctuation, op)
@@ -271,7 +314,10 @@ end
 
 # Parse power (special case for preceding unary ops)
 function parse_operator{K}(ps::ParseState, ret::SyntaxNode, op::OPERATOR{13, K})
+    # Parsing
     nextarg = @precedence ps 13-LtoR(13) parse_expression(ps)
+
+    # Construction
     if ret isa EXPR && ret.head == CALL && ret.args[1] isa OPERATOR && isunaryop(ret.args[1])
         if !isempty(ret.punctuation)
             xx = EXPR(HEAD{InvisibleBrackets}(0), [ret.args[2]], ret.args[2].span + sum(p.span for p in ret.punctuation), ret.punctuation)
@@ -288,12 +334,16 @@ end
 
 # parse declarations
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{14})
+    # Parsing
     nextarg = @precedence ps 14-LtoR(14) parse_expression(ps)
-    return EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
+    # Construction
+    ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
+    return ret
 end
 
 # parse dot access
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
+    # Parsing
     if ps.nt.kind==Tokens.LPAREN
         startbyte = ps.nt.startbyte
         puncs = INSTANCE[INSTANCE(next(ps))]
@@ -316,6 +366,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
         nextarg = @precedence ps 15-LtoR(15) parse_expression(ps)
     end
 
+    # Construction
     if nextarg isa INSTANCE || (nextarg isa EXPR && nextarg.head == VECT) || nextarg isa EXPR && nextarg.head isa OPERATOR{9, Tokens.EX_OR}
         ret = EXPR(op, SyntaxNode[ret, QUOTENODE(nextarg)], op.span + ret.span + nextarg.span)
     elseif nextarg isa EXPR && nextarg.head == MACROCALL
@@ -329,23 +380,29 @@ end
 
 
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{0, Tokens.DDDOT})
-    return  EXPR(op, SyntaxNode[ret], op.span + ret.span)
+    return EXPR(op, SyntaxNode[ret], op.span + ret.span)
 end
 
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15, Tokens.PRIME})
-    return  EXPR(op, SyntaxNode[ret], op.span + ret.span)
+    return EXPR(op, SyntaxNode[ret], op.span + ret.span)
 end
 
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{20, Tokens.ANON_FUNC})
-    ret = EXPR(op, SyntaxNode[ret], op.span + ret.span - ps.nt.startbyte)
+    startbyte = ps.nt.startbyte
+    # Parsing
     arg = parse_expression(ps)
-    push!(ret.args, EXPR(BLOCK, [arg], arg.span))
-    ret.span += ps.nt.startbyte
+
+    # Construction
+    ret = EXPR(op, [ret, EXPR(BLOCK, [arg], arg.span)], op.span + ret.span + ps.nt.startbyte - startbyte)
+    
     return ret
 end
 
 function parse_operator{op_prec,K}(ps::ParseState, ret::SyntaxNode, op::OPERATOR{op_prec, K})
+    # Parsing
     nextarg = @precedence ps op_prec-LtoR(op_prec) parse_expression(ps)
+    
+    # Construction
     ret = EXPR(CALL, SyntaxNode[op, ret, nextarg], op.span + ret.span + nextarg.span)
     return ret
 end
