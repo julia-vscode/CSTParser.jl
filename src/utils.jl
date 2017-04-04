@@ -28,7 +28,8 @@ function closer(ps::ParseState)
         ps.nt.kind == Tokens.DO) ||
         (isbinaryop(ps.nt.kind) && (!isempty(ps.nws) || !isunaryop(ps.nt)))
         )) ||
-    (ps.nt.startbyte ≥ ps.closer.stop)
+    (ps.nt.startbyte ≥ ps.closer.stop) ||
+    ps.errored
 end
 
 """

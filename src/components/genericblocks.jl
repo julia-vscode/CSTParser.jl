@@ -22,7 +22,7 @@ function parse_block(ps::ParseState, start_col = 0; ret::EXPR = EXPR(BLOCK, [], 
     startbyte = ps.nt.startbyte
 
     # Parsing
-    while !(ps.nt.kind in closers)
+    while !(ps.nt.kind in closers) && !ps.errored
         format_indent(ps, start_col)
         push!(ret.args, @closer ps block parse_expression(ps))
     end

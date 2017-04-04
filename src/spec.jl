@@ -29,6 +29,7 @@ end
 
 type ERROR{K} <: SyntaxNode
     span::Int
+    partial::SyntaxNode
 end
 
 function LITERAL(ps::ParseState)
@@ -47,8 +48,8 @@ function INSTANCE(ps::ParseState)
         iskw(ps.t) ? KEYWORD{ps.t.kind}(span) :
         isoperator(ps.t) ? OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}(span) :
         ispunctuation(ps.t) ? PUNCTUATION{ps.t.kind}(span) :
-        ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION{ps.t.kind}(span) : error("Can't make a token from $(ps.t)")
-        # ERROR{ps.t.kind}(0)
+        ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION{ps.t.kind}(span) : #error("Can't make a token from $(ps.t)")
+        ERROR{ps.t.kind}(0, NOTHING)
 end
 
 
