@@ -18,20 +18,20 @@ function parse_array(ps::ParseState)
 
         return EXPR(VECT, [], ps.nt.startbyte - startbyte, puncs)
     else
-        first_arg = @default ps @closer ps square @closer ps ws parse_expression(ps)
+        @catcherror ps startbyte first_arg = @default ps @closer ps square @closer ps ws parse_expression(ps)
 
         # Handle macros
         if first_arg isa LITERAL{Tokens.MACRO}
             first_arg = EXPR(MACROCALL, [first_arg], first_arg.span)
             @default ps @closer ps square while !closer(ps)
-                a = @closer ps ws parse_expression(ps)
+                @catcherror ps startbyte a = @closer ps ws parse_expression(ps)
                 push!(first_arg.args, a)
                 first_arg.span += a.span
             end
         end
         # Handle generator split over lines
         if ps.nt.kind == Tokens.FOR && ps.ws.kind == NewLineWS
-            first_arg = parse_compound(ps, first_arg)
+            @catcherror ps startbyte first_arg = parse_compound(ps, first_arg)
             if ps.nt.kind!= Tokens.RSQUARE
                 error("expected \"]\"")
             end
@@ -79,7 +79,7 @@ function parse_array(ps::ParseState)
                 if ps.nt.kind == Tokens.COMMA
                     error("unexpected comma in matrix expression")
                 end
-                arg = parse_expression(ps)
+                @catcherror ps startbyte arg = parse_expression(ps)
                 push!(ret.args, arg)
             end
             next(ps)
@@ -91,7 +91,7 @@ function parse_array(ps::ParseState)
         elseif ps.ws.kind == NewLineWS
             ret = EXPR(VCAT, [first_arg], - startbyte, puncs)
             while ps.nt.kind != Tokens.RSQUARE
-                a = @default ps @closer ps square parse_expression(ps)
+                @catcherror ps startbyte a = @default ps @closer ps square parse_expression(ps)
                 push!(ret.args, a)
             end
             next(ps)
@@ -103,7 +103,7 @@ function parse_array(ps::ParseState)
         elseif ps.ws.kind == WS
             first_row = EXPR(HCAT, [first_arg], -(ps.nt.startbyte - first_arg.span))
             while ps.nt.kind != Tokens.RSQUARE && ps.ws.kind != NewLineWS && ps.ws.kind != SemiColonWS
-                a = @default ps @closer ps square @closer ps ws parse_expression(ps)
+                @catcherror ps startbyte a = @default ps @closer ps square @closer ps ws parse_expression(ps)
                 push!(first_row.args, a)
             end
             first_row.span += ps.nt.startbyte
@@ -117,10 +117,10 @@ function parse_array(ps::ParseState)
                 first_row.head = ROW
                 ret = EXPR(VCAT, [first_row], 0)
                 while ps.nt.kind != Tokens.RSQUARE
-                    first_arg = @default ps @closer ps square @closer ps ws parse_expression(ps)
+                    @catcherror ps startbyte first_arg = @default ps @closer ps square @closer ps ws parse_expression(ps)
                     push!(ret.args, EXPR(ROW, [first_arg], first_arg.span))
                     while ps.nt.kind != Tokens.RSQUARE && ps.ws.kind != NewLineWS && ps.ws.kind != SemiColonWS
-                        a = @default ps @closer ps square @closer ps ws parse_expression(ps)
+                        @catcherror ps startbyte a = @default ps @closer ps square @closer ps ws parse_expression(ps)
                         push!(last(ret.args).args, a)
                         last(ret.args).span += a.span
                     end

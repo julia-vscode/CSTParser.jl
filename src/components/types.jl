@@ -3,7 +3,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
 
     # Parsing
     kw = INSTANCE(ps)
-    arg = parse_expression(ps)
+    @catcherror ps startbyte arg = parse_expression(ps)
 
     # Linting
     format_typename(ps, arg)
@@ -18,8 +18,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
     
     # Parsing
     kw = INSTANCE(ps)
-    arg1 = @closer ps ws parse_expression(ps) 
-    arg2 = parse_expression(ps)
+    @catcherror ps startbyte arg1 = @closer ps ws parse_expression(ps) 
+    @catcherror ps startbyte arg2 = parse_expression(ps)
 
     # Linting
     format_typename(ps, arg2)
@@ -34,8 +34,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
 
     # Parsing
     kw = INSTANCE(ps)
-    arg1 = @closer ps ws parse_expression(ps) 
-    arg2 = parse_expression(ps)
+    @catcherror ps startbyte arg1 = @closer ps ws parse_expression(ps) 
+    @catcherror ps startbyte arg2 = parse_expression(ps)
 
     # Linting
     format_typename(ps, arg1)
@@ -57,8 +57,8 @@ function parse_struct(ps::ParseState, mutable)
 
     # Parsing
     kw = INSTANCE(ps)
-    sig = @closer ps block @closer ps ws parse_expression(ps)
-    block = parse_block(ps, start_col)
+    @catcherror ps startbyte sig = @closer ps block @closer ps ws parse_expression(ps)
+    @catcherror ps startbyte block = parse_block(ps, start_col)
 
     # Linting
     format_typename(ps, sig)

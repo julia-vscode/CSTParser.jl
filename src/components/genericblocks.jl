@@ -4,7 +4,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BEGIN}})
 
     # Parsing
     kw = INSTANCE(ps)
-    arg = @default ps parse_block(ps, start_col)
+    @catcherror ps startbyte arg = @default ps parse_block(ps, start_col)
 
     next(ps)
     return EXPR(kw, SyntaxNode[arg], ps.nt.startbyte - startbyte, [INSTANCE(ps)])
@@ -22,9 +22,10 @@ function parse_block(ps::ParseState, start_col = 0; ret::EXPR = EXPR(BLOCK, [], 
     startbyte = ps.nt.startbyte
 
     # Parsing
-    while !(ps.nt.kind in closers)
+    while !(ps.nt.kind in closers) && !ps.errored
         format_indent(ps, start_col)
-        push!(ret.args, @closer ps block parse_expression(ps))
+        @catcherror ps startbyte a = @closer ps block parse_expression(ps)
+        push!(ret.args, a)
     end
 
     # Linting

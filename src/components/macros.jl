@@ -6,9 +6,9 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
     startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
-    arg = @closer ps block @closer ps ws parse_expression(ps)
+    @catcherror ps startbyte arg = @closer ps block @closer ps ws parse_expression(ps)
     scope = Scope{Tokens.MACRO}(get_id(arg), [])
-    block = @default ps parse_block(ps, start_col)
+    @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
     next(ps)
     return EXPR(kw, SyntaxNode[arg, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
 end
@@ -44,17 +44,17 @@ function parse_macrocall(ps::ParseState)
     if isempty(ps.ws) && ps.nt.kind == Tokens.LPAREN
         next(ps)
         push!(ret.punctuation, INSTANCE(ps))
-        args = @default ps @nocloser ps newline @closer ps paren parse_list(ps, ret.punctuation)
+        @catcherror ps startbyte args = @default ps @nocloser ps newline @closer ps paren parse_list(ps, ret.punctuation)
         append!(ret.args, args)
         next(ps)
         push!(ret.punctuation, INSTANCE(ps))
     else
         @default ps if !closer(ps)
-            first_arg = @closer ps ws @closer ps inmacro parse_expression(ps)
+            @catcherror ps startbyte first_arg = @closer ps ws @closer ps inmacro parse_expression(ps)
             push!(ret.args, first_arg)
         end
         @default ps @closer ps inmacro while !closer(ps)
-            a = @closer ps ws parse_expression(ps)
+            @catcherror ps startbyte a = @closer ps ws parse_expression(ps)
             push!(ret.args, a)
         end
     end

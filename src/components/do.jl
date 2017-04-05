@@ -8,7 +8,7 @@ function parse_do(ps::ParseState, ret)
     
     args = EXPR(TUPLE,[], - ps.nt.startbyte)
     @default ps @closer ps comma @closer ps block while !closer(ps)
-        a = parse_expression(ps)
+        @catcherror ps startbyte a = parse_expression(ps)
         push!(args.args, a)
         if ps.nt.kind == Tokens.COMMA
             next(ps)
@@ -17,7 +17,7 @@ function parse_do(ps::ParseState, ret)
         end
     end
     args.span += ps.nt.startbyte
-    block = @default ps parse_block(ps, start_col)
+    @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
 
     # Construction
     ret = EXPR(kw, [ret], ret.span - startbyte)

@@ -11,16 +11,17 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
 
     # Parsing
     kw = INSTANCE(ps)
-    cond = @default ps @closer ps ws parse_expression(ps)
+    @catcherror ps startbyte cond = @default ps @closer ps ws parse_expression(ps)
 
-    ifblock = @default ps parse_block(ps, start_col, closers =[Tokens.END, Tokens.ELSE, Tokens.ELSEIF])
+    @catcherror ps startbyte ifblock = @default ps parse_block(ps, start_col, closers =[Tokens.END, Tokens.ELSE, Tokens.ELSEIF])
 
     elseblock = EXPR(BLOCK, SyntaxNode[], 0)
     if ps.nt.kind==Tokens.ELSEIF
         next(ps)
         push!(puncs, INSTANCE(ps))
         startelseblock = ps.nt.startbyte
-        push!(elseblock.args, parse_if(ps, true, puncs))
+        
+        @catcherror ps startbyte push!(elseblock.args, parse_if(ps, true, puncs))
         elseblock.span = ps.nt.startbyte - startelseblock
     end
     elsekw = ps.nt.kind == Tokens.ELSE
@@ -28,7 +29,7 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
         next(ps)
         start_col = ps.t.startpos[2]
         push!(puncs, INSTANCE(ps))
-        @default ps parse_block(ps, start_col, ret = elseblock)
+        @catcherror ps startbyte @default ps parse_block(ps, start_col, ret = elseblock)
     end
 
     # Construction

@@ -2,15 +2,16 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2]
 
+    # Parsing
     kw = INSTANCE(ps)
-    sig = @default ps @closer ps block @closer ps ws parse_expression(ps)
+    @catcherror ps startbyte sig = @default ps @closer ps block @closer ps ws parse_expression(ps)
 
     if sig isa EXPR && sig.head isa HEAD{InvisibleBrackets} && !(sig.args[1] isa EXPR && sig.args[1].head == TUPLE)
         sig.args[1] = EXPR(TUPLE, [sig.args[1]], sig.args[1].span)
     end
     scope = Scope{Tokens.FUNCTION}(function_name(sig), [])
     @scope ps scope _lint_func_sig(ps, sig)
-    block = @default ps @scope ps scope parse_block(ps, start_col)
+    @catcherror ps startbyte block = @default ps @scope ps scope parse_block(ps, start_col)
     
     if isempty(block.args)
         if sig isa EXPR
@@ -43,7 +44,7 @@ function parse_call(ps::ParseState, ret)
     end
     format_lbracket(ps)
     
-    @noscope ps @nocloser ps newline @closer ps comma @closer ps paren while !closer(ps)
+    @catcherror ps startbyte @noscope ps @nocloser ps newline @closer ps comma @closer ps paren while !closer(ps)
         a = parse_expression(ps)
         if a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
             a.head = HEAD{Tokens.KW}(a.head.span)
@@ -62,7 +63,7 @@ function parse_call(ps::ParseState, ret)
     if ps.ws.kind == SemiColonWS
         paras = EXPR(PARAMETERS, [], -ps.nt.startbyte)
         @nocloser ps newline @nocloser ps semicolon @closer ps comma @closer ps brace while !closer(ps)
-            a = parse_expression(ps)
+            @catcherror ps startbyte a = parse_expression(ps)
             if a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
                 a.head = HEAD{Tokens.KW}(a.head.span)
             end

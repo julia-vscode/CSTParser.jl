@@ -14,6 +14,7 @@ include("hints.jl")
 import .Hints: Hint, LintCodes, FormatCodes
 
 include("lexer.jl")
+include("errors.jl")
 include("spec.jl")
 include("utils.jl")
 include("iterators.jl")
@@ -71,6 +72,18 @@ function parse_expression(ps::ParseState)
         end
     elseif ps.t.kind==Tokens.AT_SIGN
         ret = parse_macrocall(ps)
+    elseif ps.t.kind == Tokens.ENDMARKER
+        ps.errored = true
+        return ERROR{UnexpectedEndmarker}(0, INSTANCE(ps))
+    elseif ps.t.kind == Tokens.RPAREN
+        ps.errored = true
+        return ERROR{UnexpectedRParen}(0, INSTANCE(ps))
+    elseif ps.t.kind == Tokens.RBRACE
+        ps.errored = true
+        return ERROR{UnexpectedRBrace}(0, INSTANCE(ps))
+    elseif ps.t.kind == Tokens.RSQUARE
+        ps.errored = true
+        return ERROR{UnexpectedRSquare}(0, INSTANCE(ps))
     else
         error("Expression started with $(ps)")
     end
@@ -118,19 +131,22 @@ function parse_compound(ps::ParseState, ret)
         if isempty(ps.ws) 
             ret = @default ps @closer ps paren parse_call(ps, ret)
         else
-            error("space before \"(\" not allowed in \"$(Expr(ret)) (\"")
+            ps.errored = true
+            return ERROR{UnexpectedLParen}(ret.span, ret)
         end
     elseif ps.nt.kind==Tokens.LBRACE
         if isempty(ps.ws)
             ret = parse_curly(ps, ret)
         else
-            error("space before \"{\" not allowed in \"$(Expr(ret)) {\"")
+            ps.errored = true
+            return ERROR{UnexpectedLBrace}(ret.span, ret)
         end
     elseif ps.nt.kind==Tokens.LSQUARE
         if isempty(ps.ws)
             ret = @nocloser ps block parse_ref(ps, ret)
         else
-            error("space before \"[\" not allowed in \"$(Expr(ret)) {\"")
+            ps.errored = true
+            return ERROR{UnexpectedLSquare}(ret.span, ret)
         end
     elseif ps.nt.kind == Tokens.COMMA
         ret = parse_tuple(ps, ret)
@@ -154,15 +170,27 @@ function parse_compound(ps::ParseState, ret)
         # prime operator followed by an identifier has an implicit multiplication
         nextarg = @precedence ps 11 parse_expression(ps)
         ret = EXPR(CALL, [OPERATOR{11, Tokens.STAR, false}(0), ret, nextarg], ret.span + nextarg.span)
+################################################################################
+# Everything below here is an error
+################################################################################
+    elseif ps.nt.kind == Tokens.ENDMARKER
+        ps.errored = true
+        return ERROR{UnexpectedEndmarker}(ret.span, ret)
+    elseif ps.nt.kind == Tokens.RPAREN
+        ps.errored = true
+        return ERROR{UnexpectedRParen}(ret.span, ret)
+    elseif ps.nt.kind == Tokens.RBRACE
+        ps.errored = true
+        return ERROR{UnexpectedRBrace}(ret.span, ret)
+    elseif ps.nt.kind == Tokens.RSQUARE
+        ps.errored = true
+        return ERROR{UnexpectedRSquare}(ret.span, ret)
+    elseif ret isa OPERATOR
+        ps.errored = true
+        return ERROR{UnexpectedOperator}(ret.span, ret)
     else
-        println(first(stacktrace()))
-        print_with_color(:green, string("Failed at: ", position(ps.l.io), "\n"))
-        for f in fieldnames(ps.closer)
-            if getfield(ps.closer, f)==true
-                println(f, ": true")
-            end
-        end
-        error("infinite loop at $(ps)")
+        ps.errored = true
+        return ERROR{UnknownError}(ret.span, ret)
     end
     return ret
 end
@@ -293,6 +321,9 @@ Parses the passed string. If `cont` is true then will continue parsing until the
 function parse(str::String, cont = false)
     ps = Parser.ParseState(str)
     x, ps = parse(ps, cont)
+    if ps.errored
+        x = ERROR{0}(ps.nt.startbyte, x)
+    end
     return x
 end
 
@@ -335,7 +366,7 @@ function parse(ps::ParseState, cont = false)
             next(ps)
             push!(top.args, LITERAL{nothing}(ps.nt.startbyte, :nothing))
         end
-        while !ps.done
+        while !ps.done && !ps.errored
             ret = parse_doc(ps)
             push!(top.args, ret)
         end

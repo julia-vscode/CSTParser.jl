@@ -7,7 +7,7 @@ Handles cases where an expression - `ret` - is followed by
 """
 function parse_ref(ps::ParseState, ret)
     next(ps)
-    ref = parse_array(ps)
+    @catcherror ps startbyte ref = parse_array(ps)
     if ref isa EXPR && ref.head == VECT
         ret = EXPR(REF, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
     elseif ref isa EXPR && ref.head == HCAT

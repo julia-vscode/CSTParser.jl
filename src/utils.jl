@@ -28,7 +28,8 @@ function closer(ps::ParseState)
         ps.nt.kind == Tokens.DO) ||
         (isbinaryop(ps.nt.kind) && (!isempty(ps.nws) || !isunaryop(ps.nt)))
         )) ||
-    (ps.nt.startbyte ≥ ps.closer.stop)
+    (ps.nt.startbyte ≥ ps.closer.stop) ||
+    ps.errored
 end
 
 """
@@ -189,20 +190,20 @@ macro clear(ps, body)
     end
 end
 
-    """
-        @scope ps scope body 
+"""
+    @scope ps scope body 
 
-    Continues parsing closing on `rule`.
-    """
-    macro scope(ps, new_scope, body)
-        quote
-            local tmp1 = $(esc(ps)).current_scope
-            $(esc(ps)).current_scope = $(esc(new_scope))
-            out = $(esc(body))
-            $(esc(ps)).current_scope = tmp1
-            out
-        end
+Continues parsing closing on `rule`.
+"""
+macro scope(ps, new_scope, body)
+    quote
+        local tmp1 = $(esc(ps)).current_scope
+        $(esc(ps)).current_scope = $(esc(new_scope))
+        out = $(esc(body))
+        $(esc(ps)).current_scope = tmp1
+        out
     end
+end
 
 """
     @noscope ps body
@@ -218,6 +219,21 @@ macro noscope(ps, body)
         out
     end
 end
+
+"""
+    @catcherror ps body 
+
+Checks for `ps.errored`.
+"""
+macro catcherror(ps, startbyte, body)
+    quote
+        $(esc(body))
+        if $(esc(ps)).errored
+            return ERROR{UnknownError}($(esc(ps)).nt.startbyte - $(esc(startbyte)), NOTHING)
+        end
+    end
+end
+
 
 isidentifier(t::Token) = t.kind == Tokens.IDENTIFIER
 

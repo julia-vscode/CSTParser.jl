@@ -27,13 +27,13 @@ function parse_tuple(ps::ParseState, ret)
             ret = EXPR(TUPLE, SyntaxNode[ret], ret.span + op.span, INSTANCE[op])
         end
     else
-        nextarg = @closer ps tuple parse_expression(ps)
+        @catcherror ps startbyte nextarg = @closer ps tuple parse_expression(ps)
         if ret isa EXPR && ret.head==TUPLE && (length(ret.punctuation)==0 || !(first(ret.punctuation) isa PUNCTUATION{Tokens.LPAREN}))
             push!(ret.args, nextarg) 
             push!(ret.punctuation, op)
             ret.span += ps.nt.startbyte - startbyte
         else
-            ret =  EXPR(TUPLE, SyntaxNode[ret, nextarg], ret.span+ps.nt.startbyte - startbyte, INSTANCE[op])
+            ret =  EXPR(TUPLE, SyntaxNode[ret, nextarg], ret.span + ps.nt.startbyte - startbyte, INSTANCE[op])
         end
     end
     return ret
