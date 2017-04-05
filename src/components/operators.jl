@@ -47,7 +47,7 @@ isunaryop(kind) = kind == Tokens.PLUS ||
                   kind == Tokens.ISSUBTYPE ||
                   kind == Tokens.NOT_SIGN ||
                   kind == Tokens.AND ||
-                  kind == Tokens.GREATER_COLON ||
+                  kind == Tokens.ISSUPERTYPE ||
                   kind == Tokens.SQUARE_ROOT ||
                   kind == Tokens.CUBE_ROOT ||
                   kind == Tokens.QUAD_ROOT ||
@@ -61,7 +61,7 @@ isunaryandbinaryop(kind) = kind == Tokens.PLUS ||
                            kind == Tokens.MINUS ||
                            kind == Tokens.EX_OR ||
                            kind == Tokens.ISSUBTYPE ||
-                           kind == Tokens.GREATER_COLON ||
+                           kind == Tokens.ISSUPERTYPE ||
                            kind == Tokens.AND ||
                            kind == Tokens.APPROX ||
                            kind == Tokens.DECLARATION ||
@@ -87,7 +87,7 @@ function non_dotted_op(t::Token)
             k == Tokens.LAZY_OR ||
             k == Tokens.LAZY_AND ||
             k == Tokens.ISSUBTYPE ||
-            k == Tokens.GREATER_COLON ||
+            k == Tokens.ISSUPERTYPE ||
             k == Tokens.LPIPE ||
             k == Tokens.RPIPE ||
             k == Tokens.EX_OR ||
@@ -104,7 +104,7 @@ function issyntaxcall{P,K}(op::OPERATOR{P,K})
     P == 4 ||
     P == 5 ||
     K == Tokens.ISSUBTYPE ||
-    K == Tokens.GREATER_COLON ||
+    K == Tokens.ISSUPERTYPE ||
     K == Tokens.COLON ||
     K == Tokens.AND ||
     K == Tokens.DECLARATION ||
@@ -136,7 +136,7 @@ function parse_unary{P,K}(ps::ParseState, op::OPERATOR{P,K})
             arg.val = string("-", arg.val)
         end
         return arg
-    elseif issyntaxcall(op) && !(op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.GREATER_COLON})
+    elseif issyntaxcall(op) && !(op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.ISSUPERTYPE})
         return EXPR(op, [arg], op.span + arg.span)
     else
         return EXPR(CALL, [op, arg], op.span + arg.span)
@@ -264,9 +264,9 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{6})
         ret.span += op.span + nextarg.span
     elseif ret isa EXPR && ret.head == CALL && ret.args[1] isa OPERATOR{6} && isempty(ret.punctuation)
         ret = EXPR(COMPARISON, SyntaxNode[ret.args[2], ret.args[1], ret.args[3], op, nextarg], ret.args[2].span + ret.args[1].span + ret.args[3].span + op.span + nextarg.span)
-    elseif ret isa EXPR && (ret.head isa OPERATOR{6,Tokens.ISSUBTYPE} || ret.head isa OPERATOR{6,Tokens.GREATER_COLON})
+    elseif ret isa EXPR && (ret.head isa OPERATOR{6,Tokens.ISSUBTYPE} || ret.head isa OPERATOR{6,Tokens.ISSUPERTYPE})
         ret = EXPR(COMPARISON, SyntaxNode[ret.args[1], ret.head, ret.args[2], op, nextarg], ret.args[1].span + ret.head.span + ret.args[2].span + op.span + nextarg.span)
-    elseif (op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.GREATER_COLON})
+    elseif (op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.ISSUPERTYPE})
         ret = EXPR(op, SyntaxNode[ret, nextarg], ret.span + op.span + nextarg.span)
     else
         ret = EXPR(CALL, SyntaxNode[op, ret, nextarg], op.span + ret.span + nextarg.span)
