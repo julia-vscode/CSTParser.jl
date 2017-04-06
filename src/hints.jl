@@ -80,10 +80,10 @@ function format_op(ps, prec)
     elseif ps.t.kind == Tokens.ISSUBTYPE || ps.t.kind == Tokens.DDDOT
     else
         if ps.lws.kind == EmptyWS
-            push!(ps.hints, Hint{Hints.AddWhiteSpace}(ps.t.startbyte))
+            push!(ps.hints, Hint{Hints.AddWhiteSpace}(ps.t.startbyte:ps.nt.startbyte))
         end
         if ps.ws.kind == EmptyWS
-            push!(ps.hints, Hint{Hints.AddWhiteSpace}(ps.t.endbyte + 1))
+            push!(ps.hints, Hint{Hints.AddWhiteSpace}(ps.t.startbyte:ps.nt.startbyte))
         end
     end
 end
@@ -93,7 +93,7 @@ function format_comma(ps)
         push!(ps.hints, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1 : ps.lws.endbyte + 1))
     end
     if ps.ws.kind == EmptyWS && !(isrbracket(ps.nt))
-        push!(ps.hints, Hint{Hints.AddWhiteSpace}(ps.nt.startbyte))
+        push!(ps.hints, Hint{Hints.AddWhiteSpace}(ps.t.startbyte:ps.nt.startbyte))
     end
 end
 
@@ -113,7 +113,7 @@ function format_indent(ps, start_col)
     if (start_col > 0 && ps.nt.startpos[2] != start_col + 4)
         dindent = start_col + 4 - ps.nt.startpos[2]
         if dindent > 0
-            push!(ps.hints, Hint{Hints.AddWhiteSpace}((ps.nt.startbyte, dindent)))
+            push!(ps.hints, Hint{Hints.AddWhiteSpace}((ps.nt.startbyte + (0:dindent))))
         else
             push!(ps.hints, Hint{Hints.DeleteWhiteSpace}(ps.nt.startbyte + (dindent + 1 : 0)))
         end
@@ -132,10 +132,10 @@ function format_typename(ps, sig)
 end
 
 function format_funcname(ps, id, offset)
-    start_loc = ps.nt.startbyte - offset
-    !(id isa Symbol) && return
-    val = string(id)
-    if !islower(val) #!all(islower(c) || isdigit(c) || c == '!' for c in val)
-        push!(ps.hints, Hint{Hints.LowerCase}(start_loc + (1:sizeof(val))))
-    end
+    # start_loc = ps.nt.startbyte - offset
+    # !(id isa Symbol) && return
+    # val = string(id)
+    # if !islower(val) #!all(islower(c) || isdigit(c) || c == '!' for c in val)
+    #     push!(ps.hints, Hint{Hints.LowerCase}(start_loc + (1:sizeof(val))))
+    # end
 end

@@ -63,6 +63,34 @@ function _track_assignment(ps::ParseState, x, val, defs = [])
     return defs
 end
 
+function get_symbols(x, symbols) end
+function get_symbols(x::EXPR, symbols = [])
+    offset = 0
+    for a in x
+        if a isa EXPR
+            if !isempty(a.defs)
+                for v in a.defs
+                    push!(symbols, (v.id, v.t, offset+(1:a.span)))
+                end
+            end
+            if contributes_scope(a)
+                get_symbols(a, symbols)
+            end
+            if a.head isa KEYWORD{Tokens.MODULE} || a.head isa KEYWORD{Tokens.MODULE}
+                m_scope = get_symbols(a[3])
+                offset2 = offset + a[1].span + a[2].span
+                for mv in m_scope
+                    push!(symbols, (Expr(:(.), a.defs[1].id, QuoteNode(mv[1])),mv[2], mv[3] + offset2))
+
+                end
+            end
+
+        end
+        offset += a.span
+    end
+    return symbols
+end
+
 # function _get_full_scope(x::EXPR, n::Int)
 #     y, path, ind = find(x, n)
 #     full_scope = []
