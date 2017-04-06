@@ -98,25 +98,22 @@ const FALSE = LITERAL{Tokens.FALSE}(0, "")
 const AT_SIGN = PUNCTUATION{Tokens.AT_SIGN}(1)
 const GlobalRefDOC = HEAD{:globalrefdoc}(0)
 
-type Scope{t}
-    id
-    args::Vector
-end
+
+abstract Scope{t}
 
 type File
     imports
     includes::Vector{String}
     path::String
     ast::SyntaxNode
+    errors
 end
+File(path::String) = File([], [], path, EXPR(TOPLEVEL,[]), [])
 
 type Project
     path::String
     files::Vector{File}
 end
-
-
-Scope() = Scope{nothing}(nothing, [])
 
 type Variable
     id
@@ -124,14 +121,16 @@ type Variable
     val
 end
 
+const NoVariable = Variable(NOTHING, NOTHING, NOTHING)
+
 type EXPR <: SyntaxNode
     head::SyntaxNode
     args::Vector{SyntaxNode}
     span::Int
     punctuation::Vector{SyntaxNode}
-    scope::Scope
+    defs::Vector{Variable}
 end
 
-EXPR(head, args) = EXPR(head, args, 0, [], Scope())
-EXPR(head, args, span::Int) = EXPR(head, args, span, [], Scope())
-EXPR(head, args, span::Int, puncs) = EXPR(head, args, span, puncs, Scope())
+EXPR(head, args) = EXPR(head, args, 0, [], [])
+EXPR(head, args, span::Int) = EXPR(head, args, span, [], [])
+EXPR(head, args, span::Int, puncs) = EXPR(head, args, span, puncs, [])

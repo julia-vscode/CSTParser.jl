@@ -9,10 +9,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     if sig isa EXPR && sig.head isa HEAD{InvisibleBrackets} && !(sig.args[1] isa EXPR && sig.args[1].head == TUPLE)
         sig.args[1] = EXPR(TUPLE, [sig.args[1]], sig.args[1].span)
     end
-    scope = Scope{Tokens.FUNCTION}(function_name(sig), [])
-    @scope ps scope _lint_func_sig(ps, sig)
-    @catcherror ps startbyte block = @default ps @scope ps scope parse_block(ps, start_col)
+    _lint_func_sig(ps, sig)
+    @catcherror ps startbyte block = @default ps @scope ps Scope{Tokens.FUNCTION} parse_block(ps, start_col)
     
+
+    # Construction
     if isempty(block.args)
         if sig isa EXPR
             args = SyntaxNode[sig, block]
@@ -22,10 +23,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     else
         args = SyntaxNode[sig, block]
     end
-    push!(ps.current_scope.args, scope)
     
     next(ps)
-    return EXPR(kw, args, ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)], scope)
+    ret = EXPR(kw, args, ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
+    ret.defs = [Variable(function_name(sig), :Function, ret)]
+    return ret
 end
 
 """
@@ -201,12 +203,13 @@ function _lint_func_sig(ps::ParseState, sig::EXPR)
             _lint_arg(ps, arg, args, i, fname, nargs, firstkw, loc)
         end
     end
+    sig.defs = (a->Variable(a, :Any, sig)).(args)
 end
     
 function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
     a = _arg_id(arg)
     !(a isa IDENTIFIER) && return
-    push!(ps.current_scope.args, Variable(a, :Any, :argument))
+    # push!(ps.current_scope.args, Variable(a, :Any, :argument))
     if !(a.val in args)
         push!(args, a.val)
     else 

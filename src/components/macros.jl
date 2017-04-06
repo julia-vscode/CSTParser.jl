@@ -6,11 +6,13 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
     startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2]
     kw = INSTANCE(ps)
-    @catcherror ps startbyte arg = @closer ps block @closer ps ws parse_expression(ps)
-    scope = Scope{Tokens.MACRO}(get_id(arg), [])
+    @catcherror ps startbyte sig = @closer ps block @closer ps ws parse_expression(ps)
     @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
+
     next(ps)
-    return EXPR(kw, SyntaxNode[arg, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
+    ret = EXPR(kw, SyntaxNode[sig, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
+    ret.defs =  [Variable(function_name(sig), :Macro, ret)]
+    return ret
 end
 
 """

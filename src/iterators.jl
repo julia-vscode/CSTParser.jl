@@ -204,6 +204,8 @@ function Base.find(x::EXPR, n::Int)
     return y, path, ind, offsets
 end
 
+Base.find(x::ERROR, n::Int) = x, [x], [1], [0]
+
 
 Base.find(x, n::Symbol, loc = 0, list = Int[]) = nothing
 function Base.find(x::IDENTIFIER, n::Symbol, loc = 0, list = [])

@@ -7,10 +7,12 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
 
     # Linting
     format_typename(ps, arg)
-    scope = Scope{Tokens.ABSTRACT}(get_id(arg), [])
-    # push!(ps.current_scope.args, scope)
 
-    return EXPR(kw, SyntaxNode[arg], ps.nt.startbyte - startbyte)
+    # Construction
+    ret = EXPR(kw, SyntaxNode[arg], ps.nt.startbyte - startbyte)
+    ret.defs = [Variable(get_id(arg), :abstract, ret)]
+
+    return ret
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
@@ -23,10 +25,12 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
 
     # Linting
     format_typename(ps, arg2)
-    scope = Scope{Tokens.BITSTYPE}(get_id(arg2), [])
-    push!(ps.current_scope.args, scope)
 
-    return EXPR(kw, SyntaxNode[arg1, arg2], ps.nt.startbyte - startbyte, [], scope)
+    # Construction
+    ret = EXPR(kw, SyntaxNode[arg1, arg2], ps.nt.startbyte - startbyte, [])
+    ret.defs = [Variable(get_id(arg2), :bitstype, ret)]
+
+    return ret
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
@@ -39,10 +43,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
 
     # Linting
     format_typename(ps, arg1)
-    scope = Scope{Tokens.TYPEALIAS}(get_id(arg1), [])
-    push!(ps.current_scope.args, scope)
 
-    return EXPR(kw, SyntaxNode[arg1, arg2], ps.nt.startbyte - startbyte, [], scope)
+    return EXPR(kw, SyntaxNode[arg1, arg2], ps.nt.startbyte - startbyte, [])
 end
 
 # for 0.6 the above two can be merged to a `parse_type` function as 
@@ -63,19 +65,21 @@ function parse_struct(ps::ParseState, mutable)
     # Linting
     format_typename(ps, sig)
     T = mutable==TRUE ? Tokens.TYPE : Tokens.IMMUTABLE
-    scope = Scope{T}(get_id(sig), [])
+
     for a in block.args
         if declares_function(a)
         else
             id = get_id(a)
             t = get_t(a)
-            push!(scope.args, Variable(id, t, :field))
         end
     end
-    push!(ps.current_scope.args, scope)
 
+    # Construction
     next(ps)
-    return EXPR(kw, SyntaxNode[mutable, sig, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)], scope)
+    ret = EXPR(kw, SyntaxNode[mutable, sig, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
+    ret.defs = [Variable(Expr(get_id(sig)), Expr(mutable) ? :mutable : :immutable, ret)]
+
+    return ret
 end
 
 function next(x::EXPR, s::Iterator{:abstract})

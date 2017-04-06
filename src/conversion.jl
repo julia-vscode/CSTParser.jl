@@ -29,6 +29,7 @@ end
 
 Expr(x::LITERAL{Tokens.MACRO}) = Symbol(x.val)
 
+Expr{K}(x::PUNCTUATION{K}) = string(K)
 
 function Expr(x::LITERAL{Tokens.STRING}) 
     x.val

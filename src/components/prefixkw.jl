@@ -1,12 +1,12 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONST}})
-    start = ps.t.startbyte
+    startbyte = ps.t.startbyte
     
     # Parsing
     kw = INSTANCE(ps)
     @catcherror ps startbyte arg = parse_expression(ps)
 
     # Construction 
-    ret = EXPR(kw, [arg], ps.nt.startbyte - start)
+    ret = EXPR(kw, [arg], ps.nt.startbyte - startbyte)
 
     return ret
 end

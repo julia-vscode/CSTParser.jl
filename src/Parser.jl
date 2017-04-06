@@ -379,6 +379,7 @@ function parse(ps::ParseState, cont = false)
             top = parse_doc(ps)
         end
     end
+    # top.scope = ps.current_scope
 
     return top, ps
 end
@@ -387,7 +388,7 @@ end
 function parse_file(path::String)
     x = parse(readstring(path), true)
     
-    File([], (f->joinpath(dirname(path), f)).(_get_includes(x)), path, x)
+    File([], (f->joinpath(dirname(path), f)).(_get_includes(x)), path, x, [])
 end
 
 function parse_directory(path::String, proj = Project(path,[]))

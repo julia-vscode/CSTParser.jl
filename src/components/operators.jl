@@ -178,20 +178,22 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1, Tokens.
     startbyte = ps.nt.startbyte - op.span - ret.span
     # Parsing
     @catcherror ps startbyte nextarg = @precedence ps 1-LtoR(1) parse_expression(ps)
-
     
     if is_func_call(ret)
         # Construction
         nextarg = EXPR(BLOCK, SyntaxNode[nextarg], nextarg.span)
         # Linting
-        scope = Scope{Tokens.FUNCTION}(get_id(ret), [])
-        @scope ps scope _lint_func_sig(ps, ret)
-        push!(ps.current_scope.args, scope)
+        @scope ps Scope{Tokens.FUNCTION} _lint_func_sig(ps, ret)
+        
+        ret1 = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
+        ret1.defs = [Variable(function_name(ret), :Function, ret1)]
+        return ret1
     else
-        ps.trackscope && _track_assignment(ps, ret, nextarg)
+        defs = ps.trackscope ? _track_assignment(ps, ret, nextarg) : Variable[]
+        ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
+        ret.defs = defs
+        return ret
     end
-
-    return EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
 end
 
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1})
