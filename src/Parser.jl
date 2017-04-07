@@ -127,12 +127,16 @@ function parse_compound(ps::ParseState, ret)
         #  --> implicit multiplication
         op = OPERATOR{11,Tokens.STAR,false}(0)
         ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind==Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR})
+    elseif ps.nt.kind==Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR})# && !isunaryop(ret)
         if isempty(ps.ws) 
             ret = @default ps @closer ps paren parse_call(ps, ret)
         else
-            ps.errored = true
-            return ERROR{UnexpectedLParen}(ret.span, ret)
+            if isunaryop(ret)
+                ret = parse_unary(ps, ret)
+            else
+                ps.errored = true
+                return ERROR{UnexpectedLParen}(ret.span, ret)
+            end
         end
     elseif ps.nt.kind==Tokens.LBRACE
         if isempty(ps.ws)
@@ -150,7 +154,7 @@ function parse_compound(ps::ParseState, ret)
         end
     elseif ps.nt.kind == Tokens.COMMA
         ret = parse_tuple(ps, ret)
-    elseif isunaryop(ret) && !isassignment(ps.nt)
+    elseif isunaryop(ret) # && !isassignment(ps.nt)
         ret = parse_unary(ps, ret)
     elseif isoperator(ps.nt)
         next(ps)

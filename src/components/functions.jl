@@ -36,6 +36,7 @@ end
 Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
 """
 function parse_call(ps::ParseState, ret)
+    startbyte = ps.t.startbyte
     # Parsing
     next(ps)
     if ret isa IDENTIFIER && ret.val == :ccall

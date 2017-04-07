@@ -63,44 +63,33 @@ function _track_assignment(ps::ParseState, x, val, defs = [])
     return defs
 end
 
-function get_symbols(x, symbols) end
-function get_symbols(x::EXPR, symbols = [])
-    offset = 0
+function get_symbols(x, offset = 0, symbols = []) end
+function get_symbols(x::EXPR, offset = 0, symbols = [])
     for a in x
         if a isa EXPR
             if !isempty(a.defs)
                 for v in a.defs
-                    push!(symbols, (v.id, v.t, offset+(1:a.span)))
+                    # push!(symbols, (v.id, v.t, offset+(1:a.span)))
+                    push!(symbols, (v, offset+(1:a.span)))
                 end
             end
             if contributes_scope(a)
-                get_symbols(a, symbols)
+                get_symbols(a, offset, symbols)
             end
             if a.head isa KEYWORD{Tokens.MODULE} || a.head isa KEYWORD{Tokens.MODULE}
                 m_scope = get_symbols(a[3])
                 offset2 = offset + a[1].span + a[2].span
                 for mv in m_scope
-                    push!(symbols, (Expr(:(.), a.defs[1].id, QuoteNode(mv[1])),mv[2], mv[3] + offset2))
-
+                    # push!(symbols, (Expr(:(.), a.defs[1].id, QuoteNode(mv[1])),mv[2], mv[3] + offset2))
+                    push!(symbols, (Variable(Expr(:(.), a.defs[1].id, QuoteNode(mv[1])), mv.t, mv.val), mv[3] + offset2))
+                    
                 end
             end
-
         end
         offset += a.span
     end
     return symbols
 end
-
-# function _get_full_scope(x::EXPR, n::Int)
-#     y, path, ind = find(x, n)
-#     full_scope = []
-#     for p in path
-#         if p isa EXPR && !(p.scope isa Scope{nothing})
-#             append!(full_scope, p.scope.args)
-#         end
-#     end
-#     full_scope
-# end
 
 is_func_call(x) = false
 is_func_call(x::EXPR) = x.head == CALL
@@ -150,6 +139,16 @@ function _find_scope(x::EXPR, n, path, ind, offsets, scope)
     end
 end
 
+_find_scope(x::Union{QUOTENODE,INSTANCE,ERROR}, n, path, ind, offsets, scope) = x
+
+function find_scope(x::EXPR, n::Int)
+    path = []
+    ind = Int[]
+    offsets = Int[]
+    scope = Variable[]
+    y = _find_scope(x, n ,path, ind, offsets, scope)
+    return y, path, ind, offsets, scope
+end
 
 
 contributes_scope(x) = false
@@ -166,22 +165,13 @@ function get_scope(x, scope) end
 
 function get_scope(x::EXPR, scope)
     append!(scope, x.defs)
-    if contributes_scope(x)
+        if contributes_scope(x)
         for a in x
             get_scope(a, scope)
         end
     end
 end
 
-_find_scope(x::Union{QUOTENODE,INSTANCE,ERROR}, n, path, ind, offsets, scope) = x
 
-function find_scope(x::EXPR, n::Int)
-    path = []
-    ind = Int[]
-    offsets = Int[]
-    scope = Variable[]
-    y = _find_scope(x, n ,path, ind, offsets, scope)
-    return y, path, ind, offsets, scope
-end
 
 find_scope(x::ERROR, n::Int) = ERROR, [], [], [], [], []
