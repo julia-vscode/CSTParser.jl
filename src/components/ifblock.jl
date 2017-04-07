@@ -41,15 +41,15 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
 
     # Linting
     if cond isa EXPR && cond.head isa OPERATOR{1}
-        push!(ps.hints, Hint{Hints.CondAssignment}(startbyte + kw.span + (0:cond.span)))
+        push!(ps.diagnostics, Hint{Hints.CondAssignment}(startbyte + kw.span + (0:cond.span)))
     end
     if cond isa LITERAL{Tokens.TRUE}
         if length(ret.args) == 3
-            push!(ps.hints, Hint{Hints.DeadCode}(startbyte + kw.span + cond.span + ret.args[2].span + (0:ret.args[3].span)))
+            push!(ps.diagnostics, Hint{Hints.DeadCode}(startbyte + kw.span + cond.span + ret.args[2].span + (0:ret.args[3].span)))
         end
     elseif cond isa LITERAL{Tokens.FALSE}
         if length(ret.args) == 2
-            push!(ps.hints, Hint{Hints.DeadCode}(startbyte + kw.span + cond.span + (0:ret.args[2].span)))
+            push!(ps.diagnostics, Hint{Hints.DeadCode}(startbyte + kw.span + cond.span + (0:ret.args[2].span)))
         end
     end
 

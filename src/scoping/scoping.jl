@@ -81,7 +81,7 @@ function get_symbols(x::EXPR, offset = 0, symbols = [])
                 offset2 = offset + a[1].span + a[2].span
                 for mv in m_scope
                     # push!(symbols, (Expr(:(.), a.defs[1].id, QuoteNode(mv[1])),mv[2], mv[3] + offset2))
-                    push!(symbols, (Variable(Expr(:(.), a.defs[1].id, QuoteNode(mv[1])), mv.t, mv.val), mv[3] + offset2))
+                    push!(symbols, (Variable(Expr(:(.), a.defs[1].id, QuoteNode(mv[1].id)), mv[1].t, mv[1].val), mv[2] + offset2))
                     
                 end
             end

@@ -119,7 +119,7 @@ function parse_imports(ps::ParseState)
     
     # Linting
     if ps.current_scope isa Scope{Tokens.FUNCTION}
-        push!(ps.hints, Hint{Hints.ImportInFunction}(startbyte:ps.nt.startbyte))
+        push!(ps.diagnostics, Hint{Hints.ImportInFunction}(startbyte:ps.nt.startbyte))
     end
 
     ret.span = ps.nt.startbyte - startbyte
@@ -146,11 +146,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
     # check for duplicates
     let idargs = filter(a-> a isa IDENTIFIER, ret.args)
         if length(idargs) != length(unique((a->a.val).(idargs)))
-            push!(ps.hints, Hint{Hints.DuplicateArgument}(startbyte:ps.nt.startbyte))
+            push!(ps.diagnostics, Hint{Hints.DuplicateArgument}(startbyte:ps.nt.startbyte))
         end
     end
     if ps.current_scope isa Scope{Tokens.FUNCTION}
-        push!(ps.hints, Hint{Hints.ImportInFunction}(startbyte:ps.nt.startbyte))
+        push!(ps.diagnostics, Hint{Hints.ImportInFunction}(startbyte:ps.nt.startbyte))
     end
     return ret
 end
@@ -163,7 +163,7 @@ function _start_imports(x::EXPR)
 end
 
 function _start_toplevel(x::EXPR)
-    if !(x.args[1] isa EXPR && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING})) 
+    if !all(x.args[i] isa EXPR && (x.args[i].head isa KEYWORD{Tokens.IMPORT} || x.args[i].head isa KEYWORD{Tokens.IMPORTALL} || x.args[i].head isa KEYWORD{Tokens.USING}) for i = 1:length(x.args)) 
         return Iterator{:toplevelblock}(1, length(x.args) + length(x.punctuation))
     else
         # return Iterator{:toplevel}(1, length(x.args) + length(x.punctuation))

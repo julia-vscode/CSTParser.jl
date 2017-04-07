@@ -61,7 +61,7 @@ type ParseState
     trackscope::Bool
     formatcheck::Bool
     ids::Dict{String,Any}
-    hints::Vector{Hints.Hint}
+    diagnostics::Vector{Hints.Hint}
     closer::Closer
     errored::Bool
     current_scope

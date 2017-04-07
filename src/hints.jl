@@ -72,40 +72,40 @@ function format_op(ps, prec)
     # prec = precedence(ps.t)
     if prec == 8 || prec == 13 || prec == 14 || prec == 15
         if ps.lws.kind != EmptyWS
-            push!(ps.hints, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1 : ps.lws.endbyte + 1))
+            push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1 : ps.lws.endbyte + 1))
         end
         if ps.ws.kind != EmptyWS
-            push!(ps.hints, Hint{Hints.DeleteWhiteSpace}(ps.ws.startbyte + 1 : ps.ws.endbyte + 1))
+            push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.ws.startbyte + 1 : ps.ws.endbyte + 1))
         end
     elseif ps.t.kind == Tokens.ISSUBTYPE || ps.t.kind == Tokens.DDDOT
     else
         if ps.lws.kind == EmptyWS
-            push!(ps.hints, Hint{Hints.AddWhiteSpace}(ps.t.startbyte:ps.nt.startbyte))
+            push!(ps.diagnostics, Hint{Hints.AddWhiteSpace}(ps.t.startbyte:ps.nt.startbyte))
         end
         if ps.ws.kind == EmptyWS
-            push!(ps.hints, Hint{Hints.AddWhiteSpace}(ps.t.startbyte:ps.nt.startbyte))
+            push!(ps.diagnostics, Hint{Hints.AddWhiteSpace}(ps.t.startbyte:ps.nt.startbyte))
         end
     end
 end
 
 function format_comma(ps)
     if ps.lws.kind != EmptyWS && !(islbracket(ps.lt))
-        push!(ps.hints, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1 : ps.lws.endbyte + 1))
+        push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1 : ps.lws.endbyte + 1))
     end
     if ps.ws.kind == EmptyWS && !(isrbracket(ps.nt))
-        push!(ps.hints, Hint{Hints.AddWhiteSpace}(ps.t.startbyte:ps.nt.startbyte))
+        push!(ps.diagnostics, Hint{Hints.AddWhiteSpace}(ps.t.startbyte:ps.nt.startbyte))
     end
 end
 
 function format_lbracket(ps)
     if ps.ws.kind != EmptyWS
-        push!(ps.hints, Hint{Hints.DeleteWhiteSpace}(ps.ws.startbyte + 1 : ps.ws.endbyte + 1))
+        push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.ws.startbyte + 1 : ps.ws.endbyte + 1))
     end
 end
 
 function format_rbracket(ps)
     if ps.lws.kind != EmptyWS
-        push!(ps.hints, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1 : ps.lws.endbyte + 1))
+        push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1 : ps.lws.endbyte + 1))
     end
 end
 
@@ -113,9 +113,9 @@ function format_indent(ps, start_col)
     if (start_col > 0 && ps.nt.startpos[2] != start_col + 4)
         dindent = start_col + 4 - ps.nt.startpos[2]
         if dindent > 0
-            push!(ps.hints, Hint{Hints.AddWhiteSpace}((ps.nt.startbyte + (0:dindent))))
+            push!(ps.diagnostics, Hint{Hints.AddWhiteSpace}((ps.nt.startbyte + (0:dindent))))
         else
-            push!(ps.hints, Hint{Hints.DeleteWhiteSpace}(ps.nt.startbyte + (dindent + 1 : 0)))
+            push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.nt.startbyte + (dindent + 1 : 0)))
         end
     end
 end
@@ -127,7 +127,7 @@ function format_typename(ps, sig)
     val = string(id.val)
     # Abitrary limit of 3 for uppercase acronym
     if islower(first(val)) || (length(val) > 3 && isupper(val))
-        push!(ps.hints, Hint{Hints.CamelCase}(start_loc + (1:sizeof(val))))
+        push!(ps.diagnostics, Hint{Hints.CamelCase}(start_loc + (1:sizeof(val))))
     end
 end
 
@@ -136,6 +136,6 @@ function format_funcname(ps, id, offset)
     # !(id isa Symbol) && return
     # val = string(id)
     # if !islower(val) #!all(islower(c) || isdigit(c) || c == '!' for c in val)
-    #     push!(ps.hints, Hint{Hints.LowerCase}(start_loc + (1:sizeof(val))))
+    #     push!(ps.diagnostics, Hint{Hints.LowerCase}(start_loc + (1:sizeof(val))))
     # end
 end

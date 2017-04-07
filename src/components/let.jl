@@ -29,7 +29,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
     let span = startbyte + ret.head.span
         for (i, a) in enumerate(args)
             if !(a isa EXPR && a.head isa OPERATOR{1})
-                push!(ps.hints, Hint{Hints.LetNonAssignment}(span:a.head))
+                push!(ps.diagnostics, Hint{Hints.LetNonAssignment}(span:a.head))
             end
             span += a.span + ret.punctuation[i].span
         end
