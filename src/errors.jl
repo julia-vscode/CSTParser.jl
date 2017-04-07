@@ -7,4 +7,5 @@ UnexpectedRParen,
 UnexpectedRBrace,
 UnexpectedRSquare,
 UnexpectedEndmarker,
-UnexpectedOperator)
+UnexpectedOperator,
+UnexpectedEnd)

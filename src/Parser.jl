@@ -3,7 +3,7 @@ module Parser
 global debug = true
 
 using Tokenize
-import Base: next, start, done, length, first, last, +, isempty, getindex, setindex!
+import Base: next, start, done, length, first, last, endof, +, isempty, getindex, setindex!
 import Tokenize.Tokens
 import Tokenize.Tokens: Token, iskeyword, isliteral, isoperator
 import Tokenize.Lexers: Lexer, peekchar, iswhitespace
@@ -58,20 +58,21 @@ Acceptable starting tokens are:
 
 """
 function parse_expression(ps::ParseState)
+    startbyte = ps.nt.startbyte
     next(ps)
     if Tokens.begin_keywords < ps.t.kind < Tokens.end_keywords && ps.t.kind != Tokens.DO
-        ret = @nocloser ps toplevel parse_kw(ps, Val{ps.t.kind})
+        @catcherror ps startbyte ret = @nocloser ps toplevel parse_kw(ps, Val{ps.t.kind})
     elseif ps.t.kind == Tokens.LPAREN
-        ret = parse_paren(ps)
+        @catcherror ps startbyte ret = parse_paren(ps)
     elseif ps.t.kind == Tokens.LSQUARE
-        ret = parse_array(ps)
+        @catcherror ps startbyte ret = parse_array(ps)
     elseif isinstance(ps.t) || isoperator(ps.t)
         ret = INSTANCE(ps)
         if ret isa OPERATOR{8,Tokens.COLON} && ps.nt.kind != Tokens.COMMA
-            ret = parse_unary(ps, ret)
+            @catcherror ps startbyte ret = parse_unary(ps, ret)
         end
     elseif ps.t.kind==Tokens.AT_SIGN
-        ret = parse_macrocall(ps)
+        @catcherror ps startbyte ret = parse_macrocall(ps)
     elseif ps.t.kind == Tokens.ENDMARKER
         ps.errored = true
         return ERROR{UnexpectedEndmarker}(0, INSTANCE(ps))
@@ -89,7 +90,7 @@ function parse_expression(ps::ParseState)
     end
 
     while !closer(ps) && !(ps.closer.precedence == 15 && ismacro(ret))
-        ret = parse_compound(ps, ret)
+        @catcherror ps startbyte ret = parse_compound(ps, ret)
     end
     if ps.closer.precedence != 15 && closer(ps) && ret isa LITERAL{Tokens.MACRO}
         ret = EXPR(MACROCALL, [ret], ret.span)
@@ -116,23 +117,24 @@ Handles cases where an expression - `ret` - is not followed by
 + A number followed by an expression (with no seperating white space)
 """
 function parse_compound(ps::ParseState, ret)
+    startbyte = ps.nt.startbyte - ret.span
     if ps.nt.kind == Tokens.FOR
-        ret = parse_generator(ps, ret)
+        @catcherror ps startbyte ret = parse_generator(ps, ret)
     elseif ps.nt.kind == Tokens.DO
-        ret = parse_do(ps, ret)
+        @catcherror ps startbyte ret = parse_do(ps, ret)
     elseif ((ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN)) || (ret isa EXPR && ret.head isa OPERATOR{15, Tokens.PRIME} && ps.nt.kind == Tokens.IDENTIFIER) || ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && ps.nt.kind == Tokens.IDENTIFIER)
         # a literal number followed by an identifier or (
         # a transpose call followed by an identifier
         # a () or [] expression followed by an identifier
         #  --> implicit multiplication
         op = OPERATOR{11,Tokens.STAR,false}(0)
-        ret = parse_operator(ps, ret, op)
+        @catcherror ps startbyte ret = parse_operator(ps, ret, op)
     elseif ps.nt.kind==Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR})# && !isunaryop(ret)
         if isempty(ps.ws) 
-            ret = @default ps @closer ps paren parse_call(ps, ret)
+            @catcherror ps startbyte ret = @default ps @closer ps paren parse_call(ps, ret)
         else
             if isunaryop(ret)
-                ret = parse_unary(ps, ret)
+                @catcherror ps startbyte ret = parse_unary(ps, ret)
             else
                 ps.errored = true
                 return ERROR{UnexpectedLParen}(ret.span, ret)
@@ -140,30 +142,30 @@ function parse_compound(ps::ParseState, ret)
         end
     elseif ps.nt.kind==Tokens.LBRACE
         if isempty(ps.ws)
-            ret = parse_curly(ps, ret)
+            @catcherror ps startbyte ret = parse_curly(ps, ret)
         else
             ps.errored = true
             return ERROR{UnexpectedLBrace}(ret.span, ret)
         end
     elseif ps.nt.kind==Tokens.LSQUARE
         if isempty(ps.ws)
-            ret = @nocloser ps block parse_ref(ps, ret)
+            @catcherror ps startbyte ret = @nocloser ps block parse_ref(ps, ret)
         else
             ps.errored = true
             return ERROR{UnexpectedLSquare}(ret.span, ret)
         end
     elseif ps.nt.kind == Tokens.COMMA
-        ret = parse_tuple(ps, ret)
+        @catcherror ps startbyte ret = parse_tuple(ps, ret)
     elseif isunaryop(ret) # && !isassignment(ps.nt)
-        ret = parse_unary(ps, ret)
+        @catcherror ps startbyte ret = parse_unary(ps, ret)
     elseif isoperator(ps.nt)
         next(ps)
         op = INSTANCE(ps)
         format_op(ps, precedence(ps.t))
-        ret = parse_operator(ps, ret, op)
+        @catcherror ps startbyte ret = parse_operator(ps, ret, op)
     elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{15,Tokens.DOT})) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
         next(ps)
-        arg = parse_string(ps, ret)
+        @catcherror ps startbyte arg = parse_string(ps, ret)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
     elseif ret isa EXPR && ret.head == x_STR && ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
@@ -172,7 +174,7 @@ function parse_compound(ps::ParseState, ret)
         ret.span += arg.span
     elseif ret isa EXPR && ret.head isa OPERATOR{20, Tokens.PRIME} 
         # prime operator followed by an identifier has an implicit multiplication
-        nextarg = @precedence ps 11 parse_expression(ps)
+        @catcherror ps startbyte nextarg = @precedence ps 11 parse_expression(ps)
         ret = EXPR(CALL, [OPERATOR{11, Tokens.STAR, false}(0), ret, nextarg], ret.span + nextarg.span)
 ################################################################################
 # Everything below here is an error

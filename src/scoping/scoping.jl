@@ -118,20 +118,30 @@ function _find_scope(x::EXPR, n, path, ind, offsets, scope)
         return x
     end
     offset = 0
-    @assert n <= x.span
+    if n > x.span
+        return NOTHING
+    end
     push!(path, x)
     for (i, a) in enumerate(x)
         if n > offset + a.span
-            get_scope(a, scope)
+            get_scope(a, sum(offsets) + offset, scope)
             offset += a.span
         else
-            a isa EXPR && append!(scope, a.defs)
+            if a isa EXPR
+                # append!(scope, a.defs)
+                for d in a.defs
+                    push!(scope, (d, sum(offsets) + offset+(1:a.span)))
+                end
+            end
+
             push!(ind, i)
             push!(offsets, offset)
             # If toplevel/module get scope for rest of block
             if x.head == BLOCK && length(path) > 1 && path[end-1] isa EXPR && (path[end-1].head == TOPLEVEL || path[end-1].head isa KEYWORD{Tokens.MODULE} || path[end-1].head isa KEYWORD{Tokens.BAREMODULE})
+                offset1 = sum(offsets) + offset
                 for j = i+1:length(x)
-                    get_scope(x[j], scope)
+                    get_scope(x[j], offset1, scope)
+                    offset1 += x[j].span
                 end
             end
             return _find_scope(a, n-offset, path, ind, offsets, scope)
@@ -145,9 +155,23 @@ function find_scope(x::EXPR, n::Int)
     path = []
     ind = Int[]
     offsets = Int[]
-    scope = Variable[]
+    scope = Tuple{Variable, UnitRange}[]
     y = _find_scope(x, n ,path, ind, offsets, scope)
     return y, path, ind, offsets, scope
+end
+
+function get_scope(x, offset, scope) end
+
+function get_scope(x::EXPR, offset, scope)
+    # append!(scope, x.defs)
+    for d in x.defs
+        push!(scope, (d, offset+(1:x.span)))
+    end
+    if contributes_scope(x)
+        for a in x
+            get_scope(a, offset, scope)
+        end
+    end
 end
 
 
@@ -161,16 +185,7 @@ function contributes_scope(x::EXPR)
     x.head isa HEAD{Tokens.MACROCALL}
 end
 
-function get_scope(x, scope) end
 
-function get_scope(x::EXPR, scope)
-    append!(scope, x.defs)
-        if contributes_scope(x)
-        for a in x
-            get_scope(a, scope)
-        end
-    end
-end
 
 
 

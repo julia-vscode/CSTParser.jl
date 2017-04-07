@@ -18,6 +18,8 @@ end
 Expr(x::LITERAL{Tokens.TRUE}) = true
 Expr(x::LITERAL{Tokens.FALSE}) = false
 
+Expr(x::ERROR) = "Parsing error"
+
 # No reason 
 function Expr{T}(x::LITERAL{T})
     Base.parse(x.val)

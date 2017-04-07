@@ -59,7 +59,12 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.RETURN}})
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.END}})
-    return IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :end)
+    ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :end)
+    if !ps.closer.square
+        ps.errored = true
+        return ERROR{UnexpectedEnd}(ret.span, ret)
+    end
+    return ret
 end
 
 function next(x::EXPR, s::Iterator{:const})
