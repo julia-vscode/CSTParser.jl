@@ -19,7 +19,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
     end
 
     #  catch block
-    if ps.nt.kind==Tokens.CATCH
+    if ps.nt.kind == Tokens.CATCH
         next(ps)
         # catch closing early
         if ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END
@@ -72,13 +72,13 @@ function _start_try(x::EXPR)
     if length(x.punctuation) == 1
         return Iterator{:try}(1, 3)
     elseif length(x.punctuation) == 2
-        if x.args[2]==FALSE
+        if x.args[2] == FALSE
             return Iterator{:try}(1, 5)
         else
             return Iterator{:try}(1, 6)
         end
     elseif length(x.punctuation) == 3
-        if x.args[2]==FALSE
+        if x.args[2] == FALSE
             return Iterator{:try}(1, 7)
         else
             return Iterator{:try}(1, 8)

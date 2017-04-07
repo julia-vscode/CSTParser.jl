@@ -23,10 +23,10 @@ end
 _start_ref(x::EXPR) = Iterator{:ref}(1, length(x.args) + length(x.punctuation))
 
 function next(x::EXPR, s::Iterator{:ref})
-    if  s.i==s.n
+    if  s.i == s.n
         return last(x.punctuation), +s
     elseif isodd(s.i)
-        return x.args[div(s.i+1, 2)], +s
+        return x.args[div(s.i + 1, 2)], +s
     else
         return x.punctuation[div(s.i, 2)], +s
     end

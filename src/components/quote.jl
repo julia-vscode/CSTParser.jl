@@ -15,7 +15,7 @@ end
 
 
 function _start_quote(x::EXPR)
-    if x.head.span>0
+    if x.head.span > 0
         return Iterator{:quote}(1, 3)
     else
         return Iterator{:quote}(1, 2)
@@ -23,7 +23,7 @@ function _start_quote(x::EXPR)
 end
 
 function next(x::EXPR, s::Iterator{:quote})
-    if x.head.span>0
+    if x.head.span > 0
         if s.i == 1
             return x.head, +s
         elseif s.i == s.n
@@ -55,7 +55,7 @@ end
 
 function getindex(x::QUOTENODE, i::Int)
     s = start(x)
-    @assert i<=s.n
+    @assert i <= s.n
     s.i = i
     next(x, s)[1]
 end

@@ -1,6 +1,6 @@
 function parse_do(ps::ParseState, ret)
     startbyte = ps.nt.startbyte
-    start_col = ps.nt.startpos[2]-ret.span
+    start_col = ps.nt.startpos[2] - ret.span
 
     # Parsing
     next(ps)
@@ -38,7 +38,7 @@ end
 
 function next(x::EXPR, s::Iterator{:do})
     if s.i == 1
-       return x.args[1], +s
+        return x.args[1], +s
     elseif s.i == 2 
         return x.head, +s
     elseif s.i == 3 

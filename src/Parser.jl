@@ -71,7 +71,7 @@ function parse_expression(ps::ParseState)
         if ret isa OPERATOR{8,Tokens.COLON} && ps.nt.kind != Tokens.COMMA
             @catcherror ps startbyte ret = parse_unary(ps, ret)
         end
-    elseif ps.t.kind==Tokens.AT_SIGN
+    elseif ps.t.kind == Tokens.AT_SIGN
         @catcherror ps startbyte ret = parse_macrocall(ps)
     elseif ps.t.kind == Tokens.ENDMARKER
         ps.errored = true
@@ -129,7 +129,7 @@ function parse_compound(ps::ParseState, ret)
         #  --> implicit multiplication
         op = OPERATOR{11,Tokens.STAR,false}(0)
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind==Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR})# && !isunaryop(ret)
+    elseif ps.nt.kind == Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR})# && !isunaryop(ret)
         if isempty(ps.ws) 
             @catcherror ps startbyte ret = @default ps @closer ps paren parse_call(ps, ret)
         else
@@ -140,14 +140,14 @@ function parse_compound(ps::ParseState, ret)
                 return ERROR{UnexpectedLParen}(ret.span, ret)
             end
         end
-    elseif ps.nt.kind==Tokens.LBRACE
+    elseif ps.nt.kind == Tokens.LBRACE
         if isempty(ps.ws)
             @catcherror ps startbyte ret = parse_curly(ps, ret)
         else
             ps.errored = true
             return ERROR{UnexpectedLBrace}(ret.span, ret)
         end
-    elseif ps.nt.kind==Tokens.LSQUARE
+    elseif ps.nt.kind == Tokens.LSQUARE
         if isempty(ps.ws)
             @catcherror ps startbyte ret = @nocloser ps block parse_ref(ps, ret)
         else
@@ -219,7 +219,7 @@ function parse_list(ps::ParseState, puncs)
     while !closer(ps)
         a = @nocloser ps newline @closer ps comma parse_expression(ps)
         push!(args, a)
-        if ps.nt.kind==Tokens.COMMA
+        if ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(puncs, INSTANCE(ps))
             format_comma(ps)
@@ -253,14 +253,14 @@ function parse_paren(ps::ParseState)
     end
     
     ret = EXPR(BLOCK, [], 0)
-    while ps.nt.kind != Tokens.RPAREN && ps.nt.kind !=Tokens.ENDMARKER
+    while ps.nt.kind != Tokens.RPAREN && ps.nt.kind != Tokens.ENDMARKER
         a = @default ps @nocloser ps newline @closer ps paren parse_expression(ps)
         push!(ret.args, a)
     end
 
     if length(ret.args) == 1
         if ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{0,Tokens.DDDOT} && ps.ws.kind != SemiColonWS
-            ret.args[1] = EXPR(TUPLE,[ret.args[1]], ret.args[1].span)
+            ret.args[1] = EXPR(TUPLE, [ret.args[1]], ret.args[1].span)
         end
 
         if ps.ws.kind != SemiColonWS
@@ -308,7 +308,7 @@ function parse_quote(ps::ParseState)
         push!(puncs, INSTANCE(ps))
         if ps.nt.kind == Tokens.RPAREN
             next(ps)
-            return EXPR(QUOTE, [EXPR(TUPLE,[], 2, [pop!(puncs), INSTANCE(ps)])], 3, puncs)
+            return EXPR(QUOTE, [EXPR(TUPLE, [], 2, [pop!(puncs), INSTANCE(ps)])], 3, puncs)
         end
         arg = @closer ps paren parse_expression(ps)
         next(ps)
@@ -336,7 +336,7 @@ end
 
 function parse_doc(ps::ParseState, ret)
     (ps.nt.kind == Tokens.ENDMARKER) && return ret
-    if ret isa LITERAL{Tokens.STRING} || ret isa LITERAL{Tokens.TRIPLE_STRING} || (ret isa EXPR && ret.head==STRING)
+    if ret isa LITERAL{Tokens.STRING} || ret isa LITERAL{Tokens.TRIPLE_STRING} || (ret isa EXPR && ret.head == STRING)
         doc = ret
         ret = parse_expression(ps)
         ret = EXPR(MACROCALL, [GlobalRefDOC, doc, ret], doc.span + ret.span)
@@ -394,7 +394,7 @@ end
 function parse_file(path::String)
     x = parse(readstring(path), true)
     
-    File([], (f->joinpath(dirname(path), f)).(_get_includes(x)), path, x, [])
+    File([], (f -> joinpath(dirname(path), f)).(_get_includes(x)), path, x, [])
 end
 
 function parse_directory(path::String, proj = Project(path,[]))

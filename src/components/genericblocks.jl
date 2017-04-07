@@ -52,13 +52,13 @@ function next(x::EXPR, s::Iterator{:block})
         else
             return x.punctuation[div(s.i, 2)], +s
         end
-    elseif length(x.punctuation)==2
+    elseif length(x.punctuation) == 2
         if s.i == 1
             return x.punctuation[1], +s
         elseif s.i == s.n
             return x.punctuation[2], +s
         else
-            return x.args[s.i-1], +s
+            return x.args[s.i - 1], +s
         end
     end
 
@@ -80,7 +80,7 @@ function next(x::EXPR, s::Iterator{:toplevelblock})
         return x.args[s.i], +s
     else     
         if isodd(s.i)
-            return x.args[div(s.i+1, 2)], +s
+            return x.args[div(s.i + 1, 2)], +s
         else
             return x.punctuation[div(s.i, 2)], +s
         end

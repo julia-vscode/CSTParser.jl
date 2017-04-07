@@ -94,8 +94,8 @@ function parse_call(ps::ParseState, ret)
         ret.head = MACROCALL
     end
     if ret.head isa HEAD{Tokens.CCALL} && length(ret.args) > 1 && ret.args[2] isa IDENTIFIER && (ret.args[2].val == :stdcall || ret.args[2].val == :fastcall || ret.args[2].val == :cdecl || ret.args[2].val == :thiscall)
-       arg = splice!(ret.args, 2)
-       push!(ret.args, EXPR(arg, [], arg.span))
+        arg = splice!(ret.args, 2)
+        push!(ret.args, EXPR(arg, [], arg.span))
     end
     # Linting
     if (ret.args[1] isa IDENTIFIER && ret.args[1].val==:Dict) || (ret.args[1] isa EXPR && ret.args[1].head == CURLY && ret.args[1].args[1] isa IDENTIFIER && ret.args[1].args[1].val == :Dict)
@@ -127,13 +127,13 @@ function next(x::EXPR, s::Iterator{:function})
 end
 
 function next(x::EXPR, s::Iterator{:call})
-    if length(x.args)>0 && last(x.args) isa EXPR && last(x.args).head == PARAMETERS && s.i == (s.n-1)
+    if length(x.args) > 0 && last(x.args) isa EXPR && last(x.args).head == PARAMETERS && s.i == (s.n - 1)
         return last(x.args), +s
     end
-    if  s.i==s.n
+    if  s.i == s.n
         return last(x.punctuation), +s
     elseif isodd(s.i)
-        return x.args[div(s.i+1, 2)], +s
+        return x.args[div(s.i + 1, 2)], +s
     else
         return x.punctuation[div(s.i, 2)], +s
     end
@@ -141,7 +141,7 @@ end
 
 function next(x::EXPR, s::Iterator{:parameters})
     if  isodd(s.i)
-        return x.args[div(s.i+1, 2)] , +s
+        return x.args[div(s.i + 1, 2)], +s
     elseif iseven(s.i)
         return x.punctuation[div(s.i, 2)], +s
     end
@@ -160,7 +160,7 @@ function next(x::EXPR, s::Iterator{:ccall})
     elseif iseven(s.i)
         return x.punctuation[div(s.i, 2)], +s
     else
-        return x.args[div(s.i-1, 2)], +s
+        return x.args[div(s.i - 1, 2)], +s
     end
 end
 
@@ -198,13 +198,13 @@ function _lint_func_sig(ps::ParseState, sig::EXPR)
             continue
         elseif arg isa EXPR && arg.head == PARAMETERS
             for (i1, arg1) in enumerate(arg.args)
-                _lint_arg(ps, arg1, args, i + i1 -1, fname, nargs, i-1, loc)
+                _lint_arg(ps, arg1, args, i + i1 - 1, fname, nargs, i - 1, loc)
             end
         else
             _lint_arg(ps, arg, args, i, fname, nargs, firstkw, loc)
         end
     end
-    sig.defs = (a->Variable(a, :Any, sig)).(args)
+    sig.defs = (a -> Variable(a, :Any, sig)).(args)
 end
     
 function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
@@ -219,13 +219,13 @@ function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
     if a.val == Expr(fname)
         push!(ps.diagnostics, Hint{Hints.ArgumentFunctionNameConflict}(loc))
     end
-    if arg isa EXPR && arg.head isa OPERATOR{0,Tokens.DDDOT} && i!=nargs
+    if arg isa EXPR && arg.head isa OPERATOR{0,Tokens.DDDOT} && i != nargs
         push!(ps.diagnostics, Hint{Hints.SlurpingPosition}(loc))
     end
     if arg isa EXPR && arg.head isa HEAD{Tokens.KW} && i < firstkw
         firstkw = i
     end
-    if !(arg isa EXPR && arg.head isa HEAD{Tokens.KW}) && i> firstkw
+    if !(arg isa EXPR && arg.head isa HEAD{Tokens.KW}) && i > firstkw
         push!(ps.diagnostics, Hint{Hints.KWPosition}(loc))
     end
     # Check 
@@ -291,7 +291,7 @@ function declares_function(x::SyntaxNode)
     if x isa EXPR
         if x.head isa KEYWORD{Tokens.FUNCTION}
             return true
-        elseif x.head isa OPERATOR{1,Tokens.EQ} && x.args[1] isa EXPR && x.args[1].head==CALL
+        elseif x.head isa OPERATOR{1,Tokens.EQ} && x.args[1] isa EXPR && x.args[1].head == CALL
             return true
         else
             return false
@@ -311,7 +311,7 @@ function _lint_dict(ps::ParseState, x::EXPR)
     else
     end
     # Handle generators
-    if length(x.args)>1 
+    if length(x.args) > 1 
         if x.args[2] isa EXPR && x.args[2].head == GENERATOR
             gen = x.args[2]
             if gen.args[1].head isa OPERATOR{1} && !(gen.args[1].head isa OPERATOR{1, Tokens.PAIR_ARROW})
@@ -325,7 +325,7 @@ function _lint_dict(ps::ParseState, x::EXPR)
                 if a isa EXPR && a.head isa OPERATOR{1} && !(a.head isa OPERATOR{1, Tokens.PAIR_ARROW})
                     push!(ps.diagnostics, Hint{Hints.DictGenAssignment}(locstart + (0:a.span)))
                 end
-                locstart += a.span + x.punctuation[i+1].span
+                locstart += a.span + x.punctuation[i + 1].span
             end
         end
     end

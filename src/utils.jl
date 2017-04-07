@@ -1,26 +1,26 @@
 function closer(ps::ParseState)
     (ps.closer.newline && ps.ws.kind == NewLineWS && ps.t.kind != Tokens.COMMA) ||
     (ps.closer.semicolon && ps.ws.kind == SemiColonWS) ||
-    (isoperator(ps.nt) && precedence(ps.nt)<=ps.closer.precedence) ||
-    (ps.nt.kind == Tokens.LPAREN && ps.closer.precedence>14) ||
-    (ps.nt.kind == Tokens.LBRACE && ps.closer.precedence>14) ||
-    (ps.nt.kind == Tokens.LSQUARE && ps.closer.precedence>14) ||
-    (ps.nt.kind == Tokens.STRING && isempty(ps.ws) && ps.closer.precedence>14) ||
-    (ps.closer.precedence>14 && ps.t.kind == Tokens.RPAREN && ps.nt.kind == Tokens.IDENTIFIER) ||
-    (ps.closer.precedence>14 && ps.t.kind == Tokens.RSQUARE && ps.nt.kind == Tokens.IDENTIFIER) ||
-    (ps.nt.kind == Tokens.COMMA && ps.closer.precedence>0) ||
-    ps.nt.kind==Tokens.ENDMARKER ||
+    (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence) ||
+    (ps.nt.kind == Tokens.LPAREN && ps.closer.precedence > 14) ||
+    (ps.nt.kind == Tokens.LBRACE && ps.closer.precedence > 14) ||
+    (ps.nt.kind == Tokens.LSQUARE && ps.closer.precedence > 14) ||
+    (ps.nt.kind == Tokens.STRING && isempty(ps.ws) && ps.closer.precedence > 14) ||
+    (ps.closer.precedence > 14 && ps.t.kind == Tokens.RPAREN && ps.nt.kind == Tokens.IDENTIFIER) ||
+    (ps.closer.precedence > 14 && ps.t.kind == Tokens.RSQUARE && ps.nt.kind == Tokens.IDENTIFIER) ||
+    (ps.nt.kind == Tokens.COMMA && ps.closer.precedence > 0) ||
+    ps.nt.kind == Tokens.ENDMARKER ||
     (ps.closer.comma && iscomma(ps.nt)) || 
     (ps.closer.tuple && (iscomma(ps.nt) || isassignment(ps.nt))) ||
-    (ps.nt.kind==Tokens.FOR && ps.closer.precedence>-1) ||
-    (ps.closer.paren && ps.nt.kind==Tokens.RPAREN) ||
-    (ps.closer.brace && ps.nt.kind==Tokens.RBRACE) ||
-    (ps.closer.square && ps.nt.kind==Tokens.RSQUARE) ||
-    (ps.closer.block && ps.nt.kind==Tokens.END) ||
-    (ps.closer.inmacro && ps.nt.kind==Tokens.FOR) ||
-    (ps.closer.ifelse && ps.nt.kind==Tokens.ELSEIF || ps.nt.kind==Tokens.ELSE) ||
-    (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt)<=0 || ps.nt.kind==Tokens.COLON)) ||
-    (ps.closer.trycatch && (ps.nt.kind==Tokens.CATCH || ps.nt.kind==Tokens.FINALLY || ps.nt.kind==Tokens.END)) ||
+    (ps.nt.kind == Tokens.FOR && ps.closer.precedence > -1) ||
+    (ps.closer.paren && ps.nt.kind == Tokens.RPAREN) ||
+    (ps.closer.brace && ps.nt.kind == Tokens.RBRACE) ||
+    (ps.closer.square && ps.nt.kind == Tokens.RSQUARE) ||
+    (ps.closer.block && ps.nt.kind == Tokens.END) ||
+    (ps.closer.inmacro && ps.nt.kind == Tokens.FOR) ||
+    (ps.closer.ifelse && ps.nt.kind == Tokens.ELSEIF || ps.nt.kind == Tokens.ELSE) ||
+    (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt) <= 0 || ps.nt.kind == Tokens.COLON)) ||
+    (ps.closer.trycatch && (ps.nt.kind == Tokens.CATCH || ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END)) ||
     (ps.closer.ws && !isempty(ps.ws) && !(
         (ps.nt.kind == Tokens.COMMA || 
         ps.t.kind == Tokens.COMMA || 
@@ -265,7 +265,7 @@ Removes line info expressions. (i.e. Expr(:line, 1))
 """
 function remlineinfo!(x)
     if isa(x,Expr)
-        id = find(map(x->isa(x,Expr) && x.head==:line,x.args))
+        id = find(map(x -> isa(x, Expr) && x.head == :line, x.args))
         deleteat!(x.args, id)
         for j in x.args
             remlineinfo!(j)
@@ -314,19 +314,19 @@ function check_file(f::String)
     cnt = 0
     failed = []
     while !eof(io)
-        if ps.nt.endbyte == length(str)-1
+        if ps.nt.endbyte == length(str) - 1
             break
         end
-        if ismod && ps.nt.kind == Tokens.END && ps.nws.endbyte > (sizeof(str)-10)
+        if ismod && ps.nt.kind == Tokens.END && ps.nws.endbyte > (sizeof(str) - 10)
             break
         end
-        cnt+=1
+        cnt += 1
         x,ps = try
             Parser.parse(ps)
         end
         if x isa LITERAL{Tokens.TRIPLE_STRING}
             doc = x
-            x,ps = Parser.parse(ps)
+            x, ps = Parser.parse(ps)
             x = EXPR(MACROCALL, [GlobalRefDOC, doc, x], doc.span + x.span)
         end
         x0 = Expr(x)
@@ -350,16 +350,16 @@ function check_folder(dir, N = 0, errs = [], failedfiles = [])
         if endswith(f, ".jl")
             try
                 failed, cnt = check_file(joinpath(dir,f))
-                N+=cnt
+                N += cnt
                 append!(errs, failed)
-                if length(failed)!=0
+                if length(failed) != 0
                     push!(failedfiles, f)
                 end
             catch
                 push!(failedfiles, f)
             end
         elseif isdir(f)
-            N, _, errs, failedfiles =check_folder(joinpath(dir, f), N, errs, failedfiles)
+            N, _, errs, failedfiles = check_folder(joinpath(dir, f), N, errs, failedfiles)
         end
     end
     N, length(errs), errs, failedfiles
@@ -374,7 +374,7 @@ expressions.
 """
 compare(x,y) = x == y ? true : (x,y)
 
-function compare(x::Expr,y::Expr)
+function compare(x::Expr, y::Expr)
     if x == y
         return true
     else
@@ -386,7 +386,7 @@ function compare(x::Expr,y::Expr)
         end
         for i = 1:length(x.args)
             t = compare(x.args[i], y.args[i])
-            if t!=true
+            if t != true
                 return t
             end
         end
@@ -445,8 +445,8 @@ end
 Reads and parses all files in current directory, applys formatting fixes and checks that the output AST remains the same.
 """
 function check_reformat()
-    fs = filter(f->endswith(f, ".jl"), readdir())
-    for (i,f) in enumerate(fs)
+    fs = filter(f -> endswith(f, ".jl"), readdir())
+    for (i, f) in enumerate(fs)
         f == "deprecated.jl" && continue
         str = readstring(f)
         x, ps = Parser.parse(ParseState(str), true);

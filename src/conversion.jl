@@ -9,7 +9,7 @@ end
 
 function Expr{O,K,dot}(x::OPERATOR{O,K,dot}) 
     if dot
-        Symbol(:.,UNICODE_OPS_REVERSE[K])
+        Symbol(:., UNICODE_OPS_REVERSE[K])
     else
         UNICODE_OPS_REVERSE[K]
     end
@@ -71,7 +71,7 @@ function Expr(x::EXPR)
            x.args[1].head isa HEAD{InvisibleBrackets} && 
            length(x.args[1].args[1]) == 1 &&
            (first(x.args[1].args[1]) isa OPERATOR || first(x.args[1].args[1]) isa LITERAL || first(x.args[1].args[1]) isa INSTANCE)
-           return QuoteNode(Expr(x.args[1].args[1]))
+        return QuoteNode(Expr(x.args[1].args[1]))
     elseif (x.head isa KEYWORD{Tokens.GLOBAL} || x.head isa KEYWORD{Tokens.LOCAL}) && x.args[1] isa EXPR && x.args[1].head isa KEYWORD{Tokens.CONST}
         return Expr(:const, Expr(Expr(x.head), Expr.(x.args[1].args)...))
     elseif x.head isa KEYWORD{Tokens.BAREMODULE}
@@ -90,7 +90,7 @@ function Expr(x::EXPR)
         else
             head = Expr(x.args[1])
             if head.args[2] isa QuoteNode
-                head.args[2] = QuoteNode(Symbol('@',head.args[2].value,"_str"))
+                head.args[2] = QuoteNode(Symbol('@', head.args[2].value, "_str"))
             end
             return Expr(:macrocall, head, Expr.(x.args[2:end])...)
         end
@@ -103,7 +103,7 @@ function Expr(x::EXPR)
             return ret
         elseif x.args[1] isa EXPR && x.args[1].head isa OPERATOR{15, Tokens.DOT} && string(x.args[1].args[2].val.val)[1] != '@'
             x1 = deepcopy(x)
-            x1.args[1].args[2].val.val = Symbol("@",x1.args[1].args[2].val.val)
+            x1.args[1].args[2].val.val = Symbol("@", x1.args[1].args[2].val.val)
             remove_first_at!(x1.args[1])
             return Expr(x1)
         end
@@ -118,7 +118,7 @@ function Expr(x::EXPR)
         return ret
     elseif x.head == TOPLEVEL && !(isempty(x.punctuation)) && (x.punctuation[1] isa KEYWORD{Tokens.IMPORT} || x.punctuation[1] isa KEYWORD{Tokens.IMPORTALL} || x.punctuation[1] isa KEYWORD{Tokens.USING})
         ret = Expr(Expr(x.head))
-        col = findfirst(x-> x isa OPERATOR{8, Tokens.COLON}, x.punctuation)
+        col = findfirst(x -> x isa OPERATOR{8, Tokens.COLON}, x.punctuation)
         ndots = 0
         while x.punctuation[ndots + 2] isa OPERATOR{15, Tokens.DOT}
             ndots += 1
@@ -136,7 +136,7 @@ function Expr(x::EXPR)
         end 
         return ret
     elseif x.head == CALL
-        if x.args[1] isa OPERATOR{9, Tokens.MINUS} && length(x.args) ==2 && (x.args[2] isa LITERAL{Tokens.INTEGER} || x.args[2] isa LITERAL{Tokens.FLOAT})
+        if x.args[1] isa OPERATOR{9, Tokens.MINUS} && length(x.args) == 2 && (x.args[2] isa LITERAL{Tokens.INTEGER} || x.args[2] isa LITERAL{Tokens.FLOAT})
             return -Expr(x.args[2])
         end
         ret = Expr(Expr(x.head))
@@ -182,7 +182,7 @@ end
 
 fixranges(a::INSTANCE) = Expr(a)
 function fixranges(a::EXPR)
-    if a.head==CALL && a.args[1] isa OPERATOR{6, Tokens.IN} || a.args[1] isa OPERATOR{6, Tokens.ELEMENT_OF}
+    if a.head == CALL && a.args[1] isa OPERATOR{6, Tokens.IN} || a.args[1] isa OPERATOR{6, Tokens.ELEMENT_OF}
         ret = Expr(:(=))
         for x in a.args[2:end]
             push!(ret.args, Expr(x))
@@ -195,7 +195,7 @@ end
 
 
 UNICODE_OPS_REVERSE = Dict{Tokenize.Tokens.Kind,Symbol}()
-for (k,v) in Tokenize.Tokens.UNICODE_OPS
+for (k, v) in Tokenize.Tokens.UNICODE_OPS
     UNICODE_OPS_REVERSE[v] = Symbol(k)
 end
 

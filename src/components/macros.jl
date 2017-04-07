@@ -23,7 +23,7 @@ Parses a macro call. Expects to start on the `@`.
 function parse_macrocall(ps::ParseState)
     startbyte = ps.t.startbyte
     next(ps)
-    mname = IDENTIFIER(ps.nt.startbyte - ps.lt.startbyte , string("@", ps.t.val))
+    mname = IDENTIFIER(ps.nt.startbyte - ps.lt.startbyte, string("@", ps.t.val))
     # Handle cases with @ at start of dotted expressions
     if ps.nt.kind == Tokens.DOT
         while ps.nt.kind == Tokens.DOT
@@ -34,7 +34,7 @@ function parse_macrocall(ps::ParseState)
             end
             next(ps)
             nextarg = INSTANCE(ps)
-            mname = EXPR(op,[mname, QUOTENODE(nextarg)], mname.span + op.span + nextarg.span)
+            mname = EXPR(op, [mname, QUOTENODE(nextarg)], mname.span + op.span + nextarg.span)
         end
     end
     ret = EXPR(MACROCALL, [mname], 0)

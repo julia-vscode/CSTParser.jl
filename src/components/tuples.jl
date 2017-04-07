@@ -13,14 +13,14 @@ function parse_tuple(ps::ParseState, ret)
     format_comma(ps)
 
     if isassignment(ps.nt)
-        if ret isa EXPR && ret.head==TUPLE
+        if ret isa EXPR && ret.head == TUPLE
             push!(ret.punctuation, op)
             ret.span += op.span
         else
             ret =  EXPR(TUPLE, SyntaxNode[ret], ret.span + op.span, INSTANCE[op])
         end
     elseif closer(ps)
-        if ret isa EXPR && ret.head==TUPLE && (length(ret.punctuation)==0 || !(first(ret.punctuation) isa PUNCTUATION{Tokens.LPAREN}))
+        if ret isa EXPR && ret.head == TUPLE && (length(ret.punctuation) == 0 || !(first(ret.punctuation) isa PUNCTUATION{Tokens.LPAREN}))
             push!(ret.punctuation, op)
             ret.span += op.span
         else
@@ -28,7 +28,7 @@ function parse_tuple(ps::ParseState, ret)
         end
     else
         @catcherror ps startbyte nextarg = @closer ps tuple parse_expression(ps)
-        if ret isa EXPR && ret.head==TUPLE && (length(ret.punctuation)==0 || !(first(ret.punctuation) isa PUNCTUATION{Tokens.LPAREN}))
+        if ret isa EXPR && ret.head == TUPLE && (length(ret.punctuation) == 0 || !(first(ret.punctuation) isa PUNCTUATION{Tokens.LPAREN}))
             push!(ret.args, nextarg) 
             push!(ret.punctuation, op)
             ret.span += ps.nt.startbyte - startbyte
@@ -41,8 +41,8 @@ end
 
 function next(x::EXPR, s::Iterator{:tuple})
     if isodd(s.i)
-        return x.punctuation[div(s.i+1, 2)], +s
-    elseif s.i==s.n
+        return x.punctuation[div(s.i + 1, 2)], +s
+    elseif s.i == s.n
         return last(x.punctuation), +s
     else
         return x.args[div(s.i, 2)], +s
@@ -51,7 +51,7 @@ end
 
 function next(x::EXPR, s::Iterator{:tuplenoparen})
     if isodd(s.i)
-        return x.args[div(s.i+1, 2)], +s
+        return x.args[div(s.i + 1, 2)], +s
     else
         return x.punctuation[div(s.i, 2)], +s
     end

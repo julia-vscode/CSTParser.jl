@@ -2,12 +2,12 @@ type Iterator{T}
     i::Int
     n::Int
 end
-+{T}(s::Iterator{T}) = (s.i+=1;s)
++{T}(s::Iterator{T}) = (s.i += 1;s)
 
 start(x::INSTANCE) = 1
-next(x::INSTANCE, i) = x, i+1
+next(x::INSTANCE, i) = x, i + 1
 length(x::INSTANCE) = 1
-done(x::INSTANCE, i) = i>1
+done(x::INSTANCE, i) = i > 1
 
 
 """
@@ -19,8 +19,8 @@ punctuation.
 """
 function start(x::EXPR)
     if x.head == CALL
-        if (x.args[1] isa OPERATOR{9,Tokens.PLUS} || x.args[1] isa OPERATOR{11,Tokens.STAR}) && length(x.args)>3
-            return Iterator{:opchain}(1, max(2, length(x.args)*2-3))
+        if (x.args[1] isa OPERATOR{9,Tokens.PLUS} || x.args[1] isa OPERATOR{11,Tokens.STAR}) && length(x.args) > 3
+            return Iterator{:opchain}(1, max(2, length(x.args) * 2 - 3))
         elseif x.args[1] isa OPERATOR && isempty(x.punctuation)
             return Iterator{:op}(1, length(x.args) + length(x.punctuation))
         else
@@ -29,7 +29,7 @@ function start(x::EXPR)
     elseif x.head isa HEAD{Tokens.CCALL}
         return _start_ccall(x)
     elseif x.head isa OPERATOR{15, Tokens.PRIME}
-        return Iterator{:prime}(1,2)
+        return Iterator{:prime}(1, 2)
     elseif issyntaxcall(x.head) || x.head isa OPERATOR{20, Tokens.ANON_FUNC}
         if x.head isa OPERATOR{8,Tokens.COLON}
             return Iterator{:(:)}(1, length(x.args) == 2 ? 3 : 5)
@@ -66,7 +66,7 @@ function start(x::EXPR)
     elseif x.head == CURLY
         return _start_curly(x)
     elseif x.head isa IDENTIFIER && (x.head.val == :stdcall || x.head.val == :cdelc || x.head.val == :fastcall || x.head.val == :thiscall)
-        return Iterator{:stdcall}(1,1)
+        return Iterator{:stdcall}(1, 1)
     elseif x.head isa KEYWORD{Tokens.QUOTE} || x.head isa HEAD{Tokens.QUOTE}
         return _start_quote(x)
     elseif x.head == REF
@@ -107,7 +107,7 @@ function start(x::EXPR)
         elseif x.head isa KEYWORD{Tokens.DO}
             return _start_do(x)
         elseif x.head isa KEYWORD{Tokens.EXPORT}
-            return Iterator{:export}(1, length(x.args)*2)
+            return Iterator{:export}(1, length(x.args) * 2)
         elseif x.head isa KEYWORD{Tokens.FOR}
             return _start_for(x)
         elseif x.head isa KEYWORD{Tokens.FUNCTION}
@@ -150,7 +150,7 @@ endof(x::EXPR) = length(x)
 
 function Base.getindex(x::EXPR, i::Int)
     s = start(x)
-    @assert i<=s.n
+    @assert i <= s.n
     s.i = i
     next(x, s)[1]
 end
@@ -161,13 +161,13 @@ function Base.setindex!(x::EXPR, y, i::Int)
         x.head = y
         return
     else
-        for (j,a) in enumerate(x.args)
+        for (j, a) in enumerate(x.args)
             if a == x_old
                 x.args[j] = y
                 return
             end
         end
-        for (j,a) in enumerate(x.punctuation)
+        for (j, a) in enumerate(x.punctuation)
             if a == x_old
                 x.punctuation[j] = y
                 return
@@ -190,7 +190,7 @@ function _find(x::EXPR, n, path, ind, offsets)
         else
             push!(ind, i)
             push!(offsets, offset)
-            return _find(a, n-offset, path, ind, offsets)
+            return _find(a, n - offset, path, ind, offsets)
         end
     end
 end
@@ -201,7 +201,7 @@ function Base.find(x::EXPR, n::Int)
     path = []
     ind = Int[]
     offsets = Int[]
-    y = _find(x, n ,path, ind, offsets)
+    y = _find(x, n, path, ind, offsets)
     return y, path, ind, offsets
 end
 

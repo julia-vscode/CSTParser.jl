@@ -10,11 +10,11 @@ function parse_string(ps::ParseState, prefixed = false)
     if istrip
         lit = unindent_triple_string(ps)
     else
-        lit = LITERAL{ps.t.kind}(span, ps.t.val[2:end-1])
+        lit = LITERAL{ps.t.kind}(span, ps.t.val[2:end - 1])
     end
 
     # there are interpolations in the string
-    if prefixed!=false
+    if prefixed != false
         if prefixed isa INSTANCE && prefixed.val == :r
             lit.val = replace(lit.val, "\\\"", "\"")
         end
@@ -35,15 +35,15 @@ function parse_string(ps::ParseState, prefixed = false)
                 lc = c
             end
             str1 = String(take!(io2))
-            pos+=endof(str1)
+            pos += endof(str1)
 
-            if length(str1)>0 && last(str1) === '$' && (length(str1) == 1 || str1[end-1] != '\\')
-                lit2 = LITERAL{Tokens.STRING}(endof(str1) - 1, unescape_string(str1[1:end-1]))
+            if length(str1) > 0 && last(str1) === '$' && (length(str1) == 1 || str1[end - 1] != '\\')
+                lit2 = LITERAL{Tokens.STRING}(endof(str1) - 1, unescape_string(str1[1:end - 1]))
                 if !isempty(lit2.val)
                     push!(ret.args, lit2)
                 end
                 if peekchar(io) == '('
-                    ps1 = ParseState(lit.val[pos+1:end])
+                    ps1 = ParseState(lit.val[pos + 1:end])
                     @catcherror ps startbyte interp = @closer ps1 paren parse_expression(ps1)
                     push!(ret.args, interp)
                     skip(io, interp.span + 2 - length(ps1.ws.val))
@@ -73,20 +73,20 @@ end
 
 function unindent_triple_string(ps::ParseState)
     indent = -1
-    val = startswith(ps.t.val, "\"\"\"\n") ? ps.t.val[5:end-3] : ps.t.val[4:end-3]
+    val = startswith(ps.t.val, "\"\"\"\n") ? ps.t.val[5:end - 3] : ps.t.val[4:end - 3]
     io = IOBuffer(val)
     while !eof(io)
         c = readuntil(io, '\n')
         eof(io) && break
-        peekchar(io) == '\n' && skip(io,1)
+        peekchar(io) == '\n' && skip(io, 1)
         cnt = 0
         while iswhitespace(peekchar(io)) && peekchar(io) != '\n'
             read(io, Char)
-            cnt+=1
+            cnt += 1
         end
-        indent = indent==-1 ? cnt : min(indent, cnt)
+        indent = indent == -1 ? cnt : min(indent, cnt)
     end
-    if indent>-1
+    if indent > -1
         val = Base.unindent(val, indent)
     end
     lit = LITERAL{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte - ps.ndot, val)

@@ -144,8 +144,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
     # Linting
 
     # check for duplicates
-    let idargs = filter(a-> a isa IDENTIFIER, ret.args)
-        if length(idargs) != length(unique((a->a.val).(idargs)))
+    let idargs = filter(a -> a isa IDENTIFIER, ret.args)
+        if length(idargs) != length(unique((a -> a.val).(idargs)))
             push!(ps.diagnostics, Hint{Hints.DuplicateArgument}(startbyte:ps.nt.startbyte))
         end
     end

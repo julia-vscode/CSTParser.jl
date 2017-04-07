@@ -108,7 +108,7 @@ type File
     ast::SyntaxNode
     errors
 end
-File(path::String) = File([], [], path, EXPR(TOPLEVEL,[]), [])
+File(path::String) = File([], [], path, EXPR(TOPLEVEL, []), [])
 
 type Project
     path::String

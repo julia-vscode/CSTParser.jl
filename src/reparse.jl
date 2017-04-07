@@ -55,7 +55,7 @@ function reparse(f::File, newstr, startbyte, endbyte, text)
     # if on the last byte of a node we need to check the boundary
     first_tok, first_tree, first_ind = find(f.ast, startbyte)
     if !(first_tok isa IDENTIFIER)
-        first_tok, first_tree, first_ind = find(f.ast, startbyte+1)
+        first_tok, first_tree, first_ind = find(f.ast, startbyte + 1)
     end
     last_tok, last_tree, last_ind = find(f.ast, endbyte)
     if !(last_tok isa IDENTIFIER)

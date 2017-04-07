@@ -6,7 +6,7 @@ Comprehensions are parsed as SQUAREs containing a generator.
 """
 function parse_generator(ps::ParseState, ret)
     startbyte = ps.nt.startbyte
-    ret = EXPR(GENERATOR,[ret], ret.span - startbyte)
+    ret = EXPR(GENERATOR, [ret], ret.span - startbyte)
     next(ps)
     push!(ret.punctuation, INSTANCE(ps))
     @catcherror ps startbyte ranges = @closer ps paren @closer ps square parse_ranges(ps)
@@ -46,12 +46,12 @@ function parse_generator(ps::ParseState, ret)
 end
 
 function _start_generator(x::EXPR)
-    return Iterator{:generator}(1, length(x.args)*2 - 1)
+    return Iterator{:generator}(1, length(x.args) * 2 - 1)
 end
 
 function next(x::EXPR, s::Iterator{:generator})
     if isodd(s.i)
-        return x.args[div(s.i+1, 2)], +s
+        return x.args[div(s.i + 1, 2)], +s
     else
         return x.punctuation[div(s.i, 2)], +s
     end

@@ -64,7 +64,7 @@ function parse_struct(ps::ParseState, mutable)
 
     # Linting
     format_typename(ps, sig)
-    T = mutable==TRUE ? Tokens.TYPE : Tokens.IMMUTABLE
+    T = mutable == TRUE ? Tokens.TYPE : Tokens.IMMUTABLE
 
     for a in block.args
         if declares_function(a)

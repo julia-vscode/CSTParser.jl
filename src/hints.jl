@@ -44,7 +44,7 @@ end
 function apply(h::Hint{AddWhiteSpace}, str)
     if h.loc isa Tuple
         # loc = ind2chr(str, h.loc[1])
-        str = string(str[1:h.loc[1]], " "^h.loc[2], str[h.loc[1] + 1 : end])
+        str = string(str[1:h.loc[1]], " "^h.loc[2], str[h.loc[1] + 1:end])
     else
         # loc = ind2chr(str, h.loc)
         str = string(str[1:h.loc], " ", str[h.loc + 1:end])
@@ -72,10 +72,10 @@ function format_op(ps, prec)
     # prec = precedence(ps.t)
     if prec == 8 || prec == 13 || prec == 14 || prec == 15
         if ps.lws.kind != EmptyWS
-            push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1 : ps.lws.endbyte + 1))
+            push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1:ps.lws.endbyte + 1))
         end
         if ps.ws.kind != EmptyWS
-            push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.ws.startbyte + 1 : ps.ws.endbyte + 1))
+            push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.ws.startbyte + 1:ps.ws.endbyte + 1))
         end
     elseif ps.t.kind == Tokens.ISSUBTYPE || ps.t.kind == Tokens.DDDOT
     else
@@ -90,7 +90,7 @@ end
 
 function format_comma(ps)
     if ps.lws.kind != EmptyWS && !(islbracket(ps.lt))
-        push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1 : ps.lws.endbyte + 1))
+        push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1:ps.lws.endbyte + 1))
     end
     if ps.ws.kind == EmptyWS && !(isrbracket(ps.nt))
         push!(ps.diagnostics, Hint{Hints.AddWhiteSpace}(ps.t.startbyte:ps.nt.startbyte))
@@ -99,13 +99,13 @@ end
 
 function format_lbracket(ps)
     if ps.ws.kind != EmptyWS
-        push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.ws.startbyte + 1 : ps.ws.endbyte + 1))
+        push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.ws.startbyte + 1:ps.ws.endbyte + 1))
     end
 end
 
 function format_rbracket(ps)
     if ps.lws.kind != EmptyWS
-        push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1 : ps.lws.endbyte + 1))
+        push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1:ps.lws.endbyte + 1))
     end
 end
 
@@ -115,7 +115,7 @@ function format_indent(ps, start_col)
         if dindent > 0
             push!(ps.diagnostics, Hint{Hints.AddWhiteSpace}((ps.nt.startbyte + (0:dindent))))
         else
-            push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.nt.startbyte + (dindent + 1 : 0)))
+            push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.nt.startbyte + (dindent + 1:0)))
         end
     end
 end

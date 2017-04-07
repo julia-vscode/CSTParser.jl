@@ -44,11 +44,11 @@ function next(x::EXPR, s::Iterator{:let})
         return x.head, +s
     elseif s.i == s.n
         return x.punctuation[end], +s
-    elseif s.i == s.n-1
+    elseif s.i == s.n - 1
         return x.args[1], +s
     elseif iseven(s.i) 
-        return x.args[div(s.i, 2)+1], +s
+        return x.args[div(s.i, 2) + 1], +s
     elseif isodd(s.i) 
-        return x.punctuation[div(s.i-1, 2)], +s
+        return x.punctuation[div(s.i - 1, 2)], +s
     end
 end
