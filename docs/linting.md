@@ -10,11 +10,11 @@
 
 ## Declarationsc
 ### `function`
-[] repeated args.
-[] func/args name conflict.
+[x] repeated args.
+[x] func/args name conflict.
 [] ellipsis not on end arg.
-[] default variable positioning.
-[] parameters positioning.
+[x] default variable positioning.
+[x] parameters positioning.
 [] deadcode following `return`.
 [] unused argument.
 [] use of undeclared variable.

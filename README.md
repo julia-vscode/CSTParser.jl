@@ -44,12 +44,8 @@ The `K` parameterisation refers to the `kind` of the associated token as specifi
 - 
 
 ### Major current syntax omissions
-- String interpolation
 - Syntax changes for 0.6 (`where`, change of type definition keywords)
 - flattening of concurrent generators
-- Doc strings prefixing function, method or datatype definitions.
-- Failure to parse `Array{T,N>1}` constructors.
-- Find/fix iteration errors.
 
 ### Problems with `span`
 - STRING expressions
@@ -59,8 +55,6 @@ The `K` parameterisation refers to the `kind` of the associated token as specifi
 ### TODO
 - rethink approach to handling of semicolons.
 - cleanup @closer usage.
-- Fix storage structute of `Scope`.
-- Add rename function, datatype, variable capability.
 - Add incremental parsing.
 - Return code hints in response to parsing failures.
 - Second pass for linting.
