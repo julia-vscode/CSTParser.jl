@@ -264,7 +264,7 @@ ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
 Removes line info expressions. (i.e. Expr(:line, 1))
 """
 function remlineinfo!(x)
-    if isa(x,Expr)
+    if isa(x, Expr)
         id = find(map(x -> isa(x, Expr) && x.head == :line, x.args))
         deleteat!(x.args, id)
         for j in x.args
@@ -321,7 +321,7 @@ function check_file(f::String)
             break
         end
         cnt += 1
-        x,ps = try
+        x, ps = try
             Parser.parse(ps)
         end
         if x isa LITERAL{Tokens.TRIPLE_STRING}
@@ -349,7 +349,7 @@ function check_folder(dir, N = 0, errs = [], failedfiles = [])
     for f in readdir(dir)
         if endswith(f, ".jl")
             try
-                failed, cnt = check_file(joinpath(dir,f))
+                failed, cnt = check_file(joinpath(dir, f))
                 N += cnt
                 append!(errs, failed)
                 if length(failed) != 0
@@ -372,7 +372,7 @@ end
 Recursively checks whether two Base.Expr are the same. Returns unequal sub-
 expressions.
 """
-compare(x,y) = x == y ? true : (x,y)
+compare(x, y) = x == y ? true : (x, y)
 
 function compare(x::Expr, y::Expr)
     if x == y
@@ -416,28 +416,6 @@ function span(x, neq = [])
     neq
 end
 
-function span1(x, neq = [])
-    if x isa EXPR && !no_iter(x)
-        cnt = 0
-        for a in x
-            try
-                span(a, neq)
-            catch
-                push!(neq, a)
-            end
-        end
-        if x isa EXPR
-            if x.span != x.head.span + (isempty(x.args) ? 0 :sum(a.span for a in x.args)) +  + (isempty(x.punctuation) ? 0 :sum(a.span for a in x.punctuation))
-                push!(neq, x)
-            end
-        else
-            if x.span != (length(x) == 0 ? 0 : sum(a.span for a in x))
-                push!(neq, x)
-            end
-        end
-    end
-    neq
-end
 
 """
     check_reformat()

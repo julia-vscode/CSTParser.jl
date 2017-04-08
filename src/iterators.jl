@@ -133,7 +133,16 @@ function start(x::EXPR)
         elseif x.head isa KEYWORD{Tokens.TRY}
             return _start_try(x)
         elseif x.head isa KEYWORD{Tokens.TYPE}
+            if length(x.punctuation) == 2
+                if x.punctuation[1] isa KEYWORD{Tokens.ABSTRACT}
+                    return Iterator{:abstracttype}(1, 4)
+                elseif x.punctuation[1] isa KEYWORD{Tokens.PRIMITIVE}
+                    return Iterator{:primitivetype}(1, 5)
+                end
+            end
             return Iterator{:type}(1, 4)
+        elseif x.head isa KEYWORD{Tokens.STRUCT}
+            return Iterator{:struct}(1, length(x.args) + length(x.punctuation))
         elseif x.head isa KEYWORD{Tokens.TYPEALIAS}
             return Iterator{:typealias}(1, 3)
         elseif x.head isa KEYWORD{Tokens.WHILE}

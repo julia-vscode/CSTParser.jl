@@ -59,13 +59,24 @@ function Expr(x::EXPR)
             push!(ret.args, fixranges(a))
         end
         return ret
-
+    elseif x.head isa KEYWORD{Tokens.STRUCT}
+        ret = Expr(:type, Expr(x.args[1]))
+        for a in x.args[2:end]
+            push!(ret.args, Expr(a))
+        end
+        return ret
     elseif x.head isa KEYWORD{Tokens.IMMUTABLE}
         ret = Expr(:type, false)
         for a in x.args[2:end]
             push!(ret.args, Expr(a))
         end
         return ret
+    elseif x.head isa KEYWORD{Tokens.TYPE} && length(x.punctuation) == 2
+        if x.punctuation[1] isa KEYWORD{Tokens.ABSTRACT}
+            return Expr(:abstract, Expr(x.args[1]))
+        elseif x.punctuation[1] isa KEYWORD{Tokens.PRIMITIVE}
+            return Expr(:bitstype, Expr(x.args[1]), Expr(x.args[2]))
+        end
     elseif x.head isa HEAD{Tokens.QUOTE} && 
            x.args[1] isa EXPR && 
            x.args[1].head isa HEAD{InvisibleBrackets} && 

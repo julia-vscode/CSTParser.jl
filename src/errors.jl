@@ -8,4 +8,6 @@ UnexpectedRBrace,
 UnexpectedRSquare,
 UnexpectedEndmarker,
 UnexpectedOperator,
-UnexpectedEnd)
+UnexpectedEnd,
+UnexpectedComma,
+MissingEnd)

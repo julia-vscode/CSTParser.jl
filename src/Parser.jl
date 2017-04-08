@@ -73,9 +73,15 @@ function parse_expression(ps::ParseState)
         end
     elseif ps.t.kind == Tokens.AT_SIGN
         @catcherror ps startbyte ret = parse_macrocall(ps)
+################################################################################
+# Everything below here is an error
+################################################################################
     elseif ps.t.kind == Tokens.ENDMARKER
         ps.errored = true
         return ERROR{UnexpectedEndmarker}(0, INSTANCE(ps))
+    elseif ps.t.kind == Tokens.COMMA
+        ps.errored = true
+        return ERROR{UnexpectedComma}(0, INSTANCE(ps))
     elseif ps.t.kind == Tokens.RPAREN
         ps.errored = true
         return ERROR{UnexpectedRParen}(0, INSTANCE(ps))
