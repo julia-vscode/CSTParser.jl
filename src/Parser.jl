@@ -85,6 +85,9 @@ function parse_expression(ps::ParseState)
     elseif ps.t.kind == Tokens.RPAREN
         ps.errored = true
         return ERROR{UnexpectedRParen}(0, INSTANCE(ps))
+    elseif ps.t.kind == Tokens.LBRACE
+        ps.errored = true
+        return ERROR{UnexpectedLBrace}(0, INSTANCE(ps))
     elseif ps.t.kind == Tokens.RBRACE
         ps.errored = true
         return ERROR{UnexpectedRBrace}(0, INSTANCE(ps))
