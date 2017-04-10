@@ -67,6 +67,30 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.END}})
     return ret
 end
 
+function parse_kw(ps::ParseState, ::Type{Val{Tokens.ELSE}})
+    ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :else)
+    ps.errored = true
+    return ERROR{UnexpectedElse}(ret.span, ret)
+end
+
+function parse_kw(ps::ParseState, ::Type{Val{Tokens.ELSEIF}})
+    ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :elseif)
+    ps.errored = true
+    return ERROR{UnexpectedElseIf}(ret.span, ret)
+end
+
+function parse_kw(ps::ParseState, ::Type{Val{Tokens.CATCH}})
+    ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :catch)
+    ps.errored = true
+    return ERROR{UnexpectedCatch}(ret.span, ret)
+end
+
+function parse_kw(ps::ParseState, ::Type{Val{Tokens.FINALLY}})
+    ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :finally)
+    ps.errored = true
+    return ERROR{UnexpectedFinally}(ret.span, ret)
+end
+
 function next(x::EXPR, s::Iterator{:const})
     if s.i == 1
         return x.head, +s
