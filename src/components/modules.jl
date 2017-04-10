@@ -79,14 +79,16 @@ function parse_imports(ps::ParseState)
 
     arg, puncs = parse_dot_mod(ps)
 
-    if ps.nt.kind!=Tokens.COMMA && ps.nt.kind!=Tokens.COLON
-        return EXPR(kw, arg, ps.nt.startbyte - startbyte, puncs)
+    if ps.nt.kind != Tokens.COMMA && ps.nt.kind != Tokens.COLON
+        ret = EXPR(kw, arg, ps.nt.startbyte - startbyte, puncs)
+        ret.defs = [Variable(Expr(ret), :IMPORTS, ret)]
+        return ret
     end
 
     if ps.nt.kind == Tokens.COLON
         ret = EXPR(TOPLEVEL,[], 0, [kw])
         t = 0
-        for t = 1:length(puncs)-length(arg)+1
+        for t = 1:length(puncs) - length(arg) + 1
             push!(ret.punctuation, puncs[t])
         end
 
@@ -99,13 +101,14 @@ function parse_imports(ps::ParseState)
         
         M = arg
         @catcherror ps startbyte arg, puncs = parse_dot_mod(ps)
-        push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg)-1, puncs))
+        push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg) - 1, puncs))
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
             @catcherror ps startbyte arg, puncs = parse_dot_mod(ps)
-            push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg)-1, puncs))
+            push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg) - 1, puncs))
         end
+        ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
     else
         ret = EXPR(TOPLEVEL,[], 0, [kw])
         push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg)-1, puncs))
@@ -113,8 +116,9 @@ function parse_imports(ps::ParseState)
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
             @catcherror ps startbyte arg, puncs = parse_dot_mod(ps)
-            push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg)-1, puncs))
+            push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg) - 1, puncs))
         end
+        ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
     end
     
     # Linting

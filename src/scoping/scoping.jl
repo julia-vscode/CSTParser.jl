@@ -112,7 +112,18 @@ function _get_includes(x::EXPR, files = [])
 end
 
 function _find_scope(x::EXPR, n, path, ind, offsets, scope)
-    if x.head == STRING || x.head isa KEYWORD{Tokens.USING} || x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL} || (x.head == TOPLEVEL && x.args[1] isa EXPR && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING}))
+    # No scoping/iteration for STRING 
+    if x.head == STRING
+        return x
+    elseif x.head isa KEYWORD{Tokens.USING} || x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL}
+        for d in x.defs
+            unshift!(scope, (d, sum(offsets) + (1:x.span)))
+        end
+        return x
+    elseif x.head == TOPLEVEL && all(x.args[i] isa EXPR && (x.args[i].head isa KEYWORD{Tokens.IMPORT} || x.args[i].head isa KEYWORD{Tokens.IMPORTALL} || x.args[i].head isa KEYWORD{Tokens.USING}) for i = 1:length(x.args))
+        for d in x.defs
+            unshift!(scope, (d, sum(offsets) + (1:x.span)))
+        end
         return x
     end
     offset = 0
@@ -126,7 +137,6 @@ function _find_scope(x::EXPR, n, path, ind, offsets, scope)
             offset += a.span
         else
             if a isa EXPR
-                # append!(scope, a.defs)
                 for d in a.defs
                     push!(scope, (d, sum(offsets) + offset + (1:a.span)))
                 end
