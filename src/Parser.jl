@@ -165,8 +165,12 @@ function parse_compound(ps::ParseState, ret)
         end
     elseif ps.nt.kind == Tokens.COMMA
         @catcherror ps startbyte ret = parse_tuple(ps, ret)
-    elseif isunaryop(ret) # && !isassignment(ps.nt)
+    elseif isunaryop(ret) && ps.nt.kind != Tokens.EQ # && !isassignment(ps.nt)
+        # if 
+
+        # else
         @catcherror ps startbyte ret = parse_unary(ps, ret)
+        # end
     elseif isoperator(ps.nt)
         next(ps)
         op = INSTANCE(ps)

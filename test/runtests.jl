@@ -54,6 +54,9 @@ if VERSION.major <=6 && VERSION.prerelease[1] == "dev" && VERSION.prerelease[2]<
         catch
             push!(wontparse, f)
         end
+        if ps.errored
+            push!(wontparse, f)
+        end
     end
     println("These files failed to parse: ")
     for f in wontparse
