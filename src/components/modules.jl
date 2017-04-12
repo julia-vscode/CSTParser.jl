@@ -34,8 +34,22 @@ function parse_dot_mod(ps::ParseState)
     while ps.nt.kind==Tokens.DOT || ps.nt.kind==Tokens.DDOT || ps.nt.kind==Tokens.DDDOT
         next(ps)
         d = INSTANCE(ps)
-        for i = 1:d.span
+        if d isa OPERATOR{15,Tokens.DOT}
             push!(puncs, OPERATOR{15,Tokens.DOT,false}(1))
+        elseif d isa OPERATOR{8,Tokens.DDOT}
+            push!(puncs, OPERATOR{15,Tokens.DOT,false}(1))
+            push!(puncs, OPERATOR{15,Tokens.DOT,false}(1))
+        elseif d isa OPERATOR{0,Tokens.DDDOT}
+            push!(puncs, OPERATOR{15,Tokens.DOT,false}(1))
+            push!(puncs, OPERATOR{15,Tokens.DOT,false}(1))
+            push!(puncs, OPERATOR{15,Tokens.DOT,false}(1))
+        end
+    end
+
+    # import/export ..
+    if ps.nt.kind == Tokens.COMMA || ps.ws.kind == NewLineWS || ps.nt.kind == Tokens.ENDMARKER
+        if length(puncs) == 2
+            return [INSTANCE(ps)], []
         end
     end
 
