@@ -1,6 +1,6 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     startbyte = ps.t.startbyte
-    start_col = ps.t.startpos[2]
+    start_col = ps.t.startpos[2] + 4
 
     # Parsing
     kw = INSTANCE(ps)
@@ -90,7 +90,7 @@ function parse_call(ps::ParseState, ret)
     if ret.args[1] isa OPERATOR{9, Tokens.EX_OR}
         ret.head = shift!(ret.args)
     end
-    if length(ret.args)>0 && ismacro(ret.args[1])
+    if length(ret.args) > 0 && ismacro(ret.args[1])
         ret.head = MACROCALL
     end
     if ret.head isa HEAD{Tokens.CCALL} && length(ret.args) > 1 && ret.args[2] isa IDENTIFIER && (ret.args[2].val == :stdcall || ret.args[2].val == :fastcall || ret.args[2].val == :cdecl || ret.args[2].val == :thiscall)
@@ -98,7 +98,7 @@ function parse_call(ps::ParseState, ret)
         push!(ret.args, EXPR(arg, [], arg.span))
     end
     # Linting
-    if (ret.args[1] isa IDENTIFIER && ret.args[1].val==:Dict) || (ret.args[1] isa EXPR && ret.args[1].head == CURLY && ret.args[1].args[1] isa IDENTIFIER && ret.args[1].args[1].val == :Dict)
+    if (ret.args[1] isa IDENTIFIER && ret.args[1].val == :Dict) || (ret.args[1] isa EXPR && ret.args[1].head == CURLY && ret.args[1].args[1] isa IDENTIFIER && ret.args[1].args[1].val == :Dict)
         _lint_dict(ps, ret)
     end
     # fname = _get_fname(ret)

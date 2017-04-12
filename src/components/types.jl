@@ -108,7 +108,7 @@ end
 
 function parse_struct(ps::ParseState, mutable)
     startbyte = ps.t.startbyte
-    start_col = ps.t.startpos[2]
+    start_col = ps.t.startpos[2] + 4
 
     # Parsing
     kw = INSTANCE(ps)

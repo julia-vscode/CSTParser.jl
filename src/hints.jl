@@ -110,8 +110,8 @@ function format_rbracket(ps)
 end
 
 function format_indent(ps, start_col)
-    if (start_col > 0 && ps.nt.startpos[2] != start_col + 4)
-        dindent = start_col + 4 - ps.nt.startpos[2]
+    if (start_col > 0 && ps.nt.startpos[2] != start_col)
+        dindent = start_col - ps.nt.startpos[2]
         if dindent > 0
             push!(ps.diagnostics, Hint{Hints.AddWhiteSpace}((ps.nt.startbyte + (0:dindent))))
         else

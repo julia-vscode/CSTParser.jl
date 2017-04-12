@@ -1,6 +1,6 @@
 function parse_do(ps::ParseState, ret)
     startbyte = ps.nt.startbyte
-    start_col = ps.nt.startpos[2] - ret.span
+    start_col = ps.nt.startpos[2] - ret.span + 4
 
     # Parsing
     next(ps)

@@ -1,6 +1,6 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
     startbyte = ps.t.startbyte
-    start_col = ps.t.startpos[2]
+    start_col = ps.t.startpos[2] + 4
 
     # Parsing
     kw = INSTANCE(ps)
@@ -49,7 +49,7 @@ end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
     startbyte = ps.t.startbyte
-    start_col = ps.t.startpos[2]
+    start_col = ps.t.startpos[2] + 4
 
     # Parsing
     kw = INSTANCE(ps)
