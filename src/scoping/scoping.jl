@@ -1,3 +1,6 @@
+is_func_call(x) = false
+is_func_call(x::EXPR) = x.head == CALL
+
 """
     get_id(x)
 
@@ -89,8 +92,7 @@ function get_symbols(x::EXPR, offset = 0, symbols = [])
     return symbols
 end
 
-is_func_call(x) = false
-is_func_call(x::EXPR) = x.head == CALL
+
 
 function _get_includes(x, files = []) end
 
@@ -115,12 +117,7 @@ function _find_scope(x::EXPR, n, path, ind, offsets, scope)
     # No scoping/iteration for STRING 
     if x.head == STRING
         return x
-    elseif x.head isa KEYWORD{Tokens.USING} || x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL}
-        for d in x.defs
-            unshift!(scope, (d, sum(offsets) + (1:x.span)))
-        end
-        return x
-    elseif x.head == TOPLEVEL && all(x.args[i] isa EXPR && (x.args[i].head isa KEYWORD{Tokens.IMPORT} || x.args[i].head isa KEYWORD{Tokens.IMPORTALL} || x.args[i].head isa KEYWORD{Tokens.USING}) for i = 1:length(x.args))
+    elseif x.head isa KEYWORD{Tokens.USING} || x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL} || (x.head == TOPLEVEL && all(x.args[i] isa EXPR && (x.args[i].head isa KEYWORD{Tokens.IMPORT} || x.args[i].head isa KEYWORD{Tokens.IMPORTALL} || x.args[i].head isa KEYWORD{Tokens.USING}) for i = 1:length(x.args)))
         for d in x.defs
             unshift!(scope, (d, sum(offsets) + (1:x.span)))
         end
