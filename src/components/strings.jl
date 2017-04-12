@@ -37,7 +37,7 @@ function parse_string(ps::ParseState, prefixed = false)
             str1 = String(take!(io2))
             pos += endof(str1)
 
-            if length(str1) > 0 && last(str1) === '$' && (length(str1) == 1 || str1[end - 1] != '\\')
+            if length(str1) > 0 && last(str1) === '$' && (length(str1) == 1 || str1[chr2ind(str1, length(str1)-1)] != '\\')
                 lit2 = LITERAL{Tokens.STRING}(endof(str1) - 1, unescape_string(str1[1:end - 1]))
                 if !isempty(lit2.val)
                     push!(ret.args, lit2)
