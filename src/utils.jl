@@ -21,6 +21,7 @@ function closer(ps::ParseState)
     (ps.closer.ifelse && ps.nt.kind == Tokens.ELSEIF || ps.nt.kind == Tokens.ELSE) ||
     (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt) <= 0 || ps.nt.kind == Tokens.COLON)) ||
     (ps.closer.trycatch && (ps.nt.kind == Tokens.CATCH || ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END)) ||
+    (ps.closer.range && ps.nt.kind == Tokens.FOR) ||
     (ps.closer.ws && !isempty(ps.ws) && !(
         (ps.nt.kind == Tokens.COMMA || 
         ps.t.kind == Tokens.COMMA || 
@@ -92,7 +93,7 @@ macro default(ps, body)
         local tmp5 = $(esc(ps)).closer.comma
         # local tmp6 = $(esc(ps)).closer.paren
         # local tmp7 = $(esc(ps)).closer.brace
-        # local tmp8 = $(esc(ps)).closer.square
+        local tmp8 = $(esc(ps)).closer.range
         local tmp9 = $(esc(ps)).closer.block
         local tmp10 = $(esc(ps)).closer.ifelse
         local tmp11 = $(esc(ps)).closer.ifop
@@ -107,7 +108,7 @@ macro default(ps, body)
         # $(esc(ps)).closer.paren = false
         # $(esc(ps)).closer.brace = false
         # $(esc(ps)).closer.square = false
-        # $(esc(ps)).closer.block = false
+        $(esc(ps)).closer.range = false
         $(esc(ps)).closer.ifelse = false
         $(esc(ps)).closer.ifop = false
         $(esc(ps)).closer.trycatch = false
@@ -123,7 +124,7 @@ macro default(ps, body)
         $(esc(ps)).closer.comma = tmp5
         # $(esc(ps)).closer.paren = tmp6
         # $(esc(ps)).closer.brace = tmp7
-        # $(esc(ps)).closer.square = tmp8
+        $(esc(ps)).closer.range = tmp8
         $(esc(ps)).closer.block = tmp9
         $(esc(ps)).closer.ifelse = tmp10
         $(esc(ps)).closer.ifop = tmp11

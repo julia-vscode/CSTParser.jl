@@ -27,12 +27,13 @@ type Closer
     block::Bool
     ifelse::Bool
     ifop::Bool
+    range::Bool
     trycatch::Bool
     ws::Bool
     precedence::Int
     stop::Int
 end
-Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int))
+Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int))
 
 """
     ParseState

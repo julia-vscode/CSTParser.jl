@@ -416,8 +416,18 @@ end
     @test "f(a for a in A if cond)" |> test_expr
     @test "M.r\"str\" " |> test_expr
     @test "! = f" |> test_expr
+    @test """
+            begin
+                for i in I for j in J
+                    if cond
+                        a
+                    end
+                end end
+            end""" |> test_expr
 end
 
 @testset "Broken things" begin
     @test_broken "(a,b = c,d)" |> test_expr
+    @test_broken "[a for a in A for b in B]" |> test_expr
+    
 end

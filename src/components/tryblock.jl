@@ -1,4 +1,5 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
+    startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2] + 4
 
     # Parsing
