@@ -26,14 +26,14 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
     ret.span += ps.nt.startbyte
 
     # Linting
-    let span = startbyte + ret.head.span
-        for (i, a) in enumerate(args)
-            if !(a isa EXPR && a.head isa OPERATOR{1})
-                push!(ps.diagnostics, Hint{Hints.LetNonAssignment}(span:a.head))
-            end
-            span += a.span + ret.punctuation[i].span
-        end
-    end
+    # let span = startbyte + ret.head.span
+    #     for (i, a) in enumerate(args)
+    #         if !(a isa EXPR && a.head isa OPERATOR{1})
+    #             push!(ps.diagnostics, Hint{Hints.LetNonAssignment}(span:a.head))
+    #         end
+    #         span += a.span + ret.punctuation[i].span
+    #     end
+    # end
     return ret
 end
 

@@ -429,5 +429,8 @@ end
 @testset "Broken things" begin
     @test_broken "(a,b = c,d)" |> test_expr
     @test_broken "[a for a in A for b in B]" |> test_expr
+    @test_broken """@testset a for t in T
+        t
+    end""" |> test_expr
     
 end
