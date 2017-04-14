@@ -25,7 +25,7 @@ function parse_macrocall(ps::ParseState)
     next(ps)
     mname = IDENTIFIER(ps.nt.startbyte - ps.lt.startbyte, string("@", ps.t.val))
     # Handle cases with @ at start of dotted expressions
-    if ps.nt.kind == Tokens.DOT
+    if ps.nt.kind == Tokens.DOT && isempty(ps.ws)
         while ps.nt.kind == Tokens.DOT
             next(ps)
             op = INSTANCE(ps)

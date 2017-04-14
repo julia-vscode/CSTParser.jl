@@ -432,5 +432,6 @@ end
     @test_broken """@testset a for t in T
         t
     end""" |> test_expr
+    @test_broken "@assert .!(isna(res[2]))" |> test_expr
     
 end

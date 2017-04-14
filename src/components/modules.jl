@@ -60,8 +60,9 @@ function parse_dot_mod(ps::ParseState)
             next(ps)
             next(ps)
             a = INSTANCE(ps)
-            a.val = Symbol('@', a.val)
-            a.span +=1
+            # a.val = Symbol('@', a.val)
+            # a.span +=1
+            a = IDENTIFIER(a.span + 1, Symbol('@', Expr(a)))
             push!(args, a)
         elseif ps.nt.kind == Tokens.LPAREN
             next(ps)
