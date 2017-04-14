@@ -433,5 +433,6 @@ end
         t
     end""" |> test_expr
     @test_broken "@assert .!(isna(res[2]))" |> test_expr
-    
+    @test_broken "@test_throws ArgumentError isequal(m2, m3)``" |> test_expr
+    @test_broken "-f.(a.b + c)" |> test_expr
 end

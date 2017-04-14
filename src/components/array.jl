@@ -18,7 +18,7 @@ function parse_array(ps::ParseState)
 
         return EXPR(VECT, [], ps.nt.startbyte - startbyte, puncs)
     else
-        @catcherror ps startbyte first_arg = @default ps @closer ps square @closer ps ws parse_expression(ps)
+        @catcherror ps startbyte first_arg = @default ps @nocloser ps newline @closer ps square @closer ps ws parse_expression(ps)
 
         # Handle macros
         if first_arg isa LITERAL{Tokens.MACRO}
@@ -37,6 +37,8 @@ function parse_array(ps::ParseState)
             end
         end
         
+        
+
         if ps.nt.kind == Tokens.RSQUARE
             if first_arg isa EXPR && first_arg.head == TUPLE
                 first_arg.head = VECT

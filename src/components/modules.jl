@@ -18,7 +18,6 @@ function parse_module(ps::ParseState)
         # @catcherror ps startbyte a = @closer ps block parse_doc(ps, a)
         @catcherror ps startbyte a = @closer ps block parse_doc(ps)
         push!(block.args, a)
-        push!(block.args, a)
     end
 
     # Construction
