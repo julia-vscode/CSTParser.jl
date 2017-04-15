@@ -59,6 +59,13 @@ function Expr(x::EXPR)
             push!(ret.args, fixranges(a))
         end
         return ret
+    elseif x.head == FLATTEN
+        x0 = deepcopy(x)
+        x0 = Expr(x0.args[1])
+        r2 = x0.args[1].args[2]
+        x0.args[1].args[2] = x0.args[2]
+        x0.args[2] = r2
+        return Expr(:flatten, x0)
     elseif x.head isa KEYWORD{Tokens.STRUCT}
         ret = Expr(:type, Expr(x.args[1]))
         for a in x.args[2:end]
@@ -203,7 +210,7 @@ end
 
 fixranges(a::INSTANCE) = Expr(a)
 function fixranges(a::EXPR)
-    if a.head == CALL && a.args[1] isa OPERATOR{6, Tokens.IN} || a.args[1] isa OPERATOR{6, Tokens.ELEMENT_OF}
+    if a.head isa HEAD{Tokens.CALL} && a.args[1] isa OPERATOR{6, Tokens.IN} || a.args[1] isa OPERATOR{6, Tokens.ELEMENT_OF}
         ret = Expr(:(=))
         for x in a.args[2:end]
             push!(ret.args, Expr(x))
