@@ -89,7 +89,11 @@ function parse_call(ps::ParseState, ret)
     # fix arbitrary $ case
     if ret.args[1] isa OPERATOR{9, Tokens.EX_OR}
         ret.head = shift!(ret.args)
+    else#if ret.args[1]
+
     end
+
+    
     if length(ret.args) > 0 && ismacro(ret.args[1])
         ret.head = MACROCALL
     end
@@ -97,6 +101,8 @@ function parse_call(ps::ParseState, ret)
         arg = splice!(ret.args, 2)
         push!(ret.args, EXPR(arg, [], arg.span))
     end
+
+
     # Linting
     if (ret.args[1] isa IDENTIFIER && ret.args[1].val == :Dict) || (ret.args[1] isa EXPR && ret.args[1].head == CURLY && ret.args[1].args[1] isa IDENTIFIER && ret.args[1].args[1].val == :Dict)
         _lint_dict(ps, ret)

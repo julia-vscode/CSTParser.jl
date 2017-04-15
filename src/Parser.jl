@@ -68,7 +68,7 @@ function parse_expression(ps::ParseState)
         @catcherror ps startbyte ret = parse_array(ps)
     elseif isinstance(ps.t) || isoperator(ps.t)
         ret = INSTANCE(ps)
-        if ret isa OPERATOR{8,Tokens.COLON} && ps.nt.kind != Tokens.COMMA
+        if (ret isa OPERATOR{8,Tokens.COLON}) && ps.nt.kind != Tokens.COMMA
             @catcherror ps startbyte ret = parse_unary(ps, ret)
         end
     elseif ps.t.kind == Tokens.AT_SIGN
@@ -138,7 +138,7 @@ function parse_compound(ps::ParseState, ret)
         #  --> implicit multiplication
         op = OPERATOR{11,Tokens.STAR,false}(0)
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind == Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR})# && !isunaryop(ret)
+    elseif ps.nt.kind == Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR} || ret isa OPERATOR{11,Tokens.AND} || ret isa OPERATOR{14,Tokens.DECLARATION})# && !isunaryop(ret)
         if isempty(ps.ws) 
             @catcherror ps startbyte ret = @default ps @closer ps paren parse_call(ps, ret)
         else

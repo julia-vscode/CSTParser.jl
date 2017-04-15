@@ -58,6 +58,22 @@ test_expr(str) = Expr(Parser.parse(str)) == remlineinfo!(Base.parse(str))
         @test "∛" |> test_expr
         @test "∜" |> test_expr
     end
+
+    @testset "unary op calls" begin
+        @test "+(a,b)" |> test_expr
+        @test "-(a,b)" |> test_expr
+        @test "!(a,b)" |> test_expr
+        @test "¬(a,b)" |> test_expr
+        @test "~(a,b)" |> test_expr
+        @test "<:(a,b)" |> test_expr
+        @test "√(a,b)" |> test_expr
+        @test "\$(a,b)" |> test_expr
+        @test ":(a,b)" |> test_expr
+        @test "&a" |> test_expr
+        @test "&(a,b)" |> test_expr
+        @test "::a" |> test_expr
+        @test "::(a,b)" |> test_expr
+    end
 end
 
 
