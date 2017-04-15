@@ -391,6 +391,8 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
         else
             @catcherror ps startbyte nextarg = @precedence ps 15 - LtoR(15) parse_unary(ps, op2)
         end
+    elseif ps.nt.kind == Tokens.EX_OR && ps.nnt.kind == Tokens.LPAREN
+        @catcherror ps startbyte nextarg = parse_expression(ps)
     else
         @catcherror ps startbyte nextarg = @precedence ps 15 - LtoR(15) parse_expression(ps)
     end
