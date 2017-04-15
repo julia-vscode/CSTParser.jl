@@ -445,6 +445,7 @@ end
     @test "a.\$(b)" |> test_expr
     @test "a.\$f()" |> test_expr
     @test "[a for a in A for b in B]" |> test_expr
+    @test "[a=>1, b=>2]" |> test_expr
 end
 
 @testset "Broken things" begin

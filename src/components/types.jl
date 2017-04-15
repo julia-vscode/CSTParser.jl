@@ -17,7 +17,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
     else
         # Parsing
         kw = INSTANCE(ps)
-        @catcherror ps startbyte sig = parse_expression(ps)
+        @catcherror ps startbyte sig = @default ps parse_expression(ps)
 
         # Linting
         format_typename(ps, sig)

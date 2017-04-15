@@ -55,7 +55,7 @@ function start(x::EXPR)
         return Iterator{:flatten}(1,1)
     elseif x.head == FILTER
         return _start_filter(x)
-    elseif x.head == COMPREHENSION
+    elseif x.head == COMPREHENSION || x.head == DICT_COMPREHENSION
         return _start_comprehension(x)
     elseif x.head == PARAMETERS
         return _start_parameters(x)

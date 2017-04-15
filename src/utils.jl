@@ -460,7 +460,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")))
                         println()
                     elseif !(x0 == x1)
                         cumfail = 0
-                        if length(x0.args) == length(x1.args) && all((x1.args[i] isa Expr && x1.args[i].head == :toplevel && x0.args[i] == x1.args[i].args[1]) for i = length(x0.args))
+                        if length(x0.args) == length(x1.args) && all((x0.args[i] == x1.args[i] || (x1.args[i] isa Expr && x1.args[i].head == :toplevel && x0.args[i] == x1.args[i].args[1])) for i = length(x0.args))
                         else
                             neq += 1
                             print_with_color(:green, file)

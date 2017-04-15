@@ -350,6 +350,14 @@ function parse_doc(ps::ParseState)
         (ps.nt.kind == Tokens.ENDMARKER) && return doc
         ret = parse_expression(ps)
         ret = EXPR(MACROCALL, [GlobalRefDOC, doc, ret], doc.span + ret.span)
+    elseif ps.nt.kind == Tokens.IDENTIFIER && ps.nt.val == "doc" && (ps.nnt.kind == Tokens.STRING || ps.nnt.kind == Tokens.TRIPLE_STRING)
+        next(ps)
+        doc = INSTANCE(ps)
+        next(ps)
+        @catcherror ps startbyte arg = parse_string(ps, doc)
+        doc = EXPR(x_STR, [doc, arg], doc.span + arg.span)
+        ret = parse_expression(ps)
+        ret = EXPR(MACROCALL, [GlobalRefDOC, doc, ret], doc.span + ret.span)
     else
         ret = parse_expression(ps)
     end

@@ -18,7 +18,7 @@ function parse_array(ps::ParseState)
 
         return EXPR(VECT, [], ps.nt.startbyte - startbyte, puncs)
     else
-        @catcherror ps startbyte first_arg = @default ps @nocloser ps newline @closer ps square @closer ps ws parse_expression(ps)
+        @catcherror ps startbyte first_arg = @default ps @nocloser ps newline @closer ps square @closer ps ws @closer ps comma parse_expression(ps)
 
         # Handle macros
         if first_arg isa LITERAL{Tokens.MACRO}
@@ -75,6 +75,28 @@ function parse_array(ps::ParseState)
 
                 ret = EXPR(VECT, [first_arg], ps.nt.startbyte - startbyte, puncs)
             end
+        elseif ps.nt.kind == Tokens.COMMA
+            ret = EXPR(VECT, [first_arg], -startbyte, puncs)
+            next(ps)
+            push!(ret.punctuation, INSTANCE(ps))
+            @default ps @closer ps square @closer ps comma while ps.nt.kind != Tokens.RSQUARE
+                a = parse_expression(ps)
+                push!(ret.args, a)
+                if ps.nt.kind == Tokens.COMMA
+                    next(ps)
+                    push!(ret.punctuation, INSTANCE(ps))
+                    format_comma(ps)
+                elseif ps.nt.kind != Tokens.RSQUARE
+                    error("unexpected")
+                end
+            end
+
+            next(ps)
+            push!(ret.punctuation, INSTANCE(ps))
+            format_rbracket(ps)
+
+            ret.span = ps.nt.startbyte - startbyte
+            return ret
         elseif ps.ws.kind == SemiColonWS
             ret = EXPR(VCAT,[first_arg], -startbyte, puncs)
             @default ps @closer ps square @closer ps ws @closer ps comma while ps.ws.kind == SemiColonWS
