@@ -51,6 +51,8 @@ function start(x::EXPR)
         return Iterator{:invisiblebrackets}(1, 3)
     elseif x.head == GENERATOR
         return _start_generator(x)
+    elseif x.head == FLATTEN
+        return Iterator{:flatten}(1,1)
     elseif x.head == FILTER
         return _start_filter(x)
     elseif x.head == COMPREHENSION

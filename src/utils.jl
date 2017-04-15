@@ -476,6 +476,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")))
             end
         end
     end
+    println("$N files")
     print_with_color(:red, "failed")
     println(" : $fail    $(100*fail/N)%")
     print_with_color(:yellow, "errored")

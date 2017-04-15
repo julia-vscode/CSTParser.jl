@@ -50,7 +50,7 @@ function parse_array(ps::ParseState)
 
                 first_arg.span = ps.nt.startbyte - startbyte
                 return first_arg
-            elseif first_arg isa EXPR && first_arg.head == GENERATOR
+            elseif first_arg isa EXPR && (first_arg.head == GENERATOR || first_arg.head == FLATTEN)
                 next(ps)
                 push!(puncs, INSTANCE(ps))
                 format_rbracket(ps)

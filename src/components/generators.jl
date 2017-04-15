@@ -41,6 +41,10 @@ function parse_generator(ps::ParseState, ret)
     else
         _lint_range(ps, ranges, startbyte + first(ret.punctuation).span + (0:ranges.span))
     end
+    # This should reverse order of iterators
+    if ret.args[1] isa EXPR && (ret.args[1].head == GENERATOR || ret.args[1].head == FLATTEN)
+        ret = EXPR(FLATTEN, [ret], ret.span)
+    end
 
     return ret
 end
@@ -102,3 +106,5 @@ function next(x::EXPR, s::Iterator{:typed_comprehension})
         return x.punctuation[2], +s
     end
 end
+
+next(x::EXPR, s::Iterator{:flatten}) = x.args[1], +s
