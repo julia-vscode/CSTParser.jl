@@ -425,6 +425,7 @@ end
                 end end
             end""" |> test_expr
     @test "-f.(a.b + c)" |> test_expr
+    @test ":(import Base: @doc)" |> test_expr
 end
 
 @testset "Broken things" begin
