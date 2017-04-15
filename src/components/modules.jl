@@ -14,8 +14,6 @@ function parse_module(ps::ParseState)
 
     block = EXPR(BLOCK, [], -ps.nt.startbyte)
     @scope ps Scope{Tokens.MODULE} @default ps while ps.nt.kind !== Tokens.END
-        # @catcherror ps startbyte a = @closer ps block parse_expression(ps)
-        # @catcherror ps startbyte a = @closer ps block parse_doc(ps, a)
         @catcherror ps startbyte a = @closer ps block parse_doc(ps)
         push!(block.args, a)
     end

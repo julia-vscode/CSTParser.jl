@@ -343,16 +343,6 @@ function parse(str::String, cont = false)
 end
 
 
-function parse_doc(ps::ParseState, ret)
-    (ps.nt.kind == Tokens.ENDMARKER) && return ret
-    if ret isa LITERAL{Tokens.STRING} || ret isa LITERAL{Tokens.TRIPLE_STRING} || (ret isa EXPR && ret.head == STRING)
-        doc = ret
-        ret = parse_expression(ps)
-        ret = EXPR(MACROCALL, [GlobalRefDOC, doc, ret], doc.span + ret.span)
-    end
-    return ret
-end
-
 function parse_doc(ps::ParseState)
     if ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
         next(ps)
