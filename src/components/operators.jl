@@ -370,11 +370,15 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
 
     # Parsing
     if ps.nt.kind == Tokens.LPAREN
-        startbyte = ps.nt.startbyte
-        puncs = INSTANCE[INSTANCE(next(ps))]
-        @catcherror ps startbyte args = @closer ps paren parse_list(ps, puncs)
-        push!(puncs, INSTANCE(next(ps)))
-        nextarg = EXPR(TUPLE, args, ps.nt.startbyte - startbyte, puncs)
+        # puncs = INSTANCE[INSTANCE(next(ps))]
+        # @catcherror ps startbyte args = @closer ps paren parse_list(ps, puncs)
+        # push!(puncs, INSTANCE(next(ps)))
+        # nextarg = EXPR(TUPLE, args, ps.nt.startbyte - startbyte, puncs)
+        startbyte1 = ps.nt.startbyte
+        @catcherror ps startbyte sig = @default ps @closer ps paren parse_call(ps, ret)
+        args = EXPR(TUPLE, sig.args[2:end], ps.nt.startbyte - startbyte1, sig.punctuation)
+        ret = EXPR(op, [ret, args], ps.nt.startbyte - startbyte)
+        return ret
     elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA
         next(ps)
         nextarg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, Symbol(lowercase(string(ps.t.kind))))

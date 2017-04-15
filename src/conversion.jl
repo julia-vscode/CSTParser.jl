@@ -159,6 +159,16 @@ function Expr(x::EXPR)
             end
         end
         return ret
+    elseif x.head == TUPLE
+        ret = Expr(:tuple)
+        for a in (x.args)
+            if a isa EXPR && a.head == PARAMETERS
+                unshift!(ret.args, Expr(a))
+            else
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
     elseif x.head isa KEYWORD{Tokens.FOR}
         ret = Expr(Expr(x.head))
         if x.args[1] isa EXPR && x.args[1].head == BLOCK

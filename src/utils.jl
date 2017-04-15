@@ -418,6 +418,70 @@ function span(x, neq = [])
 end
 
 
+function check_base(dir = dirname(Base.find_source_file("base.jl")))
+    N = 0
+    neq = 0
+    err = 0
+    fail = 0
+    for (rp, d, files) in walkdir(dir)
+        for f in files
+            file = joinpath(rp, f)
+            if endswith(file, ".jl")
+                N += 1
+                try
+                    str = readstring(file)
+                    ps = ParseState(str)
+                    io = IOBuffer(str)
+                    x, ps = parse(ps, true)
+                    sp = span(x)
+                    if x.args[1] isa LITERAL{nothing}
+                        shift!(x.args)
+                    end
+                    if x.args[end] isa LITERAL{nothing}
+                        pop!(x.args)
+                    end
+                    x0 = Expr(x)
+                    x1 = Expr(:toplevel)
+                    while !eof(io)
+                        push!(x1.args, Base.parse(io))
+                    end
+                    if x1.args[end] ==nothing
+                        pop!(x1.args)
+                    end
+                    remlineinfo!(x1)
+                    
+                    if !isempty(sp)
+                        print_with_color(:blue, file)
+                        println()
+                    end
+                    if ps.errored
+                        err += 1
+                        print_with_color(:yellow, file)
+                        println()
+                    elseif !(x0 == x1)
+                        neq += 1
+                        print_with_color(:green, file)
+                        println()
+                    end
+                    
+                catch er
+                    fail += 1
+                    print_with_color(:red, file)
+                    println()
+                end
+            end
+        end
+    end
+    print_with_color(:red, "failed")
+    println(" : $fail    $(100*fail/N)%")
+    print_with_color(:yellow, "errored")
+    println(" : $err     $(100*err/N)%")
+    print_with_color(:green, "not eq.")
+    println(" : $neq    $(100*neq/N)%")
+end
+
+
+
 """
     check_reformat()
 
