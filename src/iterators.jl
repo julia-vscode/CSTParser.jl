@@ -85,6 +85,8 @@ function start(x::EXPR)
         return _start_row(x)
     elseif x.head == TYPED_VCAT
         return _start_typed_vcat(x)
+    elseif x.head == TYPED_HCAT
+        return _start_typed_vcat(x)
     elseif x.head == TUPLE
         if isempty(x.punctuation) || first(x.punctuation) isa PUNCTUATION{Tokens.COMMA}
             return Iterator{:tuplenoparen}(1, length(x.args) + length(x.punctuation))

@@ -129,7 +129,10 @@ function parse_array(ps::ParseState)
                         push!(last(ret.args).args, a)
                         last(ret.args).span += a.span
                     end
-                    # last(ret.args).span += ps.nt.startbyte
+                    # if only one entry dont use :row
+                    if length(last(ret.args).args) == 1
+                        ret.args[end] = ret.args[end].args[1]
+                    end
                 end
                 next(ps)
                 push!(puncs, INSTANCE(ps))
@@ -183,6 +186,18 @@ end
 next(x::EXPR, s::Iterator{:row}) = x.args[s.i], +s
 
 function next(x::EXPR, s::Iterator{:typed_vcat})
+    if s.i == 1
+        return x.args[1], +s
+    elseif s.i == 2
+        return first(x.punctuation), +s
+    elseif s.i == s.n
+        return last(x.punctuation), +s
+    else
+        return x.args[s.i - 1], +s
+    end
+end
+
+function next(x::EXPR, s::Iterator{:typed_hcat})
     if s.i == 1
         return x.args[1], +s
     elseif s.i == 2
