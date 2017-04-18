@@ -1,7 +1,8 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
     startbyte = ps.t.startbyte
 
-    if ps.nt.kind == Tokens.TYPE
+    # Switch for v0.6 compatability
+    if ps.nt.kind == Tokens.TYPE && false
         # Parsing
         kw1 = INSTANCE(ps)
         next(ps)

@@ -24,7 +24,6 @@ function parse_string(ps::ParseState, prefixed = false)
     elseif ismatch(r"(?<!\\)\$", lit.val) 
         io = IOBuffer(lit.val)
         ret = EXPR(STRING, [], lit.span)
-        pos = 1
         lc = ' '
         while !eof(io)
             io2 = IOBuffer()
@@ -37,7 +36,6 @@ function parse_string(ps::ParseState, prefixed = false)
                 lc = c
             end
             str1 = String(take!(io2))
-            pos += endof(str1)
 
             if length(str1) > 0 && last(str1) === '$' && (length(str1) == 1 || str1[chr2ind(str1, length(str1)-1)] != '\\')
                 lit2 = LITERAL{Tokens.STRING}(endof(str1) - 1, unescape_string(str1[1:end - 1]))
@@ -45,21 +43,23 @@ function parse_string(ps::ParseState, prefixed = false)
                     push!(ret.args, lit2)
                 end
                 if peekchar(io) == '('
-                    ps1 = ParseState(lit.val[pos + 1:end])
+                    ps1 = ParseState(lit.val[io.ptr + 1:end])
+                    leading_ws_span = 0
+                    if ps1.nt.kind == Tokens.WHITESPACE
+                        next(ps1)
+                        leading_ws_span = ps1.nt.startbyte - ps1.t.startbyte
+                    end
                     @catcherror ps startbyte interp = @closer ps1 paren parse_expression(ps1)
                     push!(ret.args, interp)
                     skip(io, interp.span + 2 - length(ps1.ws.val))
-                    pos += interp.span + 2 - length(ps1.ws.val)
                 else
-                    ps1 = ParseState(lit.val[pos:end])
+                    ps1 = ParseState(lit.val[io.ptr:end])
                     next(ps1)
                     interp = INSTANCE(ps1)
                     push!(ret.args, interp)
                     
                     skip(io, interp.span - length(ps1.ws.val))
-                    pos += interp.span - length(ps1.ws.val)
                 end
-                # !eof(io) && skip(io, 1)
             else
                 push!(ret.args, LITERAL{Tokens.STRING}(sizeof(str1) - 1, unescape_string(str1)))
             end
