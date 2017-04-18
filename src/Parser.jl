@@ -361,7 +361,7 @@ function parse_doc(ps::ParseState)
     if ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
         next(ps)
         doc = INSTANCE(ps)
-        (ps.nt.kind == Tokens.ENDMARKER) && return doc
+        (ps.nt.kind == Tokens.ENDMARKER || ps.nt.kind == Tokens.END) && return doc
         ret = parse_expression(ps)
         ret = EXPR(MACROCALL, [GlobalRefDOC, doc, ret], doc.span + ret.span)
     elseif ps.nt.kind == Tokens.IDENTIFIER && ps.nt.val == "doc" && (ps.nnt.kind == Tokens.STRING || ps.nnt.kind == Tokens.TRIPLE_STRING)
