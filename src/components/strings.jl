@@ -5,6 +5,8 @@ When trying to make an `INSTANCE` from a string token we must check for
 interpolating operators.
 """
 function parse_string(ps::ParseState, prefixed = false)
+    startbyte = ps.nt.startbyte
+    
     span = ps.nt.startbyte - ps.t.startbyte - ps.ndot
     istrip = ps.t.kind == Tokens.TRIPLE_STRING
     if istrip

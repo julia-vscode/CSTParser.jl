@@ -6,6 +6,8 @@ Handles cases where an expression - `ret` - is followed by
 `.head` appropriately.
 """
 function parse_ref(ps::ParseState, ret)
+    startbyte = ps.nt.startbyte
+    
     next(ps)
     @catcherror ps startbyte ref = parse_array(ps)
     if ref isa EXPR && ref.head == VECT

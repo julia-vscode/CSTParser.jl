@@ -27,10 +27,11 @@ function parse_module(ps::ParseState)
 end
 
 function parse_dot_mod(ps::ParseState)
+    startbyte = ps.nt.startbyte
     args = []
     puncs = []
 
-    while ps.nt.kind==Tokens.DOT || ps.nt.kind==Tokens.DDOT || ps.nt.kind==Tokens.DDDOT
+    while ps.nt.kind == Tokens.DOT || ps.nt.kind == Tokens.DDOT || ps.nt.kind == Tokens.DDDOT
         next(ps)
         d = INSTANCE(ps)
         if d isa OPERATOR{15,Tokens.DOT}
@@ -100,7 +101,7 @@ function parse_imports(ps::ParseState)
     end
 
     if ps.nt.kind == Tokens.COLON
-        ret = EXPR(TOPLEVEL,[], 0, [kw])
+        ret = EXPR(TOPLEVEL, [], 0, [kw])
         t = 0
         for t = 1:length(puncs) - length(arg) + 1
             push!(ret.punctuation, puncs[t])
@@ -124,8 +125,8 @@ function parse_imports(ps::ParseState)
         end
         ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
     else
-        ret = EXPR(TOPLEVEL,[], 0, [kw])
-        push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg)-1, puncs))
+        ret = EXPR(TOPLEVEL, [], 0, [kw])
+        push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg) - 1, puncs))
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
@@ -177,7 +178,7 @@ end
 
 function _start_imports(x::EXPR)
     # return Iterator{:imports}(1, (x.head.span>0) + length(x.args) + length(x.punctuation)) 
-    return Iterator{:imports}(1,1)
+    return Iterator{:imports}(1, 1)
 end
 
 function _start_toplevel(x::EXPR)
@@ -185,7 +186,7 @@ function _start_toplevel(x::EXPR)
         return Iterator{:toplevelblock}(1, length(x.args) + length(x.punctuation))
     else
         # return Iterator{:toplevel}(1, length(x.args) + length(x.punctuation))
-        return Iterator{:toplevel}(1,1)
+        return Iterator{:toplevel}(1, 1)
     end
 end
 
@@ -218,7 +219,7 @@ function next(x::EXPR, s::Iterator{:export})
     if s.i == 1
         return x.head, +s
     elseif isodd(s.i)
-        return x.punctuation[div(s.i-1, 2)], +s
+        return x.punctuation[div(s.i - 1, 2)], +s
     else
         return x.args[div(s.i, 2)], +s
     end
@@ -238,7 +239,7 @@ function next(x::EXPR, s::Iterator{:module})
 end
 
 function next(x::EXPR, s::Iterator{:toplevel})
-    col = findfirst(x-> x isa OPERATOR{8, Tokens.COLON}, x.punctuation)
+    col = findfirst(x -> x isa OPERATOR{8, Tokens.COLON}, x.punctuation)
     if col > 0
         if s.i ≤ col
             return x.punctuation[s.i], +s
@@ -256,7 +257,7 @@ function next(x::EXPR, s::Iterator{:toplevel})
         elseif iseven(s.i)
             return x.args[div(s.i, 2)], +s
         else
-            return x.punctuation[div(s.i+1, 2)], +s
+            return x.punctuation[div(s.i + 1, 2)], +s
         end
     end
 end

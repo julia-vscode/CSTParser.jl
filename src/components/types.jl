@@ -93,6 +93,7 @@ parse_kw(ps::ParseState, ::Type{Val{Tokens.STRUCT}}) = parse_struct(ps, FALSE)
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.MUTABLE}})
     startbyte = ps.t.startbyte
+    
     if ps.nt.kind == Tokens.STRUCT
         kw = INSTANCE(ps)
         next(ps)

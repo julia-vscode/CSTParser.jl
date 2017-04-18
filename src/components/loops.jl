@@ -28,6 +28,8 @@ function _lint_range(ps::ParseState, x, loc)
 end
 
 function parse_ranges(ps::ParseState)
+    startbyte = ps.nt.startbyte
+    
     arg = @closer ps range @closer ps comma @closer ps ws parse_expression(ps)
     if ps.nt.kind == Tokens.COMMA
         indices = EXPR(BLOCK, [arg], arg.span)

@@ -223,10 +223,12 @@ item so surrounding punctuation must be handled externally.
 Should be replaced with the approach taken in `parse_call`
 """
 function parse_list(ps::ParseState, puncs)
+    startbyte = ps.nt.startbyte
+
     args = SyntaxNode[]
 
     while !closer(ps)
-        a = @nocloser ps newline @closer ps comma parse_expression(ps)
+        @catcherror ps startbyte a = @nocloser ps newline @closer ps comma parse_expression(ps)
         push!(args, a)
         if ps.nt.kind == Tokens.COMMA
             next(ps)
@@ -250,6 +252,7 @@ Parses an expression starting with a `(`.
 """
 function parse_paren(ps::ParseState)
     startbyte = ps.t.startbyte
+
     openparen = INSTANCE(ps)
     format_lbracket(ps)
     
@@ -263,7 +266,7 @@ function parse_paren(ps::ParseState)
     
     ret = EXPR(BLOCK, [], 0)
     while ps.nt.kind != Tokens.RPAREN && ps.nt.kind != Tokens.ENDMARKER
-        a = @default ps @nocloser ps newline @closer ps paren parse_expression(ps)
+        @catcherror ps startbyte a = @default ps @nocloser ps newline @closer ps paren parse_expression(ps)
         push!(ret.args, a)
     end
 
@@ -302,6 +305,7 @@ expression. The output is a quoted expression.
 """
 function parse_quote(ps::ParseState)
     startbyte = ps.t.startbyte
+
     puncs = INSTANCE[INSTANCE(ps)]
     if ps.nt.kind == Tokens.IDENTIFIER
         arg = INSTANCE(next(ps))
@@ -319,7 +323,7 @@ function parse_quote(ps::ParseState)
             next(ps)
             return EXPR(QUOTE, [EXPR(TUPLE, [], 2, [pop!(puncs), INSTANCE(ps)])], 3, puncs)
         end
-        arg = @closer ps paren parse_expression(ps)
+        @catcherror ps startbyte arg = @closer ps paren parse_expression(ps)
         next(ps)
         push!(puncs, INSTANCE(ps))
         return EXPR(QUOTE, [arg],  ps.nt.startbyte - startbyte, puncs)
