@@ -72,16 +72,28 @@ function parse_dot_mod(ps::ParseState)
         elseif ps.nt.kind == Tokens.EX_OR
             @catcherror ps startbyte a = @closer ps comma parse_expression(ps)
             push!(args, a)
+        elseif isoperator(ps.nt) && ps.ndot
+            next(ps)
+            push!(args, OPERATOR{precedence(ps.t), ps.t.kind, false}(ps.nt.startbyte-ps.t.startbyte - 1))
         else
             next(ps)
             push!(args, INSTANCE(ps))
         end
-        if ps.nt.kind != Tokens.DOT
-            break
-        else
+
+        if ps.nt.kind == Tokens.DOT
             next(ps)
             push!(puncs, INSTANCE(ps))
+        elseif isoperator(ps.nt) && ps.ndot
+            push!(puncs, PUNCTUATION{Tokens.DOT}(1))
+        else
+            break
         end
+        # if ps.nt.kind != Tokens.DOT
+        #     break
+        # else
+        #     next(ps)
+        #     push!(puncs, INSTANCE(ps))
+        # end
     end
     args, puncs
 end

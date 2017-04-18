@@ -450,6 +450,7 @@ end
         t
     end""" |> test_expr
     @test "(-, ~)" |> test_expr
+    @test "import Base.==" |> test_expr
 end
 
 @testset "Broken things" begin
