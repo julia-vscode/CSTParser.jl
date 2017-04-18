@@ -367,6 +367,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")))
     neq = 0
     err = 0
     fail = 0
+    bfail = 0
     ret = []
     for (rp, d, files) in walkdir(dir)
         for f in files
@@ -379,18 +380,23 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")))
                     io = IOBuffer(str)
                     x, ps = parse(ps, true)
                     sp = span(x)
-                    if x.args[1] isa LITERAL{nothing}
+                    if length(x.args) > 0 && x.args[1] isa LITERAL{nothing}
                         shift!(x.args)
                     end
-                    if x.args[end] isa LITERAL{nothing}
+                    if length(x.args) > 0 && x.args[end] isa LITERAL{nothing}
                         pop!(x.args)
                     end
                     x0 = Expr(x)
                     x1 = Expr(:toplevel)
-                    while !eof(io)
-                        push!(x1.args, Base.parse(io))
+                    try
+                        while !eof(io)
+                            push!(x1.args, Base.parse(io))
+                        end
+                    catch er
+                        bfail +=1
+                        continue
                     end
-                    if x1.args[end] == nothing
+                    if length(x1.args) > 0  && x1.args[end] == nothing
                         pop!(x1.args)
                     end
                     remlineinfo!(x1)
@@ -432,6 +438,8 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")))
     println(" : $err     $(100*err/N)%")
     print_with_color(:green, "not eq.")
     println(" : $neq    $(100*neq/N)%")
+    print_with_color(:magenta, "base failed")
+    println(" : $bfail    $(100*bfail/N)%")
     ret
 end
 

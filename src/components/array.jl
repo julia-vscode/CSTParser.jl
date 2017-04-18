@@ -61,14 +61,15 @@ function parse_array(ps::ParseState)
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
             @default ps @closer ps square @closer ps comma while ps.nt.kind != Tokens.RSQUARE
-                a = parse_expression(ps)
+                @catcherror ps startbyte a = parse_expression(ps)
                 push!(ret.args, a)
                 if ps.nt.kind == Tokens.COMMA
                     next(ps)
                     push!(ret.punctuation, INSTANCE(ps))
                     format_comma(ps)
                 elseif ps.nt.kind != Tokens.RSQUARE
-                    error("unexpected")
+                    ps.errored = true
+                    return ERROR{UnknownError}(ps.nt.startbyte, ret)
                 end
             end
 
@@ -82,7 +83,8 @@ function parse_array(ps::ParseState)
             ret = EXPR(VCAT,[first_arg], -startbyte, puncs)
             @default ps @closer ps square @closer ps ws @closer ps comma while ps.ws.kind == SemiColonWS
                 if ps.nt.kind == Tokens.COMMA
-                    error("unexpected comma in matrix expression")
+                    ps.errored = true
+                    return ERROR{UnexpectedComma}(ps.nt.startbyte, ret)
                 end
                 @catcherror ps startbyte arg = parse_expression(ps)
                 push!(ret.args, arg)

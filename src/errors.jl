@@ -14,4 +14,5 @@ UnexpectedElseIf,
 UnexpectedComma,
 UnexpectedCatch,
 UnexpectedFinally,
-MissingEnd)
+MissingEnd,
+InvalidMacroName)

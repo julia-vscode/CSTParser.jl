@@ -30,7 +30,8 @@ function parse_macrocall(ps::ParseState)
             next(ps)
             op = INSTANCE(ps)
             if ps.nt.kind != Tokens.IDENTIFIER
-                error("invalid macro name specification")
+                return ERROR{InvalidMacroName}(startbyte:ps.nt.startbyte, mname)
+                
             end
             next(ps)
             nextarg = INSTANCE(ps)
