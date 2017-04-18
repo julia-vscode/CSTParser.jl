@@ -23,6 +23,7 @@ type Closer
     quotemode::Bool
     brace::Bool
     inmacro::Bool
+    insquare::Bool
     square::Bool
     block::Bool
     ifelse::Bool
@@ -33,7 +34,7 @@ type Closer
     precedence::Int
     stop::Int
 end
-Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int))
+Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int))
 
 """
     ParseState

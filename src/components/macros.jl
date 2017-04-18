@@ -51,13 +51,13 @@ function parse_macrocall(ps::ParseState)
         next(ps)
         push!(ret.punctuation, INSTANCE(ps))
     else
-        @default ps if !closer(ps)
-            @catcherror ps startbyte first_arg = @closer ps ws @closer ps inmacro parse_expression(ps)
-            push!(ret.args, first_arg)
-        end
-        @default ps @closer ps inmacro while !closer(ps)
-            @catcherror ps startbyte a = @closer ps ws parse_expression(ps)
+        insquare = ps.closer.insquare
+        @default ps while !closer(ps)
+            @catcherror ps startbyte a = @closer ps inmacro @closer ps ws parse_expression(ps)
             push!(ret.args, a)
+            if insquare && ps.nt.kind == Tokens.FOR
+                break
+            end
         end
     end
     ret.span = ps.nt.startbyte - startbyte

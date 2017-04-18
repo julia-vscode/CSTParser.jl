@@ -91,7 +91,7 @@ macro default(ps, body)
         local tmp3 = $(esc(ps)).closer.inmacro
         local tmp4 = $(esc(ps)).closer.tuple
         local tmp5 = $(esc(ps)).closer.comma
-        # local tmp6 = $(esc(ps)).closer.paren
+        local tmp6 = $(esc(ps)).closer.insquare
         # local tmp7 = $(esc(ps)).closer.brace
         local tmp8 = $(esc(ps)).closer.range
         local tmp9 = $(esc(ps)).closer.block
@@ -105,7 +105,7 @@ macro default(ps, body)
         $(esc(ps)).closer.inmacro = false
         $(esc(ps)).closer.tuple = false
         $(esc(ps)).closer.comma = false
-        # $(esc(ps)).closer.paren = false
+        $(esc(ps)).closer.insquare = false
         # $(esc(ps)).closer.brace = false
         # $(esc(ps)).closer.square = false
         $(esc(ps)).closer.range = false
@@ -122,65 +122,9 @@ macro default(ps, body)
         $(esc(ps)).closer.inmacro = tmp3
         $(esc(ps)).closer.tuple = tmp4
         $(esc(ps)).closer.comma = tmp5
-        # $(esc(ps)).closer.paren = tmp6
+        $(esc(ps)).closer.insquare = tmp6
         # $(esc(ps)).closer.brace = tmp7
         $(esc(ps)).closer.range = tmp8
-        $(esc(ps)).closer.block = tmp9
-        $(esc(ps)).closer.ifelse = tmp10
-        $(esc(ps)).closer.ifop = tmp11
-        $(esc(ps)).closer.trycatch = tmp12
-        $(esc(ps)).closer.ws = tmp13
-        $(esc(ps)).closer.precedence = tmp14
-        out
-    end
-end
-
-"""
-    @clear ps body
-
-Parses the next expression using default closure rules.
-"""
-macro clear(ps, body)
-    quote
-        local tmp1 = $(esc(ps)).closer.newline
-        local tmp2 = $(esc(ps)).closer.semicolon
-        # local tmp3 = $(esc(ps)).closer.eof
-        local tmp4 = $(esc(ps)).closer.tuple
-        local tmp5 = $(esc(ps)).closer.comma
-        # local tmp6 = $(esc(ps)).closer.paren
-        # local tmp7 = $(esc(ps)).closer.brace
-        # local tmp8 = $(esc(ps)).closer.square
-        local tmp9 = $(esc(ps)).closer.block
-        local tmp10 = $(esc(ps)).closer.ifelse
-        local tmp11 = $(esc(ps)).closer.ifop
-        local tmp12 = $(esc(ps)).closer.trycatch
-        local tmp13 = $(esc(ps)).closer.ws
-        local tmp14 = $(esc(ps)).closer.precedence
-        $(esc(ps)).closer.newline = false
-        $(esc(ps)).closer.semicolon = false
-        # $(esc(ps)).closer.eof = false
-        $(esc(ps)).closer.tuple = false
-        $(esc(ps)).closer.comma = false
-        # $(esc(ps)).closer.paren = false
-        # $(esc(ps)).closer.brace = false
-        # $(esc(ps)).closer.square = false
-        $(esc(ps)).closer.block = false
-        $(esc(ps)).closer.ifelse = false
-        $(esc(ps)).closer.ifop = false
-        $(esc(ps)).closer.trycatch = false
-        $(esc(ps)).closer.ws = false
-        $(esc(ps)).closer.precedence = 0
-
-        out = $(esc(body))
-        
-        $(esc(ps)).closer.newline = tmp1
-        $(esc(ps)).closer.semicolon = tmp2
-        # $(esc(ps)).closer.eof = tmp3
-        $(esc(ps)).closer.tuple = tmp4
-        $(esc(ps)).closer.comma = tmp5
-        # $(esc(ps)).closer.paren = tmp6
-        # $(esc(ps)).closer.brace = tmp7
-        # $(esc(ps)).closer.square = tmp8
         $(esc(ps)).closer.block = tmp9
         $(esc(ps)).closer.ifelse = tmp10
         $(esc(ps)).closer.ifop = tmp11
@@ -423,6 +367,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")))
     neq = 0
     err = 0
     fail = 0
+    ret = []
     for (rp, d, files) in walkdir(dir)
         for f in files
             file = joinpath(rp, f)
@@ -453,11 +398,13 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")))
                     if !isempty(sp)
                         print_with_color(:blue, file)
                         println()
+                        push!(ret, (file, :span))
                     end
                     if ps.errored
                         err += 1
                         print_with_color(:yellow, file)
                         println()
+                        push!(ret, (file, :errored))
                     elseif !(x0 == x1)
                         cumfail = 0
                         if length(x0.args) == length(x1.args) && all((x0.args[i] == x1.args[i] || (x1.args[i] isa Expr && x1.args[i].head == :toplevel && x0.args[i] == x1.args[i].args[1])) for i = length(x0.args))
@@ -465,6 +412,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")))
                             neq += 1
                             print_with_color(:green, file)
                             println()
+                            push!(ret, (file, :noteq))
                         end
                     end
                     
@@ -472,6 +420,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")))
                     fail += 1
                     print_with_color(:red, file)
                     println()
+                    push!(ret, (file, :failed))
                 end
             end
         end
@@ -483,6 +432,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")))
     println(" : $err     $(100*err/N)%")
     print_with_color(:green, "not eq.")
     println(" : $neq    $(100*neq/N)%")
+    ret
 end
 
 

@@ -18,26 +18,7 @@ function parse_array(ps::ParseState)
 
         return EXPR(VECT, [], ps.nt.startbyte - startbyte, puncs)
     else
-        @catcherror ps startbyte first_arg = @default ps @nocloser ps newline @closer ps square @closer ps ws @closer ps comma parse_expression(ps)
-
-        # Handle macros
-        if first_arg isa LITERAL{Tokens.MACRO}
-            first_arg = EXPR(MACROCALL, [first_arg], first_arg.span)
-            @default ps @closer ps square while !closer(ps)
-                @catcherror ps startbyte a = @closer ps ws parse_expression(ps)
-                push!(first_arg.args, a)
-                first_arg.span += a.span
-            end
-        end
-        # Handle generator split over lines
-        if ps.nt.kind == Tokens.FOR && ps.ws.kind == NewLineWS
-            @catcherror ps startbyte first_arg = parse_compound(ps, first_arg)
-            if ps.nt.kind != Tokens.RSQUARE
-                error("expected \"]\"")
-            end
-        end
-        
-        
+        @catcherror ps startbyte first_arg = @default ps @nocloser ps newline @closer ps square @closer ps insquare @closer ps ws @closer ps comma parse_expression(ps)
 
         if ps.nt.kind == Tokens.RSQUARE
             if first_arg isa EXPR && first_arg.head == TUPLE

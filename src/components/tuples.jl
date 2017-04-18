@@ -12,7 +12,7 @@ function parse_tuple(ps::ParseState, ret)
     op = INSTANCE(ps)
     format_comma(ps)
 
-    if isassignment(ps.nt)
+    if isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX
         if ret isa EXPR && ret.head == TUPLE
             push!(ret.punctuation, op)
             ret.span += op.span

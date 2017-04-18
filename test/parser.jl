@@ -446,13 +446,14 @@ end
     @test "a.\$f()" |> test_expr
     @test "[a for a in A for b in B]" |> test_expr
     @test "[a=>1, b=>2]" |> test_expr
+    @test """@testset a for t in T
+        t
+    end""" |> test_expr
+    @test "(-, ~)" |> test_expr
 end
 
 @testset "Broken things" begin
     @test_broken "(a,b = c,d)" |> test_expr
-    @test_broken """@testset a for t in T
-        t
-    end""" |> test_expr
     @test_broken "@assert .!(isna(res[2]))" |> test_expr
     @test_broken "@test_throws ArgumentError isequal(m2, m3)``" |> test_expr
     @test_broken "function(f, args...; kw...) end" |> test_expr
@@ -463,4 +464,5 @@ end
         if j+k <= deg +1
         end
         """ |> test_expr
+    @test_broken "t{a; b}} " |> test_expr
 end
