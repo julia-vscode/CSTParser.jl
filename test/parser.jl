@@ -451,12 +451,16 @@ end
     end""" |> test_expr
     @test "(-, ~)" |> test_expr
     @test "import Base.==" |> test_expr
+    @test "(a+b)``" |> test_expr
+    @test "a`text`" |> test_expr
+    @test "a``" |> test_expr
+    @test "a`text`b" |> test_expr
 end
 
 @testset "Broken things" begin
     @test_broken "(a,b = c,d)" |> test_expr
     @test_broken "@assert .!(isna(res[2]))" |> test_expr
-    @test_broken "@test_throws ArgumentError isequal(m2, m3)``" |> test_expr
+    
     @test_broken "function(f, args...; kw...) end" |> test_expr
     @test_broken """
         "\\\\\$ch"

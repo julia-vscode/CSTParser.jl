@@ -131,10 +131,11 @@ function parse_compound(ps::ParseState, ret)
         @catcherror ps startbyte ret = parse_generator(ps, ret)
     elseif ps.nt.kind == Tokens.DO
         @catcherror ps startbyte ret = parse_do(ps, ret)
-    elseif ((ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN)) || (ret isa EXPR && ret.head isa OPERATOR{15, Tokens.PRIME} && ps.nt.kind == Tokens.IDENTIFIER) || ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && ps.nt.kind == Tokens.IDENTIFIER)
+    elseif ((ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD)) || (ret isa EXPR && ret.head isa OPERATOR{15, Tokens.PRIME} && ps.nt.kind == Tokens.IDENTIFIER) || ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD))
         # a literal number followed by an identifier or (
         # a transpose call followed by an identifier
         # a () or [] expression followed by an identifier
+        # an expression followed by a CMD
         #  --> implicit multiplication
         op = OPERATOR{11,Tokens.STAR,false}(0)
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
@@ -177,6 +178,15 @@ function parse_compound(ps::ParseState, ret)
         @catcherror ps startbyte arg = parse_string(ps, ret)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
     elseif ret isa EXPR && ret.head == x_STR && ps.nt.kind == Tokens.IDENTIFIER
+        next(ps)
+        arg = INSTANCE(ps)
+        push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.val))
+        ret.span += arg.span
+    elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{15,Tokens.DOT})) && ps.nt.kind == Tokens.CMD
+        next(ps)
+        @catcherror ps startbyte arg = parse_string(ps, ret)
+        ret = EXPR(x_CMD, [ret, arg], ret.span + arg.span)
+    elseif ret isa EXPR && ret.head == x_CMD && ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         arg = INSTANCE(ps)
         push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.val))

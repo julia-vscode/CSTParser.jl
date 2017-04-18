@@ -92,7 +92,8 @@ const VCAT = HEAD{Tokens.VCAT}(0)
 const VECT = HEAD{Tokens.VECT}(0)
 
 # Misc items
-const x_STR = HEAD{Tokens.KEYWORD}(1)
+const x_STR = HEAD{Tokens.x_STR}(1)
+const x_CMD = HEAD{Tokens.x_CMD}(1)
 
 const TRUE = LITERAL{Tokens.TRUE}(0, "")
 const FALSE = LITERAL{Tokens.FALSE}(0, "")

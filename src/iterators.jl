@@ -61,7 +61,7 @@ function start(x::EXPR)
         return _start_parameters(x)
     elseif x.head == STRING
         return _start_string(x)
-    elseif x.head == x_STR
+    elseif x.head == x_STR || x.head == x_CMD
         return Iterator{:x_str}(1, length(x.args))
     elseif x.head isa HEAD{Tokens.TOPLEVEL}
         return _start_toplevel(x)

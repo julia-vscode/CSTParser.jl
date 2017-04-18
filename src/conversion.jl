@@ -30,8 +30,10 @@ function Expr(x::LITERAL{Tokens.FLOAT})
 end
 
 Expr(x::LITERAL{Tokens.MACRO}) = Symbol(x.val)
+# Expr(x::LITERAL{Tokens.CMD}) = x.val
 
 Expr{K}(x::PUNCTUATION{K}) = string(K)
+
 
 function Expr(x::LITERAL{Tokens.STRING}) 
     x.val
@@ -112,6 +114,24 @@ function Expr(x::EXPR)
             end
             return Expr(:macrocall, head, Expr.(x.args[2:end])...)
         end
+    elseif x.head == x_CMD
+        if x.args[1] isa IDENTIFIER
+            head = Symbol('@', Expr(x.args[1]), "_cmd")
+        else
+            head = Expr(x.args[1])
+            if head.args[2] isa QuoteNode
+                head.args[2] = QuoteNode(Symbol('@', head.args[2].value, "_cmd"))
+            end
+        end
+        ret = Expr(:macrocall, head)
+        for a in x.args[2:end]
+            if a isa LITERAL{Tokens.CMD}
+                push!(ret.args, a.val)
+            else
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
     elseif x.head == MACROCALL
         if x.args[1] isa HEAD{:globalrefdoc}
             ret = Expr(:macrocall, GlobalRef(Core, Symbol("@doc")))
