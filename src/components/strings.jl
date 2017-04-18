@@ -51,7 +51,7 @@ function parse_string(ps::ParseState, prefixed = false)
                     end
                     @catcherror ps startbyte interp = @closer ps1 paren parse_expression(ps1)
                     push!(ret.args, interp)
-                    skip(io, interp.span + 2 - length(ps1.ws.val))
+                    skip(io, interp.span + 2 + leading_ws_span)
                 else
                     ps1 = ParseState(lit.val[io.ptr:end])
                     next(ps1)
