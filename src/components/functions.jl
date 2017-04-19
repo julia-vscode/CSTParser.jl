@@ -47,39 +47,41 @@ function parse_call(ps::ParseState, ret)
     end
     format_lbracket(ps)
     
-    @catcherror ps startbyte @noscope ps @nocloser ps newline @closer ps comma @closer ps paren while !closer(ps)
-        a = parse_expression(ps)
-        if a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
-            a.head = HEAD{Tokens.KW}(a.head.span)
-        end
-        push!(ret.args, a)
-        if ps.nt.kind == Tokens.COMMA
-            next(ps)
-            push!(ret.punctuation, INSTANCE(ps))
-            format_comma(ps)
-        end
-        if ps.ws.kind == SemiColonWS
-            break
-        end
-    end
+    # @catcherror ps startbyte @noscope ps @nocloser ps newline @closer ps comma @closer ps paren while !closer(ps)
+    #     a = parse_expression(ps)
+    #     if a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
+    #         a.head = HEAD{Tokens.KW}(a.head.span)
+    #     end
+    #     push!(ret.args, a)
+    #     if ps.nt.kind == Tokens.COMMA
+    #         next(ps)
+    #         push!(ret.punctuation, INSTANCE(ps))
+    #         format_comma(ps)
+    #     end
+    #     if ps.ws.kind == SemiColonWS
+    #         break
+    #     end
+    # end
 
-    if ps.ws.kind == SemiColonWS
-        paras = EXPR(PARAMETERS, [], -ps.nt.startbyte)
-        @nocloser ps newline @nocloser ps semicolon @closer ps comma @closer ps brace while !closer(ps)
-            @catcherror ps startbyte a = parse_expression(ps)
-            if a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
-                a.head = HEAD{Tokens.KW}(a.head.span)
-            end
-            push!(paras.args, a)
-            if ps.nt.kind == Tokens.COMMA
-                next(ps)
-                push!(paras.punctuation, INSTANCE(ps))
-                format_comma(ps)
-            end
-        end
-        paras.span += ps.nt.startbyte
-        push!(ret.args, paras)
-    end
+    # if ps.ws.kind == SemiColonWS
+    #     paras = EXPR(PARAMETERS, [], -ps.nt.startbyte)
+    #     @nocloser ps newline @nocloser ps semicolon @closer ps comma @closer ps brace while !closer(ps)
+    #         @catcherror ps startbyte a = parse_expression(ps)
+    #         if a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
+    #             a.head = HEAD{Tokens.KW}(a.head.span)
+    #         end
+    #         push!(paras.args, a)
+    #         if ps.nt.kind == Tokens.COMMA
+    #             next(ps)
+    #             push!(paras.punctuation, INSTANCE(ps))
+    #             format_comma(ps)
+    #         end
+    #     end
+    #     paras.span += ps.nt.startbyte
+    #     push!(ret.args, paras)
+    # end
+    @default ps @closer ps paren parse_comma_sep(ps, ret)
+
     next(ps)
     push!(ret.punctuation, INSTANCE(ps))
     format_rbracket(ps)
@@ -89,8 +91,6 @@ function parse_call(ps::ParseState, ret)
     # fix arbitrary $ case
     if ret.args[1] isa OPERATOR{9, Tokens.EX_OR}
         ret.head = shift!(ret.args)
-    else#if ret.args[1]
-
     end
 
     
@@ -112,6 +112,44 @@ function parse_call(ps::ParseState, ret)
     #     push!(ps.diagnostics, Hint{Hints.Deprecation}(ps.nt.startbyte - ret.span + (0:(fname.span))))
     # end
     return ret
+end
+
+function parse_comma_sep(ps::ParseState, ret::EXPR)
+    startbyte = ps.nt.startbyte
+
+    @catcherror ps startbyte @noscope ps @nocloser ps newline @closer ps comma while !closer(ps)
+        a = parse_expression(ps)
+        if !ps.closer.brace && a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
+            a.head = HEAD{Tokens.KW}(a.head.span)
+        end
+        push!(ret.args, a)
+        if ps.nt.kind == Tokens.COMMA
+            next(ps)
+            push!(ret.punctuation, INSTANCE(ps))
+            format_comma(ps)
+        end
+        if ps.ws.kind == SemiColonWS
+            break
+        end
+    end
+
+    if ps.ws.kind == SemiColonWS
+        paras = EXPR(PARAMETERS, [], -ps.nt.startbyte)
+        @nocloser ps newline @nocloser ps semicolon @closer ps comma while !closer(ps)
+            @catcherror ps startbyte a = parse_expression(ps)
+            if !ps.closer.brace && a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
+                a.head = HEAD{Tokens.KW}(a.head.span)
+            end
+            push!(paras.args, a)
+            if ps.nt.kind == Tokens.COMMA
+                next(ps)
+                push!(paras.punctuation, INSTANCE(ps))
+                format_comma(ps)
+            end
+        end
+        paras.span += ps.nt.startbyte
+        push!(ret.args, paras)
+    end
 end
 
 

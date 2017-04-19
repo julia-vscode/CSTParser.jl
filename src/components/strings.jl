@@ -5,9 +5,9 @@ When trying to make an `INSTANCE` from a string token we must check for
 interpolating operators.
 """
 function parse_string(ps::ParseState, prefixed = false)
-    startbyte = ps.nt.startbyte
+    startbyte = ps.t.startbyte
     
-    span = ps.nt.startbyte - ps.t.startbyte - ps.ndot
+    span = ps.nt.startbyte - ps.t.startbyte
     istrip = ps.t.kind == Tokens.TRIPLE_STRING
     if istrip
         lit = unindent_triple_string(ps)
@@ -21,7 +21,7 @@ function parse_string(ps::ParseState, prefixed = false)
             lit.val = replace(lit.val, "\\\"", "\"")
         end
         return lit
-    elseif ismatch(r"(?<!\\)\$", lit.val) 
+    elseif ismatch(r"(?<!\\)\$", lit.val)
         io = IOBuffer(lit.val)
         ret = EXPR(STRING, [], lit.span)
         lc = ' '
@@ -69,6 +69,7 @@ function parse_string(ps::ParseState, prefixed = false)
         lit.val = unescape_string(lit.val)
         return lit
     end
+    ret.span = span
     return ret
 end
 

@@ -102,7 +102,11 @@ function Expr(x::EXPR)
         return ret
     elseif x.head isa KEYWORD{Tokens.DO}
         ret = Expr(x.args[1])
-        insert!(ret.args, 2, Expr(:->, Expr(x.args[2]), Expr(x.args[3])))
+        i = 2
+        while length(ret.args) >= i && ret.args[i] isa Expr && ret.args[i].head == :parameters
+            i +=1
+        end
+        insert!(ret.args, i, Expr(:->, Expr(x.args[2]), Expr(x.args[3])))
         return ret
     elseif x.head == x_STR
         if x.args[1] isa IDENTIFIER
