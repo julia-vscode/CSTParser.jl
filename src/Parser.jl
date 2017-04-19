@@ -87,9 +87,6 @@ function parse_expression(ps::ParseState)
     elseif ps.t.kind == Tokens.RPAREN
         ps.errored = true
         return ERROR{UnexpectedRParen}(0, INSTANCE(ps))
-    # elseif ps.t.kind == Tokens.LBRACE
-    #     ps.errored = true
-    #     return ERROR{UnexpectedLBrace}(0, INSTANCE(ps))
     elseif ps.t.kind == Tokens.RBRACE
         ps.errored = true
         return ERROR{UnexpectedRBrace}(0, INSTANCE(ps))
@@ -367,7 +364,13 @@ function parse_doc(ps::ParseState)
     if ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
         next(ps)
         doc = INSTANCE(ps)
-        (ps.nt.kind == Tokens.ENDMARKER || ps.nt.kind == Tokens.END) && return doc
+        if (ps.nt.kind == Tokens.ENDMARKER || ps.nt.kind == Tokens.END)
+            return doc
+        elseif isbinaryop(ps.nt) && !closer(ps)
+            @catcherror ps startbyte ret = parse_compound(ps, doc)
+            return ret
+        end
+
         ret = parse_expression(ps)
         ret = EXPR(MACROCALL, [GlobalRefDOC, doc, ret], doc.span + ret.span)
     elseif ps.nt.kind == Tokens.IDENTIFIER && ps.nt.val == "doc" && (ps.nnt.kind == Tokens.STRING || ps.nnt.kind == Tokens.TRIPLE_STRING)
