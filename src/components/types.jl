@@ -114,8 +114,8 @@ function parse_struct(ps::ParseState, mutable)
 
     # Parsing
     kw = INSTANCE(ps)
-    @catcherror ps startbyte sig = @closer ps block @closer ps ws parse_expression(ps)
-    @catcherror ps startbyte block = parse_block(ps, start_col)
+    @catcherror ps startbyte sig = @default ps @closer ps block @closer ps ws parse_expression(ps)
+    @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
 
     # Linting
     format_typename(ps, sig)
