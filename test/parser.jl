@@ -475,6 +475,6 @@ end
     @test_broken "y[j=1:10,k=3:2:9; isodd(j+k) && k <= 8]" |> test_expr
     @test_broken "(8=>32.0, 12=>33.1, 6=>18.2)" |> test_expr
     @test_broken "\$(a) * -\$(b)" |> test_expr
-    @test_broken "" |> test_expr
+    @test_broken "[a, b; c]" |> test_expr
     @test_broken "" |> test_expr
 end

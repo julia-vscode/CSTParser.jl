@@ -43,7 +43,7 @@ function parse_array(ps::ParseState)
                     return EXPR(COMPREHENSION, [first_arg], ps.nt.startbyte - 
                     startbyte, puncs)
                 end
-            elseif ps.ws.kind== SemiColonWS
+            elseif ps.ws.kind == SemiColonWS
                 next(ps)
                 push!(puncs, INSTANCE(ps))
                 format_rbracket(ps)
@@ -60,18 +60,7 @@ function parse_array(ps::ParseState)
             ret = EXPR(VECT, [first_arg], -startbyte, puncs)
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
-            @default ps @closer ps square @closer ps comma while ps.nt.kind != Tokens.RSQUARE
-                @catcherror ps startbyte a = parse_expression(ps)
-                push!(ret.args, a)
-                if ps.nt.kind == Tokens.COMMA
-                    next(ps)
-                    push!(ret.punctuation, INSTANCE(ps))
-                    format_comma(ps)
-                elseif ps.nt.kind != Tokens.RSQUARE
-                    ps.errored = true
-                    return ERROR{UnknownError}(ps.nt.startbyte, ret)
-                end
-            end
+            @catcherror ps startbyte @default ps @closer ps square parse_comma_sep(ps, ret)
 
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
@@ -79,22 +68,6 @@ function parse_array(ps::ParseState)
 
             ret.span = ps.nt.startbyte - startbyte
             return ret
-        # elseif ps.ws.kind == SemiColonWS
-        #     ret = EXPR(VCAT, [first_arg], -startbyte, puncs)
-        #     @default ps @closer ps square @closer ps ws @closer ps comma while ps.ws.kind == SemiColonWS && ps.nt.kind != Tokens.RSQUARE
-        #         if ps.nt.kind == Tokens.COMMA
-        #             ps.errored = true
-        #             return ERROR{UnexpectedComma}(ps.nt.startbyte, ret)
-        #         end
-        #         @catcherror ps startbyte arg = parse_expression(ps)
-        #         push!(ret.args, arg)
-        #     end
-        #     next(ps)
-        #     push!(ret.punctuation, INSTANCE(ps))
-        #     format_rbracket(ps)
-
-        #     ret.span = ps.nt.startbyte - startbyte
-        #     return ret
         elseif ps.ws.kind == NewLineWS
             ret = EXPR(VCAT, [first_arg], - startbyte, puncs)
             while ps.nt.kind != Tokens.RSQUARE
