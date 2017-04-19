@@ -20,7 +20,6 @@ assumed to handle the closer.
 """
 function parse_block(ps::ParseState, start_col = 0; ret::EXPR = EXPR(BLOCK, [], 0), closers = [Tokens.END, Tokens.CATCH, Tokens.FINALLY])
     startbyte = ps.nt.startbyte
-
     start_col = ps.nt.startpos[2]
 
     # Parsing
