@@ -79,22 +79,22 @@ function parse_array(ps::ParseState)
 
             ret.span = ps.nt.startbyte - startbyte
             return ret
-        elseif ps.ws.kind == SemiColonWS
-            ret = EXPR(VCAT,[first_arg], -startbyte, puncs)
-            @default ps @closer ps square @closer ps ws @closer ps comma while ps.ws.kind == SemiColonWS && ps.nt.kind != Tokens.RSQUARE
-                if ps.nt.kind == Tokens.COMMA
-                    ps.errored = true
-                    return ERROR{UnexpectedComma}(ps.nt.startbyte, ret)
-                end
-                @catcherror ps startbyte arg = parse_expression(ps)
-                push!(ret.args, arg)
-            end
-            next(ps)
-            push!(ret.punctuation, INSTANCE(ps))
-            format_rbracket(ps)
+        # elseif ps.ws.kind == SemiColonWS
+        #     ret = EXPR(VCAT, [first_arg], -startbyte, puncs)
+        #     @default ps @closer ps square @closer ps ws @closer ps comma while ps.ws.kind == SemiColonWS && ps.nt.kind != Tokens.RSQUARE
+        #         if ps.nt.kind == Tokens.COMMA
+        #             ps.errored = true
+        #             return ERROR{UnexpectedComma}(ps.nt.startbyte, ret)
+        #         end
+        #         @catcherror ps startbyte arg = parse_expression(ps)
+        #         push!(ret.args, arg)
+        #     end
+        #     next(ps)
+        #     push!(ret.punctuation, INSTANCE(ps))
+        #     format_rbracket(ps)
 
-            ret.span = ps.nt.startbyte - startbyte
-            return ret
+        #     ret.span = ps.nt.startbyte - startbyte
+        #     return ret
         elseif ps.ws.kind == NewLineWS
             ret = EXPR(VCAT, [first_arg], - startbyte, puncs)
             while ps.nt.kind != Tokens.RSQUARE
@@ -107,7 +107,7 @@ function parse_array(ps::ParseState)
             
             ret.span += ps.nt.startbyte
             return ret
-        elseif ps.ws.kind == WS
+        elseif ps.ws.kind == WS || ps.ws.kind == SemiColonWS
             first_row = EXPR(HCAT, [first_arg], -(ps.nt.startbyte - first_arg.span))
             while ps.nt.kind != Tokens.RSQUARE && ps.ws.kind != NewLineWS && ps.ws.kind != SemiColonWS
                 @catcherror ps startbyte a = @default ps @closer ps square @closer ps ws parse_expression(ps)
@@ -117,11 +117,18 @@ function parse_array(ps::ParseState)
             if ps.nt.kind == Tokens.RSQUARE
                 next(ps)
                 push!(puncs, INSTANCE(ps))
+                if length(first_row.args) == 1
+                    first_row.head == VCAT
+                end
                 first_row.punctuation = puncs
                 first_row.span += first(puncs).span + last(puncs).span
                 return first_row
             else
-                first_row.head = ROW
+                if length(first_row.args) == 1
+                    first_row = first_row.args[1]
+                else
+                    first_row.head = ROW
+                end
                 ret = EXPR(VCAT, [first_row], 0)
                 while ps.nt.kind != Tokens.RSQUARE
                     @catcherror ps startbyte first_arg = @default ps @closer ps square @closer ps ws parse_expression(ps)
