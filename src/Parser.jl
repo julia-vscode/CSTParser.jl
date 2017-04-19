@@ -70,7 +70,7 @@ function parse_expression(ps::ParseState)
         @catcherror ps startbyte ret = parse_cell1d(ps)
     elseif isinstance(ps.t) || isoperator(ps.t)
         ret = INSTANCE(ps)
-        if (ret isa OPERATOR{8,Tokens.COLON}) && ps.nt.kind != Tokens.COMMA
+        if (ret isa OPERATOR{8, Tokens.COLON}) && ps.nt.kind != Tokens.COMMA
             @catcherror ps startbyte ret = parse_unary(ps, ret)
         end
     elseif ps.t.kind == Tokens.AT_SIGN
@@ -145,7 +145,7 @@ function parse_compound(ps::ParseState, ret)
         #  --> implicit multiplication
         op = OPERATOR{11, Tokens.STAR, false}(0)
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind == Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR} || ret isa OPERATOR{11,Tokens.AND} || ret isa OPERATOR{14,Tokens.DECLARATION})# && !isunaryop(ret)
+    elseif ps.nt.kind == Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR} || ret isa OPERATOR{11, Tokens.AND} || ret isa OPERATOR{14, Tokens.DECLARATION})# && !isunaryop(ret)
         if isempty(ps.ws) 
             @catcherror ps startbyte ret = @default ps @closer ps paren parse_call(ps, ret)
         else
@@ -179,7 +179,7 @@ function parse_compound(ps::ParseState, ret)
         op = INSTANCE(ps)
         format_op(ps, precedence(ps.t))
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
-    elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{15,Tokens.DOT})) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
+    elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{15, Tokens.DOT})) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
         next(ps)
         @catcherror ps startbyte arg = parse_string(ps, ret)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
@@ -188,7 +188,7 @@ function parse_compound(ps::ParseState, ret)
         arg = INSTANCE(ps)
         push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.val))
         ret.span += arg.span
-    elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{15,Tokens.DOT})) && ps.nt.kind == Tokens.CMD
+    elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{15, Tokens.DOT})) && ps.nt.kind == Tokens.CMD
         next(ps)
         @catcherror ps startbyte arg = parse_string(ps, ret)
         ret = EXPR(x_CMD, [ret, arg], ret.span + arg.span)
@@ -287,7 +287,7 @@ function parse_paren(ps::ParseState)
     end
 
     if length(ret.args) == 1
-        if ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{0,Tokens.DDDOT} && ps.ws.kind != SemiColonWS
+        if ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{0, Tokens.DDDOT} && ps.ws.kind != SemiColonWS
             ret.args[1] = EXPR(TUPLE, [ret.args[1]], ret.args[1].span)
         end
 
@@ -424,7 +424,7 @@ function parse_file(path::String)
     File([], (f -> joinpath(dirname(path), f)).(_get_includes(x)), path, x, [])
 end
 
-function parse_directory(path::String, proj = Project(path,[]))
+function parse_directory(path::String, proj = Project(path, []))
     for f in readdir(path)
         if isfile(joinpath(path, f)) && endswith(f, ".jl")
             try

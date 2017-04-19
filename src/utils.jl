@@ -97,7 +97,7 @@ macro default(ps, body)
         local tmp9 = $(esc(ps)).closer.block
         local tmp10 = $(esc(ps)).closer.ifelse
         local tmp11 = $(esc(ps)).closer.ifop
-        local tmp12 = $(esc(ps)).closer.trycatch
+        # local tmp12 = $(esc(ps)).closer.trycatch
         local tmp13 = $(esc(ps)).closer.ws
         local tmp14 = $(esc(ps)).closer.precedence
         $(esc(ps)).closer.newline = true
@@ -111,7 +111,7 @@ macro default(ps, body)
         $(esc(ps)).closer.range = false
         $(esc(ps)).closer.ifelse = false
         $(esc(ps)).closer.ifop = false
-        $(esc(ps)).closer.trycatch = false
+        # $(esc(ps)).closer.trycatch = false
         $(esc(ps)).closer.ws = false
         $(esc(ps)).closer.precedence = -1
 
@@ -128,7 +128,7 @@ macro default(ps, body)
         $(esc(ps)).closer.block = tmp9
         $(esc(ps)).closer.ifelse = tmp10
         $(esc(ps)).closer.ifop = tmp11
-        $(esc(ps)).closer.trycatch = tmp12
+        # $(esc(ps)).closer.trycatch = tmp12
         $(esc(ps)).closer.ws = tmp13
         $(esc(ps)).closer.precedence = tmp14
         out

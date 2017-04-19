@@ -56,7 +56,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
             ret.args[3] = FALSE
         end
         next(ps)
-        start_col = ps.t.startpos[2]
+        start_col = ps.t.startpos[2] + 4
         push!(ret.punctuation, INSTANCE(ps))
         @catcherror ps startbyte finallyblock = parse_block(ps, start_col)
         push!(ret.args, finallyblock)
