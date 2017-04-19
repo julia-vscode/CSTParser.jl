@@ -1,6 +1,7 @@
 import Base: Expr, Symbol
 # Converts EXPR to Base.Expr
 Expr{T}(x::HEAD{T}) = Symbol(lowercase(string(T)))
+Expr(x::HEAD{Tokens.LBRACE}) = :cell1d
 Expr{T}(x::KEYWORD{T}) = Symbol(lowercase(string(T)))
 
 function Expr(x::IDENTIFIER)

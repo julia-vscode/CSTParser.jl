@@ -66,6 +66,8 @@ function parse_expression(ps::ParseState)
         @catcherror ps startbyte ret = parse_paren(ps)
     elseif ps.t.kind == Tokens.LSQUARE
         @catcherror ps startbyte ret = parse_array(ps)
+    elseif ps.t.kind == Tokens.LBRACE
+        @catcherror ps startbyte ret = parse_cell1d(ps)
     elseif isinstance(ps.t) || isoperator(ps.t)
         ret = INSTANCE(ps)
         if (ret isa OPERATOR{8,Tokens.COLON}) && ps.nt.kind != Tokens.COMMA
@@ -85,9 +87,9 @@ function parse_expression(ps::ParseState)
     elseif ps.t.kind == Tokens.RPAREN
         ps.errored = true
         return ERROR{UnexpectedRParen}(0, INSTANCE(ps))
-    elseif ps.t.kind == Tokens.LBRACE
-        ps.errored = true
-        return ERROR{UnexpectedLBrace}(0, INSTANCE(ps))
+    # elseif ps.t.kind == Tokens.LBRACE
+    #     ps.errored = true
+    #     return ERROR{UnexpectedLBrace}(0, INSTANCE(ps))
     elseif ps.t.kind == Tokens.RBRACE
         ps.errored = true
         return ERROR{UnexpectedRBrace}(0, INSTANCE(ps))

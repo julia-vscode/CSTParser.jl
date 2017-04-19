@@ -26,6 +26,18 @@ function parse_curly(ps::ParseState, ret)
     return ret
 end
 
+function parse_cell1d(ps::ParseState)
+    startbyte = ps.t.startbyte
+    format_lbracket(ps)
+    ret = EXPR(CELL1D, [], -startbyte, [INSTANCE(ps)])
+    @catcherror ps startbyte @default ps @closer ps brace parse_comma_sep(ps, ret)
+    next(ps)
+    push!(ret.punctuation, INSTANCE(ps))
+    format_rbracket(ps)
+    ret.span += ps.nt.startbyte
+    return ret
+end
+
 _start_curly(x::EXPR) = Iterator{:curly}(1, length(x.args) + length(x.punctuation))
 
 function next(x::EXPR, s::Iterator{:curly})
