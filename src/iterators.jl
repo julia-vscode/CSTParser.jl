@@ -73,7 +73,7 @@ function start(x::EXPR)
         return _start_quote(x)
     elseif x.head == REF
         return _start_ref(x)
-    elseif x.head == VECT
+    elseif x.head == VECT || x.head == CELL1D
         return _start_vect(x)
     elseif x.head == TYPED_COMPREHENSION
         return _start_typed_comprehension(x)
