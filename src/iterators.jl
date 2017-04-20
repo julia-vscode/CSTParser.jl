@@ -19,7 +19,7 @@ punctuation.
 """
 function start(x::EXPR)
     if x.head == CALL
-        if (x.args[1] isa OPERATOR{9,Tokens.PLUS} || x.args[1] isa OPERATOR{11,Tokens.STAR}) && length(x.args) > 3
+        if (x.args[1] isa OPERATOR{9,Tokens.PLUS} || x.args[1] isa OPERATOR{11,Tokens.STAR}) && length(x.args) > 3 && !(first(x.punctuation) isa PUNCTUATION{Tokens.LPAREN})
             return Iterator{:opchain}(1, max(2, length(x.args) * 2 - 3))
         elseif x.args[1] isa OPERATOR && isempty(x.punctuation)
             return Iterator{:op}(1, length(x.args) + length(x.punctuation))
@@ -86,6 +86,7 @@ function start(x::EXPR)
         return _start_row(x)
     elseif x.head == TYPED_VCAT
         return _start_typed_vcat(x)
+        # return Iterator{:call}(1, length(x.args) + length(x.punctuation))
     elseif x.head == TYPED_HCAT
         return _start_typed_vcat(x)
     elseif x.head == TUPLE

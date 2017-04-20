@@ -81,12 +81,12 @@ function parse_call(ps::ParseState, ret)
     return ret
 end
 
-function parse_comma_sep(ps::ParseState, ret::EXPR)
+function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true)
     startbyte = ps.nt.startbyte
 
     @catcherror ps startbyte @noscope ps @nocloser ps newline @closer ps comma while !closer(ps)
         a = parse_expression(ps)
-        if !ps.closer.brace && a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
+        if kw && !ps.closer.brace && a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
             a.head = HEAD{Tokens.KW}(a.head.span)
         end
         push!(ret.args, a)

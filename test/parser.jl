@@ -14,7 +14,13 @@ randop() = rand(["-->", "→",
                  "::",
                  "."])
 
-test_expr(str) = Expr(Parser.parse(str)) == remlineinfo!(Base.parse(str))
+
+function test_expr(str)
+    x, ps = Parser.parse(Parser.ParseState(str))
+    x0 = Expr(x)
+    x1 = remlineinfo!(Base.parse(str))
+    !ps.errored && x0 == x1 && isempty(Parser.span(x))
+end
 
 @testset "Operators" begin
     @testset "Binary Operators" begin
@@ -260,18 +266,52 @@ end
 end
 
 @testset "Square " begin
-    @testset "Vector" begin
+    @testset "vect" begin
+        @test "[x]" |> test_expr
+        @test "[(1,2)]" |> test_expr
+        @test "[x...]" |> test_expr
         @test "[1,2,3,4,5]" |> test_expr
+    end
+
+    @testset "ref" begin
+        @test "t[i]" |> test_expr
+        @test "t[i, j]" |> test_expr
+    end
+
+    @testset "vcat" begin
+        @test "[x;]" |> test_expr
+        @test "[x;y;z]" |> test_expr
+        @test """[x
+                  y
+                  z]""" |> test_expr
+        @test """[x
+                  y;z]""" |> test_expr
+        @test """[x;y
+                  z]""" |> test_expr
+        @test "[x,y;z]" |> test_expr
+    end
+
+    @testset "typed_vcat" begin
+        @test "t[x;]" |> test_expr
+        @test "t[x;y]" |> test_expr
+        @test """t[x
+                   y]""" |> test_expr
+        @test "t[x;y]" |> test_expr
+        @test "t[x y; z]" |> test_expr
+        @test "t[x, y; z]" |> test_expr
+    end
+
+    @testset "hcat" begin
+        @test "[x y]" |> test_expr
+    end
+
+    @testset "typed_hcat" begin
+        @test "t[x y]" |> test_expr
     end
 
     @testset "Comprehension" begin
         @test "[i for i = 1:10]" |> test_expr
         @test "Int[i for i = 1:10]" |> test_expr
-    end
-
-    @testset "Ref" begin
-        @test "x[i]" |> test_expr
-        @test "x[i + 1]" |> test_expr
     end
 end
 
@@ -459,6 +499,7 @@ end
     @test "[a, b; c]" |> test_expr
     @test "t{a; b} " |> test_expr
     @test "a ~ b + c -d" |> test_expr
+    @test "y[j=1:10,k=3:2:9; isodd(j+k) && k <= 8]" |> test_expr
 end
 
 @testset "Broken things" begin
@@ -473,10 +514,10 @@ end
         if j+k <= deg +1
         end
         """ |> test_expr
-    # parse comma sep list
-    @test_broken "y[j=1:10,k=3:2:9; isodd(j+k) && k <= 8]" |> test_expr
     @test_broken "(8=>32.0, 12=>33.1, 6=>18.2)" |> test_expr
     @test_broken "\$(a) * -\$(b)" |> test_expr
     @test_broken "function f() ::TensorShape end" |> test_expr
+    @test_broken "+(a,b,c...)" |> test_expr
+    @test_broken "" |> test_expr
     @test_broken "" |> test_expr
 end

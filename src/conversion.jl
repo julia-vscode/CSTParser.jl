@@ -178,8 +178,8 @@ function Expr(x::EXPR)
 
         end 
         return ret
-    elseif x.head == CALL || x.head == CURLY
-        if x.args[1] isa OPERATOR{9, Tokens.MINUS} && length(x.args) == 2 && (x.args[2] isa LITERAL{Tokens.INTEGER} || x.args[2] isa LITERAL{Tokens.FLOAT})
+    elseif x.head == CALL || x.head == CURLY || x.head == TYPED_VCAT
+        if x.head == CALL && x.args[1] isa OPERATOR{9, Tokens.MINUS} && length(x.args) == 2 && (x.args[2] isa LITERAL{Tokens.INTEGER} || x.args[2] isa LITERAL{Tokens.FLOAT})
             return -Expr(x.args[2])
         end
         ret = Expr(Expr(x.head))

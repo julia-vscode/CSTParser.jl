@@ -61,7 +61,7 @@ function parse_array(ps::ParseState)
             ret = EXPR(VECT, [first_arg], -startbyte, puncs)
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
-            @catcherror ps startbyte @default ps @closer ps square parse_comma_sep(ps, ret)
+            @catcherror ps startbyte @default ps @closer ps square parse_comma_sep(ps, ret, false)
 
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
@@ -210,14 +210,30 @@ end
 next(x::EXPR, s::Iterator{:row}) = x.args[s.i], +s
 
 function next(x::EXPR, s::Iterator{:typed_vcat})
-    if s.i == 1
-        return x.args[1], +s
-    elseif s.i == 2
-        return first(x.punctuation), +s
-    elseif s.i == s.n
-        return last(x.punctuation), +s
+    if length(x.args) > 0 && last(x.args) isa EXPR && last(x.args).head == PARAMETERS
+        if s.i == s.n
+            return last(x.punctuation), +s
+        elseif s.i == s.n - 1 
+            return last(x.args), +s
+        elseif s.i == 1
+            return x.args[1], +s
+        elseif s.i == 2
+            return first(x.punctuation), +s
+        elseif isodd(s.i)
+            return x.args[div(s.i + 1, 2)], +s
+        else
+            return x.punctuation[div(s.i, 2)], +s
+        end
     else
-        return x.args[s.i - 1], +s
+        if s.i == 1
+            return x.args[1], +s
+        elseif s.i == 2
+            return first(x.punctuation), +s
+        elseif s.i == s.n
+            return last(x.punctuation), +s
+        else
+            return x.args[s.i - 1], +s
+        end
     end
 end
 
