@@ -329,7 +329,7 @@ end
 function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{11,Tokens.STAR,false})
     startbyte = ps.nt.startbyte - op.span - ret.span
 
-    if ret.head == CALL && ret.args[1] isa OPERATOR{11,Tokens.STAR,false}
+    if ret.head == CALL && ret.args[1] isa OPERATOR{11,Tokens.STAR,false} && ret.args[1].span != 0 && op.span != 0
         # Parsing
         @catcherror ps startbyte nextarg = @precedence ps 11 - LtoR(11) parse_expression(ps)
 
