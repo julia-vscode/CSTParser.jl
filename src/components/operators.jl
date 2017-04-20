@@ -196,6 +196,18 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1, Tokens.
     end
 end
 
+
+# REMOVE FOR v0.6
+function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1, Tokens.APPROX})
+    startbyte = ps.nt.startbyte - op.span - ret.span
+    # Parsing
+    @catcherror ps startbyte nextarg = @precedence ps 1 - LtoR(1) parse_expression(ps)
+    # Construction
+    op1 = IDENTIFIER(op.span, Symbol('@', Expr(op)))
+    ret = EXPR(MACROCALL, [op1, ret, nextarg], op.span + ret.span + nextarg.span)
+    return ret
+end
+
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1})
     startbyte = ps.nt.startbyte - op.span - ret.span
     # Parsing

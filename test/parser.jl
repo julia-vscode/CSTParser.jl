@@ -458,6 +458,7 @@ end
     @test "[a; a 0]" |> test_expr
     @test "[a, b; c]" |> test_expr
     @test "t{a; b} " |> test_expr
+    @test "a ~ b + c -d" |> test_expr
 end
 
 @testset "Broken things" begin
