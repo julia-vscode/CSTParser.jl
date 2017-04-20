@@ -81,7 +81,7 @@ function parse_call(ps::ParseState, ret)
     return ret
 end
 
-function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true)
+function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false)
     startbyte = ps.nt.startbyte
 
     @catcherror ps startbyte @noscope ps @nocloser ps newline @closer ps comma while !closer(ps)
@@ -101,21 +101,30 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true)
     end
 
     if ps.ws.kind == SemiColonWS
-        paras = EXPR(PARAMETERS, [], -ps.nt.startbyte)
-        @nocloser ps newline @nocloser ps semicolon @closer ps comma while !closer(ps)
-            @catcherror ps startbyte a = parse_expression(ps)
-            if !ps.closer.brace && a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
-                a.head = HEAD{Tokens.KW}(a.head.span)
+        if block
+            ret.head = BLOCK
+            @nocloser ps newline  @closer ps comma while @nocloser ps semicolon !closer(ps)
+                @catcherror ps startbyte a = parse_expression(ps)
+                push!(ret.args, a)
             end
-            push!(paras.args, a)
-            if ps.nt.kind == Tokens.COMMA
-                next(ps)
-                push!(paras.punctuation, INSTANCE(ps))
-                format_comma(ps)
+
+        else
+            paras = EXPR(PARAMETERS, [], -ps.nt.startbyte)
+            @nocloser ps newline @nocloser ps semicolon @closer ps comma while !closer(ps)
+                @catcherror ps startbyte a = parse_expression(ps)
+                if kw && !ps.closer.brace && a isa EXPR && a.head isa OPERATOR{1, Tokens.EQ}
+                    a.head = HEAD{Tokens.KW}(a.head.span)
+                end
+                push!(paras.args, a)
+                if ps.nt.kind == Tokens.COMMA
+                    next(ps)
+                    push!(paras.punctuation, INSTANCE(ps))
+                    format_comma(ps)
+                end
             end
+            paras.span += ps.nt.startbyte
+            push!(ret.args, paras)
         end
-        paras.span += ps.nt.startbyte
-        push!(ret.args, paras)
     end
 end
 
