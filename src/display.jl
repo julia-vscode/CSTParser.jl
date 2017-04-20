@@ -20,6 +20,9 @@ Base.show{P,K}(io::IO, x::OPERATOR{P,K}, indent = 0) =
 Base.show{K}(io::IO, x::PUNCTUATION{K}, indent = 0) =
     println(io, " "^indent, " $((Tokens.Kind[K][1]))", "    [", x.span, "]")
 
+Base.show(io::IO, x::HEAD{:file}, indent = 0) =
+    println(io, " "^indent, " file", "    [", x.span, "]")
+
 Base.show{K}(io::IO, x::HEAD{K}, indent = 0) =
     println(io, " "^indent, " $((Tokens.Kind[K][1]))", "    [", x.span, "]")
 

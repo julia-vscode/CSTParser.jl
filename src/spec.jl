@@ -95,6 +95,7 @@ const VECT = HEAD{Tokens.VECT}(0)
 # Misc items
 const x_STR = HEAD{Tokens.x_STR}(1)
 const x_CMD = HEAD{Tokens.x_CMD}(1)
+const FILE = HEAD{:file}(0)
 
 const TRUE = LITERAL{Tokens.TRUE}(0, "")
 const FALSE = LITERAL{Tokens.FALSE}(0, "")
@@ -111,7 +112,7 @@ type File
     ast::SyntaxNode
     errors
 end
-File(path::String) = File([], [], path, EXPR(TOPLEVEL, []), [])
+File(path::String) = File([], [], path, EXPR(FILE, []), [])
 
 type Project
     path::String

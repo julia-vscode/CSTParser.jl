@@ -387,7 +387,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")))
                         pop!(x.args)
                     end
                     x0 = Expr(x)
-                    x1 = Expr(:toplevel)
+                    x1 = Expr(:file)
                     try
                         while !eof(io)
                             push!(x1.args, Base.parse(io))

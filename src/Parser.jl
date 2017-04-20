@@ -60,7 +60,7 @@ function parse_expression(ps::ParseState)
     startbyte = ps.nt.startbyte
     next(ps)
     if Tokens.begin_keywords < ps.t.kind < Tokens.end_keywords && ps.t.kind != Tokens.DO
-        @catcherror ps startbyte ret = @nocloser ps toplevel parse_kw(ps, Val{ps.t.kind})
+        @catcherror ps startbyte ret = parse_kw(ps, Val{ps.t.kind})
     elseif ps.t.kind == Tokens.LPAREN
         @catcherror ps startbyte ret = parse_paren(ps)
     elseif ps.t.kind == Tokens.LSQUARE
@@ -392,18 +392,32 @@ end
 """
 function parse(ps::ParseState, cont = false)
     if ps.l.io.size == 0
-        return (cont ? EXPR(TOPLEVEL, [], 0) : nothing), ps
+        return (cont ? EXPR(FILE, [], 0) : nothing), ps
     end
+    last_line = 0
+    curr_line = 0
 
     if cont
-        top = EXPR(TOPLEVEL, [], 0)
+        top = EXPR(FILE, [], 0)
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
             push!(top.args, LITERAL{nothing}(ps.nt.startbyte, :nothing))
         end
+        
         while !ps.done && !ps.errored
+            curr_line = ps.nt.startpos[1]
             ret = parse_doc(ps)
-            push!(top.args, ret)
+
+            # join semicolon sep items
+            if curr_line == last_line && last(top.args) isa EXPR && last(top.args).head == TOPLEVEL
+                push!(last(top.args).args, ret)
+                last(top.args).span += ret.span
+            elseif ps.ws.kind == SemiColonWS
+                push!(top.args, EXPR(TOPLEVEL, [ret], ret.span))
+            else
+                push!(top.args, ret)
+            end
+            last_line = curr_line
         end
         top.span += ps.nt.startbyte
     else
@@ -412,9 +426,19 @@ function parse(ps::ParseState, cont = false)
             top = LITERAL{nothing}(ps.nt.startbyte, :nothing)
         else
             top = parse_doc(ps)
+            last_line = ps.nt.startpos[1]
+            if ps.ws.kind == SemiColonWS
+                top = EXPR(TOPLEVEL, [top], top.span)
+                while ps.ws.kind == SemiColonWS && ps.nt.startpos[1] == last_line
+                    ret = parse_doc(ps)
+                    push!(top.args, ret)
+                    top.span += ret.span
+                    last_line = ps.nt.startpos[1]
+
+                end
+            end
         end
     end
-    # top.scope = ps.current_scope
 
     return top, ps
 end

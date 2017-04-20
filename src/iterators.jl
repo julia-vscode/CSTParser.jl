@@ -18,7 +18,9 @@ Creates an interator state for `EXPR`s. One can then iterator through all
 punctuation.
 """
 function start(x::EXPR)
-    if x.head == CALL
+    if x.head == FILE
+        return Iterator{:file}(1, length(x.args))
+    elseif x.head == CALL
         if (x.args[1] isa OPERATOR{9,Tokens.PLUS} || x.args[1] isa OPERATOR{11,Tokens.STAR}) && length(x.args) > 3 && !(first(x.punctuation) isa PUNCTUATION{Tokens.LPAREN})
             return Iterator{:opchain}(1, max(2, length(x.args) * 2 - 3))
         elseif x.args[1] isa OPERATOR && isempty(x.punctuation)
@@ -157,6 +159,9 @@ function start(x::EXPR)
     end
 end
 
+function next(x::EXPR, s::Iterator{:file})
+    return x.args[s.i], +s
+end
 
 done(x::EXPR, s::Iterator) = s.i > s.n
 length(x::EXPR) = start(x).n
