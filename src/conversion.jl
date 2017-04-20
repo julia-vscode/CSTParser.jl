@@ -8,7 +8,7 @@ function Expr(x::IDENTIFIER)
     return x.val
 end
 
-function Expr{O,K,dot}(x::OPERATOR{O,K,dot}) 
+function Expr{O, K, dot}(x::OPERATOR{O, K, dot}) 
     if dot
         Symbol(:., UNICODE_OPS_REVERSE[K])
     else
@@ -105,7 +105,7 @@ function Expr(x::EXPR)
         ret = Expr(x.args[1])
         i = 2
         while length(ret.args) >= i && ret.args[i] isa Expr && ret.args[i].head == :parameters
-            i +=1
+            i += 1
         end
         insert!(ret.args, i, Expr(:->, Expr(x.args[2]), Expr(x.args[3])))
         return ret
@@ -178,7 +178,7 @@ function Expr(x::EXPR)
 
         end 
         return ret
-    elseif x.head == CALL
+    elseif x.head == CALL || x.head == CURLY
         if x.args[1] isa OPERATOR{9, Tokens.MINUS} && length(x.args) == 2 && (x.args[2] isa LITERAL{Tokens.INTEGER} || x.args[2] isa LITERAL{Tokens.FLOAT})
             return -Expr(x.args[2])
         end
@@ -191,8 +191,8 @@ function Expr(x::EXPR)
             end
         end
         return ret
-    elseif x.head == TUPLE
-        ret = Expr(:tuple)
+    elseif x.head == TUPLE || x.head == VCAT
+        ret = Expr(Expr(x.head))
         for a in (x.args)
             if a isa EXPR && a.head == PARAMETERS
                 unshift!(ret.args, Expr(a))
@@ -247,7 +247,7 @@ function fixranges(a::EXPR)
 end
 
 
-UNICODE_OPS_REVERSE = Dict{Tokenize.Tokens.Kind,Symbol}()
+UNICODE_OPS_REVERSE = Dict{Tokenize.Tokens.Kind, Symbol}()
 for (k, v) in Tokenize.Tokens.UNICODE_OPS
     UNICODE_OPS_REVERSE[v] = Symbol(k)
 end

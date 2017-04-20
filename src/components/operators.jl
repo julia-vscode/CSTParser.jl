@@ -421,7 +421,7 @@ end
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{20, Tokens.ANON_FUNC})
     startbyte = ps.nt.startbyte - op.span - ret.span
     # Parsing
-    @catcherror ps startbyte arg = parse_expression(ps)
+    @catcherror ps startbyte arg = @precedence ps 0 parse_expression(ps)
 
     # Construction
     ret = EXPR(op, [ret, EXPR(BLOCK, [arg], arg.span)], ps.nt.startbyte - startbyte)

@@ -21,17 +21,18 @@ function parse_array(ps::ParseState)
         @catcherror ps startbyte first_arg = @default ps @nocloser ps newline @closer ps square @closer ps insquare @closer ps ws @closer ps comma parse_expression(ps)
 
         if ps.nt.kind == Tokens.RSQUARE
-            if first_arg isa EXPR && first_arg.head == TUPLE
-                first_arg.head = VECT
+            # if first_arg isa EXPR && first_arg.head == TUPLE
+            #     first_arg.head = VECT
 
-                unshift!(first_arg.punctuation, first(puncs))
-                next(ps)
-                push!(first_arg.punctuation, INSTANCE(ps))
-                format_rbracket(ps)
+            #     unshift!(first_arg.punctuation, first(puncs))
+            #     next(ps)
+            #     push!(first_arg.punctuation, INSTANCE(ps))
+            #     format_rbracket(ps)
 
-                first_arg.span = ps.nt.startbyte - startbyte
-                return first_arg
-            elseif first_arg isa EXPR && (first_arg.head == GENERATOR || first_arg.head == FLATTEN)
+            #     first_arg.span = ps.nt.startbyte - startbyte
+            #     return first_arg
+            # elseif first_arg isa EXPR && (first_arg.head == GENERATOR || first_arg.head == FLATTEN)
+            if first_arg isa EXPR && (first_arg.head == GENERATOR || first_arg.head == FLATTEN)
                 next(ps)
                 push!(puncs, INSTANCE(ps))
                 format_rbracket(ps)
@@ -65,6 +66,10 @@ function parse_array(ps::ParseState)
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
             format_rbracket(ps)
+            
+            if last(ret.args) isa EXPR && last(ret.args).head == PARAMETERS
+                ret.head = VCAT
+            end
 
             ret.span = ps.nt.startbyte - startbyte
             return ret
@@ -146,12 +151,25 @@ function next(x::EXPR, s::Iterator{:vect})
 end
 
 function next(x::EXPR, s::Iterator{:vcat})
-    if s.i == 1
-        return first(x.punctuation), +s
-    elseif s.i == s.n
-        return last(x.punctuation), +s
+    np = length(x.punctuation) - 2
+    if np > 0
+        if s.i == s.n
+            return last(x.punctuation), +s
+        elseif s.i == s.n - 1 
+            return last(x.args), +s
+        elseif iseven(s.i)
+            return x.args[div(s.i, 2)], +s
+        else
+            return x.punctuation[div(s.i + 1, 2)], +s
+        end
     else
-        return x.args[s.i - 1], +s
+        if s.i == 1
+            return first(x.punctuation), +s
+        elseif s.i == s.n
+            return last(x.punctuation), +s
+        else
+            return x.args[s.i - 1], +s
+        end
     end
 end
 

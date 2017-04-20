@@ -29,9 +29,9 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
             catchblock = EXPR(BLOCK, SyntaxNode[])
         else
             start1 = ps.nt.startbyte
-            start_col = ps.t.startpos[2]
+            start_col = ps.t.startpos[2] + 4
             push!(ret.punctuation, INSTANCE(ps))
-            if ps.ws.kind == SemiColonWS
+            if ps.ws.kind == SemiColonWS || ps.ws.kind == NewLineWS
                 caught = FALSE
             else
                 @catcherror ps startbyte caught = @default ps @closer ps ws @closer ps trycatch parse_expression(ps)

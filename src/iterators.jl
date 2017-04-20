@@ -66,7 +66,8 @@ function start(x::EXPR)
     elseif x.head isa HEAD{Tokens.TOPLEVEL}
         return _start_toplevel(x)
     elseif x.head == CURLY
-        return _start_curly(x)
+        # return _start_curly(x)
+        return Iterator{:call}(1, length(x.args) + length(x.punctuation))
     elseif x.head isa IDENTIFIER && (x.head.val == :stdcall || x.head.val == :cdelc || x.head.val == :fastcall || x.head.val == :thiscall)
         return Iterator{:stdcall}(1, 1)
     elseif x.head isa KEYWORD{Tokens.QUOTE} || x.head isa HEAD{Tokens.QUOTE}
