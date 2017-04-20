@@ -501,6 +501,7 @@ end
     @test "a ~ b + c -d" |> test_expr
     @test "y[j=1:10,k=3:2:9; isodd(j+k) && k <= 8]" |> test_expr
     @test "+(a,b,c...)" |> test_expr
+    @test "(8=>32.0, 12=>33.1, 6=>18.2)" |> test_expr
 end
 
 @testset "Broken things" begin
@@ -515,7 +516,6 @@ end
         if j+k <= deg +1
         end
         """ |> test_expr
-    @test_broken "(8=>32.0, 12=>33.1, 6=>18.2)" |> test_expr
     @test_broken "\$(a) * -\$(b)" |> test_expr
     @test_broken "function f() ::TensorShape end" |> test_expr
     @test_broken "-((attr.rise / PANGO_SCALE)pt).value" |> test_expr

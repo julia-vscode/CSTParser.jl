@@ -163,7 +163,7 @@ function parse_unary(ps::ParseState, op::OPERATOR{8,Tokens.COLON})
 end
 
 
-function parse_unary(ps::ParseState, op::OPERATOR{9,Tokens.EX_OR,false})
+function parse_unary(ps::ParseState, op::OPERATOR{9, Tokens.EX_OR, false})
     startbyte = ps.nt.startbyte - op.span
     # Parsing
     @catcherror ps startbyte arg = @precedence ps 20 parse_expression(ps)

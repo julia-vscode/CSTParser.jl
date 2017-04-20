@@ -265,42 +265,25 @@ Parses an expression starting with a `(`.
 function parse_paren(ps::ParseState)
     startbyte = ps.t.startbyte
 
-    openparen = INSTANCE(ps)
+    ret = EXPR(TUPLE, [], - startbyte, [INSTANCE(ps)])
     format_lbracket(ps)
     
-    # handle empty case
-    if ps.nt.kind == Tokens.RPAREN
-        next(ps)
-        closeparen = INSTANCE(ps)
-        format_rbracket(ps)
-        return EXPR(TUPLE, [], ps.nt.startbyte - startbyte, [openparen, closeparen])
-    end
-    
-    ret = EXPR(BLOCK, [], 0)
-    while ps.nt.kind != Tokens.RPAREN && ps.nt.kind != Tokens.ENDMARKER
-        @catcherror ps startbyte a = @default ps @nocloser ps newline @closer ps paren parse_expression(ps)
-        push!(ret.args, a)
-    end
+    @catcherror ps startbyte @default ps @closer ps paren parse_comma_sep(ps, ret, false, true)
 
-    if length(ret.args) == 1
+    if length(ret.args) == 1 && length(ret.punctuation) == 1
         if ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{0, Tokens.DDDOT} && ps.ws.kind != SemiColonWS
             ret.args[1] = EXPR(TUPLE, [ret.args[1]], ret.args[1].span)
         end
-
         if ps.ws.kind != SemiColonWS
             ret.head = HEAD{InvisibleBrackets}(0)
         end
-    elseif ret isa EXPR && (ret.head == TUPLE || ret.head == BLOCK)
-    else
-        ret = EXPR(BLOCK, [ret], 0)
     end
+
     # handle closing ')'
     next(ps)
-    closeparen = INSTANCE(ps)
+    push!(ret.punctuation, INSTANCE(ps))
     format_rbracket(ps)
     
-    unshift!(ret.punctuation, openparen)
-    push!(ret.punctuation, closeparen)
     ret.span = ps.nt.startbyte - startbyte
 
     return ret
