@@ -131,6 +131,30 @@ function parse_array(ps::ParseState)
     end
 end
 
+"""
+    parse_ref(ps, ret)
+
+Handles cases where an expression - `ret` - is followed by 
+`[`. Parses the following bracketed expression and modifies it's
+`.head` appropriately.
+"""
+function parse_ref(ps::ParseState, ret)
+    startbyte = ps.nt.startbyte
+    
+    next(ps)
+    @catcherror ps startbyte ref = parse_array(ps)
+    if ref isa EXPR && ref.head == VECT
+        ret = EXPR(REF, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+    elseif ref isa EXPR && ref.head == HCAT
+        ret = EXPR(TYPED_HCAT, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+    elseif ref isa EXPR && ref.head == VCAT
+        ret = EXPR(TYPED_VCAT, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+    elseif ref isa EXPR && ref.head == COMPREHENSION
+        ret = EXPR(TYPED_COMPREHENSION, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+    end
+    return ret
+end
+
 _start_vect(x::EXPR) = Iterator{:vect}(1, length(x.args) + length(x.punctuation))
 
 _start_vcat(x::EXPR) = Iterator{:vcat}(1, length(x.args) + length(x.punctuation))
@@ -206,5 +230,17 @@ function next(x::EXPR, s::Iterator{:typed_hcat})
         return last(x.punctuation), +s
     else
         return x.args[s.i - 1], +s
+    end
+end
+
+_start_ref(x::EXPR) = Iterator{:ref}(1, length(x.args) + length(x.punctuation))
+
+function next(x::EXPR, s::Iterator{:ref})
+    if  s.i == s.n
+        return last(x.punctuation), +s
+    elseif isodd(s.i)
+        return x.args[div(s.i + 1, 2)], +s
+    else
+        return x.punctuation[div(s.i, 2)], +s
     end
 end
