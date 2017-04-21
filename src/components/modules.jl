@@ -26,30 +26,30 @@ function parse_module(ps::ParseState)
     return ret
 end
 
-function parse_dot_mod(ps::ParseState)
+function parse_dot_mod(ps::ParseState, colon=false)
     startbyte = ps.nt.startbyte
-    args = []
-    puncs = []
+    args = SyntaxNode[]
+    puncs = SyntaxNode[]
 
     while ps.nt.kind == Tokens.DOT || ps.nt.kind == Tokens.DDOT || ps.nt.kind == Tokens.DDDOT
         next(ps)
         d = INSTANCE(ps)
-        if d isa OPERATOR{15,Tokens.DOT}
-            push!(puncs, OPERATOR{15,Tokens.DOT,false}(1))
-        elseif d isa OPERATOR{8,Tokens.DDOT}
-            push!(puncs, OPERATOR{15,Tokens.DOT,false}(1))
-            push!(puncs, OPERATOR{15,Tokens.DOT,false}(1))
-        elseif d isa OPERATOR{0,Tokens.DDDOT}
-            push!(puncs, OPERATOR{15,Tokens.DOT,false}(1))
-            push!(puncs, OPERATOR{15,Tokens.DOT,false}(1))
-            push!(puncs, OPERATOR{15,Tokens.DOT,false}(1))
+        if d isa OPERATOR{15, Tokens.DOT}
+            push!(puncs, OPERATOR{15, Tokens.DOT, false}(1))
+        elseif d isa OPERATOR{8, Tokens.DDOT}
+            push!(puncs, OPERATOR{15, Tokens.DOT, false}(1))
+            push!(puncs, OPERATOR{15, Tokens.DOT, false}(1))
+        elseif d isa OPERATOR{0, Tokens.DDDOT}
+            push!(puncs, OPERATOR{15, Tokens.DOT, false}(1))
+            push!(puncs, OPERATOR{15, Tokens.DOT, false}(1))
+            push!(puncs, OPERATOR{15, Tokens.DOT, false}(1))
         end
     end
 
     # import/export ..
     if ps.nt.kind == Tokens.COMMA || ps.ws.kind == NewLineWS || ps.nt.kind == Tokens.ENDMARKER
         if length(puncs) == 2
-            return [INSTANCE(ps)], []
+            return SyntaxNode[INSTANCE(ps)], SyntaxNode[]
         end
     end
 
@@ -72,9 +72,9 @@ function parse_dot_mod(ps::ParseState)
         elseif ps.nt.kind == Tokens.EX_OR
             @catcherror ps startbyte a = @closer ps comma parse_expression(ps)
             push!(args, a)
-        elseif isoperator(ps.nt) && ps.ndot
+        elseif !colon && isoperator(ps.nt) && ps.ndot
             next(ps)
-            push!(args, OPERATOR{precedence(ps.t), ps.t.kind, false}(ps.nt.startbyte-ps.t.startbyte - 1))
+            push!(args, OPERATOR{precedence(ps.t), ps.t.kind, false}(ps.nt.startbyte - ps.t.startbyte - 1))
         else
             next(ps)
             push!(args, INSTANCE(ps))
@@ -127,12 +127,12 @@ function parse_imports(ps::ParseState)
         end
         
         M = arg
-        @catcherror ps startbyte arg, puncs = parse_dot_mod(ps)
+        @catcherror ps startbyte arg, puncs = parse_dot_mod(ps, true)
         push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg) - 1, puncs))
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
-            @catcherror ps startbyte arg, puncs = parse_dot_mod(ps)
+            @catcherror ps startbyte arg, puncs = parse_dot_mod(ps, true)
             push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg) - 1, puncs))
         end
         ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
@@ -154,6 +154,7 @@ function parse_imports(ps::ParseState)
     end
 
     ret.span = ps.nt.startbyte - startbyte
+    ret::EXPR
     return ret
 end
 

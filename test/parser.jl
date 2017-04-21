@@ -16,17 +16,17 @@ randop() = rand(["-->", "→",
 
 
 function test_expr(str)
-    x, ps = Parser.parse(Parser.ParseState(str))
+    x, ps = parse(ParseState(str))
     x0 = Expr(x)
     x1 = remlineinfo!(Base.parse(str))
-    !ps.errored && x0 == x1 && isempty(Parser.span(x))
+    !ps.errored && x0 == x1 && isempty(span(x))
 end
 
 @testset "Operators" begin
     @testset "Binary Operators" begin
         for iter = 1:250
             str = join([["x$(randop())" for i = 1:19];"x"])
-            x = Parser.parse(str)
+            x = parse(str)
             @test Expr(x) == remlineinfo!(Base.parse(str))
         end
     end
@@ -35,7 +35,7 @@ end
                 "a ? b:c : d"
                 "a ? b:c : d:e"]
         for str in strs
-            x = Parser.parse(str)
+            x = parse(str)
             @test Expr(x) == remlineinfo!(Base.parse(str))
         end
     end
@@ -503,24 +503,55 @@ end
     @test "+(a,b,c...)" |> test_expr
     @test "(8=>32.0, 12=>33.1, 6=>18.2)" |> test_expr
     @test "(a,b = c,d)" |> test_expr
+    @test "[ -1 -2;]" |> test_expr
+    @test "-2y" |> test_expr # precedence
+    @test "'''" |> test_expr #tokenize
+    @test """
+        if j+k <= deg +1
+        end
+        """ |> test_expr
+    @test "function f() ::T end" |> test_expr # ws closer
+    @test "import Base: +, -, .+, .-" |> test_expr
+    @test "[a +   + l]" |> test_expr #ws closer
+    @test "@inbounds C[i,j] = - α[i] * αjc" |> test_expr
+    @test "@inbounds C[i,j] = - n * p[i] * pj" |> test_expr
+    @test """
+        if ! a
+            b
+        end
+        """ |> test_expr # ws closer
+    @test "[:-\n:+]" |> test_expr
+    @test "::a::b" |> test_expr
+    @test "-[1:nc]" |> test_expr
 end
 
 @testset "Broken things" begin
-    @test_broken "@assert .!(isna(res[2]))" |> test_expr
-    
+    @test_broken "@assert .!(isna(res[2]))" |> test_expr # v0.6
     @test_broken "function(f, args...; kw...) end" |> test_expr
     @test_broken """
         "\\\\\$ch"
         """ |> test_expr
-    @test_broken """
-        if j+k <= deg +1
-        end
-        """ |> test_expr
     @test_broken "\$(a) * -\$(b)" |> test_expr
-    @test_broken "function f() ::TensorShape end" |> test_expr
     @test_broken "-((attr.rise / PANGO_SCALE)pt).value" |> test_expr
-    @test_broken "import Base: +, -, .+, .-" |> test_expr
-    @test_broken "-3exp(im * d.μ * t) * (cos(a) - sin(a) / a) / a^2" |> test_expr
+    @test_broken "µs" |> test_expr # normalize unicode
+    @test_broken """
+                    \"\"\"
+                    text
+                    \"\"\" ->
+                    function \$A end
+                    """ |> test_expr
+    @test_broken """let f = ((; a = 1, b = 2) -> ()),
+                m = first(methods(f))
+                @test DSE.keywords(f, m) == [:a, :b]
+            end""" |> test_expr
+    @test_broken ":(\$(docstr).\$(TEMP_SYM)[\$(key)])" |> test_expr
+    @test_broken "SpecialFunctions.\$(fsym)(n::Dual)" |> test_expr
+    @test_broken """finalizer(x,x::GClosure->begin
+                    ccall((:g_closure_unref,Gtk.GLib.libgobject),Void,(Ptr{GClosure},),x.handle)
+                end)""" |> test_expr
+    @test_broken "-1^a" |> test_expr
+    @test_broken "!(a = b)" |> test_expr
+    @test_broken "-(1)a" |> test_expr
     @test_broken "" |> test_expr
     @test_broken "" |> test_expr
     @test_broken "" |> test_expr

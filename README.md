@@ -1,6 +1,6 @@
-# Parser.jl (wip)
+# CSTParser
 
-A parser for Julia using [Tokenize](https://github.com/KristofferC/Tokenize.jl/) that aims to extend the built-in parser by providing additional meta information along with the resultant AST. It is incomplete though can currently parse roughly 95% of `.../base/`.
+A parser for Julia using [Tokenize](https://github.com/KristofferC/Tokenize.jl/) that aims to extend the built-in parser by providing additional meta information along with the resultant AST. 
 
 ### Additional Output
 - `EXPR`'s are iterable producing children in the order that they appear in the source code, including punctuation. 
@@ -12,7 +12,7 @@ A parser for Julia using [Tokenize](https://github.com/KristofferC/Tokenize.jl/)
   ```
 - The byte span of each `EXPR` is stored allowing a mapping between byte position in the source code and the releveant parsed expression. The span of a single token includes any trailing whitespace, newlines or comments. This also allows for fast partial parsing of modified source code.
 - Formatting hints are generated as the source code is parsed (e.g. mismatched indents for blocks, missing white space around operators). 
-- The declaration of functions, datatypes and variables are tracked and stored in the relevant hierarchical scopes attatched to the expressions that declare the scope. This allows for a mapping between any identifying symbol and the relevant code that it refers to.
+- The declaration of modules, functions, datatypes and variables are tracked and stored in the relevant hierarchical scopes attatched to the expressions that declare the scope. This allows for a mapping between any identifying symbol and the relevant code that it refers to.
 
 ### Structure
 
@@ -35,29 +35,5 @@ The `K` parameterisation refers to the `kind` of the associated token as specifi
 `INSTANCE`s represent singular objects that may have a concrete or implicit relation to a portion of the source text. In the the former case they have a `span` storing the width in bytes that they occupy in the source text, in the latter case their span is 0. Additionally, `IDENTIFIER`s store their value as a `Symbol` and `LITERAL`s as a `String`.
 
 `EXPR` are equivalent to `Base.Expr` but have extra fields to store their span and any punctuation tokens.
-
-
-
-### Parsing errors
-- relative module use/import etc.
-- relative indents in triple quoted strings (maybe Tokenize related?)
-- 
-
-### Major current syntax omissions
-- Syntax changes for 0.6 (`where`, change of type definition keywords)
-- flattening of concurrent generators
-
-### Problems with `span`
-- STRING expressions
-- import/toplevel import statements
-- mix of const and global/local
-
-### TODO
-- rethink approach to handling of semicolons.
-- cleanup @closer usage.
-- Add incremental parsing.
-- Return code hints in response to parsing failures.
-- Second pass for linting.
-- Second pass for type inference.
 
 

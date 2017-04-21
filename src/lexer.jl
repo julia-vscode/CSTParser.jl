@@ -31,10 +31,11 @@ type Closer
     range::Bool
     trycatch::Bool
     ws::Bool
+    wsop::Bool
     precedence::Int
     stop::Int
 end
-Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int))
+Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int))
 
 """
     ParseState
@@ -62,7 +63,7 @@ type ParseState
     ndot::Bool
     trackscope::Bool
     formatcheck::Bool
-    ids::Dict{String,Any}
+    ids::Dict{String, Any}
     diagnostics::Vector{Hints.Hint}
     closer::Closer
     errored::Bool

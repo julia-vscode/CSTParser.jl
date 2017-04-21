@@ -1,9 +1,9 @@
 using Parser
-for n in names(Parser, true, true)
-    eval(:(import Parser.$n))
+for n in names(CSTParser, true, true)
+    eval(:(import CSTParser.$n))
 end
 
-applychange(str, s1, s2, t) = string(str[1:s1], t, str[s2+1:end])
+applychange(str, s1, s2, t) = string(str[1:s1], t, str[s2 + 1:end])
 
 str, s1, s2, txt = "a + b", 0, 0, "x"
 str, s1, s2, txt = "a + b", 1, 1, "x"
@@ -101,7 +101,7 @@ function get_byteposition(doc, line, character)
     line_offsets = get_line_offsets(doc)
 
     current_offset = line == 0 ? 0 : line_offsets[line]
-    for i=1:character
+    for i = 1:character
         current_offset = nextind(doc._content, current_offset)
     end
     return current_offset

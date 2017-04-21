@@ -10,7 +10,7 @@ type declaration operators.
 get_id{T<:INSTANCE}(x::T) = x
 
 function get_id(x::EXPR)
-    if x.head isa OPERATOR{6,Tokens.ISSUBTYPE} || x.head isa OPERATOR{14, Tokens.DECLARATION} || x.head == CURLY
+    if x.head isa OPERATOR{6, Tokens.ISSUBTYPE} || x.head isa OPERATOR{14, Tokens.DECLARATION} || x.head == CURLY
         return get_id(x.args[1])
     else
         return x
@@ -40,7 +40,7 @@ function func_sig(x::EXPR)
         params = name.args[2]
         name = name.args[1]
     end
-    if name isa EXPR && name.head isa OPERATOR{15,Tokens.DOT}
+    if name isa EXPR && name.head isa OPERATOR{15, Tokens.DOT}
         mod = name.args[1]
         name = name.args[2]
     end
@@ -154,7 +154,7 @@ function _find_scope(x::EXPR, n, path, ind, offsets, scope)
     end
 end
 
-_find_scope(x::Union{QUOTENODE,INSTANCE,ERROR}, n, path, ind, offsets, scope) = x
+_find_scope(x::Union{QUOTENODE, INSTANCE, ERROR}, n, path, ind, offsets, scope) = x
 
 function find_scope(x::EXPR, n::Int)
     path = []

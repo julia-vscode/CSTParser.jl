@@ -21,7 +21,7 @@ function start(x::EXPR)
     if x.head == FILE
         return Iterator{:file}(1, length(x.args))
     elseif x.head == CALL
-        if (x.args[1] isa OPERATOR{9,Tokens.PLUS} || x.args[1] isa OPERATOR{11,Tokens.STAR}) && length(x.args) > 3 && !(first(x.punctuation) isa PUNCTUATION{Tokens.LPAREN})
+        if (x.args[1] isa OPERATOR{9, Tokens.PLUS} || x.args[1] isa OPERATOR{11, Tokens.STAR}) && length(x.args) > 3 && !(first(x.punctuation) isa PUNCTUATION{Tokens.LPAREN})
             return Iterator{:opchain}(1, max(2, length(x.args) * 2 - 3))
         elseif x.args[1] isa OPERATOR && isempty(x.punctuation)
             return Iterator{:op}(1, length(x.args) + length(x.punctuation))
@@ -33,7 +33,7 @@ function start(x::EXPR)
     elseif x.head isa OPERATOR{15, Tokens.PRIME}
         return Iterator{:prime}(1, 2)
     elseif issyntaxcall(x.head) || x.head isa OPERATOR{20, Tokens.ANON_FUNC}
-        if x.head isa OPERATOR{8,Tokens.COLON}
+        if x.head isa OPERATOR{8, Tokens.COLON}
             return Iterator{:(:)}(1, length(x.args) == 2 ? 3 : 5)
         end
         return Iterator{:syntaxcall}(1, length(x.args) + 1)
@@ -54,7 +54,7 @@ function start(x::EXPR)
     elseif x.head == GENERATOR
         return _start_generator(x)
     elseif x.head == FLATTEN
-        return Iterator{:flatten}(1,1)
+        return Iterator{:flatten}(1, 1)
     elseif x.head == FILTER
         return _start_filter(x)
     elseif x.head == COMPREHENSION || x.head == DICT_COMPREHENSION
@@ -215,7 +215,7 @@ function _find(x::EXPR, n, path, ind, offsets)
     end
 end
 
-_find(x::Union{QUOTENODE,INSTANCE,ERROR}, n, path, ind, offsets) = x
+_find(x::Union{QUOTENODE, INSTANCE, ERROR}, n, path, ind, offsets) = x
 
 function Base.find(x::EXPR, n::Int)
     path = []

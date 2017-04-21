@@ -17,18 +17,20 @@ function closer(ps::ParseState)
     (ps.closer.brace && ps.nt.kind == Tokens.RBRACE) ||
     (ps.closer.square && ps.nt.kind == Tokens.RSQUARE) ||
     (ps.closer.block && ps.nt.kind == Tokens.END) ||
-    (ps.closer.inmacro && ps.nt.kind == Tokens.FOR) ||
     (ps.closer.ifelse && ps.nt.kind == Tokens.ELSEIF || ps.nt.kind == Tokens.ELSE) ||
     (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt) <= 0 || ps.nt.kind == Tokens.COLON)) ||
     (ps.closer.trycatch && (ps.nt.kind == Tokens.CATCH || ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END)) ||
     (ps.closer.range && ps.nt.kind == Tokens.FOR) ||
-    (ps.closer.ws && !isempty(ps.ws) && !(
-        (ps.nt.kind == Tokens.COMMA || 
-        ps.t.kind == Tokens.COMMA || 
-        ps.nt.kind == Tokens.FOR || 
-        ps.nt.kind == Tokens.DO) ||
-        (isbinaryop(ps.nt.kind) && (!isempty(ps.nws) || !isunaryop(ps.nt)))
-        )) ||
+    (ps.closer.ws && !isempty(ps.ws) &&
+        !(ps.nt.kind == Tokens.COMMA) && 
+        !(ps.t.kind == Tokens.COMMA) && 
+        !(!ps.closer.inmacro && ps.nt.kind == Tokens.FOR) &&
+        !(ps.nt.kind == Tokens.DO) && 
+        # !((isbinaryop(ps.nt.kind) && (!isempty(ps.nws) || !isunaryop(ps.nt))) || (!ps.closer.wsop && isbinaryop(ps.nt.kind)))) ||
+        !((isbinaryop(ps.nt) && !isempty(ps.nws)) ||
+        (isbinaryop(ps.nt) && !isunaryop(ps.nt)) ||
+        (isunaryop(ps.t) && ps.ws.kind == WS) ||
+        (!ps.closer.wsop && isbinaryop(ps.nt.kind)))) ||
     (ps.nt.startbyte ≥ ps.closer.stop) ||
     ps.errored
 end
@@ -99,7 +101,8 @@ macro default(ps, body)
         local tmp11 = $(esc(ps)).closer.ifop
         # local tmp12 = $(esc(ps)).closer.trycatch
         local tmp13 = $(esc(ps)).closer.ws
-        local tmp14 = $(esc(ps)).closer.precedence
+        local tmp14 = $(esc(ps)).closer.wsop
+        local tmp15 = $(esc(ps)).closer.precedence
         $(esc(ps)).closer.newline = true
         $(esc(ps)).closer.semicolon = true
         $(esc(ps)).closer.inmacro = false
@@ -113,6 +116,7 @@ macro default(ps, body)
         $(esc(ps)).closer.ifop = false
         # $(esc(ps)).closer.trycatch = false
         $(esc(ps)).closer.ws = false
+        $(esc(ps)).closer.wsop = false
         $(esc(ps)).closer.precedence = -1
 
         out = $(esc(body))
@@ -130,7 +134,8 @@ macro default(ps, body)
         $(esc(ps)).closer.ifop = tmp11
         # $(esc(ps)).closer.trycatch = tmp12
         $(esc(ps)).closer.ws = tmp13
-        $(esc(ps)).closer.precedence = tmp14
+        $(esc(ps)).closer.wsop = tmp14
+        $(esc(ps)).closer.precedence = tmp15
         out
     end
 end
@@ -233,81 +238,10 @@ function test_order(x, out = [])
 end
 
 function test_find(str)
-    x = Parser.parse(str, true)
+    x = parse(str, true)
     for i = 1:sizeof(str)
         find(x, i)
     end
-end
-
-
-
-
-function check_file(f::String)
-    str = readstring(f)
-    ps = ParseState(str)
-    io = IOBuffer(str)
-    if ps.nt.kind == Tokens.COMMENT
-        next(ps)
-    end
-    ismod = false
-    if ps.nt.kind == Tokens.MODULE
-        next(ps)
-        next(ps)
-        ismod = true
-    end
-    seek(io, ps.nt.startbyte)
-    cnt = 0
-    failed = []
-    while !eof(io)
-        if ps.nt.endbyte == length(str) - 1
-            break
-        end
-        if ismod && ps.nt.kind == Tokens.END && ps.nws.endbyte > (sizeof(str) - 10)
-            break
-        end
-        cnt += 1
-        x, ps = try
-            Parser.parse(ps)
-        end
-        if x isa LITERAL{Tokens.TRIPLE_STRING}
-            doc = x
-            x, ps = Parser.parse(ps)
-            x = EXPR(MACROCALL, [GlobalRefDOC, doc, x], doc.span + x.span)
-        end
-        x0 = Expr(x)
-        y = try Base.parse(io) end
-        y0 = remlineinfo!(y)
-        eq = (x0 == y0)
-        
-        if !eq
-            push!(failed, (x0, y0))
-        end
-        if !isempty(span(x))
-            push!(failed, (x, span(x)))
-        end
-    end
-    failed, cnt
-end
-
-
-function check_folder(dir, N = 0, errs = [], failedfiles = [])
-    for f in readdir(dir)
-        if endswith(f, ".jl")
-            try
-                failed, cnt = check_file(joinpath(dir, f))
-                N += cnt
-                append!(errs, failed)
-                if length(failed) != 0
-                    push!(failedfiles, f)
-                end
-            catch
-                push!(failedfiles, f)
-            end
-        elseif isdir(f)
-            N, _, errs, failedfiles = check_folder(joinpath(dir, f), N, errs, failedfiles)
-        end
-    end
-    N, length(errs), errs, failedfiles
 end
 
 
@@ -362,10 +296,11 @@ function span(x, neq = [])
 end
 
 
-function check_base(dir = dirname(Base.find_source_file("base.jl")))
+function check_base(dir = dirname(Base.find_source_file("base.jl")), display = false)
     N = 0
     neq = 0
     err = 0
+    aerr = 0
     fail = 0
     bfail = 0
     ret = []
@@ -375,6 +310,8 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")))
             if endswith(file, ".jl")
                 N += 1
                 try
+                    # print(N)
+                    print("\r", rpad(string(N), 5), rpad(string(signif(fail / N * 100, 3)), 8), rpad(string(signif(err / N * 100, 3)), 8), rpad(string(signif(neq / N * 100, 3)), 8))
                     str = readstring(file)
                     ps = ParseState(str)
                     io = IOBuffer(str)
@@ -393,14 +330,14 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")))
                             push!(x1.args, Base.parse(io))
                         end
                     catch er
-                        bfail +=1
+                        bfail += 1
                         continue
                     end
                     if length(x1.args) > 0  && x1.args[end] == nothing
                         pop!(x1.args)
                     end
                     remlineinfo!(x1)
-                    
+                    print("\r                             ")
                     if !isempty(sp)
                         print_with_color(:blue, file)
                         println()
@@ -413,13 +350,21 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")))
                         push!(ret, (file, :errored))
                     elseif !(x0 == x1)
                         cumfail = 0
-                        # if length(x0.args) == length(x1.args) && all((x0.args[i] == x1.args[i] || (x1.args[i] isa Expr && x1.args[i].head == :toplevel && x0.args[i] == x1.args[i].args[1])) for i = length(x0.args))
-                        # else
-                            neq += 1
-                            print_with_color(:green, file)
-                            println()
-                            push!(ret, (file, :noteq))
-                        # end
+                        neq += 1
+                        print_with_color(:green, file)
+                        println()
+                        if display
+                            c0, c1 = compare(x0, x1)
+                            if !(c0 isa String && c1 isa String)
+                                aerr+=1
+                                print_with_color(:light_red, string("    ", c0), bold = true)
+                                println()
+                                print_with_color(:light_green, string("    ", c1), bold = true)
+                                println()
+                            end
+                            
+                        end
+                        push!(ret, (file, :noteq))
                     end
                     
                 catch er
@@ -431,19 +376,19 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")))
             end
         end
     end
-    println("$N files")
-    print_with_color(:red, "failed")
-    println(" : $fail    $(100*fail/N)%")
-    print_with_color(:yellow, "errored")
-    println(" : $err     $(100*err/N)%")
-    print_with_color(:green, "not eq.")
-    println(" : $neq    $(100*neq/N)%")
-    print_with_color(:magenta, "base failed")
-    println(" : $bfail    $(100*bfail/N)%")
+    if fail + err + neq > 0
+        println("\r$N files")
+        print_with_color(:red, "failed")
+        println(" : $fail    $(100*fail/N)%")
+        print_with_color(:yellow, "errored")
+        println(" : $err     $(100*err/N)%")
+        print_with_color(:green, "not eq.")
+        println(" : $neq    $(100*neq/N)%", "  -  $aerr     $(100*aerr/N)%")
+        print_with_color(:magenta, "base failed")
+        println(" : $bfail    $(100*bfail/N)%")
+    end
     ret
 end
-
-
 
 """
     check_reformat()
@@ -455,13 +400,13 @@ function check_reformat()
     for (i, f) in enumerate(fs)
         f == "deprecated.jl" && continue
         str = readstring(f)
-        x, ps = Parser.parse(ParseState(str), true);
+        x, ps = parse(ParseState(str), true);
         cnt = 0
         for i = 1:length(x) - 1
             y = x[i]
             sstr = str[cnt + (1:y.span)]
             
-            y1 = Parser.parse(sstr)
+            y1 = parse(sstr)
             @assert Expr(y) == Expr(y1)
             cnt += y.span
         end

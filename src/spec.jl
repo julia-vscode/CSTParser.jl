@@ -15,7 +15,7 @@ type KEYWORD{K} <: INSTANCE
     span::Int
 end
 
-type OPERATOR{P,K,dot} <: INSTANCE
+type OPERATOR{P, K, dot} <: INSTANCE
     span::Int
 end
 
@@ -46,7 +46,7 @@ function INSTANCE(ps::ParseState)
     return isidentifier(ps.t) ? IDENTIFIER(span, Symbol(ps.t.val)) : 
         isliteral(ps.t) ? LITERAL(ps) :
         iskw(ps.t) ? KEYWORD{ps.t.kind}(span) :
-        isoperator(ps.t) ? OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}(span) :
+        isoperator(ps.t) ? OPERATOR{precedence(ps.t), ps.t.kind, ps.dot}(span) :
         ispunctuation(ps.t) ? PUNCTUATION{ps.t.kind}(span) :
         ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION{ps.t.kind}(span) : #error("Can't make a token from $(ps.t)")
         ERROR{ps.t.kind}(0, NOTHING)
