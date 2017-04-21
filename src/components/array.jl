@@ -18,20 +18,9 @@ function parse_array(ps::ParseState)
 
         return EXPR(VECT, [], ps.nt.startbyte - startbyte, puncs)
     else
-        @catcherror ps startbyte first_arg = @default ps @nocloser ps newline @closer ps square @closer ps insquare @closer ps ws @closer ps comma parse_expression(ps)
+        @catcherror ps startbyte first_arg = @default ps @nocloser ps newline @closer ps square @closer ps insquare @closer ps ws @closer ps wsop @closer ps comma parse_expression(ps)
 
         if ps.nt.kind == Tokens.RSQUARE
-            # if first_arg isa EXPR && first_arg.head == TUPLE
-            #     first_arg.head = VECT
-
-            #     unshift!(first_arg.punctuation, first(puncs))
-            #     next(ps)
-            #     push!(first_arg.punctuation, INSTANCE(ps))
-            #     format_rbracket(ps)
-
-            #     first_arg.span = ps.nt.startbyte - startbyte
-            #     return first_arg
-            # elseif first_arg isa EXPR && (first_arg.head == GENERATOR || first_arg.head == FLATTEN)
             if first_arg isa EXPR && (first_arg.head == GENERATOR || first_arg.head == FLATTEN)
                 next(ps)
                 push!(puncs, INSTANCE(ps))
@@ -88,16 +77,16 @@ function parse_array(ps::ParseState)
         elseif ps.ws.kind == WS || ps.ws.kind == SemiColonWS
             first_row = EXPR(HCAT, [first_arg], -(ps.nt.startbyte - first_arg.span))
             while ps.nt.kind != Tokens.RSQUARE && ps.ws.kind != NewLineWS && ps.ws.kind != SemiColonWS
-                @catcherror ps startbyte a = @default ps @closer ps square @closer ps ws parse_expression(ps)
+                @catcherror ps startbyte a = @default ps @closer ps square @closer ps ws @closer ps wsop parse_expression(ps)
                 push!(first_row.args, a)
             end
             first_row.span += ps.nt.startbyte
-            if ps.nt.kind == Tokens.RSQUARE
-                next(ps)
-                push!(puncs, INSTANCE(ps))
+            if ps.nt.kind == Tokens.RSQUARE && ps.ws.kind != SemiColonWS
                 if length(first_row.args) == 1
                     first_row.head == VCAT
                 end
+                next(ps)
+                push!(puncs, INSTANCE(ps))
                 first_row.punctuation = puncs
                 first_row.span += first(puncs).span + last(puncs).span
                 return first_row
@@ -109,10 +98,10 @@ function parse_array(ps::ParseState)
                 end
                 ret = EXPR(VCAT, [first_row], 0)
                 while ps.nt.kind != Tokens.RSQUARE
-                    @catcherror ps startbyte first_arg = @default ps @closer ps square @closer ps ws parse_expression(ps)
+                    @catcherror ps startbyte first_arg = @default ps @closer ps square @closer ps ws @closer ps wsop parse_expression(ps)
                     push!(ret.args, EXPR(ROW, [first_arg], first_arg.span))
                     while ps.nt.kind != Tokens.RSQUARE && ps.ws.kind != NewLineWS && ps.ws.kind != SemiColonWS
-                        @catcherror ps startbyte a = @default ps @closer ps square @closer ps ws parse_expression(ps)
+                        @catcherror ps startbyte a = @default ps @closer ps square @closer ps ws @closer ps wsop parse_expression(ps)
                         push!(last(ret.args).args, a)
                         last(ret.args).span += a.span
                     end
@@ -129,6 +118,7 @@ function parse_array(ps::ParseState)
             end
         end
     end
+    return ret
 end
 
 """
@@ -149,8 +139,11 @@ function parse_ref(ps::ParseState, ret)
         ret = EXPR(TYPED_HCAT, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
     elseif ref isa EXPR && ref.head == VCAT
         ret = EXPR(TYPED_VCAT, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
-    elseif ref isa EXPR && ref.head == COMPREHENSION
+    else#if ref isa EXPR && ref.head == COMPREHENSION
         ret = EXPR(TYPED_COMPREHENSION, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+    # else
+    #     ps.errored = true
+    #     return ERROR{}(0)
     end
     return ret
 end

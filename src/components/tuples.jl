@@ -4,7 +4,7 @@
 `ret` is followed by a comma so tries to parse the rest of the
 tuple.
 """
-function parse_tuple(ps::ParseState, ret)
+function parse_tuple(ps::ParseState, ret::SyntaxNode)
     startbyte = ps.nt.startbyte
 
     # Parsing

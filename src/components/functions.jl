@@ -239,7 +239,7 @@ function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
     if a.val == Expr(fname)
         push!(ps.diagnostics, Hint{Hints.ArgumentFunctionNameConflict}(loc))
     end
-    if arg isa EXPR && arg.head isa OPERATOR{0,Tokens.DDDOT} && i != nargs
+    if arg isa EXPR && arg.head isa OPERATOR{0, Tokens.DDDOT} && i != nargs
         push!(ps.diagnostics, Hint{Hints.SlurpingPosition}(loc))
     end
     if arg isa EXPR && arg.head isa HEAD{Tokens.KW} && i < firstkw
@@ -281,7 +281,7 @@ end
 function _get_fname(sig)
     if sig isa EXPR && sig.head == TUPLE
         return NOTHING
-    elseif sig isa EXPR && sig.head isa OPERATOR{14,Tokens.DECLARATION}
+    elseif sig isa EXPR && sig.head isa OPERATOR{14, Tokens.DECLARATION}
         get_id(sig.args[1].args[1])
     else
         get_id(sig.args[1])
@@ -292,7 +292,7 @@ function function_name(sig::SyntaxNode)
     if sig isa EXPR
         if sig.head == CALL || sig.head == CURLY
             return function_name(sig.args[1])
-        elseif sig.head isa OPERATOR{15,Tokens.DOT}
+        elseif sig.head isa OPERATOR{15, Tokens.DOT}
             return function_name(sig.args[2])
         end
     elseif sig isa QUOTENODE
@@ -311,7 +311,7 @@ function declares_function(x::SyntaxNode)
     if x isa EXPR
         if x.head isa KEYWORD{Tokens.FUNCTION}
             return true
-        elseif x.head isa OPERATOR{1,Tokens.EQ} && x.args[1] isa EXPR && x.args[1].head == CALL
+        elseif x.head isa OPERATOR{1, Tokens.EQ} && x.args[1] isa EXPR && x.args[1].head == CALL
             return true
         else
             return false
@@ -328,7 +328,6 @@ function _lint_dict(ps::ParseState, x::EXPR)
         if length(x.args[1].args) != 3
             push!(ps.diagnostics, Hint{Hints.DictParaMisSpec}(ps.nt.startbyte - x.span + (0:x[1].span)))
         end
-    else
     end
     # Handle generators
     if length(x.args) > 1 

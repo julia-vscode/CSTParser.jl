@@ -37,7 +37,7 @@ isoperator(kind) = Tokens.begin_ops < kind < Tokens.end_ops
 isoperator(t::Token) = isoperator(t.kind)
 
 
-isunaryop{P,K,D}(op::OPERATOR{P,K,D}) = isunaryop(K)
+isunaryop{P, K, D}(op::OPERATOR{P, K, D}) = isunaryop(K)
 isunaryop(t::Token) = isunaryop(t.kind)
 
 isunaryop(kind) = kind == Tokens.PLUS ||
@@ -67,7 +67,7 @@ isunaryandbinaryop(kind) = kind == Tokens.PLUS ||
                            kind == Tokens.DECLARATION ||
                            kind == Tokens.COLON
 
-isbinaryop{P,K,D}(op::OPERATOR{P,K,D}) = isbinaryop(K)
+isbinaryop{P, K, D}(op::OPERATOR{P, K, D}) = isbinaryop(K)
 isbinaryop(t::Token) = isbinaryop(t.kind)
 isbinaryop(kind) = isoperator(kind) && 
                     !(kind == Tokens.SQUARE_ROOT || 
@@ -98,7 +98,7 @@ function non_dotted_op(t::Token)
             (isunaryop(k) && !isbinaryop(k)))
 end
 
-function issyntaxcall{P,K}(op::OPERATOR{P,K})
+function issyntaxcall{P, K}(op::OPERATOR{P, K})
     P == 1 && !(K == Tokens.APPROX) ||
     K == Tokens.RIGHT_ARROW || 
     P == 4 ||
@@ -124,26 +124,31 @@ issyntaxcall(op) = false
 
 Having hit a unary operator at the start of an expression return a call.
 """
-function parse_unary{P,K}(ps::ParseState, op::OPERATOR{P,K})
+function parse_unary{P, K}(ps::ParseState, op::OPERATOR{P, K})
     startbyte = ps.nt.startbyte - op.span
-    # Parsing
-    @catcherror ps startbyte arg = @precedence ps 12 parse_expression(ps)
-
-    # Construction
-    if (op isa OPERATOR{9, Tokens.PLUS} || op isa OPERATOR{9, Tokens.MINUS}) && (arg isa LITERAL{Tokens.INTEGER} || arg isa LITERAL{Tokens.FLOAT})
+    if (op isa OPERATOR{9, Tokens.PLUS} || op isa OPERATOR{9, Tokens.MINUS}) && (ps.nt.kind ==  Tokens.INTEGER || ps.nt.kind == Tokens.FLOAT) && isempty(ps.ws)
+        next(ps)
+        arg = INSTANCE(ps)
         arg.span += op.span
         if op isa OPERATOR{9, Tokens.MINUS}
             arg.val = string("-", arg.val)
         end
         return arg
-    elseif issyntaxcall(op) && !(op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.ISSUPERTYPE})
+    end
+
+    prec = P == 14 ? 14 : 12
+    # Parsing
+    @catcherror ps startbyte arg = @precedence ps prec parse_expression(ps)
+
+    
+    if issyntaxcall(op) && !(op isa OPERATOR{6, Tokens.ISSUBTYPE} || op isa OPERATOR{6, Tokens.ISSUPERTYPE})
         return EXPR(op, [arg], op.span + arg.span)
     else
         return EXPR(CALL, [op, arg], op.span + arg.span)
     end
 end
 
-function parse_unary(ps::ParseState, op::OPERATOR{8,Tokens.COLON})
+function parse_unary(ps::ParseState, op::OPERATOR{8, Tokens.COLON})
     startbyte = ps.nt.startbyte - op.span
     if Tokens.begin_keywords < ps.nt.kind < Tokens.end_keywords || 
         Tokens.begin_literal < ps.nt.kind < Tokens.end_literal || 
@@ -278,9 +283,9 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{6})
         ret.span += op.span + nextarg.span
     elseif ret isa EXPR && ret.head == CALL && ret.args[1] isa OPERATOR{6} && isempty(ret.punctuation) && !(ret.args[1] isa OPERATOR{6, Tokens.ISSUPERTYPE})
         ret = EXPR(COMPARISON, SyntaxNode[ret.args[2], ret.args[1], ret.args[3], op, nextarg], ret.args[2].span + ret.args[1].span + ret.args[3].span + op.span + nextarg.span)
-    elseif ret isa EXPR && (ret.head isa OPERATOR{6,Tokens.ISSUBTYPE} || ret.head isa OPERATOR{6,Tokens.ISSUPERTYPE})
+    elseif ret isa EXPR && (ret.head isa OPERATOR{6, Tokens.ISSUBTYPE} || ret.head isa OPERATOR{6, Tokens.ISSUPERTYPE})
         ret = EXPR(COMPARISON, SyntaxNode[ret.args[1], ret.head, ret.args[2], op, nextarg], ret.args[1].span + ret.head.span + ret.args[2].span + op.span + nextarg.span)
-    elseif (op isa OPERATOR{6,Tokens.ISSUBTYPE} || op isa OPERATOR{6,Tokens.ISSUPERTYPE})
+    elseif (op isa OPERATOR{6, Tokens.ISSUBTYPE} || op isa OPERATOR{6, Tokens.ISSUPERTYPE})
         ret = EXPR(op, SyntaxNode[ret, nextarg], ret.span + op.span + nextarg.span)
     else
         ret = EXPR(CALL, SyntaxNode[op, ret, nextarg], op.span + ret.span + nextarg.span)
@@ -296,7 +301,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{8, Tokens.
     @catcherror ps startbyte - op.span - ret.span nextarg = @precedence ps 8 - LtoR(8) parse_expression(ps)
 
     # Construction
-    if ret isa EXPR && ret.head isa OPERATOR{8,Tokens.COLON} && length(ret.args) == 2
+    if ret isa EXPR && ret.head isa OPERATOR{8, Tokens.COLON} && length(ret.args) == 2
         push!(ret.punctuation, op)
         push!(ret.args, nextarg)
         ret.span += ps.nt.startbyte - startbyte
@@ -308,10 +313,10 @@ end
 
 
 # Parse chained +
-function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{9,Tokens.PLUS,false})
+function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{9, Tokens.PLUS, false})
     startbyte = ps.nt.startbyte - op.span - ret.span
     
-    if ret.head == CALL && ret.args[1] isa OPERATOR{9,Tokens.PLUS,false}
+    if ret.head == CALL && ret.args[1] isa OPERATOR{9, Tokens.PLUS, false}
         # Parsing
         @catcherror ps startbyte nextarg = @precedence ps 9 - LtoR(9) parse_expression(ps)
 
@@ -320,16 +325,16 @@ function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{9,Tokens.PLUS,fa
         ret.span += nextarg.span + op.span
         push!(ret.punctuation, op)
     else
-        ret = invoke(parse_operator, Tuple{ParseState,SyntaxNode,OPERATOR}, ps, ret, op)
+        ret = invoke(parse_operator, Tuple{ParseState, SyntaxNode, OPERATOR}, ps, ret, op)
     end
     return ret
 end
 
 # Parse chained *
-function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{11,Tokens.STAR,false})
+function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{11, Tokens.STAR, false})
     startbyte = ps.nt.startbyte - op.span - ret.span
 
-    if ret.head == CALL && ret.args[1] isa OPERATOR{11,Tokens.STAR,false} && ret.args[1].span != 0 && op.span != 0
+    if ret.head == CALL && ret.args[1] isa OPERATOR{11, Tokens.STAR, false} && ret.args[1].span != 0 && op.span != 0
         # Parsing
         @catcherror ps startbyte nextarg = @precedence ps 11 - LtoR(11) parse_expression(ps)
 
@@ -338,7 +343,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{11,Tokens.STAR,f
         ret.span += nextarg.span + op.span
         push!(ret.punctuation, op)
     else
-        ret = invoke(parse_operator, Tuple{ParseState,SyntaxNode,OPERATOR}, ps, ret, op)
+        ret = invoke(parse_operator, Tuple{ParseState, SyntaxNode, OPERATOR}, ps, ret, op)
     end
     return ret
 end
@@ -382,10 +387,6 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
 
     # Parsing
     if ps.nt.kind == Tokens.LPAREN
-        # puncs = INSTANCE[INSTANCE(next(ps))]
-        # @catcherror ps startbyte args = @closer ps paren parse_list(ps, puncs)
-        # push!(puncs, INSTANCE(next(ps)))
-        # nextarg = EXPR(TUPLE, args, ps.nt.startbyte - startbyte, puncs)
         startbyte1 = ps.nt.startbyte
         @catcherror ps startbyte sig = @default ps @closer ps paren parse_call(ps, ret)
         args = EXPR(TUPLE, sig.args[2:end], ps.nt.startbyte - startbyte1, sig.punctuation)
@@ -441,7 +442,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{20, Tokens
     return ret
 end
 
-function parse_operator{op_prec,K}(ps::ParseState, ret::SyntaxNode, op::OPERATOR{op_prec, K})
+function parse_operator{op_prec, K}(ps::ParseState, ret::SyntaxNode, op::OPERATOR{op_prec, K})
     startbyte = ps.nt.startbyte - op.span - ret.span
     
     # Parsing

@@ -54,7 +54,7 @@ function parse_macrocall(ps::ParseState)
     else
         insquare = ps.closer.insquare
         @default ps while !closer(ps)
-            @catcherror ps startbyte a = @closer ps inmacro @closer ps ws parse_expression(ps)
+            @catcherror ps startbyte a = @closer ps inmacro @closer ps ws @closer ps wsop parse_expression(ps)
             push!(ret.args, a)
             if insquare && ps.nt.kind == Tokens.FOR
                 break

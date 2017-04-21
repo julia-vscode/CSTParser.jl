@@ -1,5 +1,5 @@
 __precompile__()
-module Parser
+module CSTParser
 global debug = true
 
 using Tokenize
@@ -93,7 +93,8 @@ function parse_expression(ps::ParseState)
         ps.errored = true
         return ERROR{UnexpectedRSquare}(0, INSTANCE(ps))
     else
-        error("Expression started with $(ps)")
+        ps.errored = true
+        return ERROR{UnknownError}(0, INSTANCE(ps))
     end
 
     while !closer(ps) && !(ps.closer.precedence == 15 && ismacro(ret))
@@ -141,7 +142,7 @@ function parse_compound(ps::ParseState, ret)
         #  --> implicit multiplication
         op = OPERATOR{11, Tokens.STAR, false}(0)
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind == Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR} || ret isa OPERATOR{11, Tokens.AND} || ret isa OPERATOR{14, Tokens.DECLARATION})# && !isunaryop(ret)
+    elseif ps.nt.kind == Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR} || ret isa OPERATOR{11, Tokens.AND} || ret isa OPERATOR{14, Tokens.DECLARATION})
         if isempty(ps.ws) 
             @catcherror ps startbyte ret = @default ps @closer ps paren parse_call(ps, ret)
         else
@@ -159,7 +160,7 @@ function parse_compound(ps::ParseState, ret)
             ps.errored = true
             return ERROR{UnexpectedLBrace}(ret.span, ret)
         end
-    elseif ps.nt.kind == Tokens.LSQUARE
+    elseif ps.nt.kind == Tokens.LSQUARE && !(ret isa OPERATOR)
         if isempty(ps.ws)
             @catcherror ps startbyte ret = @nocloser ps block parse_ref(ps, ret)
         else
@@ -222,8 +223,6 @@ function parse_compound(ps::ParseState, ret)
     return ret
 end
 
-
-
 """
     parse_list(ps)
 
@@ -254,8 +253,6 @@ function parse_list(ps::ParseState, puncs)
     end
     return args
 end
-
-
 
 """
     parse_paren(ps, ret)
@@ -289,58 +286,19 @@ function parse_paren(ps::ParseState)
     return ret
 end
 
-
-
-
-"""
-    parse_quote(ps)
-
-Handles the case where a colon is used as a unary operator on an
-expression. The output is a quoted expression.
-"""
-function parse_quote(ps::ParseState)
-    startbyte = ps.t.startbyte
-
-    puncs = INSTANCE[INSTANCE(ps)]
-    if ps.nt.kind == Tokens.IDENTIFIER
-        arg = INSTANCE(next(ps))
-        return QUOTENODE(arg, arg.span, puncs)
-    elseif iskw(ps.nt)
-        next(ps)
-        arg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, Symbol(ps.val))
-        return QUOTENODE(arg, arg.span, puncs)
-    elseif isliteral(ps.nt)
-        return INSTANCE(next(ps))
-    elseif ps.nt.kind == Tokens.LPAREN
-        next(ps)
-        push!(puncs, INSTANCE(ps))
-        if ps.nt.kind == Tokens.RPAREN
-            next(ps)
-            return EXPR(QUOTE, [EXPR(TUPLE, [], 2, [pop!(puncs), INSTANCE(ps)])], 3, puncs)
-        end
-        @catcherror ps startbyte arg = @closer ps paren parse_expression(ps)
-        next(ps)
-        push!(puncs, INSTANCE(ps))
-        return EXPR(QUOTE, [arg],  ps.nt.startbyte - startbyte, puncs)
-    end
-end
-
-
-
 """
     parse(str, cont = false)
 
 Parses the passed string. If `cont` is true then will continue parsing until the end of the string returning the resulting expressions in a TOPLEVEL block.
 """
 function parse(str::String, cont = false)
-    ps = Parser.ParseState(str)
+    ps = ParseState(str)
     x, ps = parse(ps, cont)
     if ps.errored
-        x = ERROR{0}(ps.nt.startbyte, x)
+        x = ERROR{UnknownError}(ps.nt.startbyte, x)
     end
     return x
 end
-
 
 function parse_doc(ps::ParseState)
     if ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
@@ -369,10 +327,6 @@ function parse_doc(ps::ParseState)
     return ret
 end
 
-"""
-    parse(str, cont = false)
-
-"""
 function parse(ps::ParseState, cont = false)
     if ps.l.io.size == 0
         return (cont ? EXPR(FILE, [], 0) : nothing), ps
