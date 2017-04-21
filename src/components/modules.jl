@@ -34,15 +34,15 @@ function parse_dot_mod(ps::ParseState, colon=false)
     while ps.nt.kind == Tokens.DOT || ps.nt.kind == Tokens.DDOT || ps.nt.kind == Tokens.DDDOT
         next(ps)
         d = INSTANCE(ps)
-        if d isa OPERATOR{15, Tokens.DOT}
-            push!(puncs, OPERATOR{15, Tokens.DOT, false}(1))
+        if d isa OPERATOR{16, Tokens.DOT}
+            push!(puncs, OPERATOR{16, Tokens.DOT, false}(1))
         elseif d isa OPERATOR{8, Tokens.DDOT}
-            push!(puncs, OPERATOR{15, Tokens.DOT, false}(1))
-            push!(puncs, OPERATOR{15, Tokens.DOT, false}(1))
+            push!(puncs, OPERATOR{16, Tokens.DOT, false}(1))
+            push!(puncs, OPERATOR{16, Tokens.DOT, false}(1))
         elseif d isa OPERATOR{0, Tokens.DDDOT}
-            push!(puncs, OPERATOR{15, Tokens.DOT, false}(1))
-            push!(puncs, OPERATOR{15, Tokens.DOT, false}(1))
-            push!(puncs, OPERATOR{15, Tokens.DOT, false}(1))
+            push!(puncs, OPERATOR{16, Tokens.DOT, false}(1))
+            push!(puncs, OPERATOR{16, Tokens.DOT, false}(1))
+            push!(puncs, OPERATOR{16, Tokens.DOT, false}(1))
         end
     end
 

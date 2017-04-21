@@ -40,7 +40,7 @@ function func_sig(x::EXPR)
         params = name.args[2]
         name = name.args[1]
     end
-    if name isa EXPR && name.head isa OPERATOR{15, Tokens.DOT}
+    if name isa EXPR && name.head isa OPERATOR{16, Tokens.DOT}
         mod = name.args[1]
         name = name.args[2]
     end

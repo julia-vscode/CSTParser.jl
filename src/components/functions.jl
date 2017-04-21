@@ -286,7 +286,7 @@ function function_name(sig::SyntaxNode)
     if sig isa EXPR
         if sig.head == CALL || sig.head == CURLY
             return function_name(sig.args[1])
-        elseif sig.head isa OPERATOR{15, Tokens.DOT}
+        elseif sig.head isa OPERATOR{16, Tokens.DOT}
             return function_name(sig.args[2])
         end
     elseif sig isa QUOTENODE

@@ -11,7 +11,8 @@ precedence(op::Int) = op < Tokens.end_assignments ? 1 :
                        op < Tokens.end_times ? 11 :
                        op < Tfokens.end_rational ? 12 :
                        op < Tokens.end_power ? 13 :
-                       op < Tokens.end_decl ? 14 : 15
+                       op < Tokens.end_where ? 14 :
+                       op < Tokens.end_decl ? 15 : 16
 
 precedence(op::Token) = op.kind < Tokens.begin_assignments ? 0 :
                         op.kind < Tokens.end_assignments ? 1 :
@@ -28,8 +29,9 @@ precedence(op::Token) = op.kind < Tokens.begin_assignments ? 0 :
                        op.kind < Tokens.end_rational ? 12 :
                        op.kind < Tokens.end_power ? 13 :
                        op.kind < Tokens.end_decl ? 14 : 
-                       op.kind < Tokens.end_dot ? 15 : 
-                       op.kind == Tokens.PRIME ? 15 :20
+                       op.kind < Tokens.end_where ? 15 : 
+                       op.kind < Tokens.end_dot ? 16 : 
+                       op.kind == Tokens.PRIME ? 17 : 20
 
 precedence(x) = 0
 
@@ -112,7 +114,8 @@ function issyntaxcall{P, K}(op::OPERATOR{P, K})
     K == Tokens.DOT ||
     K == Tokens.DDDOT ||
     K == Tokens.EX_OR || 
-    K == Tokens.PRIME
+    K == Tokens.PRIME ||
+    K == Tokens.WHERE 
 end
 
 
@@ -401,8 +404,20 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{14})
     return ret
 end
 
+# parse where
+function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15, Tokens.WHERE})
+    startbyte = ps.nt.startbyte - op.span - ret.span
+    
+    # Parsing
+    @catcherror ps startbyte nextarg = @precedence ps 15 - LtoR(15) parse_expression(ps)
+    
+    # Construction
+    ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
+    return ret
+end
+
 # parse dot access
-function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
+function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{16})
     startbyte = ps.nt.startbyte - op.span - ret.span
 
     # Parsing
@@ -412,22 +427,22 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15})
         args = EXPR(TUPLE, sig.args[2:end], ps.nt.startbyte - startbyte1, sig.punctuation)
         ret = EXPR(op, [ret, args], ps.nt.startbyte - startbyte)
         return ret
-    elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA
+    elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA || ps.nt.kind == Tokens.WHERE
         next(ps)
         nextarg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, Symbol(lowercase(string(ps.t.kind))))
     elseif ps.nt.kind == Tokens.COLON
         next(ps)
         op2 = INSTANCE(ps)
         if ps.nt.kind == Tokens.LPAREN
-            @catcherror ps startbyte nextarg = @precedence ps 15 - LtoR(15) parse_expression(ps)
+            @catcherror ps startbyte nextarg = @precedence ps 16 - LtoR(16) parse_expression(ps)
             nextarg = EXPR(QUOTE, [nextarg], op2.span + nextarg.span, [op2])
         else
-            @catcherror ps startbyte nextarg = @precedence ps 15 - LtoR(15) parse_unary(ps, op2)
+            @catcherror ps startbyte nextarg = @precedence ps 16 - LtoR(16) parse_unary(ps, op2)
         end
     elseif ps.nt.kind == Tokens.EX_OR && ps.nnt.kind == Tokens.LPAREN
         @catcherror ps startbyte nextarg = parse_expression(ps)
     else
-        @catcherror ps startbyte nextarg = @precedence ps 15 - LtoR(15) parse_expression(ps)
+        @catcherror ps startbyte nextarg = @precedence ps 16 - LtoR(16) parse_expression(ps)
     end
 
     # Construction
@@ -447,7 +462,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{0, Tokens.
     return EXPR(op, SyntaxNode[ret], op.span + ret.span)
 end
 
-function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{15, Tokens.PRIME})
+function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{17, Tokens.PRIME})
     return EXPR(op, SyntaxNode[ret], op.span + ret.span)
 end
 

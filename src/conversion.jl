@@ -144,7 +144,7 @@ function Expr(x::EXPR)
                 push!(ret.args, Expr(a))
             end
             return ret
-        elseif x.args[1] isa EXPR && x.args[1].head isa OPERATOR{15, Tokens.DOT} && string(x.args[1].args[2].val.val)[1] != '@'
+        elseif x.args[1] isa EXPR && x.args[1].head isa OPERATOR{16, Tokens.DOT} && string(x.args[1].args[2].val.val)[1] != '@'
             x1 = deepcopy(x)
             x1.args[1].args[2].val.val = Symbol("@", x1.args[1].args[2].val.val)
             remove_first_at!(x1.args[1])
@@ -163,7 +163,7 @@ function Expr(x::EXPR)
         ret = Expr(Expr(x.head))
         col = findfirst(x -> x isa OPERATOR{8, Tokens.COLON}, x.punctuation)
         ndots = 0
-        while x.punctuation[ndots + 2] isa OPERATOR{15, Tokens.DOT}
+        while x.punctuation[ndots + 2] isa OPERATOR{16, Tokens.DOT}
             ndots += 1
         end
 
@@ -225,7 +225,7 @@ function Expr(x::EXPR)
 end
 
 function remove_first_at!(x)
-    if x isa EXPR && x.head isa OPERATOR{15, Tokens.DOT}
+    if x isa EXPR && x.head isa OPERATOR{16, Tokens.DOT}
         return remove_first_at!(x.args[1])
     else
         return x.val = Symbol(string(x.val)[2:end])
@@ -319,3 +319,4 @@ UNICODE_OPS_REVERSE[Tokens.PRIME] = Symbol(''')
 UNICODE_OPS_REVERSE[Tokens.DDDOT] = :(...)
 UNICODE_OPS_REVERSE[Tokens.TRANSPOSE] = Symbol(".'")
 UNICODE_OPS_REVERSE[Tokens.ANON_FUNC] = :(->)
+UNICODE_OPS_REVERSE[Tokens.WHERE] = :where

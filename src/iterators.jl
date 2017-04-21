@@ -30,7 +30,7 @@ function start(x::EXPR)
         end
     elseif x.head isa HEAD{Tokens.CCALL}
         return _start_ccall(x)
-    elseif x.head isa OPERATOR{15, Tokens.PRIME}
+    elseif x.head isa OPERATOR{16, Tokens.PRIME}
         return Iterator{:prime}(1, 2)
     elseif issyntaxcall(x.head) || x.head isa OPERATOR{20, Tokens.ANON_FUNC}
         if x.head isa OPERATOR{8, Tokens.COLON}

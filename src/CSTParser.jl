@@ -97,10 +97,10 @@ function parse_expression(ps::ParseState)
         return ERROR{UnknownError}(0, INSTANCE(ps))
     end
 
-    while !closer(ps) && !(ps.closer.precedence == 15 && ismacro(ret))
+    while !closer(ps) && !(ps.closer.precedence == 16 && ismacro(ret))
         @catcherror ps startbyte ret = parse_compound(ps, ret)
     end
-    if ps.closer.precedence != 15 && closer(ps) && ret isa LITERAL{Tokens.MACRO}
+    if ps.closer.precedence != 16 && closer(ps) && ret isa LITERAL{Tokens.MACRO}
         ret = EXPR(MACROCALL, [ret], ret.span)
     end
 
@@ -131,7 +131,7 @@ function parse_compound(ps::ParseState, ret)
     elseif ps.nt.kind == Tokens.DO
         @catcherror ps startbyte ret = parse_do(ps, ret)
     elseif ((ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || 
-        (ret isa EXPR && ret.head isa OPERATOR{15, Tokens.PRIME} && ps.nt.kind == Tokens.IDENTIFIER) || 
+        (ret isa EXPR && ret.head isa OPERATOR{16, Tokens.PRIME} && ps.nt.kind == Tokens.IDENTIFIER) || 
         ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
         ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING))
         # a literal number followed by an identifier or (
@@ -176,7 +176,7 @@ function parse_compound(ps::ParseState, ret)
         op = INSTANCE(ps)
         format_op(ps, precedence(ps.t))
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
-    elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{15, Tokens.DOT})) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
+    elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{16, Tokens.DOT})) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
         next(ps)
         @catcherror ps startbyte arg = parse_string(ps, ret)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
@@ -185,7 +185,7 @@ function parse_compound(ps::ParseState, ret)
         arg = INSTANCE(ps)
         push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.val))
         ret.span += arg.span
-    elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{15, Tokens.DOT})) && ps.nt.kind == Tokens.CMD
+    elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{16, Tokens.DOT})) && ps.nt.kind == Tokens.CMD
         next(ps)
         @catcherror ps startbyte arg = parse_string(ps, ret)
         ret = EXPR(x_CMD, [ret, arg], ret.span + arg.span)
