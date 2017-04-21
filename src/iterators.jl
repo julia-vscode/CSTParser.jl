@@ -36,7 +36,7 @@ function start(x::EXPR)
         if x.head isa OPERATOR{8, Tokens.COLON}
             return Iterator{:(:)}(1, length(x.args) == 2 ? 3 : 5)
         end
-        return Iterator{:syntaxcall}(1, length(x.args) + 1)
+        return Iterator{:syntaxcall}(1, 1 + length(x.args) + length(x.punctuation))
     elseif x.head isa OPERATOR{20, Tokens.PRIME}
         return Iterator{:prime}(1, 2)
     elseif x.head == COMPARISON

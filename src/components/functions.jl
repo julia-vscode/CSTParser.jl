@@ -39,12 +39,8 @@ function parse_call(ps::ParseState, ret)
     startbyte = ps.t.startbyte
     # Parsing
     next(ps)
-    if ret isa IDENTIFIER && ret.val == :ccall
-        ret = HEAD{Tokens.CCALL}(ret.span)
-        ret = EXPR(ret, [], ret.span - ps.t.startbyte, [INSTANCE(ps)])
-    else
-        ret = EXPR(CALL, [ret], ret.span - ps.t.startbyte, [INSTANCE(ps)])
-    end
+    
+    ret = EXPR(CALL, [ret], ret.span - ps.t.startbyte, [INSTANCE(ps)])
     format_lbracket(ps)
         
     @default ps @closer ps paren parse_comma_sep(ps, ret)
@@ -56,10 +52,9 @@ function parse_call(ps::ParseState, ret)
 
     # Construction
     # fix arbitrary $ case
-    if ret.args[1] isa OPERATOR{9, Tokens.EX_OR}
+    if ret.args[1] isa OPERATOR{9, Tokens.EX_OR} || ret.args[1] isa OPERATOR{6, Tokens.ISSUBTYPE} || ret.args[1] isa OPERATOR{6, Tokens.ISSUPERTYPE}
         ret.head = shift!(ret.args)
     end
-
     
     if length(ret.args) > 0 && ismacro(ret.args[1])
         ret.head = MACROCALL
@@ -68,7 +63,6 @@ function parse_call(ps::ParseState, ret)
         arg = splice!(ret.args, 2)
         push!(ret.args, EXPR(arg, [], arg.span))
     end
-
 
     # Linting
     if (ret.args[1] isa IDENTIFIER && ret.args[1].val == :Dict) || (ret.args[1] isa EXPR && ret.args[1].head == CURLY && ret.args[1].args[1] isa IDENTIFIER && ret.args[1].args[1].val == :Dict)

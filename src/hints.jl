@@ -126,7 +126,7 @@ function format_typename(ps, sig)
     sig isa EXPR && return
     val = string(id.val)
     # Abitrary limit of 3 for uppercase acronym
-    if islower(first(val)) || (length(val) > 3 && isupper(val))
+    if islower(first(val)) || (length(val) > 3 && all(isupper, val))
         push!(ps.diagnostics, Hint{Hints.CamelCase}(start_loc + (1:sizeof(val))))
     end
 end

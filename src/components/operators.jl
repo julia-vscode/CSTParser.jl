@@ -105,6 +105,7 @@ function issyntaxcall{P, K}(op::OPERATOR{P, K})
     P == 5 ||
     K == Tokens.ISSUBTYPE ||
     K == Tokens.ISSUPERTYPE ||
+    K == Tokens.PAIR_ARROW ||
     K == Tokens.COLON ||
     K == Tokens.AND ||
     K == Tokens.DECLARATION ||
@@ -141,7 +142,7 @@ function parse_unary{P, K}(ps::ParseState, op::OPERATOR{P, K})
     @catcherror ps startbyte arg = @precedence ps prec parse_expression(ps)
 
     
-    if issyntaxcall(op) && !(op isa OPERATOR{6, Tokens.ISSUBTYPE} || op isa OPERATOR{6, Tokens.ISSUPERTYPE})
+    if issyntaxcall(op) && #!(op isa OPERATOR{6, Tokens.ISSUBTYPE} || op isa OPERATOR{6, Tokens.ISSUPERTYPE})
         return EXPR(op, [arg], op.span + arg.span)
     else
         return EXPR(CALL, [op, arg], op.span + arg.span)
@@ -203,15 +204,25 @@ end
 
 
 # REMOVE FOR v0.6
+# function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1, Tokens.APPROX})
+#     startbyte = ps.nt.startbyte - op.span - ret.span
+#     # Parsing
+#     @catcherror ps startbyte nextarg = @precedence ps 1 - LtoR(1) parse_expression(ps)
+#     # Construction
+#     op1 = IDENTIFIER(op.span, Symbol('@', Expr(op)))
+#     ret = EXPR(MACROCALL, [op1, ret, nextarg], op.span + ret.span + nextarg.span)
+#     return ret
+# end
+
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1, Tokens.APPROX})
     startbyte = ps.nt.startbyte - op.span - ret.span
     # Parsing
     @catcherror ps startbyte nextarg = @precedence ps 1 - LtoR(1) parse_expression(ps)
-    # Construction
-    op1 = IDENTIFIER(op.span, Symbol('@', Expr(op)))
-    ret = EXPR(MACROCALL, [op1, ret, nextarg], op.span + ret.span + nextarg.span)
+    # Construction 
+    ret = EXPR(CALL, SyntaxNode[op, ret, nextarg], op.span + ret.span + nextarg.span)
     return ret
 end
+
 
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1})
     startbyte = ps.nt.startbyte - op.span - ret.span
@@ -219,6 +230,15 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1})
     @catcherror ps startbyte nextarg = @precedence ps 1 - LtoR(1) parse_expression(ps)
     # Construction 
     ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
+    return ret
+end
+
+function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{1, Tokens.PAIR_ARROW})
+    startbyte = ps.nt.startbyte - op.span - ret.span
+    # Parsing
+    @catcherror ps startbyte nextarg = @precedence ps 1 - LtoR(1) parse_expression(ps)
+    # Construction 
+    ret = EXPR(CALL, SyntaxNode[op, ret, nextarg], op.span + ret.span + nextarg.span)
     return ret
 end
 
@@ -491,13 +511,28 @@ function next(x::EXPR, s::Iterator{:syntaxcall})
         else
             return x.args[1], +s
         end
-    end
-    if s.i == 1
-        return x.args[1], +s
-    elseif s.i == 2
-        return x.head, +s
-    elseif s.i == 3 
-        return x.args[2], +s
+    elseif s.n == 3
+        if s.i == 1
+            return x.args[1], +s
+        elseif s.i == 2
+            return x.head, +s
+        elseif s.i == 3 
+            return x.args[2], +s
+        end
+    else
+        if s.i == 1
+            return x.head, +s
+        elseif s.i == 2
+            return x.punctuation[1], +s
+        elseif s.i == 3
+            return x.args[1], +s
+        elseif s.i == 4
+            return x.punctuation[2], +s
+        elseif s.i == 5
+            return x.args[1], +s
+        elseif s.i == 6
+            return x.punctuation[3], +s
+        end
     end
 end
 
