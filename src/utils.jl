@@ -2,12 +2,12 @@ function closer(ps::ParseState)
     (ps.closer.newline && ps.ws.kind == NewLineWS && ps.t.kind != Tokens.COMMA) ||
     (ps.closer.semicolon && ps.ws.kind == SemiColonWS) ||
     (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence) ||
-    (ps.nt.kind == Tokens.LPAREN && ps.closer.precedence > 14) ||
-    (ps.nt.kind == Tokens.LBRACE && ps.closer.precedence > 14) ||
-    (ps.nt.kind == Tokens.LSQUARE && ps.closer.precedence > 14) ||
-    (ps.nt.kind == Tokens.STRING && isempty(ps.ws) && ps.closer.precedence > 14) ||
-    (ps.closer.precedence > 14 && ps.t.kind == Tokens.RPAREN && ps.nt.kind == Tokens.IDENTIFIER) ||
-    (ps.closer.precedence > 14 && ps.t.kind == Tokens.RSQUARE && ps.nt.kind == Tokens.IDENTIFIER) ||
+    (ps.nt.kind == Tokens.LPAREN && ps.closer.precedence > 15) ||
+    (ps.nt.kind == Tokens.LBRACE && ps.closer.precedence > 15) ||
+    (ps.nt.kind == Tokens.LSQUARE && ps.closer.precedence > 15) ||
+    (ps.nt.kind == Tokens.STRING && isempty(ps.ws) && ps.closer.precedence > 15) ||
+    (ps.closer.precedence > 15 && ps.t.kind == Tokens.RPAREN && ps.nt.kind == Tokens.IDENTIFIER) ||
+    (ps.closer.precedence > 15 && ps.t.kind == Tokens.RSQUARE && ps.nt.kind == Tokens.IDENTIFIER) ||
     (ps.nt.kind == Tokens.COMMA && ps.closer.precedence > 0) ||
     ps.nt.kind == Tokens.ENDMARKER ||
     (ps.closer.comma && iscomma(ps.nt)) || 
