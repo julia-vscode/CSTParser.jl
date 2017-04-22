@@ -36,7 +36,7 @@ function parse_dot_mod(ps::ParseState, colon=false)
         d = INSTANCE(ps)
         if d isa OPERATOR{16, Tokens.DOT}
             push!(puncs, OPERATOR{16, Tokens.DOT, false}(1))
-        elseif d isa OPERATOR{8, Tokens.DDOT}
+        elseif d isa OPERATOR{9, Tokens.DDOT}
             push!(puncs, OPERATOR{16, Tokens.DOT, false}(1))
             push!(puncs, OPERATOR{16, Tokens.DOT, false}(1))
         elseif d isa OPERATOR{0, Tokens.DDDOT}
@@ -252,7 +252,7 @@ function next(x::EXPR, s::Iterator{:module})
 end
 
 function next(x::EXPR, s::Iterator{:toplevel})
-    col = findfirst(x -> x isa OPERATOR{8, Tokens.COLON}, x.punctuation)
+    col = findfirst(x -> x isa OPERATOR{9, Tokens.COLON}, x.punctuation)
     if col > 0
         if s.i ≤ col
             return x.punctuation[s.i], +s

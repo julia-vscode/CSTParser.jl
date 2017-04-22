@@ -70,7 +70,7 @@ isrbracket(t::Token) = t.kind == Tokens.RPAREN ||
 
 function format_op(ps, prec)
     # prec = precedence(ps.t)
-    if prec == 8 || prec == 13 || prec == 14 || prec == 16
+    if prec == 9 || prec == 14 || prec == 15 || prec == 16
         if ps.lws.kind != EmptyWS
             push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1:ps.lws.endbyte + 1))
         end

@@ -161,7 +161,7 @@ function Expr(x::EXPR)
         return ret
     elseif x.head == TOPLEVEL && !(isempty(x.punctuation)) && (x.punctuation[1] isa KEYWORD{Tokens.IMPORT} || x.punctuation[1] isa KEYWORD{Tokens.IMPORTALL} || x.punctuation[1] isa KEYWORD{Tokens.USING})
         ret = Expr(Expr(x.head))
-        col = findfirst(x -> x isa OPERATOR{8, Tokens.COLON}, x.punctuation)
+        col = findfirst(x -> x isa OPERATOR{9, Tokens.COLON}, x.punctuation)
         ndots = 0
         while x.punctuation[ndots + 2] isa OPERATOR{16, Tokens.DOT}
             ndots += 1
@@ -235,7 +235,7 @@ end
 
 fixranges(a::INSTANCE) = Expr(a)
 function fixranges(a::EXPR)
-    if a.head isa HEAD{Tokens.CALL} && a.args[1] isa OPERATOR{6, Tokens.IN} || a.args[1] isa OPERATOR{6, Tokens.ELEMENT_OF}
+    if a.head isa HEAD{Tokens.CALL} && a.args[1] isa OPERATOR{7, Tokens.IN} || a.args[1] isa OPERATOR{7, Tokens.ELEMENT_OF}
         ret = Expr(:(=))
         for x in a.args[2:end]
             push!(ret.args, Expr(x))

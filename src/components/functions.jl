@@ -52,7 +52,7 @@ function parse_call(ps::ParseState, ret)
 
     # Construction
     # fix arbitrary $ case
-    if ret.args[1] isa OPERATOR{9, Tokens.EX_OR} || ret.args[1] isa OPERATOR{6, Tokens.ISSUBTYPE} || ret.args[1] isa OPERATOR{6, Tokens.ISSUPERTYPE}
+    if ret.args[1] isa OPERATOR{10, Tokens.EX_OR} || ret.args[1] isa OPERATOR{7, Tokens.ISSUBTYPE} || ret.args[1] isa OPERATOR{7, Tokens.ISSUPERTYPE}
         ret.head = shift!(ret.args)
     end
     
@@ -198,7 +198,7 @@ function _lint_func_sig(ps::ParseState, sig::IDENTIFIER) end
     
 function _lint_func_sig(ps::ParseState, sig::EXPR)
     loc = ps.nt.startbyte + (-sig.span:0)
-    if sig isa EXPR && sig.head isa OPERATOR{14, Tokens.DECLARATION}
+    if sig isa EXPR && sig.head isa OPERATOR{15, Tokens.DECLARATION}
         return _lint_func_sig(ps, sig.args[1])
     end
     fname = _get_fname(sig)
@@ -207,7 +207,7 @@ function _lint_func_sig(ps::ParseState, sig::EXPR)
     nargs = length(sig.args) - 1
     firstkw  = nargs + 1
     for (i, arg) in enumerate(sig.args[2:end])
-        if arg isa EXPR && arg.head isa OPERATOR{14, Tokens.DECLARATION} && length(arg.args) == 1
+        if arg isa EXPR && arg.head isa OPERATOR{15, Tokens.DECLARATION} && length(arg.args) == 1
             #unhandled ::Type argument
             continue
         elseif arg isa EXPR && arg.head == PARAMETERS
@@ -253,7 +253,7 @@ end
 _arg_id(x::INSTANCE) = x
 
 function _arg_id(x::EXPR)
-    if x.head isa OPERATOR{14, Tokens.DECLARATION} || x.head == CURLY || x.head isa OPERATOR{0, Tokens.DDDOT} || x.head isa HEAD{Tokens.KW}
+    if x.head isa OPERATOR{15, Tokens.DECLARATION} || x.head == CURLY || x.head isa OPERATOR{0, Tokens.DDDOT} || x.head isa HEAD{Tokens.KW}
         return _arg_id(x.args[1])
     else
         return x
@@ -275,7 +275,7 @@ end
 function _get_fname(sig)
     if sig isa EXPR && sig.head == TUPLE
         return NOTHING
-    elseif sig isa EXPR && sig.head isa OPERATOR{14, Tokens.DECLARATION}
+    elseif sig isa EXPR && sig.head isa OPERATOR{15, Tokens.DECLARATION}
         get_id(sig.args[1].args[1])
     else
         get_id(sig.args[1])

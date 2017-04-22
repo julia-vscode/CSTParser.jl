@@ -69,7 +69,7 @@ function parse_expression(ps::ParseState)
         @catcherror ps startbyte ret = parse_cell1d(ps)
     elseif isinstance(ps.t) || isoperator(ps.t)
         ret = INSTANCE(ps)
-        if (ret isa OPERATOR{8, Tokens.COLON}) && ps.nt.kind != Tokens.COMMA
+        if (ret isa OPERATOR{9, Tokens.COLON}) && ps.nt.kind != Tokens.COMMA
             @catcherror ps startbyte ret = parse_unary(ps, ret)
         end
     elseif ps.t.kind == Tokens.AT_SIGN
@@ -140,9 +140,9 @@ function parse_compound(ps::ParseState, ret)
         # an expression followed by a CMD
         # a string followed by a string
         #  --> implicit multiplication
-        op = OPERATOR{11, Tokens.STAR, false}(0)
+        op = OPERATOR{12, Tokens.STAR, false}(0)
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind == Tokens.LPAREN && !(ret isa OPERATOR{9, Tokens.EX_OR} || ret isa OPERATOR{11, Tokens.AND} || ret isa OPERATOR{14, Tokens.DECLARATION})
+    elseif ps.nt.kind == Tokens.LPAREN && !(ret isa OPERATOR{10, Tokens.EX_OR} || ret isa OPERATOR{12, Tokens.AND} || ret isa OPERATOR{15, Tokens.DECLARATION})
         if isempty(ps.ws) 
             @catcherror ps startbyte ret = @default ps @closer ps paren parse_call(ps, ret)
         else
@@ -197,7 +197,7 @@ function parse_compound(ps::ParseState, ret)
     elseif ret isa EXPR && ret.head isa OPERATOR{20, Tokens.PRIME} 
         # prime operator followed by an identifier has an implicit multiplication
         @catcherror ps startbyte nextarg = @precedence ps 11 parse_expression(ps)
-        ret = EXPR(CALL, [OPERATOR{11, Tokens.STAR, false}(0), ret, nextarg], ret.span + nextarg.span)
+        ret = EXPR(CALL, [OPERATOR{12, Tokens.STAR, false}(0), ret, nextarg], ret.span + nextarg.span)
 ################################################################################
 # Everything below here is an error
 ################################################################################
@@ -407,6 +407,6 @@ end
 ischainable(t::Token) = t.kind == Tokens.PLUS || t.kind == Tokens.STAR || t.kind == Tokens.APPROX
 LtoR(prec::Int) = 1 ≤ prec ≤ 5 || prec == 13
 
-include("precompile.jl")
-_precompile_()
+# include("precompile.jl")
+# _precompile_()
 end
