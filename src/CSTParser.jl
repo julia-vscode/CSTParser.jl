@@ -405,7 +405,6 @@ end
 
 
 ischainable(t::Token) = t.kind == Tokens.PLUS || t.kind == Tokens.STAR || t.kind == Tokens.APPROX
-LtoR(prec::Int) = 1 ≤ prec ≤ 5 || prec == 13
 
 # include("precompile.jl")
 # _precompile_()
