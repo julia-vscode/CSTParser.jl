@@ -48,31 +48,31 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
     return ret
 end
 
-# function parse_kw(ps::ParseState, ::Type{Val{Tokens.PRIMITIVE}})
-#     startbyte = ps.t.startbyte
+function parse_kw(ps::ParseState, ::Type{Val{Tokens.PRIMITIVE}})
+    startbyte = ps.t.startbyte
 
-#     if ps.nt.kind == Tokens.TYPE
-#         # Parsing
-#         kw1 = INSTANCE(ps)
-#         next(ps)
-#         kw2 = INSTANCE(ps)
-#         @catcherror ps startbyte sig = @closer ps ws parse_expression(ps)
-#         @catcherror ps startbyte arg = @closer ps block parse_expression(ps)
+    if ps.nt.kind == Tokens.TYPE
+        # Parsing
+        kw1 = INSTANCE(ps)
+        next(ps)
+        kw2 = INSTANCE(ps)
+        @catcherror ps startbyte sig = @default ps @closer ps ws parse_expression(ps)
+        @catcherror ps startbyte arg = @default ps @closer ps block parse_expression(ps)
 
-#         # Construction
-#         if ps.nt.kind != Tokens.END
-#             return ERROR{MissingEnd}(ps.nt.startbyte - startbyte, EXPR(kw2, [sig, arg], ps.nt.startbyte - startbyte, [kw1]))
-#         else
-#             next(ps)
-#             ret = EXPR(kw2, [arg, sig], ps.nt.startbyte - startbyte, [kw1, INSTANCE(ps)])
-#             # ret.defs = [Variable(get_id(sig), :bitstype, ret)]
-#         end
+        # Construction
+        if ps.nt.kind != Tokens.END
+            return ERROR{MissingEnd}(ps.nt.startbyte - startbyte, EXPR(kw2, [sig, arg], ps.nt.startbyte - startbyte, [kw1]))
+        else
+            next(ps)
+            ret = EXPR(kw2, [arg, sig], ps.nt.startbyte - startbyte, [kw1, INSTANCE(ps)])
+            # ret.defs = [Variable(get_id(sig), :bitstype, ret)]
+        end
         
-#     else
-#         ret = IDENTIFIER(ps.nt.startbyte - startbyte, :primitive)
-#     end
-#     return ret
-# end
+    else
+        ret = IDENTIFIER(ps.nt.startbyte - startbyte, :primitive)
+    end
+    return ret
+end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
     startbyte = ps.t.startbyte

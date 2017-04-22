@@ -98,7 +98,7 @@ function next(ps::ParseState)
     
     ps.nnt, ps.done  = next(ps.l, ps.done)
     # Reject new kws for now
-    if ps.nnt.kind == Tokens.STRUCT || ps.nnt.kind == Tokens.STRUCT || ps.nnt.kind == Tokens.MUTABLE || ps.nnt.kind == Tokens.PRIMITIVE
+    if ps.nnt.kind == Tokens.STRUCT || ps.nnt.kind == Tokens.STRUCT || ps.nnt.kind == Tokens.MUTABLE
         ps.nnt = Token(Tokens.IDENTIFIER, ps.nnt.startpos, ps.nnt.endpos, ps.nnt.startbyte, ps.nnt.endbyte, ps.nnt.val)
     end
 
@@ -121,7 +121,6 @@ function next(ps::ParseState)
     if iswhitespace(peekchar(ps.l)) || peekchar(ps.l) == '#' || peekchar(ps.l) == ';'
         ps.nnws = lex_ws_comment(ps.l, readchar(ps.l))
     else
-        # ps.nnws = Token(EmptyWS, (0, 0), (0, 0), ps.nnt.endbyte, ps.nnt.endbyte, "")
         ps.nnws = EmptyWSToken
     end
     ps.done = ps.nt.kind == Tokens.ENDMARKER

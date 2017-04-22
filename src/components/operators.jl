@@ -31,7 +31,7 @@ precedence(op::Token) = op.kind < Tokens.begin_assignments ? 0 :
                        op.kind < Tokens.end_decl ? 14 : 
                        op.kind < Tokens.end_where ? 15 : 
                        op.kind < Tokens.end_dot ? 16 : 
-                       op.kind == Tokens.PRIME ? 17 : 20
+                       op.kind == Tokens.PRIME ? 16 : 20
 
 precedence(x) = 0
 
@@ -462,7 +462,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{0, Tokens.
     return EXPR(op, SyntaxNode[ret], op.span + ret.span)
 end
 
-function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{17, Tokens.PRIME})
+function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{16, Tokens.PRIME})
     return EXPR(op, SyntaxNode[ret], op.span + ret.span)
 end
 

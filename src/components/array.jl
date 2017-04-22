@@ -58,6 +58,9 @@ function parse_array(ps::ParseState)
             
             if last(ret.args) isa EXPR && last(ret.args).head == PARAMETERS
                 ret.head = VCAT
+                if isempty(last(ret.args).args)
+                    pop!(ret.args)
+                end
             end
 
             ret.span = ps.nt.startbyte - startbyte
