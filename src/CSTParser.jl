@@ -68,7 +68,11 @@ function parse_expression(ps::ParseState)
     elseif ps.t.kind == Tokens.LBRACE
         @catcherror ps startbyte ret = parse_cell1d(ps)
     elseif isinstance(ps.t) || isoperator(ps.t)
-        ret = INSTANCE(ps)
+        if ps.t.kind == Tokens.WHERE
+            ret = IDENTIFIER(ps)
+        else
+            ret = INSTANCE(ps)
+        end
         if (ret isa OPERATOR{ColonOp, Tokens.COLON}) && ps.nt.kind != Tokens.COMMA
             @catcherror ps startbyte ret = parse_unary(ps, ret)
         end

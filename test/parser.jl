@@ -552,7 +552,7 @@ end
     @test_broken "-1^a" |> test_expr
     @test_broken "!(a = b)" |> test_expr
     @test_broken "-(1)a" |> test_expr
-    @test_broken "" |> test_expr
+    @test_broken "f() where {a} = b" |> test_expr
     @test_broken "" |> test_expr
     @test_broken "" |> test_expr
 end

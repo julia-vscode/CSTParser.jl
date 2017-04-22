@@ -41,14 +41,22 @@ function LITERAL(ps::ParseState)
     end
 end
 
+IDENTIFIER(ps::ParseState) = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, Symbol(ps.t.val))
+
+OPERATOR(ps::ParseState) = OPERATOR{precedence(ps.t), ps.t.kind, ps.dot}(ps.nt.startbyte - ps.t.startbyte)
+
+KEYWORD(ps::ParseState) = KEYWORD{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte)
+
+PUNCTUATION(ps::ParseState) = PUNCTUATION{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte)
+
 function INSTANCE(ps::ParseState)
     span = ps.nt.startbyte - ps.t.startbyte
-    return isidentifier(ps.t) ? IDENTIFIER(span, Symbol(ps.t.val)) : 
+    return isidentifier(ps.t) ? IDENTIFIER(ps) : 
         isliteral(ps.t) ? LITERAL(ps) :
-        iskw(ps.t) ? KEYWORD{ps.t.kind}(span) :
-        isoperator(ps.t) ? OPERATOR{precedence(ps.t), ps.t.kind, ps.dot}(span) :
+        iskw(ps.t) ? KEYWORD(ps) :
+        isoperator(ps.t) ? OPERATOR(ps) :
         ispunctuation(ps.t) ? PUNCTUATION{ps.t.kind}(span) :
-        ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION{ps.t.kind}(span) : #error("Can't make a token from $(ps.t)")
+        ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION{ps.t.kind}(span) : 
         ERROR{ps.t.kind}(0, NOTHING)
 end
 

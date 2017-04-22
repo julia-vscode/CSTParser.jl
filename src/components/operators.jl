@@ -115,6 +115,7 @@ function non_dotted_op(t::Token)
             k == Tokens.DECLARATION ||
             k == Tokens.IN ||
             k == Tokens.ISA ||
+            k == Tokens.WHERE ||
             (isunaryop(k) && !isbinaryop(k)))
 end
 
