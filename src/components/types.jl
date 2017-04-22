@@ -56,7 +56,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.PRIMITIVE}})
         kw1 = INSTANCE(ps)
         next(ps)
         kw2 = INSTANCE(ps)
-        @catcherror ps startbyte sig = @default ps @closer ps ws parse_expression(ps)
+        @catcherror ps startbyte sig = @default ps @closer ps ws @closer ps wsop parse_expression(ps)
         @catcherror ps startbyte arg = @default ps @closer ps block parse_expression(ps)
 
         # Construction
