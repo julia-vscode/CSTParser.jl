@@ -80,6 +80,67 @@ end
         @test "::a" |> test_expr
         @test "::(a,b)" |> test_expr
     end
+
+    @testset "where precedence" begin
+        @test "a = b where c = d" |> test_expr
+        @test "a = b where c" |> test_expr
+        @test "b where c = d" |> test_expr
+        
+        @test "a ? b where c : d" |> test_expr
+
+        @test "a --> b where c --> d" |> test_expr
+        @test "a --> b where c" |> test_expr
+        @test "b where c --> d" |> test_expr
+
+        @test "a || b where c || d" |> test_expr
+        @test "a || b where c" |> test_expr
+        @test "b where c || d" |> test_expr
+
+        @test "a && b where c && d" |> test_expr
+        @test "a && b where c" |> test_expr
+        @test "b where c && d" |> test_expr
+
+        @test "a <: b where c <: d" |> test_expr
+        @test "a <: b where c" |> test_expr
+        @test "b where c <: d" |> test_expr
+
+        @test "a <| b where c <| d" |> test_expr
+        @test "a <| b where c" |> test_expr
+        @test "b where c <| d" |> test_expr
+
+        @test "a : b where c : d" |> test_expr
+        @test "a : b where c" |> test_expr
+        @test "b where c : d" |> test_expr
+
+        @test "a + b where c + d" |> test_expr
+        @test "a + b where c" |> test_expr
+        @test "b where c + d" |> test_expr
+
+        @test "a << b where c << d" |> test_expr
+        @test "a << b where c" |> test_expr
+        @test "b where c << d" |> test_expr
+
+        @test "a * b where c * d" |> test_expr
+        @test "a * b where c" |> test_expr
+        @test "b where c * d" |> test_expr
+
+        @test "a // b where c // d" |> test_expr
+        @test "a // b where c" |> test_expr
+        @test "b where c // d" |> test_expr
+
+        @test "a ^ b where c ^ d" |> test_expr
+        @test "a ^ b where c" |> test_expr
+        @test "b where c ^ d" |> test_expr
+
+        @test "a :: b where c :: d" |> test_expr
+        @test "a :: b where c" |> test_expr
+        @test "b where c :: d" |> test_expr
+
+        @test "a.b where c.d" |> test_expr
+        @test "a.b where c" |> test_expr
+        @test "b where c.d" |> test_expr
+    end
+
 end
 
 

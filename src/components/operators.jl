@@ -1,55 +1,56 @@
-const AssignmentOp = 1
+const AssignmentOp  = 1
 const ConditionalOp = 2
-const ArrowOp = 3
-const LazyOrOp = 4
-const LazyAndOp = 5
-const WhereOp = 6
-const ComparisonOp = 7
-const PipeOp = 8
-const ColonOp = 9
-const PlusOp = 10
-const BitShiftOp = 11
-const TimesOp = 12
-const RationalOp = 13
-const PowerOp = 14
-const DeclarationOp = 15
-const DotOp = 16
+const ArrowOp       = 3
+const LazyOrOp      = 4
+const LazyAndOp     = 5
+const ComparisonOp  = 6
+const PipeOp        = 7
+const ColonOp       = 8
+const PlusOp        = 9
+const BitShiftOp    = 10
+const TimesOp       = 11
+const RationalOp    = 12
+const PowerOp       = 13
+const DeclarationOp = 14
+const WhereOp       = 15
+const DotOp         = 16
+const PrimeOp       = 16
 
 
-precedence(op::Int) = op < Tokens.end_assignments ? 1 :
+precedence(op::Int) = op < Tokens.end_assignments ?  1 :
                        op < Tokens.end_conditional ? 2 :
-                       op < Tokens.end_arrow ? 3 :
-                       op < Tokens.end_lazyor ? 4 :
-                       op < Tokens.end_lazyand ? 5 :
-                       op < Tokens.end_where ? 6 :
-                       op < Tokens.end_comparison ? 7 :
-                       op < Tokens.end_pipe ? 8 :
-                       op < Tokens.end_colon ? 9 :
-                       op < Tokens.end_plus ? 10 :
-                       op < Tokens.end_bitshifts ? 11 :
-                       op < Tokens.end_times ? 12 :
-                       op < Tfokens.end_rational ? 13 :
-                       op < Tokens.end_power ? 14 :
-                       op < Tokens.end_decl ? 14 : 15
+                       op < Tokens.end_arrow ?       3 :
+                       op < Tokens.end_lazyor ?      4 :
+                       op < Tokens.end_lazyand ?     5 :
+                       op < Tokens.end_comparison ?  6 :
+                       op < Tokens.end_pipe ?        7 :
+                       op < Tokens.end_colon ?       8 :
+                       op < Tokens.end_plus ?        9 :
+                       op < Tokens.end_bitshifts ?   10 :
+                       op < Tokens.end_times ?       11 :
+                       op < Tfokens.end_rational ?   12 :
+                       op < Tokens.end_power ?       13 :
+                       op < Tokens.end_decl ?        14 : 
+                       op < Tokens.end_where ?       15 : 16
 
 precedence(op::Token) = op.kind < Tokens.begin_assignments ? 0 :
-                        op.kind < Tokens.end_assignments ? 1 :
-                       op.kind < Tokens.end_conditional ? 2 :
-                       op.kind < Tokens.end_arrow ? 3 :
-                       op.kind < Tokens.end_lazyor ? 4 :
-                       op.kind < Tokens.end_lazyand ? 5 :
-                       op.kind < Tokens.end_where ? 6 : 
-                       op.kind < Tokens.end_comparison ? 7 :
-                       op.kind < Tokens.end_pipe ? 8 :
-                       op.kind < Tokens.end_colon ? 9 :
-                       op.kind < Tokens.end_plus ? 10 :
-                       op.kind < Tokens.end_bitshifts ? 11 :
-                       op.kind < Tokens.end_times ? 12 :
-                       op.kind < Tokens.end_rational ? 13 :
-                       op.kind < Tokens.end_power ? 14 :
-                       op.kind < Tokens.end_decl ? 15 : 
-                       op.kind < Tokens.end_dot ? 16 : 
-                       op.kind == Tokens.PRIME ? 16 : 20
+                        op.kind < Tokens.end_assignments ?   1 :
+                       op.kind < Tokens.end_conditional ?    2 :
+                       op.kind < Tokens.end_arrow ?          3 :
+                       op.kind < Tokens.end_lazyor ?         4 :
+                       op.kind < Tokens.end_lazyand ?        5 :
+                       op.kind < Tokens.end_comparison ?     6 :
+                       op.kind < Tokens.end_pipe ?           7 :
+                       op.kind < Tokens.end_colon ?          8 :
+                       op.kind < Tokens.end_plus ?           9 :
+                       op.kind < Tokens.end_bitshifts ?      10 :
+                       op.kind < Tokens.end_times ?          11 :
+                       op.kind < Tokens.end_rational ?       12 :
+                       op.kind < Tokens.end_power ?          13 :
+                       op.kind < Tokens.end_decl ?           14 : 
+                       op.kind < Tokens.end_where ?          15 : 
+                       op.kind < Tokens.end_dot ?            16 : 
+                       op.kind == Tokens.PRIME ?             16 : 20
 
 precedence(x) = 0
 
@@ -141,7 +142,7 @@ end
 
 issyntaxcall(op) = false
 
-LtoR(prec::Int) = 1 ≤ prec ≤ 5 || prec == 14
+LtoR(prec::Int) = 1 ≤ prec ≤ 5 || prec == 13
 
 
 """
@@ -161,7 +162,7 @@ function parse_unary{P, K}(ps::ParseState, op::OPERATOR{P, K})
         return arg
     end
 
-    prec = P == 15 ? 15 : 13
+    prec = P == DeclarationOp ? DeclarationOp : PowerOp
     # Parsing
     @catcherror ps startbyte arg = @precedence ps prec parse_expression(ps)
 
@@ -207,7 +208,7 @@ end
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{AssignmentOp, Tokens.EQ})
     startbyte = ps.nt.startbyte - op.span - ret.span
     # Parsing
-    @catcherror ps startbyte nextarg = @precedence ps 1 - LtoR(1) parse_expression(ps)
+    @catcherror ps startbyte nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
     
     if is_func_call(ret)
         # Construction
@@ -230,7 +231,7 @@ end
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{AssignmentOp, Tokens.APPROX})
     startbyte = ps.nt.startbyte - op.span - ret.span
     # Parsing
-    @catcherror ps startbyte nextarg = @precedence ps 1 - LtoR(1) parse_expression(ps)
+    @catcherror ps startbyte nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
     # Construction 
     ret = EXPR(CALL, SyntaxNode[op, ret, nextarg], op.span + ret.span + nextarg.span)
     return ret
@@ -240,7 +241,7 @@ end
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{AssignmentOp})
     startbyte = ps.nt.startbyte - op.span - ret.span
     # Parsing
-    @catcherror ps startbyte nextarg = @precedence ps 1 - LtoR(1) parse_expression(ps)
+    @catcherror ps startbyte nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
     # Construction 
     ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
     return ret
@@ -249,7 +250,7 @@ end
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{AssignmentOp, Tokens.PAIR_ARROW})
     startbyte = ps.nt.startbyte - op.span - ret.span
     # Parsing
-    @catcherror ps startbyte nextarg = @precedence ps 1 - LtoR(1) parse_expression(ps)
+    @catcherror ps startbyte nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
     # Construction 
     ret = EXPR(CALL, SyntaxNode[op, ret, nextarg], op.span + ret.span + nextarg.span)
     return ret
@@ -274,7 +275,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{ArrowOp, T
     startbyte = ps.nt.startbyte - op.span - ret.span
 
     # Parsing
-    @catcherror ps startbyte nextarg = @precedence ps 3 - LtoR(3) parse_expression(ps)
+    @catcherror ps startbyte nextarg = @precedence ps ArrowOp - LtoR(ArrowOp) parse_expression(ps)
     # Construction
     ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
     return ret
@@ -285,7 +286,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{LazyOrOp})
     startbyte = ps.nt.startbyte - op.span - ret.span
 
     # Parsing
-    @catcherror ps startbyte nextarg = @precedence ps 4 - LtoR(4) parse_expression(ps)
+    @catcherror ps startbyte nextarg = @precedence ps LazyOrOp - LtoR(LazyOrOp) parse_expression(ps)
     # Construction
     ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
     return ret
@@ -296,7 +297,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{LazyAndOp}
     startbyte = ps.nt.startbyte - op.span - ret.span
 
     # Parsing
-    @catcherror ps startbyte nextarg = @precedence ps 5 - LtoR(5) parse_expression(ps)
+    @catcherror ps startbyte nextarg = @precedence ps LazyAndOp - LtoR(LazyAndOp) parse_expression(ps)
     # Construction
     ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
     return ret
@@ -307,7 +308,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{WhereOp, T
     startbyte = ps.nt.startbyte - op.span - ret.span
     
     # Parsing
-    @catcherror ps startbyte nextarg = @precedence ps 6 - LtoR(6) parse_expression(ps)
+    @catcherror ps startbyte nextarg = @precedence ps 5 parse_expression(ps)
     
     # Construction
     ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
@@ -319,7 +320,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{Comparison
     startbyte = ps.nt.startbyte - op.span - ret.span
 
     # Parsing
-    @catcherror ps startbyte nextarg = @precedence ps 7 - LtoR(7) parse_expression(ps)
+    @catcherror ps startbyte nextarg = @precedence ps ComparisonOp - LtoR(ComparisonOp) parse_expression(ps)
 
     # Construction
     if ret isa EXPR && ret.head == COMPARISON
@@ -343,7 +344,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{ColonOp, T
     startbyte = ps.t.startbyte
 
     # Parsing
-    @catcherror ps startbyte - op.span - ret.span nextarg = @precedence ps 9 - LtoR(9) parse_expression(ps)
+    @catcherror ps startbyte - op.span - ret.span nextarg = @precedence ps ColonOp - LtoR(ColonOp) parse_expression(ps)
 
     # Construction
     if ret isa EXPR && ret.head isa OPERATOR{ColonOp, Tokens.COLON} && length(ret.args) == 2
@@ -363,7 +364,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{PlusOp, Tokens.P
     
     if ret.head == CALL && ret.args[1] isa OPERATOR{PlusOp, Tokens.PLUS, false}
         # Parsing
-        @catcherror ps startbyte nextarg = @precedence ps 10 - LtoR(10) parse_expression(ps)
+        @catcherror ps startbyte nextarg = @precedence ps PlusOp - LtoR(PlusOp) parse_expression(ps)
 
         # Construction
         push!(ret.args, nextarg)
@@ -381,7 +382,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{TimesOp, Tokens.
 
     if ret.head == CALL && ret.args[1] isa OPERATOR{TimesOp, Tokens.STAR, false} && ret.args[1].span != 0 && op.span != 0
         # Parsing
-        @catcherror ps startbyte nextarg = @precedence ps 12 - LtoR(12) parse_expression(ps)
+        @catcherror ps startbyte nextarg = @precedence ps TimesOp - LtoR(TimesOp) parse_expression(ps)
 
         # Construction
         push!(ret.args, nextarg)
@@ -398,7 +399,7 @@ function parse_operator{K}(ps::ParseState, ret::SyntaxNode, op::OPERATOR{PowerOp
     startbyte = ps.nt.startbyte - op.span - ret.span
 
     # Parsing
-    @catcherror ps startbyte nextarg = @precedence ps 14 - LtoR(14) parse_expression(ps)
+    @catcherror ps startbyte nextarg = @precedence ps PowerOp - LtoR(PowerOp) parse_expression(ps)
 
     # Construction
     if ret isa EXPR && ret.head == CALL && ret.args[1] isa OPERATOR && isunaryop(ret.args[1])
@@ -420,7 +421,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{Declaratio
     startbyte = ps.nt.startbyte - op.span - ret.span
 
     # Parsing
-    @catcherror ps startbyte nextarg = @precedence ps 15 - LtoR(15) parse_expression(ps)
+    @catcherror ps startbyte nextarg = @precedence ps DeclarationOp - LtoR(DeclarationOp) parse_expression(ps)
     # Construction
     ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
     return ret
@@ -444,15 +445,15 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{DotOp})
         next(ps)
         op2 = INSTANCE(ps)
         if ps.nt.kind == Tokens.LPAREN
-            @catcherror ps startbyte nextarg = @precedence ps 16 - LtoR(16) parse_expression(ps)
+            @catcherror ps startbyte nextarg = @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)
             nextarg = EXPR(QUOTE, [nextarg], op2.span + nextarg.span, [op2])
         else
-            @catcherror ps startbyte nextarg = @precedence ps 16 - LtoR(16) parse_unary(ps, op2)
+            @catcherror ps startbyte nextarg = @precedence ps DotOp - LtoR(DotOp) parse_unary(ps, op2)
         end
     elseif ps.nt.kind == Tokens.EX_OR && ps.nnt.kind == Tokens.LPAREN
         @catcherror ps startbyte nextarg = parse_expression(ps)
     else
-        @catcherror ps startbyte nextarg = @precedence ps 16 - LtoR(16) parse_expression(ps)
+        @catcherror ps startbyte nextarg = @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)
     end
 
     # Construction
