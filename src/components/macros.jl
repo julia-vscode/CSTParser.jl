@@ -87,7 +87,7 @@ ismacro(x) = false
 ismacro(x::LITERAL{Tokens.MACRO}) = true
 ismacro(x::QUOTENODE) = ismacro(x.val)
 function ismacro(x::EXPR)
-    if x.head isa OPERATOR{16, Tokens.DOT}
+    if x.head isa OPERATOR{DotOp, Tokens.DOT}
         return ismacro(x.args[2])
     else
         return false

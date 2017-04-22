@@ -10,7 +10,7 @@ type declaration operators.
 get_id{T<:INSTANCE}(x::T) = x
 
 function get_id(x::EXPR)
-    if x.head isa OPERATOR{7, Tokens.ISSUBTYPE} || x.head isa OPERATOR{15, Tokens.DECLARATION} || x.head == CURLY
+    if x.head isa OPERATOR{ComparisonOp, Tokens.ISSUBTYPE} || x.head isa OPERATOR{DeclarationOp, Tokens.DECLARATION} || x.head == CURLY
         return get_id(x.args[1])
     else
         return x
@@ -26,7 +26,7 @@ Basic inference in the presence of type declarations.
 get_t{T<:INSTANCE}(x::T) = :Any
 
 function get_t(x::EXPR)
-    if x.head isa OPERATOR{15, Tokens.DECLARATION}
+    if x.head isa OPERATOR{DeclarationOp, Tokens.DECLARATION}
         return x.args[2]
     else
         return :Any
@@ -40,7 +40,7 @@ function func_sig(x::EXPR)
         params = name.args[2]
         name = name.args[1]
     end
-    if name isa EXPR && name.head isa OPERATOR{16, Tokens.DOT}
+    if name isa EXPR && name.head isa OPERATOR{DotOp, Tokens.DOT}
         mod = name.args[1]
         name = name.args[2]
     end

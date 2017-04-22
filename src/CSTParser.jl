@@ -69,7 +69,7 @@ function parse_expression(ps::ParseState)
         @catcherror ps startbyte ret = parse_cell1d(ps)
     elseif isinstance(ps.t) || isoperator(ps.t)
         ret = INSTANCE(ps)
-        if (ret isa OPERATOR{9, Tokens.COLON}) && ps.nt.kind != Tokens.COMMA
+        if (ret isa OPERATOR{ColonOp, Tokens.COLON}) && ps.nt.kind != Tokens.COMMA
             @catcherror ps startbyte ret = parse_unary(ps, ret)
         end
     elseif ps.t.kind == Tokens.AT_SIGN
@@ -140,9 +140,9 @@ function parse_compound(ps::ParseState, ret)
         # an expression followed by a CMD
         # a string followed by a string
         #  --> implicit multiplication
-        op = OPERATOR{12, Tokens.STAR, false}(0)
+        op = OPERATOR{TimesOp, Tokens.STAR, false}(0)
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind == Tokens.LPAREN && !(ret isa OPERATOR{10, Tokens.EX_OR} || ret isa OPERATOR{12, Tokens.AND} || ret isa OPERATOR{15, Tokens.DECLARATION})
+    elseif ps.nt.kind == Tokens.LPAREN && !(ret isa OPERATOR{PlusOp, Tokens.EX_OR} || ret isa OPERATOR{TimesOp, Tokens.AND} || ret isa OPERATOR{DeclarationOp, Tokens.DECLARATION})
         if isempty(ps.ws) 
             @catcherror ps startbyte ret = @default ps @closer ps paren parse_call(ps, ret)
         else
@@ -176,7 +176,7 @@ function parse_compound(ps::ParseState, ret)
         op = INSTANCE(ps)
         format_op(ps, precedence(ps.t))
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
-    elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{16, Tokens.DOT})) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
+    elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{DotOp, Tokens.DOT})) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
         next(ps)
         @catcherror ps startbyte arg = parse_string(ps, ret)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
@@ -185,7 +185,7 @@ function parse_compound(ps::ParseState, ret)
         arg = INSTANCE(ps)
         push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.val))
         ret.span += arg.span
-    elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{16, Tokens.DOT})) && ps.nt.kind == Tokens.CMD
+    elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{DotOp, Tokens.DOT})) && ps.nt.kind == Tokens.CMD
         next(ps)
         @catcherror ps startbyte arg = parse_string(ps, ret)
         ret = EXPR(x_CMD, [ret, arg], ret.span + arg.span)
@@ -197,7 +197,7 @@ function parse_compound(ps::ParseState, ret)
     elseif ret isa EXPR && ret.head isa OPERATOR{20, Tokens.PRIME} 
         # prime operator followed by an identifier has an implicit multiplication
         @catcherror ps startbyte nextarg = @precedence ps 11 parse_expression(ps)
-        ret = EXPR(CALL, [OPERATOR{12, Tokens.STAR, false}(0), ret, nextarg], ret.span + nextarg.span)
+        ret = EXPR(CALL, [OPERATOR{TimesOp, Tokens.STAR, false}(0), ret, nextarg], ret.span + nextarg.span)
 ################################################################################
 # Everything below here is an error
 ################################################################################

@@ -40,7 +40,7 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
         EXPR(kw, SyntaxNode[cond, ifblock, elseblock], ps.nt.startbyte - startbyte, puncs)
 
     # Linting
-    if cond isa EXPR && cond.head isa OPERATOR{1}
+    if cond isa EXPR && cond.head isa OPERATOR{AssignmentOp}
         push!(ps.diagnostics, Hint{Hints.CondAssignment}(startbyte + kw.span + (0:cond.span)))
     end
     if cond isa LITERAL{Tokens.TRUE}

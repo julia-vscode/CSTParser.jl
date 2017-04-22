@@ -22,7 +22,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
 end
 
 function _lint_range(ps::ParseState, x, loc)
-    if !(x isa EXPR && (x.head isa OPERATOR{1, Tokens.EQ} || (x.head == CALL && x.args[1] isa OPERATOR{7, Tokens.IN})))
+    if !(x isa EXPR && (x.head isa OPERATOR{AssignmentOp, Tokens.EQ} || (x.head == CALL && x.args[1] isa OPERATOR{ComparisonOp, Tokens.IN})))
         push!(ps.diagnostics, Hint{Hints.RangeNonAssignment}(loc))
     end
 end
@@ -60,7 +60,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
     ret = EXPR(kw, SyntaxNode[cond, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
 
     # Linting
-    if cond isa EXPR && cond.head isa OPERATOR{1}
+    if cond isa EXPR && cond.head isa OPERATOR{AssignmentOp}
         push!(ps.diagnostics, Hint{Hints.CondAssignment}(start + kw.span + (0:cond.span)))
     end
     if cond isa LITERAL{Tokens.FALSE}
