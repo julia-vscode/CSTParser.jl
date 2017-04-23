@@ -146,7 +146,7 @@ function parse_compound(ps::ParseState, ret)
         #  --> implicit multiplication
         op = OPERATOR{TimesOp, Tokens.STAR, false}(0)
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind == Tokens.LPAREN && !isunaryop(ret)
+    elseif ps.nt.kind == Tokens.LPAREN && !isunaryop(ret) && isempty(ps.ws) 
         if isempty(ps.ws) 
             @catcherror ps startbyte ret = @default ps @closer ps paren parse_call(ps, ret)
         else
@@ -266,7 +266,7 @@ function parse_paren(ps::ParseState)
     ret = EXPR(TUPLE, [], - startbyte, [INSTANCE(ps)])
     format_lbracket(ps)
     
-    @catcherror ps startbyte @default ps @closer ps paren parse_comma_sep(ps, ret, false, true)
+    @catcherror ps startbyte @default ps @nocloser ps inwhere @closer ps paren parse_comma_sep(ps, ret, false, true)
 
     if length(ret.args) == 1 && length(ret.punctuation) == 1
         if ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{0, Tokens.DDDOT} && ps.ws.kind != SemiColonWS

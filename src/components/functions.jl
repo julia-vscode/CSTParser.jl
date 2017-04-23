@@ -4,7 +4,10 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
 
     # Parsing
     kw = INSTANCE(ps)
-    @catcherror ps startbyte sig = @default ps @closer ps block @closer ps ws parse_expression(ps)
+    @catcherror ps startbyte sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_expression(ps)
+    while ps.nt.kind == Tokens.WHERE
+        @catcherror ps startbyte sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_compound(ps, sig)
+    end
 
     if sig isa EXPR && sig.head isa HEAD{InvisibleBrackets} && !(sig.args[1] isa EXPR && sig.args[1].head == TUPLE)
         sig.args[1] = EXPR(TUPLE, [sig.args[1]], sig.args[1].span)
@@ -12,7 +15,6 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     _lint_func_sig(ps, sig)
     @catcherror ps startbyte block = @default ps @scope ps Scope{Tokens.FUNCTION} parse_block(ps, start_col)
     
-
     # Construction
     if isempty(block.args)
         if sig isa EXPR
