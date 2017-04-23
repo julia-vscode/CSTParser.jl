@@ -181,6 +181,8 @@ function parse_unary{P, K}(ps::ParseState, op::OPERATOR{P, K})
     else
         if arg isa EXPR && arg.head == TUPLE
             return EXPR(CALL, [op; arg.args], op.span + arg.span, arg.punctuation)
+        elseif arg isa EXPR && arg.head isa HEAD{InvisibleBrackets} && length(arg.args) == 1 && arg.args[1] isa EXPR && arg.args[1].head == TUPLE
+            return EXPR(CALL, [op, arg.args[1].args[1]], op.span + arg.span, arg.punctuation)
         else
             return EXPR(CALL, [op, arg], op.span + arg.span)
         end

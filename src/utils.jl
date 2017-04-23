@@ -1,6 +1,7 @@
 function closer(ps::ParseState)
     (ps.closer.newline && ps.ws.kind == NewLineWS && ps.t.kind != Tokens.COMMA) ||
     (ps.closer.semicolon && ps.ws.kind == SemiColonWS) ||
+    # (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence && !isunaryop(ps.nt)) ||
     (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence) ||
     (ps.nt.kind == Tokens.WHERE && ps.closer.precedence == 5) ||
     (ps.closer.inwhere && ps.nt.kind == Tokens.WHERE) || 

@@ -598,14 +598,16 @@ end
     @test "function ^(z::Complex{T}, p::Complex{T})::Complex{T} where T<:AbstractFloat end" |> test_expr
     @test "function +(a) where T where S end" |> test_expr
     @test "function -(x::Rational{T}) where T<:Signed end" |> test_expr
+    @test "+(x...)" |> test_expr
+    @test "+(promote(x,y)...)" |> test_expr
 end
 
 @testset "Broken things" begin
+    @test_broken "\$(a) * -\$(b)" |> test_expr
     @test_broken "function(f, args...; kw...) end" |> test_expr
     @test_broken """
         "\\\\\$ch"
         """ |> test_expr
-    @test_broken "\$(a) * -\$(b)" |> test_expr
     @test_broken "µs" |> test_expr # normalize unicode
     @test_broken """
                     \"\"\"
@@ -623,6 +625,11 @@ end
                     ccall((:g_closure_unref,Gtk.GLib.libgobject),Void,(Ptr{GClosure},),x.handle)
                 end)""" |> test_expr
     @test_broken "-1^a" |> test_expr
+    @test_broken """
+                function +(x::Bool, y::T)::promote_type(Bool,T) where T<:AbstractFloat
+                    return ifelse(x, oneunit(y) + y, y)
+                end""" |> test_expr
+    @test_broken "" |> test_expr
     @test_broken "" |> test_expr
     @test_broken "" |> test_expr
 end

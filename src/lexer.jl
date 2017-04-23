@@ -4,7 +4,7 @@ const EmptyWS = Tokens.begin_delimiters
 const SemiColonWS = Tokens.end_delimiters
 const NewLineWS = Tokens.begin_literal
 const WS = Tokens.end_literal
-const InvisibleBrackets = Tokens.begin_invisble_keywords
+const InvisibleBrackets = Tokens.begin_invisible_keywords
 const EmptyWSToken = Token(EmptyWS, (0, 0), (0, 0), -1, -1, "")
 
 """

@@ -147,6 +147,7 @@ function parse_compound(ps::ParseState, ret)
         op = OPERATOR{TimesOp, Tokens.STAR, false}(0)
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
     elseif ps.nt.kind == Tokens.LPAREN && !isunaryop(ret) && isempty(ps.ws) 
+    # elseif ps.nt.kind == Tokens.LPAREN && (!(ret isa OPERATOR) || (!isunaryop(ret) || isbinaryop(ret))) && isempty(ps.ws) 
         if isempty(ps.ws) 
             @catcherror ps startbyte ret = @default ps @closer ps paren parse_call(ps, ret)
         else
