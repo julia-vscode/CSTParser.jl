@@ -34,7 +34,7 @@ function start(x::EXPR)
         return Iterator{:prime}(1, 2)
     elseif x.head isa OPERATOR{WhereOp, Tokens.WHERE}
         return _start_where(x)
-    elseif issyntaxcall(x.head) || x.head isa OPERATOR{20, Tokens.ANON_FUNC}
+    elseif issyntaxcall(x.head) || x.head isa OPERATOR{20, Tokens.ANON_FUNC}  || x.head isa OPERATOR{TimesOp, Tokens.AND} 
         if x.head isa OPERATOR{ColonOp, Tokens.COLON}
             return Iterator{:(:)}(1, length(x.args) == 2 ? 3 : 5)
         end

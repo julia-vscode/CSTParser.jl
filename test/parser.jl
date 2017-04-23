@@ -21,7 +21,7 @@ function test_expr(str)
     x1 = remlineinfo!(Base.parse(str))
     !ps.errored && x0 == x1 && isempty(span(x))
 end
-
+@testset "All tests" begin
 @testset "Operators" begin
     @testset "Binary Operators" begin
         for iter = 1:250
@@ -593,6 +593,7 @@ end
     @test "-(1)a" |> test_expr
     @test "!(a)::T" |> test_expr
     @test "a::b where T<:S" |> test_expr
+    @test "+(x::Bool, y::T)::promote_type(Bool,T) where T<:AbstractFloat" |> test_expr
 end
 
 @testset "Broken things" begin
@@ -618,11 +619,11 @@ end
                     ccall((:g_closure_unref,Gtk.GLib.libgobject),Void,(Ptr{GClosure},),x.handle)
                 end)""" |> test_expr
     @test_broken "-1^a" |> test_expr
-    @test_broken "+(x::Bool, y::T)::promote_type(Bool,T) where T<:AbstractFloat" |> test_expr
     @test_broken "function ^(z::Complex{T}, p::Complex{T})::Complex{T} where T<:AbstractFloat end" |> test_expr
     @test_broken "function +(a) where T where S end" |> test_expr
     @test_broken "T where V<:(T where T)" |> test_expr
     @test_broken "function -(x::Rational{T}) where T<:Signed end" |> test_expr
     @test_broken "" |> test_expr
     @test_broken "" |> test_expr
+end
 end

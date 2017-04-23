@@ -172,7 +172,7 @@ function parse_unary{P, K}(ps::ParseState, op::OPERATOR{P, K})
     # prec = 13
     @catcherror ps startbyte arg = @precedence ps prec parse_expression(ps)
     
-    if issyntaxcall(op)
+    if issyntaxcall(op) || op isa OPERATOR{TimesOp, Tokens.AND}
         if arg isa EXPR && arg.head == TUPLE && op isa OPERATOR{ComparisonOp, Tokens.ISSUBTYPE} || op isa OPERATOR{ComparisonOp, Tokens.ISSUPERTYPE}
             return EXPR(op, arg.args, op.span + arg.span, arg.punctuation)
         else

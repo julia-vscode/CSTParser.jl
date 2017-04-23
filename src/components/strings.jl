@@ -76,7 +76,8 @@ end
 
 function unindent_triple_string(ps::ParseState)
     indent = -1
-    val = startswith(ps.t.val, "\"\"\"\n") ? ps.t.val[5:end - 3] : ps.t.val[4:end - 3]
+    leading_newline = startswith(ps.t.val, "\"\"\"\n")
+    val = leading_newline ? ps.t.val[5:end - 3] : ps.t.val[4:end - 3]
     io = IOBuffer(val)
     while !eof(io)
         c = readuntil(io, '\n')
@@ -91,6 +92,9 @@ function unindent_triple_string(ps::ParseState)
     end
     if indent > -1
         val = Base.unindent(val, indent)
+        # if !leading_newline
+        #     val = string(" "^indent, val)
+        # end
     end
     lit = LITERAL{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte - ps.ndot, val)
 end
