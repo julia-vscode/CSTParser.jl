@@ -1,7 +1,7 @@
 module Hints
-abstract Format
-abstract Lint
-type Hint{C}
+abstract type Format end
+abstract type Lint end
+mutable struct Hint{C}
     loc
 end
 
@@ -70,7 +70,7 @@ isrbracket(t::Token) = t.kind == Tokens.RPAREN ||
 
 function format_op(ps, prec)
     # prec = precedence(ps.t)
-    if prec == 9 || prec == 14 || prec == 15 || prec == 16
+    if prec == ColonOp || prec == PowerOp || prec == DeclarationOp || prec == DotOp
         if ps.lws.kind != EmptyWS
             push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1:ps.lws.endbyte + 1))
         end

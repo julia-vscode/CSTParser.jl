@@ -101,10 +101,10 @@ function parse_expression(ps::ParseState)
         return ERROR{UnknownError}(0, INSTANCE(ps))
     end
 
-    while !closer(ps) && !(ps.closer.precedence == 16 && ismacro(ret))
+    while !closer(ps) && !(ps.closer.precedence == DotOp && ismacro(ret))
         @catcherror ps startbyte ret = parse_compound(ps, ret)
     end
-    if ps.closer.precedence != 16 && closer(ps) && ret isa LITERAL{Tokens.MACRO}
+    if ps.closer.precedence != DotOp && closer(ps) && ret isa LITERAL{Tokens.MACRO}
         ret = EXPR(MACROCALL, [ret], ret.span)
     end
 
@@ -146,16 +146,12 @@ function parse_compound(ps::ParseState, ret)
         #  --> implicit multiplication
         op = OPERATOR{TimesOp, Tokens.STAR, false}(0)
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind == Tokens.LPAREN && !(ret isa OPERATOR{PlusOp, Tokens.EX_OR} || ret isa OPERATOR{TimesOp, Tokens.AND} || ret isa OPERATOR{DeclarationOp, Tokens.DECLARATION})
+    elseif ps.nt.kind == Tokens.LPAREN && !isunaryop(ret)
         if isempty(ps.ws) 
             @catcherror ps startbyte ret = @default ps @closer ps paren parse_call(ps, ret)
         else
-            if isunaryop(ret)
-                @catcherror ps startbyte ret = parse_unary(ps, ret)
-            else
-                ps.errored = true
-                return ERROR{UnexpectedLParen}(ret.span, ret)
-            end
+            ps.errored = true
+            return ERROR{UnexpectedLParen}(ret.span, ret)
         end
     elseif ps.nt.kind == Tokens.LBRACE
         if isempty(ps.ws)
@@ -184,6 +180,7 @@ function parse_compound(ps::ParseState, ret)
         next(ps)
         @catcherror ps startbyte arg = parse_string(ps, ret)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
+    # Suffix on x_str
     elseif ret isa EXPR && ret.head == x_STR && ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         arg = INSTANCE(ps)

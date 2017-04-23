@@ -61,14 +61,14 @@ isoperator(t::Token) = isoperator(t.kind)
 isunaryop{P, K, D}(op::OPERATOR{P, K, D}) = isunaryop(K)
 isunaryop(t::Token) = isunaryop(t.kind)
 
-isunaryop(kind) = kind == Tokens.PLUS ||
+isunaryop(kind) = kind == Tokens.ISSUBTYPE ||
+                  kind == Tokens.ISSUPERTYPE ||
+                  kind == Tokens.PLUS ||
                   kind == Tokens.MINUS ||
                   kind == Tokens.NOT ||
                   kind == Tokens.APPROX ||
-                  kind == Tokens.ISSUBTYPE ||
                   kind == Tokens.NOT_SIGN ||
                   kind == Tokens.AND ||
-                  kind == Tokens.ISSUPERTYPE ||
                   kind == Tokens.SQUARE_ROOT ||
                   kind == Tokens.CUBE_ROOT ||
                   kind == Tokens.QUAD_ROOT ||
@@ -117,7 +117,7 @@ function non_dotted_op(t::Token)
             k == Tokens.IN ||
             k == Tokens.ISA ||
             k == Tokens.WHERE ||
-            (isunaryop(k) && !isbinaryop(k)))
+            (isunaryop(k) && !isbinaryop(k) && !(k == Tokens.NOT)))
 end
 
 function issyntaxcall{P, K}(op::OPERATOR{P, K})
@@ -129,7 +129,6 @@ function issyntaxcall{P, K}(op::OPERATOR{P, K})
     K == Tokens.ISSUPERTYPE ||
     K == Tokens.PAIR_ARROW ||
     K == Tokens.COLON ||
-    K == Tokens.AND ||
     K == Tokens.DECLARATION ||
     K == Tokens.DOT ||
     K == Tokens.DDDOT ||
@@ -138,6 +137,11 @@ function issyntaxcall{P, K}(op::OPERATOR{P, K})
     K == Tokens.WHERE 
 end
 
+function issyntaxunarycall{P, K}(op::OPERATOR{P, K})
+    K == Tokens.EX_OR || 
+    K == Tokens.AND ||
+    K == Tokens.DECLARATION
+end
 
 
 issyntaxcall(op) = false
@@ -162,15 +166,24 @@ function parse_unary{P, K}(ps::ParseState, op::OPERATOR{P, K})
         return arg
     end
 
-    prec = P == DeclarationOp ? DeclarationOp : PowerOp
+    # prec = P == DeclarationOp ? DeclarationOp : PowerOp
     # Parsing
+    prec = P == DeclarationOp ? DeclarationOp : 13
+    # prec = 13
     @catcherror ps startbyte arg = @precedence ps prec parse_expression(ps)
-
     
     if issyntaxcall(op)
-        return EXPR(op, [arg], op.span + arg.span)
+        if arg isa EXPR && arg.head == TUPLE && op isa OPERATOR{ComparisonOp, Tokens.ISSUBTYPE} || op isa OPERATOR{ComparisonOp, Tokens.ISSUPERTYPE}
+            return EXPR(op, arg.args, op.span + arg.span, arg.punctuation)
+        else
+            return EXPR(op, [arg], op.span + arg.span)
+        end
     else
-        return EXPR(CALL, [op, arg], op.span + arg.span)
+        if arg isa EXPR && arg.head == TUPLE
+            return EXPR(CALL, [op; arg.args], op.span + arg.span, arg.punctuation)
+        else
+            return EXPR(CALL, [op, arg], op.span + arg.span)
+        end
     end
 end
 
@@ -212,7 +225,10 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{Assignment
     
     if is_func_call(ret)
         # Construction
-        nextarg = EXPR(BLOCK, SyntaxNode[nextarg], nextarg.span)
+        # NOTE : issue w/ scheme parser
+        if !(ret.head isa OPERATOR{DeclarationOp, Tokens.DECLARATION})
+            nextarg = EXPR(BLOCK, SyntaxNode[nextarg], nextarg.span)
+        end
         # Linting
         @scope ps Scope{Tokens.FUNCTION} _lint_func_sig(ps, ret)
         
@@ -298,18 +314,6 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{LazyAndOp}
 
     # Parsing
     @catcherror ps startbyte nextarg = @precedence ps LazyAndOp - LtoR(LazyAndOp) parse_expression(ps)
-    # Construction
-    ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
-    return ret
-end
-
-# parse where
-function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{WhereOp, Tokens.WHERE})
-    startbyte = ps.nt.startbyte - op.span - ret.span
-    
-    # Parsing
-    @catcherror ps startbyte nextarg = @precedence ps 5 parse_expression(ps)
-    
     # Construction
     ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
     return ret
@@ -424,6 +428,37 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{Declaratio
     @catcherror ps startbyte nextarg = @precedence ps DeclarationOp - LtoR(DeclarationOp) parse_expression(ps)
     # Construction
     ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
+    return ret
+end
+
+# parse where
+function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{WhereOp, Tokens.WHERE})
+    startbyte = ps.nt.startbyte - op.span - ret.span
+    
+    # Parsing
+    ret = EXPR(op, SyntaxNode[ret], 0)
+    # Parsing
+    if ps.nt.kind == Tokens.LBRACE
+        next(ps)
+        push!(ret.punctuation, INSTANCE(ps))
+        while ps.nt.kind != Tokens.RBRACE
+            @catcherror ps startbyte a = @default ps @nocloser ps newline @closer ps comma @closer ps brace parse_expression(ps)
+            push!(ret.args, a)
+            if ps.nt.kind == Tokens.COMMA
+                next(ps)
+                push!(ret.punctuation, INSTANCE(ps))
+                format_comma(ps)
+            end
+        end
+        next(ps)
+        push!(ret.punctuation, INSTANCE(ps))
+    else
+        @catcherror ps startbyte nextarg = @precedence ps 5 @closer ps inwhere parse_expression(ps)
+        push!(ret.args, nextarg)
+    end
+    
+    # Construction
+    ret.span = ps.nt.startbyte - startbyte
     return ret
 end
 
@@ -597,4 +632,31 @@ end
 
 function next(x::EXPR, s::Iterator{:prime})
     return (s.i == 1 ? x.args[s.i] : x.head), +s
+end
+
+function _start_where(x::EXPR)
+    return Iterator{:where}(1, 1 + length(x.args) + length(x.punctuation))
+end
+
+
+function next(x::EXPR, s::Iterator{:where})
+    if isempty(x.punctuation)
+        if s.i == 1
+            return x.args[1], +s
+        elseif s.i ==2
+            return x.head, +s
+        else
+            return x.args[2], +s
+        end
+    else
+        if s.i == 1
+            return x.args[1], +s
+        elseif s.i == 2
+            return x.head, +s
+        elseif isodd(s.i)
+            return x.punctuation[div(s.i - 1, 2)], +s
+        elseif iseven(s.i)
+            return x.args[div(s.i, 2)], +s
+        end
+    end
 end

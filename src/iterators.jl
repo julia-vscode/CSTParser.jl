@@ -32,6 +32,8 @@ function start(x::EXPR)
         return _start_ccall(x)
     elseif x.head isa OPERATOR{16, Tokens.PRIME}
         return Iterator{:prime}(1, 2)
+    elseif x.head isa OPERATOR{WhereOp, Tokens.WHERE}
+        return _start_where(x)
     elseif issyntaxcall(x.head) || x.head isa OPERATOR{20, Tokens.ANON_FUNC}
         if x.head isa OPERATOR{ColonOp, Tokens.COLON}
             return Iterator{:(:)}(1, length(x.args) == 2 ? 3 : 5)

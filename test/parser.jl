@@ -139,6 +139,8 @@ end
         @test "a.b where c.d" |> test_expr
         @test "a.b where c" |> test_expr
         @test "b where c.d" |> test_expr
+
+        @test "a where b where c" |> test_expr
     end
 
 end
@@ -584,16 +586,21 @@ end
     @test "[:-\n:+]" |> test_expr
     @test "::a::b" |> test_expr
     @test "-[1:nc]" |> test_expr
+    @test "f() where {a} = b" |> test_expr
+    @test "@assert .!(isna(res[2]))" |> test_expr # v0.6
+    @test "-((attr.rise / PANGO_SCALE)pt).value" |> test_expr
+    @test "!(a = b)" |> test_expr
+    @test "-(1)a" |> test_expr
+    @test "!(a)::T" |> test_expr
+    @test "a::b where T<:S" |> test_expr
 end
 
 @testset "Broken things" begin
-    @test_broken "@assert .!(isna(res[2]))" |> test_expr # v0.6
     @test_broken "function(f, args...; kw...) end" |> test_expr
     @test_broken """
         "\\\\\$ch"
         """ |> test_expr
     @test_broken "\$(a) * -\$(b)" |> test_expr
-    @test_broken "-((attr.rise / PANGO_SCALE)pt).value" |> test_expr
     @test_broken "µs" |> test_expr # normalize unicode
     @test_broken """
                     \"\"\"
@@ -611,9 +618,11 @@ end
                     ccall((:g_closure_unref,Gtk.GLib.libgobject),Void,(Ptr{GClosure},),x.handle)
                 end)""" |> test_expr
     @test_broken "-1^a" |> test_expr
-    @test_broken "!(a = b)" |> test_expr
-    @test_broken "-(1)a" |> test_expr
-    @test_broken "f() where {a} = b" |> test_expr
+    @test_broken "+(x::Bool, y::T)::promote_type(Bool,T) where T<:AbstractFloat" |> test_expr
+    @test_broken "function ^(z::Complex{T}, p::Complex{T})::Complex{T} where T<:AbstractFloat end" |> test_expr
+    @test_broken "function +(a) where T where S end" |> test_expr
+    @test_broken "T where V<:(T where T)" |> test_expr
+    @test_broken "function -(x::Rational{T}) where T<:Signed end" |> test_expr
     @test_broken "" |> test_expr
     @test_broken "" |> test_expr
 end

@@ -1,10 +1,10 @@
 import Tokenize.Lexers: peekchar, prevchar, readchar, iswhitespace, emit, emit_error, backup!, accept_batch, eof
 
-typealias EmptyWS Tokens.begin_delimiters
-typealias SemiColonWS Tokens.end_delimiters
-typealias NewLineWS Tokens.begin_literal
-typealias WS Tokens.end_literal
-typealias InvisibleBrackets Tokens.begin_invisble_keywords
+const EmptyWS = Tokens.begin_delimiters
+const SemiColonWS = Tokens.end_delimiters
+const NewLineWS = Tokens.begin_literal
+const WS = Tokens.end_literal
+const InvisibleBrackets = Tokens.begin_invisble_keywords
 const EmptyWSToken = Token(EmptyWS, (0, 0), (0, 0), -1, -1, "")
 
 """
@@ -12,7 +12,7 @@ const EmptyWSToken = Token(EmptyWS, (0, 0), (0, 0), -1, -1, "")
 Struct holding information on the tokens that will close the expression
 currently being parsed.
 """
-type Closer
+mutable struct Closer
     toplevel::Bool
     newline::Bool
     semicolon::Bool
@@ -24,6 +24,7 @@ type Closer
     brace::Bool
     inmacro::Bool
     insquare::Bool
+    inwhere::Bool
     square::Bool
     block::Bool
     ifelse::Bool
@@ -35,7 +36,7 @@ type Closer
     precedence::Int
     stop::Int
 end
-Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int))
+Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int))
 
 """
     ParseState
@@ -48,7 +49,7 @@ The parser's interface with `Tokenize.Lexers.Lexer`. This alters the output of `
 In addition a list of formatting hints is updated as the parsing progresses 
 and copy of the current `Scope`.
 """
-type ParseState
+mutable struct ParseState
     l::Lexer
     done::Bool
     lt::Token

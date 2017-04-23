@@ -38,13 +38,21 @@ function Base.show(io::IO, x::ERROR, indent = 0)
     println(io, " "^indent, " ERROR")
 end
 
+# function Base.show(io::IO, x::EXPR, indent = 0)
+#     name = sprint(show, x.head)
+#     println(io, " "^indent, "↘ ", name, "    [", x.span, "]")
+#     for a in x.args[(1 + (x.head == CALL)):end]
+#         show(io, a, indent + 1)
+#     end 
+# end
 function Base.show(io::IO, x::EXPR, indent = 0)
     name = sprint(show, x.head)
-    println(io, " "^indent, "↘ ", name, "    [", x.span, "]")
-    for a in x.args[(1 + (x.head == CALL)):end]
+    println(io, " "^indent, "head: ", Expr(x.head))
+    for (i, a) in enumerate(x.args)
         show(io, a, indent + 1)
     end 
 end
+
 
 function Base.show{T}(io::IO, x::Scope{T}, indent = 0)
     print(io, " "^indent, "↘ ", T, " (", length(x.args), ") ")

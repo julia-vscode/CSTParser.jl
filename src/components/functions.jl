@@ -55,6 +55,10 @@ function parse_call(ps::ParseState, ret)
     if ret.args[1] isa OPERATOR{PlusOp, Tokens.EX_OR} || ret.args[1] isa OPERATOR{ComparisonOp, Tokens.ISSUBTYPE} || ret.args[1] isa OPERATOR{ComparisonOp, Tokens.ISSUPERTYPE}
         ret.head = shift!(ret.args)
     end
+    if ret.args[1] isa OPERATOR{TimesOp, Tokens.AND} 
+        arg = EXPR(TUPLE, ret.args[2:end], ret.span - ret.args[1].span, ret.punctuation)
+        ret = EXPR(ret.args[1], [arg], ret.args[1].span + arg.span)
+    end
     
     if length(ret.args) > 0 && ismacro(ret.args[1])
         ret.head = MACROCALL

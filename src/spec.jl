@@ -1,33 +1,33 @@
-abstract SyntaxNode
-abstract INSTANCE <: SyntaxNode
+abstract type SyntaxNode end
+abstract type INSTANCE <: SyntaxNode end
 
-type IDENTIFIER <: INSTANCE
+mutable struct IDENTIFIER <: INSTANCE
     span::Int
     val::Symbol
 end
 
-type LITERAL{K} <: INSTANCE
+mutable struct LITERAL{K} <: INSTANCE
     span::Int
     val::String
 end
 
-type KEYWORD{K} <: INSTANCE
+mutable struct KEYWORD{K} <: INSTANCE
     span::Int
 end
 
-type OPERATOR{P, K, dot} <: INSTANCE
+mutable struct OPERATOR{P, K, dot} <: INSTANCE
     span::Int
 end
 
-type PUNCTUATION{K} <: INSTANCE
+mutable struct PUNCTUATION{K} <: INSTANCE
     span::Int
 end
 
-type HEAD{K} <: INSTANCE
+mutable struct HEAD{K} <: INSTANCE
     span::Int
 end
 
-type ERROR{K} <: SyntaxNode
+mutable struct ERROR{K} <: SyntaxNode
     span::Int
     partial::SyntaxNode
 end
@@ -61,7 +61,7 @@ function INSTANCE(ps::ParseState)
 end
 
 
-type QUOTENODE <: SyntaxNode
+mutable struct QUOTENODE <: SyntaxNode
     val::SyntaxNode
     span::Int
     punctuation::Vector{SyntaxNode}
@@ -111,9 +111,9 @@ const AT_SIGN = PUNCTUATION{Tokens.AT_SIGN}(1)
 const GlobalRefDOC = HEAD{:globalrefdoc}(0)
 
 
-abstract Scope{t}
+abstract type Scope{t} end
 
-type File
+mutable struct File
     imports
     includes::Vector{String}
     path::String
@@ -122,12 +122,12 @@ type File
 end
 File(path::String) = File([], [], path, EXPR(FILE, []), [])
 
-type Project
+mutable struct Project
     path::String
     files::Vector{File}
 end
 
-type Variable
+mutable struct Variable
     id
     t
     val
@@ -135,7 +135,7 @@ end
 
 const NoVariable = Variable(NOTHING, NOTHING, NOTHING)
 
-type EXPR <: SyntaxNode
+mutable struct EXPR <: SyntaxNode
     head::SyntaxNode
     args::Vector{SyntaxNode}
     span::Int

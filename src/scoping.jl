@@ -1,5 +1,13 @@
 is_func_call(x) = false
-is_func_call(x::EXPR) = x.head == CALL
+function is_func_call(x::EXPR) 
+    if x.head == CALL
+        return true
+    elseif x.head isa OPERATOR{WhereOp} || x.head isa OPERATOR{DeclarationOp}
+        return is_func_call(x.args[1])
+    else
+        return false
+    end
+end
 
 """
     get_id(x)
