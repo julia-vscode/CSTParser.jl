@@ -601,6 +601,7 @@ end
     @test "function -(x::Rational{T}) where T<:Signed end" |> test_expr
     @test "+(x...)" |> test_expr
     @test "+(promote(x,y)...)" |> test_expr
+    @test "\$(a)(b)" |> test_expr
 end
 
 @testset "Broken things" begin
@@ -630,7 +631,6 @@ end
                 function +(x::Bool, y::T)::promote_type(Bool,T) where T<:AbstractFloat
                     return ifelse(x, oneunit(y) + y, y)
                 end""" |> test_expr
-    @test_broken "" |> test_expr
     @test_broken "" |> test_expr
     @test_broken "" |> test_expr
 end

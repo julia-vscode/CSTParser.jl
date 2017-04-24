@@ -137,7 +137,7 @@ function parse_compound(ps::ParseState, ret)
     elseif isajuxtaposition(ps, ret)
         op = OPERATOR{TimesOp, Tokens.STAR, false}(0)
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind == Tokens.LPAREN && isempty(ps.ws) && !isunaryop(ret)
+    elseif ps.nt.kind == Tokens.LPAREN && isempty(ps.ws)
         @catcherror ps startbyte ret = @default ps @closer ps paren parse_call(ps, ret)
     elseif ps.nt.kind == Tokens.LBRACE && isempty(ps.ws)
         @catcherror ps startbyte ret = parse_curly(ps, ret)
@@ -193,7 +193,7 @@ function parse_compound(ps::ParseState, ret)
     elseif ps.nt.kind == Tokens.RBRACE
         ps.errored = true
         return ERROR{UnexpectedRBrace}(ret.span, ret)
-    elseif ps.nt.kind == Tokens.RLQUARE
+    elseif ps.nt.kind == Tokens.LSQUARE
         ps.errored = true
         return ERROR{UnexpectedLSquare}(ret.span, ret)
     elseif ps.nt.kind == Tokens.RSQUARE
@@ -253,10 +253,10 @@ function parse_paren(ps::ParseState)
     
     @catcherror ps startbyte @default ps @nocloser ps inwhere @closer ps paren parse_comma_sep(ps, ret, false, true)
 
-    if length(ret.args) == 1 && length(ret.punctuation) == 1
-        if ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{0, Tokens.DDDOT} && ps.ws.kind != SemiColonWS
-            ret.args[1] = EXPR(TUPLE, [ret.args[1]], ret.args[1].span)
-        end
+    if length(ret.args) == 1 && length(ret.punctuation) == 1 && !(ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{0, Tokens.DDDOT})
+        # if ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{0, Tokens.DDDOT} && ps.ws.kind != SemiColonWS
+        #     ret.args[1] = EXPR(TUPLE, [ret.args[1]], ret.args[1].span)
+        # end
         if ps.ws.kind != SemiColonWS
             ret.head = HEAD{InvisibleBrackets}(0)
         end

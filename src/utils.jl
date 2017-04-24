@@ -1,10 +1,10 @@
 function closer(ps::ParseState)
     (ps.closer.newline && ps.ws.kind == NewLineWS && ps.t.kind != Tokens.COMMA) ||
     (ps.closer.semicolon && ps.ws.kind == SemiColonWS) ||
-    # (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence && !isunaryop(ps.nt)) ||
     (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence) ||
     (ps.nt.kind == Tokens.WHERE && ps.closer.precedence == 5) ||
     (ps.closer.inwhere && ps.nt.kind == Tokens.WHERE) || 
+    # (ps.closer.precedence == PowerOp-1 && ps.nt.kind == Tokens.WHERE) ||
     (ps.nt.kind == Tokens.LPAREN && ps.closer.precedence > 15) ||
     (ps.nt.kind == Tokens.LBRACE && ps.closer.precedence > 15) ||
     (ps.nt.kind == Tokens.LSQUARE && ps.closer.precedence > 15) ||
