@@ -207,7 +207,10 @@ ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
                           t.kind == Tokens.END ||
                           Tokens.LSQUARE ≤ t.kind ≤ Tokens.RPAREN
 
-
+isajuxtaposition(ps::ParseState, ret) = ((ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || 
+        (ret isa EXPR && ret.head isa OPERATOR{16, Tokens.PRIME} && ps.nt.kind == Tokens.IDENTIFIER) || 
+        ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
+        ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING))
 
 
 # Testing functions

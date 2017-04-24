@@ -134,40 +134,15 @@ function parse_compound(ps::ParseState, ret)
         @catcherror ps startbyte ret = parse_generator(ps, ret)
     elseif ps.nt.kind == Tokens.DO
         @catcherror ps startbyte ret = parse_do(ps, ret)
-    elseif ((ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || 
-        (ret isa EXPR && ret.head isa OPERATOR{16, Tokens.PRIME} && ps.nt.kind == Tokens.IDENTIFIER) || 
-        ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
-        ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING))
-        # a literal number followed by an identifier or (
-        # a transpose call followed by an identifier
-        # a () or [] expression followed by an identifier
-        # an expression followed by a CMD
-        # a string followed by a string
-        #  --> implicit multiplication
+    elseif isajuxtaposition(ps, ret)
         op = OPERATOR{TimesOp, Tokens.STAR, false}(0)
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind == Tokens.LPAREN && !isunaryop(ret) && isempty(ps.ws) 
-    # elseif ps.nt.kind == Tokens.LPAREN && (!(ret isa OPERATOR) || (!isunaryop(ret) || isbinaryop(ret))) && isempty(ps.ws) 
-        if isempty(ps.ws) 
-            @catcherror ps startbyte ret = @default ps @closer ps paren parse_call(ps, ret)
-        else
-            ps.errored = true
-            return ERROR{UnexpectedLParen}(ret.span, ret)
-        end
-    elseif ps.nt.kind == Tokens.LBRACE
-        if isempty(ps.ws)
-            @catcherror ps startbyte ret = parse_curly(ps, ret)
-        else
-            ps.errored = true
-            return ERROR{UnexpectedLBrace}(ret.span, ret)
-        end
-    elseif ps.nt.kind == Tokens.LSQUARE && !(ret isa OPERATOR)
-        if isempty(ps.ws)
-            @catcherror ps startbyte ret = @nocloser ps block parse_ref(ps, ret)
-        else
-            ps.errored = true
-            return ERROR{UnexpectedLSquare}(ret.span, ret)
-        end
+    elseif ps.nt.kind == Tokens.LPAREN && isempty(ps.ws) && !isunaryop(ret)
+        @catcherror ps startbyte ret = @default ps @closer ps paren parse_call(ps, ret)
+    elseif ps.nt.kind == Tokens.LBRACE && isempty(ps.ws)
+        @catcherror ps startbyte ret = parse_curly(ps, ret)
+    elseif ps.nt.kind == Tokens.LSQUARE && isempty(ps.ws) && !(ret isa OPERATOR)
+        @catcherror ps startbyte ret = @nocloser ps block parse_ref(ps, ret)
     elseif ps.nt.kind == Tokens.COMMA
         @catcherror ps startbyte ret = parse_tuple(ps, ret)
     elseif isunaryop(ret) && ps.nt.kind != Tokens.EQ
@@ -206,12 +181,21 @@ function parse_compound(ps::ParseState, ret)
     elseif ps.nt.kind == Tokens.ENDMARKER
         ps.errored = true
         return ERROR{UnexpectedEndmarker}(ret.span, ret)
+    elseif ps.nt.kind == Tokens.LPAREN
+        ps.errored = true
+        return ERROR{UnexpectedLParen}(ret.span, ret)
     elseif ps.nt.kind == Tokens.RPAREN
         ps.errored = true
         return ERROR{UnexpectedRParen}(ret.span, ret)
+    elseif ps.nt.kind == Tokens.LBRACE
+        ps.errored = true
+        return ERROR{UnexpectedLBrace}(ret.span, ret)
     elseif ps.nt.kind == Tokens.RBRACE
         ps.errored = true
         return ERROR{UnexpectedRBrace}(ret.span, ret)
+    elseif ps.nt.kind == Tokens.RLQUARE
+        ps.errored = true
+        return ERROR{UnexpectedLSquare}(ret.span, ret)
     elseif ps.nt.kind == Tokens.RSQUARE
         ps.errored = true
         return ERROR{UnexpectedRSquare}(ret.span, ret)

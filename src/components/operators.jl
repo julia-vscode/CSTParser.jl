@@ -148,7 +148,7 @@ end
 
 
 
-LtoR(prec::Int) = 1 ≤ prec ≤ 5 || prec == 13
+LtoR(prec::Int) = AssignmentOp ≤ prec ≤ LazyAndOp || prec == PowerOp
 
 
 """
