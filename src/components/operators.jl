@@ -50,6 +50,7 @@ precedence(op::Token) = op.kind < Tokens.begin_assignments ? 0 :
                        op.kind < Tokens.end_decl ?           14 : 
                        op.kind < Tokens.end_where ?          15 : 
                        op.kind < Tokens.end_dot ?            16 : 
+                       op.kind == Tokens.ANON_FUNC ? 14 : 
                        op.kind == Tokens.PRIME ?             16 : 20
 
 precedence(x) = 0
@@ -171,6 +172,7 @@ function parse_unary{P, K}(ps::ParseState, op::OPERATOR{P, K})
 
     # Parsing
     prec = P == DeclarationOp ? DeclarationOp : 
+                K == Tokens.AND ? 14 : 
                 K == Tokens.EX_OR ? 20 : 13
     @catcherror ps startbyte arg = @precedence ps prec parse_expression(ps)
     
@@ -200,16 +202,6 @@ function parse_unary(ps::ParseState, op::OPERATOR{ColonOp, Tokens.COLON})
         return EXPR(QUOTE, [arg], op.span + arg.span, [op])
     end
 end
-
-# function parse_unary(ps::ParseState, op::OPERATOR{PlusOp, Tokens.EX_OR, false})
-#     startbyte = ps.nt.startbyte - op.span
-#     # Parsing
-#     @catcherror ps startbyte arg = @precedence ps 20 parse_expression(ps)
-#     # Construction
-#     ret = EXPR(op, [arg], op.span + arg.span)
-#     return ret
-# end
-
 
 # Parse assignments
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{AssignmentOp, Tokens.EQ})
@@ -393,7 +385,10 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{DotOp})
             @catcherror ps startbyte nextarg = @precedence ps DotOp - LtoR(DotOp) parse_unary(ps, op2)
         end
     elseif ps.nt.kind == Tokens.EX_OR && ps.nnt.kind == Tokens.LPAREN
-        @catcherror ps startbyte nextarg = parse_expression(ps)
+        next(ps)
+        op2 = OPERATOR(ps)
+        @catcherror ps startbyte nextarg = parse_call(ps, op2)
+        # @catcherror ps startbyte nextarg = parse_expression(ps)
     else
         @catcherror ps startbyte nextarg = @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)
     end
@@ -419,7 +414,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{16, Tokens
     return EXPR(op, SyntaxNode[ret], op.span + ret.span)
 end
 
-function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{20, Tokens.ANON_FUNC})
+function parse_operator{P}(ps::ParseState, ret::SyntaxNode, op::OPERATOR{P, Tokens.ANON_FUNC})
     startbyte = ps.nt.startbyte - op.span - ret.span
     # Parsing
     @catcherror ps startbyte arg = @precedence ps 0 parse_expression(ps)

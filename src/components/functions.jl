@@ -39,7 +39,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     
     # Construction
     if isempty(block.args)
-        if sig isa EXPR
+        if sig isa EXPR && !(sig.head isa OPERATOR{PlusOp, Tokens.EX_OR})
             args = SyntaxNode[sig, block]
         else
             args = SyntaxNode[sig]
