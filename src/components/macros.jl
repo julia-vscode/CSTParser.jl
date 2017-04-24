@@ -6,7 +6,13 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
     startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2] + 4
     kw = INSTANCE(ps)
-    @catcherror ps startbyte sig = @closer ps block @closer ps ws parse_expression(ps)
+    if ps.nt.kind == Tokens.IDENTIFIER
+        next(ps)
+        sig = INSTANCE(ps)
+        @catcherror ps startbyte sig = parse_call(ps, sig)
+    else
+        @catcherror ps startbyte sig = @closer ps block @closer ps ws parse_expression(ps)
+    end
     @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
 
     next(ps)

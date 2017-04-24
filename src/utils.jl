@@ -1,7 +1,6 @@
 function closer(ps::ParseState)
     (ps.closer.newline && ps.ws.kind == NewLineWS && ps.t.kind != Tokens.COMMA) ||
     (ps.closer.semicolon && ps.ws.kind == SemiColonWS) ||
-    # (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence && !isunaryop(ps.nt)) ||
     (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence) ||
     (ps.nt.kind == Tokens.WHERE && ps.closer.precedence == 5) ||
     (ps.closer.inwhere && ps.nt.kind == Tokens.WHERE) || 
@@ -207,7 +206,10 @@ ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
                           t.kind == Tokens.END ||
                           Tokens.LSQUARE ≤ t.kind ≤ Tokens.RPAREN
 
-
+isajuxtaposition(ps::ParseState, ret) = ((ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || 
+        (ret isa EXPR && ret.head isa OPERATOR{16, Tokens.PRIME} && ps.nt.kind == Tokens.IDENTIFIER) || 
+        ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
+        ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING))
 
 
 # Testing functions
@@ -307,6 +309,8 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
     fail = 0
     bfail = 0
     ret = []
+    oldstderr = STDERR
+    redirect_stderr()
     for (rp, d, files) in walkdir(dir)
         for f in files
             file = joinpath(rp, f)
@@ -379,6 +383,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
             end
         end
     end
+    redirect_stderr(oldstderr)
     if fail + err + neq > 0
         println("\r$N files")
         print_with_color(:red, "failed")

@@ -12,7 +12,7 @@ randop() = rand(["-->", "→",
                  "//",
                  "^", "↑",
                  "::",
-                 "."])
+                 ".", "->"])
 
 
 function test_expr(str)
@@ -21,6 +21,7 @@ function test_expr(str)
     x1 = remlineinfo!(Base.parse(str))
     !ps.errored && x0 == x1 && isempty(span(x))
 end
+
 @testset "All tests" begin
 @testset "Operators" begin
     @testset "Binary Operators" begin
@@ -63,6 +64,24 @@ end
         @test "√" |> test_expr
         @test "∛" |> test_expr
         @test "∜" |> test_expr
+    end
+
+    @testset "Unary Operator" begin
+        @test "a=b..." |> test_expr
+        @test "a-->b..." |> test_expr
+        @test "a&&b..." |> test_expr
+        @test "a||b..." |> test_expr
+        @test "a<b..." |> test_expr
+        @test "a:b..." |> test_expr
+        @test "a+b..." |> test_expr
+        @test "a<<b..." |> test_expr
+        @test "a*b..." |> test_expr
+        @test "a//b..." |> test_expr
+        @test "a^b..." |> test_expr
+        @test "a::b..." |> test_expr
+        @test "a where b..." |> test_expr
+        @test "a.b..." |> test_expr
+        
     end
 
     @testset "unary op calls" begin
@@ -600,6 +619,19 @@ end
     @test "function -(x::Rational{T}) where T<:Signed end" |> test_expr
     @test "+(x...)" |> test_expr
     @test "+(promote(x,y)...)" |> test_expr
+    @test "\$(a)(b)" |> test_expr
+    @test "if !(a) break end" |> test_expr
+    @test """function +(x::Bool, y::T)::promote_type(Bool,T) where T<:AbstractFloat
+                return ifelse(x, oneunit(y) + y, y)
+            end""" |> test_expr
+    @test """finalizer(x,x::GClosure->begin
+                    ccall((:g_closure_unref,Gtk.GLib.libgobject),Void,(Ptr{GClosure},),x.handle)
+                end)""" |> test_expr
+    @test "function \$A end" |> test_expr
+    @test "&ctx->exe_ctx_ref" |> test_expr
+    @test ":(\$(docstr).\$(TEMP_SYM)[\$(key)])" |> test_expr
+    @test "SpecialFunctions.\$(fsym)(n::Dual)" |> test_expr
+    @test "module a() end" |> test_expr
 end
 
 @testset "Broken things" begin
@@ -609,27 +641,11 @@ end
         "\\\\\$ch"
         """ |> test_expr
     @test_broken "µs" |> test_expr # normalize unicode
-    @test_broken """
-                    \"\"\"
-                    text
-                    \"\"\" ->
-                    function \$A end
-                    """ |> test_expr
     @test_broken """let f = ((; a = 1, b = 2) -> ()),
                 m = first(methods(f))
                 @test DSE.keywords(f, m) == [:a, :b]
             end""" |> test_expr
-    @test_broken ":(\$(docstr).\$(TEMP_SYM)[\$(key)])" |> test_expr
-    @test_broken "SpecialFunctions.\$(fsym)(n::Dual)" |> test_expr
-    @test_broken """finalizer(x,x::GClosure->begin
-                    ccall((:g_closure_unref,Gtk.GLib.libgobject),Void,(Ptr{GClosure},),x.handle)
-                end)""" |> test_expr
     @test_broken "-1^a" |> test_expr
-    @test_broken """
-                function +(x::Bool, y::T)::promote_type(Bool,T) where T<:AbstractFloat
-                    return ifelse(x, oneunit(y) + y, y)
-                end""" |> test_expr
-    @test_broken "" |> test_expr
     @test_broken "" |> test_expr
     @test_broken "" |> test_expr
 end
