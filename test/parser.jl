@@ -21,6 +21,7 @@ function test_expr(str)
     x1 = remlineinfo!(Base.parse(str))
     !ps.errored && x0 == x1 && isempty(span(x))
 end
+
 @testset "All tests" begin
 @testset "Operators" begin
     @testset "Binary Operators" begin
