@@ -295,12 +295,12 @@ end
 
 parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{PlusOp, Tokens.PLUS, false}) = parse_chain_operator(ps, ret, op)
 
-parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{TimesOp, Tokens.STAR, false}) = parse_chain_operator(ps, ret, op)
+function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{TimesOp, Tokens.STAR, false})  parse_chain_operator(ps, ret, op)
 
 function parse_chain_operator{P, K}(ps::ParseState, ret::EXPR, op::OPERATOR{P, K, false})
     startbyte = ps.nt.startbyte - op.span - ret.span
     
-    if ret.head == CALL && ret.args[1] isa OPERATOR{P, K, false}
+    if ret.head == CALL && ret.args[1] isa OPERATOR{P, K, false} && ret.args[1].span > 0
         # Parsing
         @catcherror ps startbyte nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
 
