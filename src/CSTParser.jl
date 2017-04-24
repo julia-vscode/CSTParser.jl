@@ -253,7 +253,7 @@ function parse_paren(ps::ParseState)
     
     @catcherror ps startbyte @default ps @nocloser ps inwhere @closer ps paren parse_comma_sep(ps, ret, false, true)
 
-    if length(ret.args) == 1 && length(ret.punctuation) == 1 && !(ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{0, Tokens.DDDOT})
+    if length(ret.args) == 1 && length(ret.punctuation) == 1 && !(ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{DddotOp, Tokens.DDDOT})
         # if ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{0, Tokens.DDDOT} && ps.ws.kind != SemiColonWS
         #     ret.args[1] = EXPR(TUPLE, [ret.args[1]], ret.args[1].span)
         # end

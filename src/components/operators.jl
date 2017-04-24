@@ -15,6 +15,7 @@ const DeclarationOp = 14
 const WhereOp       = 15
 const DotOp         = 16
 const PrimeOp       = 16
+const DddotOp       = 7
 
 
 precedence(op::Int) = op < Tokens.end_assignments ?  1 :
@@ -33,7 +34,8 @@ precedence(op::Int) = op < Tokens.end_assignments ?  1 :
                        op < Tokens.end_decl ?        14 : 
                        op < Tokens.end_where ?       15 : 16
 
-precedence(op::Token) = op.kind < Tokens.begin_assignments ? 0 :
+precedence(op::Token) = op.kind == Tokens.DDDOT ? DddotOp :
+                        op.kind < Tokens.begin_assignments ? 0 :
                         op.kind < Tokens.end_assignments ?   1 :
                        op.kind < Tokens.end_conditional ?    2 :
                        op.kind < Tokens.end_arrow ?          3 :
@@ -212,7 +214,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{Assignment
     if is_func_call(ret)
         # Construction
         # NOTE : issue w/ scheme parser
-        if !(ret.head isa OPERATOR{DeclarationOp, Tokens.DECLARATION})
+        if !(ret.head isa OPERATOR{DeclarationOp, Tokens.DECLARATION}) && ps.closer.precedence != 0
             nextarg = EXPR(BLOCK, SyntaxNode[nextarg], nextarg.span)
         end
         # Linting
@@ -406,7 +408,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{DotOp})
 end
 
 
-function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{0, Tokens.DDDOT})
+function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{DddotOp, Tokens.DDDOT})
     return EXPR(op, SyntaxNode[ret], op.span + ret.span)
 end
 

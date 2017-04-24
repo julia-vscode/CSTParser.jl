@@ -10,7 +10,12 @@ function parse_module(ps::ParseState)
 
     # Parsing
     kw = INSTANCE(ps)
-    @catcherror ps startbyte arg = @closer ps block @closer ps ws parse_expression(ps)
+    if ps.nt.kind == Tokens.IDENTIFIER
+        next(ps)
+        arg = INSTANCE(ps)
+    else
+        @catcherror ps startbyte arg = @precedence ps 15 @closer ps block @closer ps ws parse_expression(ps)
+    end
 
     block = EXPR(BLOCK, [], -ps.nt.startbyte)
     @scope ps Scope{Tokens.MODULE} @default ps while ps.nt.kind !== Tokens.END
@@ -39,7 +44,7 @@ function parse_dot_mod(ps::ParseState, colon=false)
         elseif d isa OPERATOR{ColonOp, Tokens.DDOT}
             push!(puncs, OPERATOR{DotOp, Tokens.DOT, false}(1))
             push!(puncs, OPERATOR{DotOp, Tokens.DOT, false}(1))
-        elseif d isa OPERATOR{0, Tokens.DDDOT}
+        elseif d isa OPERATOR{DddotOp, Tokens.DDDOT}
             push!(puncs, OPERATOR{DotOp, Tokens.DOT, false}(1))
             push!(puncs, OPERATOR{DotOp, Tokens.DOT, false}(1))
             push!(puncs, OPERATOR{DotOp, Tokens.DOT, false}(1))

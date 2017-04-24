@@ -66,6 +66,24 @@ end
         @test "∜" |> test_expr
     end
 
+    @testset "Unary Operator" begin
+        @test "a=b..." |> test_expr
+        @test "a-->b..." |> test_expr
+        @test "a&&b..." |> test_expr
+        @test "a||b..." |> test_expr
+        @test "a<b..." |> test_expr
+        @test "a:b..." |> test_expr
+        @test "a+b..." |> test_expr
+        @test "a<<b..." |> test_expr
+        @test "a*b..." |> test_expr
+        @test "a//b..." |> test_expr
+        @test "a^b..." |> test_expr
+        @test "a::b..." |> test_expr
+        @test "a where b..." |> test_expr
+        @test "a.b..." |> test_expr
+        
+    end
+
     @testset "unary op calls" begin
         @test "+(a,b)" |> test_expr
         @test "-(a,b)" |> test_expr
@@ -613,6 +631,7 @@ end
     @test "&ctx->exe_ctx_ref" |> test_expr
     @test ":(\$(docstr).\$(TEMP_SYM)[\$(key)])" |> test_expr
     @test "SpecialFunctions.\$(fsym)(n::Dual)" |> test_expr
+    @test "module a() end" |> test_expr
 end
 
 @testset "Broken things" begin
@@ -627,7 +646,6 @@ end
                 @test DSE.keywords(f, m) == [:a, :b]
             end""" |> test_expr
     @test_broken "-1^a" |> test_expr
-    @test_broken "" |> test_expr
     @test_broken "" |> test_expr
     @test_broken "" |> test_expr
 end

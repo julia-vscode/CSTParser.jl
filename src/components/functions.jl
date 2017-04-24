@@ -115,7 +115,7 @@ end
 function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false)
     startbyte = ps.nt.startbyte
 
-    @catcherror ps startbyte @noscope ps @nocloser ps newline @closer ps comma while !closer(ps)
+    @catcherror ps startbyte @nocloser ps inwhere @noscope ps @nocloser ps newline @closer ps comma while !closer(ps)
         a = parse_expression(ps)
         if kw && !ps.closer.brace && a isa EXPR && a.head isa OPERATOR{AssignmentOp, Tokens.EQ}
             a.head = HEAD{Tokens.KW}(a.head.span)
@@ -134,14 +134,14 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false)
     if ps.ws.kind == SemiColonWS
         if block
             ret.head = BLOCK
-            @nocloser ps newline  @closer ps comma while @nocloser ps semicolon !closer(ps)
+            @nocloser ps newline @closer ps comma while @nocloser ps semicolon !closer(ps)
                 @catcherror ps startbyte a = parse_expression(ps)
                 push!(ret.args, a)
             end
 
         else
             paras = EXPR(PARAMETERS, [], -ps.nt.startbyte)
-            @nocloser ps newline @nocloser ps semicolon @closer ps comma while !closer(ps)
+            @nocloser ps inwhere @nocloser ps newline @nocloser ps semicolon @closer ps comma while !closer(ps)
                 @catcherror ps startbyte a = parse_expression(ps)
                 if kw && !ps.closer.brace && a isa EXPR && a.head isa OPERATOR{AssignmentOp, Tokens.EQ}
                     a.head = HEAD{Tokens.KW}(a.head.span)
