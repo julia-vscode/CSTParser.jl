@@ -4,7 +4,29 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
 
     # Parsing
     kw = INSTANCE(ps)
-    @catcherror ps startbyte sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_expression(ps)
+    # signature
+
+    if isoperator(ps.nt.kind) && ps.nt.kind != Tokens.EX_OR && ps.nnt.kind == Tokens.LPAREN
+        start1 = ps.nt.startbyte
+        next(ps)
+        op = OPERATOR(ps)
+        next(ps)
+        if issyntaxunarycall(op)
+            sig = EXPR(op, [], 0, [INSTANCE(ps)])
+        else
+            sig = EXPR(CALL, [op], 0, [INSTANCE(ps)])
+        end
+        @catcherror ps startbyte @closer ps paren parse_comma_sep(ps, sig)
+        next(ps)
+        push!(sig.punctuation, INSTANCE(ps))
+        sig.span = ps.nt.startbyte - start1
+        @default ps @closer ps inwhere @closer ps ws @closer ps block while !closer(ps)
+            @catcherror ps startbyte sig = parse_compound(ps, sig)
+        end
+    else
+        @catcherror ps startbyte sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_expression(ps)
+    end
+    
     while ps.nt.kind == Tokens.WHERE
         @catcherror ps startbyte sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_compound(ps, sig)
     end
@@ -41,24 +63,24 @@ function parse_call(ps::ParseState, ret)
     startbyte = ps.t.startbyte
     # Parsing
     if ret isa OPERATOR{PlusOp, Tokens.EX_OR} || ret isa OPERATOR{DeclarationOp, Tokens.DECLARATION} || ret isa OPERATOR{TimesOp, Tokens.AND}
-        arg = @default ps @precedence ps 20 parse_expression(ps)
+        arg = @precedence ps 20 parse_expression(ps)
         ret = EXPR(ret, [arg], ret.span + arg.span)
     elseif ret isa OPERATOR{20, Tokens.NOT}
-        arg = @default ps @precedence ps 13 parse_expression(ps)
+        arg = @precedence ps 13 parse_expression(ps)
         if arg isa EXPR && arg.head == TUPLE
             ret = EXPR(CALL, [ret; arg.args], ret.span + arg.span, arg.punctuation)
         else
             ret = EXPR(CALL, [ret, arg], ret.span + arg.span)
         end
     elseif ret isa OPERATOR{PlusOp, Tokens.MINUS} || ret isa OPERATOR{PlusOp, Tokens.PLUS}
-        arg = @default ps @precedence ps PlusOp parse_expression(ps)
+        arg = @precedence ps 13 parse_expression(ps)
         if arg isa EXPR && arg.head == TUPLE
             ret = EXPR(CALL, [ret; arg.args], ret.span + arg.span, arg.punctuation)
         else
             ret = EXPR(CALL, [ret, arg], ret.span + arg.span)
         end
     elseif ret isa OPERATOR{ComparisonOp, Tokens.ISSUBTYPE} || ret isa OPERATOR{ComparisonOp, Tokens.ISSUPERTYPE} || ret isa OPERATOR{ComparisonOp, Tokens.ISSUPERTYPE}
-        arg = @default ps @precedence ps 13 parse_expression(ps)
+        arg = @precedence ps 13 parse_expression(ps)
         ret = EXPR(ret, arg.args, ret.span + arg.span, arg.punctuation)
     else
         next(ps)
@@ -70,18 +92,7 @@ function parse_call(ps::ParseState, ret)
         format_rbracket(ps)
         ret.span += ps.nt.startbyte
     end
-        
 
-    # Construction
-    # fix arbitrary $ case
-    # if ret.args[1] isa OPERATOR{PlusOp, Tokens.EX_OR} || ret.args[1] isa OPERATOR{ComparisonOp, Tokens.ISSUBTYPE} || ret.args[1] isa OPERATOR{ComparisonOp, Tokens.ISSUPERTYPE}
-    #     ret.head = shift!(ret.args)
-    # end
-    # if ret.args[1] isa OPERATOR{TimesOp, Tokens.AND} 
-    #     arg = EXPR(TUPLE, ret.args[2:end], ret.span - ret.args[1].span, ret.punctuation)
-    #     ret = EXPR(ret.args[1], [arg], ret.args[1].span + arg.span)
-    # end
-    
     if length(ret.args) > 0 && ismacro(ret.args[1])
         ret.head = MACROCALL
     end

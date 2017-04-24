@@ -602,6 +602,10 @@ end
     @test "+(x...)" |> test_expr
     @test "+(promote(x,y)...)" |> test_expr
     @test "\$(a)(b)" |> test_expr
+    @test "if !(a) break end" |> test_expr
+    @test """function +(x::Bool, y::T)::promote_type(Bool,T) where T<:AbstractFloat
+                return ifelse(x, oneunit(y) + y, y)
+            end""" |> test_expr
 end
 
 @testset "Broken things" begin
@@ -627,10 +631,8 @@ end
                     ccall((:g_closure_unref,Gtk.GLib.libgobject),Void,(Ptr{GClosure},),x.handle)
                 end)""" |> test_expr
     @test_broken "-1^a" |> test_expr
-    @test_broken """
-                function +(x::Bool, y::T)::promote_type(Bool,T) where T<:AbstractFloat
-                    return ifelse(x, oneunit(y) + y, y)
-                end""" |> test_expr
+    @test_broken "" |> test_expr
+    @test_broken "" |> test_expr
     @test_broken "" |> test_expr
     @test_broken "" |> test_expr
 end
