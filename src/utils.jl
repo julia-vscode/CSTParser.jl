@@ -310,6 +310,8 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
     fail = 0
     bfail = 0
     ret = []
+    oldstderr = STDERR
+    redirect_stderr()
     for (rp, d, files) in walkdir(dir)
         for f in files
             file = joinpath(rp, f)
@@ -382,6 +384,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
             end
         end
     end
+    redirect_stderr(oldstderr)
     if fail + err + neq > 0
         println("\r$N files")
         print_with_color(:red, "failed")
