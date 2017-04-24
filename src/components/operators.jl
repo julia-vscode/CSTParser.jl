@@ -440,11 +440,11 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{20, Tokens
     return ret
 end
 
-function parse_operator{op_prec, K}(ps::ParseState, ret::SyntaxNode, op::OPERATOR{op_prec, K})
+function parse_operator{P, K}(ps::ParseState, ret::SyntaxNode, op::OPERATOR{P, K})
     startbyte = ps.nt.startbyte - op.span - ret.span
     
     # Parsing
-    @catcherror ps startbyte nextarg = @precedence ps op_prec - LtoR(op_prec) parse_expression(ps)
+    @catcherror ps startbyte nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
     
     # Construction
     if issyntaxcall(op)
