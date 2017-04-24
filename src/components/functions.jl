@@ -16,7 +16,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
         else
             sig = EXPR(CALL, [op], 0, [INSTANCE(ps)])
         end
-        @catcherror ps startbyte @closer ps paren parse_comma_sep(ps, sig)
+        @catcherror ps startbyte @default ps @closer ps paren parse_comma_sep(ps, sig)
         next(ps)
         push!(sig.punctuation, INSTANCE(ps))
         sig.span = ps.nt.startbyte - start1
@@ -140,6 +140,7 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false)
             end
 
         else
+            ps.nt.kind == Tokens.RPAREN && return 
             paras = EXPR(PARAMETERS, [], -ps.nt.startbyte)
             @nocloser ps inwhere @nocloser ps newline @nocloser ps semicolon @closer ps comma while !closer(ps)
                 @catcherror ps startbyte a = parse_expression(ps)

@@ -1,3 +1,4 @@
+# Operator hierarchy
 const AssignmentOp  = 1
 const ConditionalOp = 2
 const ArrowOp       = 3
@@ -16,6 +17,7 @@ const WhereOp       = 15
 const DotOp         = 16
 const PrimeOp       = 16
 const DddotOp       = 7
+const AnonFuncOp    = 14
 
 
 precedence(op::Int) = op < Tokens.end_assignments ?  1 :
@@ -52,7 +54,7 @@ precedence(op::Token) = op.kind == Tokens.DDDOT ? DddotOp :
                        op.kind < Tokens.end_decl ?           14 : 
                        op.kind < Tokens.end_where ?          15 : 
                        op.kind < Tokens.end_dot ?            16 : 
-                       op.kind == Tokens.ANON_FUNC ? 14 : 
+                       op.kind == Tokens.ANON_FUNC ? AnonFuncOp : 
                        op.kind == Tokens.PRIME ?             16 : 20
 
 precedence(x) = 0
@@ -419,7 +421,7 @@ end
 function parse_operator{P}(ps::ParseState, ret::SyntaxNode, op::OPERATOR{P, Tokens.ANON_FUNC})
     startbyte = ps.nt.startbyte - op.span - ret.span
     # Parsing
-    @catcherror ps startbyte arg = @precedence ps 0 parse_expression(ps)
+    @catcherror ps startbyte arg = @closer ps comma @precedence ps 0 parse_expression(ps)
 
     # Construction
     ret = EXPR(op, [ret, EXPR(BLOCK, [arg], arg.span)], ps.nt.startbyte - startbyte)
