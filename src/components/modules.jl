@@ -31,7 +31,7 @@ function parse_module(ps::ParseState)
     return ret
 end
 
-function parse_dot_mod(ps::ParseState, colon=false)
+function parse_dot_mod(ps::ParseState, colon = false)
     startbyte = ps.nt.startbyte
     args = SyntaxNode[]
     puncs = SyntaxNode[]

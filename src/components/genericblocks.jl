@@ -20,12 +20,13 @@ assumed to handle the closer.
 """
 function parse_block(ps::ParseState, start_col = 0; ret::EXPR = EXPR(BLOCK, [], 0), closers = [Tokens.END, Tokens.CATCH, Tokens.FINALLY])
     startbyte = ps.nt.startbyte
+    start_line = ps.nt.startpos[1]
     start_col = ps.nt.startpos[2]
 
     deadcode = -1
     # Parsing
     while !(ps.nt.kind in closers) && !ps.errored
-        format_indent(ps, start_col)
+        ps.nt.startpos[1] != start_line && format_indent(ps, start_col)
         @catcherror ps startbyte a = @closer ps block parse_expression(ps)
         push!(ret.args, a)
 
@@ -35,7 +36,7 @@ function parse_block(ps::ParseState, start_col = 0; ret::EXPR = EXPR(BLOCK, [], 
     end
 
     # Linting
-    format_indent(ps, start_col - 4)
+    ps.nt.startpos[1] != start_line && format_indent(ps, start_col - 4)
     if deadcode > -1
         push!(ps.diagnostics, Hint{Hints.DeadCode}(deadcode:ps.nt.startbyte))
     end
