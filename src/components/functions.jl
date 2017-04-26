@@ -168,7 +168,7 @@ _start_function(x::EXPR) = Iterator{:function}(1, 1 + length(x.args) + length(x.
 _start_parameters(x::EXPR) = Iterator{:parameters}(1, length(x.args) + length(x.punctuation))
 
 
-function next(x::EXPR, s::Iterator{:function})    
+function next(x::EXPR, s::Iterator{:function})
     if s.i == 1
         return x.head, +s
     elseif s.i == s.n
@@ -241,7 +241,7 @@ function _lint_func_sig(ps::ParseState, sig::EXPR)
     end
     fname = _get_fname(sig)
     format_funcname(ps, function_name(sig), sig.span)
-    args = Symbol[]
+    args = Tuple{Symbol, Any}[]
     nargs = length(sig.args) - 1
     firstkw  = nargs + 1
     for (i, arg) in enumerate(sig.args[2:end])
@@ -256,15 +256,16 @@ function _lint_func_sig(ps::ParseState, sig::EXPR)
             _lint_arg(ps, arg, args, i, fname, nargs, firstkw, loc)
         end
     end
-    sig.defs = (a -> Variable(a, :Any, sig)).(args)
+    sig.defs = (a -> Variable(a[1], a[2], sig)).(args)
 end
     
 function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
     a = _arg_id(arg)
+    t = get_t(arg)
     !(a isa IDENTIFIER) && return
     # push!(ps.current_scope.args, Variable(a, :Any, :argument))
     if !(a.val in args)
-        push!(args, a.val)
+        push!(args, (a.val, t))
     else 
         push!(ps.diagnostics, Hint{Hints.DuplicateArgumentName}(loc))
     end

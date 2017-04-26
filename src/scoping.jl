@@ -35,7 +35,7 @@ get_t{T<:INSTANCE}(x::T) = :Any
 
 function get_t(x::EXPR)
     if x.head isa OPERATOR{DeclarationOp, Tokens.DECLARATION}
-        return x.args[2]
+        return Expr(x.args[2])
     else
         return :Any
     end
@@ -65,7 +65,8 @@ newly defined variables.
 """
 function _track_assignment(ps::ParseState, x, val, defs = [])
     if x isa IDENTIFIER
-        push!(defs, Variable(Expr(x), :Any, val))
+        t = infer_t(val)
+        push!(defs, Variable(Expr(x), t, val))
     elseif x isa EXPR && x.head == TUPLE
         for a in x.args
             _track_assignment(ps, a, val, defs)
@@ -74,7 +75,58 @@ function _track_assignment(ps::ParseState, x, val, defs = [])
     return defs
 end
 
+
+function infer_t(val)
+    if val isa LITERAL
+        if val isa LITERAL{Tokens.FLOAT} 
+            t = :Float64
+        elseif val isa LITERAL{Tokens.INTEGER} 
+            t = :Int
+        elseif val isa LITERAL{Tokens.STRING} || val isa LITERAL{Tokens.TRIPLE_STRING} 
+            t = :String 
+        elseif val isa LITERAL{Tokens.CHAR} 
+            t = :Char 
+        elseif val isa LITERAL{Tokens.TRUE} || val isa LITERAL{Tokens.FALSE}
+            t = :Bool
+        elseif val isa Literal{Tokens.CMD}
+            t = :Cmd
+        end
+    elseif val isa EXPR
+        if val.head == VECT 
+            t = :(Array{Any, 1})
+        elseif val.head == VCAT
+            t = :(Array{Any, N})
+        elseif val.head == TYPED_VCAT
+            t = :(Array{$(Expr(val.args[1])), N})
+        elseif val.head == HCAT
+            t = :(Array{Any, 2})
+        elseif val.head == TYPED_HCAT
+            t = :(Array{$(Expr(val.args[1])), 2})
+        elseif val.head == QUOTE
+            t = :Expr
+        elseif val.head == STRING
+            t = :String
+        elseif val.head isa OPERATOR{ColonOp, Tokens.COLON}
+            if all(a isa LITERAL{Tokens.INTEGER} for a in val.args)
+                t = :(UnitRange{Int})
+            elseif all(a isa LITERAL{Tokens.FLOAT} for a in val.args)
+                t = :(StepRangeLen{Float64, Any})
+            else
+                t = :Any
+            end
+        else
+            t = :Any
+        end
+    elseif val isa QUOTENODE
+        t = :QuoteNode
+    else
+        t = :Any
+    end
+    return t
+end
+
 function get_symbols(x, offset = 0, symbols = []) end
+
 function get_symbols(x::EXPR, offset = 0, symbols = [])
     for a in x
         if a isa EXPR

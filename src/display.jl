@@ -3,7 +3,7 @@
 # end
 
 Base.show(io::IO, x::IDENTIFIER, indent = 0) =
-    println(io, " "^indent, " $(x.val)", "    [", x.span, "]")
+    println(io, " "^indent, " $(x.val)")
 
 Base.show(io::IO, x::LITERAL{nothing}, indent = 0) =
     println(io, " "^indent, " nothing", "    [", x.span, "]")
@@ -47,7 +47,12 @@ end
 # end
 function Base.show(io::IO, x::EXPR, indent = 0)
     name = sprint(show, x.head)
-    println(io, " "^indent, "head: ", Expr(x.head))
+    print(io, " "^indent, "head: ", Expr(x.head))
+    if isempty(x.defs)
+        println()
+    else
+        println("  {", join((a.id for a in x.defs), ","), "}")
+    end
     for (i, a) in enumerate(x.args)
         show(io, a, indent + 1)
     end 
@@ -65,7 +70,7 @@ function Base.show{T}(io::IO, x::Scope{T}, indent = 0)
 end
 
 function Base.show(io::IO, x::Variable, indent = 0)
-    println(io, " "^indent, "→ ", "Variable")
+    println(io, " "^indent, "Var → $(x.id)::$(x.t)")
 end
 
 

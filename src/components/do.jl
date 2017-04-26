@@ -17,6 +17,7 @@ function parse_do(ps::ParseState, ret)
         end
     end
     args.span += ps.nt.startbyte
+    _lint_do(ps, args, ps.nt.startbyte - args.span)
     @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
 
     # Construction
@@ -28,6 +29,15 @@ function parse_do(ps::ParseState, ret)
     ret.span += ps.nt.startbyte
     
     return ret
+end
+
+
+function _lint_do(ps::ParseState, sig, loc)
+    args = []
+    for (i, arg) in enumerate(sig.args)
+        _lint_arg(ps, arg, args, i, NOTHING, length(sig.args), length(sig.args) + 1, loc)
+    end
+    sig.defs = (a -> Variable(a[1], a[2], sig)).(args)
 end
 
 

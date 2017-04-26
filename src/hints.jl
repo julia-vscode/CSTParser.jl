@@ -69,8 +69,7 @@ isrbracket(t::Token) = t.kind == Tokens.RPAREN ||
                         t.kind == Tokens.RSQUARE
 
 function format_op(ps, prec)
-    # prec = precedence(ps.t)
-    if prec == ColonOp || prec == PowerOp || prec == DeclarationOp || prec == DotOp
+    if (prec == ColonOp || prec == PowerOp || prec == DeclarationOp || prec == DotOp) && ps.t.kind != Tokens.ANON_FUNC
         if ps.lws.kind != EmptyWS
             push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1:ps.lws.endbyte + 1))
         end
