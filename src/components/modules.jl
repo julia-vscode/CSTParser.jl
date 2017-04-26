@@ -114,10 +114,7 @@ function parse_imports(ps::ParseState)
     if ps.nt.kind != Tokens.COMMA && ps.nt.kind != Tokens.COLON
         ret = EXPR(kw, arg, ps.nt.startbyte - startbyte, puncs)
         ret.defs = [Variable(Expr(ret), :IMPORTS, ret)]
-        return ret
-    end
-
-    if ps.nt.kind == Tokens.COLON
+    elseif ps.nt.kind == Tokens.COLON
         ret = EXPR(TOPLEVEL, [], 0, [kw])
         t = 0
         for t = 1:length(puncs) - length(arg) + 1
@@ -154,7 +151,7 @@ function parse_imports(ps::ParseState)
     end
     
     # Linting
-    if ps.current_scope isa Scope{Tokens.FUNCTION}
+    if ps.current_scope == Scope{Tokens.FUNCTION}
         push!(ps.diagnostics, Hint{Hints.ImportInFunction}(startbyte:ps.nt.startbyte))
     end
 
@@ -186,7 +183,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
             push!(ps.diagnostics, Hint{Hints.DuplicateArgument}(startbyte:ps.nt.startbyte))
         end
     end
-    if ps.current_scope isa Scope{Tokens.FUNCTION}
+    if ps.current_scope == Scope{Tokens.FUNCTION}
         push!(ps.diagnostics, Hint{Hints.ImportInFunction}(startbyte:ps.nt.startbyte))
     end
     return ret

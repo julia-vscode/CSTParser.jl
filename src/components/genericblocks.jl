@@ -22,15 +22,24 @@ function parse_block(ps::ParseState, start_col = 0; ret::EXPR = EXPR(BLOCK, [], 
     startbyte = ps.nt.startbyte
     start_col = ps.nt.startpos[2]
 
+    deadcode = -1
     # Parsing
     while !(ps.nt.kind in closers) && !ps.errored
         format_indent(ps, start_col)
         @catcherror ps startbyte a = @closer ps block parse_expression(ps)
         push!(ret.args, a)
+
+        if a isa EXPR && a.head isa KEYWORD{Tokens.RETURN} && !(ps.nt.kind in closers)
+            deadcode = ps.nt.startbyte
+        end
     end
 
     # Linting
     format_indent(ps, start_col - 4)
+    if deadcode > -1
+        push!(ps.diagnostics, Hint{Hints.DeadCode}(deadcode:ps.nt.startbyte))
+    end
+
     ret.span = ps.nt.startbyte - startbyte
     return ret
 end
