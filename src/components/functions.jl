@@ -332,7 +332,9 @@ function _sig_params(x, p = [])
 end
 
 function _get_fname(sig)
-    if sig isa EXPR && sig.head == TUPLE
+    if sig isa IDENTIFIER
+        return sig
+    elseif sig isa EXPR && sig.head == TUPLE
         return NOTHING
     elseif sig isa EXPR && sig.head isa OPERATOR{DeclarationOp, Tokens.DECLARATION}
         get_id(sig.args[1].args[1])

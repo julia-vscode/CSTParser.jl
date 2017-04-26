@@ -88,8 +88,10 @@ function infer_t(val)
             t = :Char 
         elseif val isa LITERAL{Tokens.TRUE} || val isa LITERAL{Tokens.FALSE}
             t = :Bool
-        elseif val isa Literal{Tokens.CMD}
+        elseif val isa LITERAL{Tokens.CMD}
             t = :Cmd
+        else 
+            t = :Any
         end
     elseif val isa EXPR
         if val.head == VECT 

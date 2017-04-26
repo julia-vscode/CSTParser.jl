@@ -140,6 +140,7 @@ function parse_ref(ps::ParseState, ret)
         ret = EXPR(REF, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
     elseif ref isa EXPR && ref.head == HCAT
         ret = EXPR(TYPED_HCAT, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+        _lint_hcat(ps, ret)
     elseif ref isa EXPR && ref.head == VCAT
         ret = EXPR(TYPED_VCAT, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
     else#if ref isa EXPR && ref.head == COMPREHENSION
@@ -150,6 +151,15 @@ function parse_ref(ps::ParseState, ret)
     end
     return ret
 end
+
+
+
+function _lint_hcat(ps::ParseState, ret)
+    if length(ret.args) == 3 && ret.args[3] isa QUOTENODE && ret.args[3].val isa KEYWORD{Tokens.END}
+        push!(ps.diagnostics, Hint{Hints.PossibleTypo}(ps.nt.startbyte + (-ret.span:0)))
+    end
+end
+
 
 _start_vect(x::EXPR) = Iterator{:vect}(1, length(x.args) + length(x.punctuation))
 

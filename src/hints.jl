@@ -29,7 +29,8 @@ DictGenAssignment,
 Deprecation,
 MisnamedConstructor,
 LoopOverSingle,
-AssignsToFuncName)
+AssignsToFuncName,
+PossibleTypo)
 
 function apply(hints::Vector{Hint}, str)
     str1 = deepcopy(str)
