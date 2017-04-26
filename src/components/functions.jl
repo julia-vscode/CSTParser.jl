@@ -109,7 +109,8 @@ function parse_call(ps::ParseState, ret)
     if (ret.args[1] isa IDENTIFIER && ret.args[1].val == :Dict) || (ret.args[1] isa EXPR && ret.args[1].head == CURLY && ret.args[1].args[1] isa IDENTIFIER && ret.args[1].args[1].val == :Dict)
         _lint_dict(ps, ret)
     end
-    # fname = _get_fname(ret)
+    _check_dep_call(ps, ret)
+
     # if fname isa IDENTIFIER && fname.val in keys(deprecated_symbols)
     #     push!(ps.diagnostics, Hint{Hints.Deprecation}(ps.nt.startbyte - ret.span + (0:(fname.span))))
     # end
