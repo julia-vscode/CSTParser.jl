@@ -84,6 +84,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
 
     # Linting
     format_typename(ps, arg1)
+    push!(ps.diagnostics, Hint{Hints.Deprecation}(startbyte:ps.nt.startbyte))
 
     return EXPR(kw, SyntaxNode[arg1, arg2], ps.nt.startbyte - startbyte, [])
 end
@@ -122,13 +123,18 @@ function parse_struct(ps::ParseState, mutable)
     # Linting
     format_typename(ps, sig)
     T = mutable == TRUE ? Tokens.TYPE : Tokens.IMMUTABLE
-
+    hloc = ps.nt.startbyte - block.span
     for a in block.args
-        if declares_function(a)
+        if a isa EXPR && declares_function(a)
+            fname = _get_fname(a.args[1])
+            if Expr(fname) != Expr(get_id(sig))
+                push!(ps.diagnostics, Hint{Hints.MisnamedConstructor}(hloc + (0:a.span)))
+            end
         else
             id = get_id(a)
             t = get_t(a)
         end
+        hloc += a.span
     end
 
     # Construction

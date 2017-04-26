@@ -241,10 +241,11 @@ end
 
 contributes_scope(x) = false
 function contributes_scope(x::EXPR)
-    x.head isa KEYWORD{Tokens.BLOCK} ||
+    x.head isa KEYWORD{Tokens.BEGIN} ||
+    x.head isa HEAD{Tokens.BLOCK} ||
     x.head isa KEYWORD{Tokens.CONST} ||
     x.head isa KEYWORD{Tokens.GLOBAL} || 
-    x.head isa KEYWORD{Tokens.IF} ||
+    x.head isa HEAD{Tokens.IF} ||
     x.head isa KEYWORD{Tokens.LOCAL} ||
     x.head isa HEAD{Tokens.MACROCALL}
 end

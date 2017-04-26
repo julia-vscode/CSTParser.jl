@@ -28,7 +28,15 @@ function _lint_range(ps::ParseState, x, loc)
             t = infer_t(x.args[3])
             push!(x.defs, Variable(id, t, x))
         end
-    elseif !(x isa EXPR && x.head isa OPERATOR{AssignmentOp, Tokens.EQ})
+        if x.args[3] isa LITERAL
+            push!(ps.diagnostics, Hint{Hints.LoopOverSingle}(loc))
+        end
+        
+    elseif x isa EXPR && x.head isa OPERATOR{AssignmentOp, Tokens.EQ}
+        if x.args[2] isa LITERAL
+            push!(ps.diagnostics, Hint{Hints.LoopOverSingle}(loc))
+        end
+    else
         push!(ps.diagnostics, Hint{Hints.RangeNonAssignment}(loc))
     end
 end

@@ -34,9 +34,13 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     if sig isa EXPR && sig.head isa HEAD{InvisibleBrackets} && !(sig.args[1] isa EXPR && sig.args[1].head == TUPLE)
         sig.args[1] = EXPR(TUPLE, [sig.args[1]], sig.args[1].span)
     end
+
     _lint_func_sig(ps, sig)
+
     @catcherror ps startbyte block = @default ps @scope ps Scope{Tokens.FUNCTION} parse_block(ps, start_col)
     
+    _lint_func_body(ps, Expr(_get_fname(sig)), block, ps.nt.startbyte - block.span)
+
     # Construction
     if isempty(block.args)
         if sig isa EXPR && !(sig.head isa OPERATOR{PlusOp, Tokens.EX_OR})
@@ -284,8 +288,24 @@ function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
     # Check 
 end
 
-function _lint_func_body(ps::ParseState, body)
+# make this traverse EXPR that contribute scope
+function _lint_func_body(ps::ParseState, fname, body, loc)
+    for a in body.args
+        if a isa EXPR
+            for d in a.defs
+                if d.id == fname
+                    push!(ps.diagnostics, Hint{Hints.AssignsToFuncName}(loc + (0:a.span)))
+                end
+            end
+        end
+        if contributes_scope(a)
+            _lint_func_body(ps::ParseState, fname, a, loc)
+        end
+        loc += a.span
+    end
 end
+
+
 
 
 
