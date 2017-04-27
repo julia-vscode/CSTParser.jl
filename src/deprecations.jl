@@ -17,7 +17,7 @@ function _check_dep_call(ps::ParseState, x::EXPR)
             fname == :isimag ||
             fname == :bitbroadcast ||
             fname == :produce ||
-            fname == :consume || 
+            fname == :consume ||
             fname == :FloatRange
             push!(ps.diagnostics, Hint{Hints.Deprecation}(ps.nt.startbyte + (-x.span:0)))
         end

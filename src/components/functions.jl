@@ -39,7 +39,9 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
 
     @catcherror ps startbyte block = @default ps @scope ps Scope{Tokens.FUNCTION} parse_block(ps, start_col)
     
-    _lint_func_body(ps, Expr(_get_fname(sig)), block, ps.nt.startbyte - block.span)
+    fname0 = _get_fname(sig)
+    fname = fname0 isa IDENTIFIER ? fname0.val : :noname
+    _lint_func_body(ps, fname, block, ps.nt.startbyte - block.span)
 
     # Construction
     if isempty(block.args)
