@@ -22,6 +22,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
 
         # Linting
         format_typename(ps, sig)
+        push!(ps.diagnostics, Hint{Hints.abstractDeprecation}(startbyte:ps.nt.startbyte))
 
         # Construction
         ret = EXPR(kw, SyntaxNode[sig], ps.nt.startbyte - startbyte)
@@ -40,6 +41,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
 
     # Linting
     format_typename(ps, arg2)
+    push!(ps.diagnostics, Hint{Hints.bitstypeDeprecation}(startbyte:ps.nt.startbyte))
 
     # Construction
     ret = EXPR(kw, SyntaxNode[arg1, arg2], ps.nt.startbyte - startbyte, [])
@@ -84,7 +86,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
 
     # Linting
     format_typename(ps, arg1)
-    push!(ps.diagnostics, Hint{Hints.Deprecation}(startbyte:ps.nt.startbyte))
+    push!(ps.diagnostics, Hint{Hints.typealiasDeprecation}(startbyte:ps.nt.startbyte))
 
     return EXPR(kw, SyntaxNode[arg1, arg2], ps.nt.startbyte - startbyte, [])
 end
@@ -135,6 +137,11 @@ function parse_struct(ps::ParseState, mutable)
             t = get_t(a)
         end
         hloc += a.span
+    end
+    if kw isa KEYWORD{Tokens.TYPE}
+        push!(ps.diagnostics, Hint{Hints.typeDeprecation}(startbyte + (0:kw.span)))
+    elseif kw isa KEYWORD{Tokens.IMMUTABLE}
+        push!(ps.diagnostics, Hint{Hints.immutableDeprecation}(startbyte + (0:kw.span)))
     end
 
     # Construction

@@ -26,11 +26,18 @@ CondAssignment,
 DeadCode,
 DictParaMisSpec,
 DictGenAssignment,
-Deprecation,
 MisnamedConstructor,
 LoopOverSingle,
 AssignsToFuncName,
-PossibleTypo)
+PossibleTypo,
+
+Deprecation,
+functionDeprecation,
+typeDeprecation,
+immutableDeprecation,
+abstractDeprecation,
+bitstypeDeprecation,
+typealiasDeprecation)
 
 function apply(hints::Vector{Hint}, str)
     str1 = deepcopy(str)
