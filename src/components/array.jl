@@ -50,6 +50,7 @@ function parse_array(ps::ParseState)
             ret = EXPR(VECT, [first_arg], -startbyte, puncs)
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
+            format_comma(ps)
             @catcherror ps startbyte @default ps @closer ps square parse_comma_sep(ps, ret, false)
 
             next(ps)
