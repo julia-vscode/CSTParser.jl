@@ -64,14 +64,13 @@ mutable struct ParseState
     ndot::Bool
     trackscope::Bool
     formatcheck::Bool
-    ids::Dict{String, Any}
-    diagnostics::Vector{Hints.Hint}
+    diagnostics::Vector{Diagnostics.Diagnostic}
     closer::Closer
     errored::Bool
     current_scope
 end
 function ParseState(str::String)
-    ps = ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), Token(), Token(), true, true, true, true, Dict(), [], Closer(), false, Scope{Tokens.TOPLEVEL})
+    ps = ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), Token(), Token(), true, true, true, true, [], Closer(), false, Scope{Tokens.TOPLEVEL})
     return next(next(ps))
 end
 

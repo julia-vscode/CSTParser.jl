@@ -11,7 +11,7 @@ import Tokenize.Lexers: Lexer, peekchar, iswhitespace
 export ParseState, parse_expression
 
 include("hints.jl")
-import .Hints: Hint, LintCodes, FormatCodes
+import .Diagnostics: Diagnostic, LintCodes, FormatCodes
 
 include("lexer.jl")
 include("errors.jl")

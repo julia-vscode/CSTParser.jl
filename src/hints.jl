@@ -1,17 +1,22 @@
-module Hints
+module Diagnostics
 abstract type Format end
 abstract type Lint end
-mutable struct Hint{C}
-    loc
+abstract type Action end
+
+mutable struct Diagnostic{C}
+    loc::UnitRange
+    actions::Vector{Action}
 end
+Diagnostic(r::UnitRange) = Diagnostic(r, [])
 
 @enum(FormatCodes,
-AddWhiteSpace,
-DeleteWhiteSpace,
 Useelseif,
 Indents,
 CamelCase,
-LowerCase)
+LowerCase,
+MissingWS,
+ExtraWS,
+CommaWS)
 
 @enum(LintCodes,
 DuplicateArgumentName,
@@ -39,34 +44,42 @@ abstractDeprecation,
 bitstypeDeprecation,
 typealiasDeprecation)
 
-function apply(hints::Vector{Hint}, str)
-    str1 = deepcopy(str)
-    ng = length(hints)
-    for i = ng:-1:1
-        str1 = apply(hints[i], str1)
-    end
-    str1
+struct Deletion <: Action
+    range::UnitRange
 end
 
-function apply(h::Hint, str) 
-    return str
+struct AddWS <: Action
+    range::UnitRange
 end
 
-function apply(h::Hint{AddWhiteSpace}, str)
-    if h.loc isa Tuple
-        # loc = ind2chr(str, h.loc[1])
-        str = string(str[1:h.loc[1]], " "^h.loc[2], str[h.loc[1] + 1:end])
-    else
-        # loc = ind2chr(str, h.loc)
-        str = string(str[1:h.loc], " ", str[h.loc + 1:end])
-    end
-end
+# function apply(hints::Vector{Diagnostic}, str)
+#     str1 = deepcopy(str)
+#     ng = length(hints)
+#     for i = ng:-1:1
+#         str1 = apply(hints[i], str1)
+#     end
+#     str1
+# end
 
-function apply(h::Hint{DeleteWhiteSpace}, str)
-    s1 = ind2chr(str, first(h.loc))
-    s2 = ind2chr(str, last(h.loc) + 1)
-    str = string(str[1:s1], str[s2:end])
-end
+# function apply(h::Diagnostic, str) 
+#     return str
+# end
+
+# function apply(h::Diagnostic{AddWhiteSpace}, str)
+#     if h.loc isa Tuple
+#         # loc = ind2chr(str, h.loc[1])
+#         str = string(str[1:h.loc[1]], " "^h.loc[2], str[h.loc[1] + 1:end])
+#     else
+#         # loc = ind2chr(str, h.loc)
+#         str = string(str[1:h.loc], " ", str[h.loc + 1:end])
+#     end
+# end
+
+# function apply(h::Diagnostic{DeleteWhiteSpace}, str)
+#     s1 = ind2chr(str, first(h.loc))
+#     s2 = ind2chr(str, last(h.loc) + 1)
+#     str = string(str[1:s1], str[s2:end])
+# end
 end
 
 # Formatting
@@ -80,72 +93,79 @@ isrbracket(t::Token) = t.kind == Tokens.RPAREN ||
                         t.kind == Tokens.RSQUARE
 
 function format_op(ps, prec)
+    !ps.formatcheck && return
     if (prec == ColonOp || prec == PowerOp || prec == DeclarationOp || prec == DotOp) && ps.t.kind != Tokens.ANON_FUNC
         if ps.lws.kind != EmptyWS
-            push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1:ps.lws.endbyte + 1))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte:ps.t.endbyte + 1, [Diagnostics.Deletion(ps.lws.startbyte + 1:ps.lws.endbyte + 1)]))
         end
         if ps.ws.kind != EmptyWS
-            push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.ws.startbyte + 1:ps.ws.endbyte + 1))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte:ps.t.endbyte + 1, [Diagnostics.Deletion(ps.ws.startbyte + 1:ps.ws.endbyte + 1)]))
         end
     elseif ps.t.kind == Tokens.ISSUBTYPE || ps.t.kind == Tokens.DDDOT
     else
         if ps.lws.kind == EmptyWS
-            push!(ps.diagnostics, Hint{Hints.AddWhiteSpace}(ps.t.startbyte:ps.nt.startbyte))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.MissingWS}(ps.t.startbyte:ps.t.endbyte + 1, [Diagnostics.AddWS(ps.t.startbyte:ps.nt.startbyte)]))
         end
         if ps.ws.kind == EmptyWS
-            push!(ps.diagnostics, Hint{Hints.AddWhiteSpace}(ps.t.startbyte:ps.nt.startbyte))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.MissingWS}(ps.t.startbyte:ps.t.endbyte + 1, [Diagnostics.AddWS(ps.t.startbyte:ps.nt.startbyte)]))
         end
     end
 end
 
 function format_comma(ps)
+    !ps.formatcheck && return
     if ps.lws.kind != EmptyWS && !(islbracket(ps.lt))
-        push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1:ps.lws.endbyte + 1))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + (0:1), [Diagnostics.Deletion(ps.lws.startbyte + 1:ps.lws.endbyte + 1)]))
     end
     if ps.ws.kind == EmptyWS && !(isrbracket(ps.nt))
-        push!(ps.diagnostics, Hint{Hints.AddWhiteSpace}(ps.t.startbyte:ps.nt.startbyte))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.MissingWS}(ps.t.startbyte + (0:1), [Diagnostics.AddWS(ps.t.startbyte:ps.nt.startbyte)]))
     end
 end
 
 function format_lbracket(ps)
+    !ps.formatcheck && return
     if ps.ws.kind != EmptyWS
-        push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.ws.startbyte + 1:ps.ws.endbyte + 1))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + 1:ps.nt.startbyte, [Diagnostics.Deletion(ps.ws.startbyte + 1:ps.ws.endbyte + 1)]))
     end
 end
 
 function format_rbracket(ps)
+    !ps.formatcheck && return
     if ps.lws.kind != EmptyWS
-        push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.lws.startbyte + 1:ps.lws.endbyte + 1))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + (0:1), [Diagnostics.Deletion(ps.lws.startbyte + 1:ps.lws.endbyte + 1)]))
     end
 end
 
 function format_indent(ps, start_col)
+    !ps.formatcheck && return
     if (start_col > 0 && ps.nt.startpos[2] != start_col)
         dindent = start_col - ps.nt.startpos[2]
         if dindent > 0
-            push!(ps.diagnostics, Hint{Hints.AddWhiteSpace}((ps.nt.startbyte + (0:dindent))))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.MissingWS}(ps.nt.startbyte + (0:dindent), []))
         else
-            push!(ps.diagnostics, Hint{Hints.DeleteWhiteSpace}(ps.nt.startbyte + (dindent + 1:0)))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.nt.startbyte + (dindent + 1:0), []))
         end
     end
 end
 
 function format_typename(ps, sig)
-    start_loc = ps.nt.startbyte - sig.span
-    id = get_id(sig)
-    sig isa EXPR && return
-    val = string(id.val)
-    # Abitrary limit of 3 for uppercase acronym
-    if islower(first(val)) || (length(val) > 3 && all(isupper, val))
-        push!(ps.diagnostics, Hint{Hints.CamelCase}(start_loc + (1:sizeof(val))))
-    end
+    !ps.formatcheck && return
+#     start_loc = ps.nt.startbyte - sig.span
+#     id = get_id(sig)
+#     sig isa EXPR && return
+#     val = string(id.val)
+#     # Abitrary limit of 3 for uppercase acronym
+#     if islower(first(val)) || (length(val) > 3 && all(isupper, val))
+#         push!(ps.diagnostics, Diagnostic{Diagnostics.CamelCase}(start_loc + (1:sizeof(val))))
+#     end
 end
 
 function format_funcname(ps, id, offset)
+    !ps.formatcheck && return
     # start_loc = ps.nt.startbyte - offset
     # !(id isa Symbol) && return
     # val = string(id)
     # if !islower(val) #!all(islower(c) || isdigit(c) || c == '!' for c in val)
-    #     push!(ps.diagnostics, Hint{Hints.LowerCase}(start_loc + (1:sizeof(val))))
+    #     push!(ps.diagnostics, Diagnostic{Diagnostics.LowerCase}(start_loc + (1:sizeof(val))))
     # end
 end

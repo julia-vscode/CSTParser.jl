@@ -114,7 +114,7 @@ function parse_call(ps::ParseState, ret)
     _check_dep_call(ps, ret)
 
     # if fname isa IDENTIFIER && fname.val in keys(deprecated_symbols)
-    #     push!(ps.diagnostics, Hint{Hints.Deprecation}(ps.nt.startbyte - ret.span + (0:(fname.span))))
+    #     push!(ps.diagnostics, Diagnostic{Diagnostics.Deprecation}(ps.nt.startbyte - ret.span + (0:(fname.span))))
     # end
     return ret
 end
@@ -274,19 +274,19 @@ function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
     if !(a.val in args)
         push!(args, (a.val, t))
     else 
-        push!(ps.diagnostics, Hint{Hints.DuplicateArgumentName}(loc))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.DuplicateArgumentName}(loc, []))
     end
     if a.val == Expr(fname)
-        push!(ps.diagnostics, Hint{Hints.ArgumentFunctionNameConflict}(loc))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ArgumentFunctionNameConflict}(loc, []))
     end
     if arg isa EXPR && arg.head isa OPERATOR{0, Tokens.DDDOT} && i != nargs
-        push!(ps.diagnostics, Hint{Hints.SlurpingPosition}(loc))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.SlurpingPosition}(loc, []))
     end
     if arg isa EXPR && arg.head isa HEAD{Tokens.KW} && i < firstkw
         firstkw = i
     end
     if !(arg isa EXPR && arg.head isa HEAD{Tokens.KW}) && i > firstkw
-        push!(ps.diagnostics, Hint{Hints.KWPosition}(loc))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.KWPosition}(loc, []))
     end
     # Check 
 end
@@ -297,7 +297,7 @@ function _lint_func_body(ps::ParseState, fname, body, loc)
         if a isa EXPR
             for d in a.defs
                 if d.id == fname
-                    push!(ps.diagnostics, Hint{Hints.AssignsToFuncName}(loc + (0:a.span)))
+                    push!(ps.diagnostics, Diagnostic{Diagnostics.AssignsToFuncName}(loc + (0:a.span), []))
                 end
             end
         end
@@ -384,7 +384,7 @@ function _lint_dict(ps::ParseState, x::EXPR)
     if x.args[1] isa EXPR && x.args[1].head == CURLY
         # expect 2 parameters (+ :Dict)
         if length(x.args[1].args) != 3
-            push!(ps.diagnostics, Hint{Hints.DictParaMisSpec}(ps.nt.startbyte - x.span + (0:x[1].span)))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.DictParaMisSpec}(ps.nt.startbyte - x.span + (0:x[1].span), []))
         end
     end
     # Handle generators
@@ -392,7 +392,7 @@ function _lint_dict(ps::ParseState, x::EXPR)
         if x.args[2] isa EXPR && x.args[2].head == GENERATOR
             gen = x.args[2]
             if gen.args[1].head isa OPERATOR{AssignmentOp} && !(gen.args[1].head isa OPERATOR{AssignmentOp, Tokens.PAIR_ARROW})
-                push!(ps.diagnostics, Hint{Hints.DictGenAssignment}(ps.nt.startbyte - x.span + (0:x.span)))
+                push!(ps.diagnostics, Diagnostic{Diagnostics.DictGenAssignment}(ps.nt.startbyte - x.span + (0:x.span), []))
             end
         # Lint items
         else
@@ -400,7 +400,7 @@ function _lint_dict(ps::ParseState, x::EXPR)
             for (i, a) in enumerate(x.args[2:end])
                 # non pair arrow assignment
                 if a isa EXPR && a.head isa OPERATOR{AssignmentOp} && !(a.head isa OPERATOR{AssignmentOp, Tokens.PAIR_ARROW})
-                    push!(ps.diagnostics, Hint{Hints.DictGenAssignment}(locstart + (0:a.span)))
+                    push!(ps.diagnostics, Diagnostic{Diagnostics.DictGenAssignment}(locstart + (0:a.span), []))
                 end
                 locstart += a.span + x.punctuation[i + 1].span
             end
