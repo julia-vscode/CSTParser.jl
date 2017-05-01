@@ -29,15 +29,15 @@ function _lint_range(ps::ParseState, x, loc)
             push!(x.defs, Variable(id, t, x))
         end
         if x.args[3] isa LITERAL
-            push!(ps.diagnostics, Hint{Hints.LoopOverSingle}(loc))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, []))
         end
         
     elseif x isa EXPR && x.head isa OPERATOR{AssignmentOp, Tokens.EQ}
         if x.args[2] isa LITERAL
-            push!(ps.diagnostics, Hint{Hints.LoopOverSingle}(loc))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, []))
         end
     else
-        push!(ps.diagnostics, Hint{Hints.RangeNonAssignment}(loc))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.RangeNonAssignment}(loc, []))
     end
 end
 
@@ -75,10 +75,10 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
 
     # Linting
     if cond isa EXPR && cond.head isa OPERATOR{AssignmentOp}
-        push!(ps.diagnostics, Hint{Hints.CondAssignment}(start + kw.span + (0:cond.span)))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.CondAssignment}(start + kw.span + (0:cond.span), []))
     end
     if cond isa LITERAL{Tokens.FALSE}
-        push!(ps.diagnostics, Hint{Hints.DeadCode}(start:ps.nt.startbyte))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(start:ps.nt.startbyte, []))
     end
 
     return ret

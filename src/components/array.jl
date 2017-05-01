@@ -157,7 +157,7 @@ end
 
 function _lint_hcat(ps::ParseState, ret)
     if length(ret.args) == 3 && ret.args[3] isa QUOTENODE && ret.args[3].val isa KEYWORD{Tokens.END}
-        push!(ps.diagnostics, Hint{Hints.PossibleTypo}(ps.nt.startbyte + (-ret.span:0)))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.PossibleTypo}(ps.nt.startbyte + (-ret.span:0), []))
     end
 end
 

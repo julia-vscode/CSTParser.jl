@@ -152,7 +152,7 @@ function parse_imports(ps::ParseState)
     
     # Linting
     if ps.current_scope == Scope{Tokens.FUNCTION}
-        push!(ps.diagnostics, Hint{Hints.ImportInFunction}(startbyte:ps.nt.startbyte))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ImportInFunction}(startbyte:ps.nt.startbyte, []))
     end
 
     ret.span = ps.nt.startbyte - startbyte
@@ -180,11 +180,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
     # check for duplicates
     let idargs = filter(a -> a isa IDENTIFIER, ret.args)
         if length(idargs) != length(unique((a -> a.val).(idargs)))
-            push!(ps.diagnostics, Hint{Hints.DuplicateArgument}(startbyte:ps.nt.startbyte))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.DuplicateArgument}(startbyte:ps.nt.startbyte, []))
         end
     end
     if ps.current_scope == Scope{Tokens.FUNCTION}
-        push!(ps.diagnostics, Hint{Hints.ImportInFunction}(startbyte:ps.nt.startbyte))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ImportInFunction}(startbyte:ps.nt.startbyte, []))
     end
     return ret
 end

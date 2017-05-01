@@ -22,7 +22,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
 
         # Linting
         format_typename(ps, sig)
-        push!(ps.diagnostics, Hint{Hints.abstractDeprecation}(startbyte:ps.nt.startbyte))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.abstractDeprecation}(startbyte:ps.nt.startbyte, []))
 
         # Construction
         ret = EXPR(kw, SyntaxNode[sig], ps.nt.startbyte - startbyte)
@@ -41,7 +41,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
 
     # Linting
     format_typename(ps, arg2)
-    push!(ps.diagnostics, Hint{Hints.bitstypeDeprecation}(startbyte:ps.nt.startbyte))
+    push!(ps.diagnostics, Diagnostic{Diagnostics.bitstypeDeprecation}(startbyte:ps.nt.startbyte, []))
 
     # Construction
     ret = EXPR(kw, SyntaxNode[arg1, arg2], ps.nt.startbyte - startbyte, [])
@@ -86,7 +86,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
 
     # Linting
     format_typename(ps, arg1)
-    push!(ps.diagnostics, Hint{Hints.typealiasDeprecation}(startbyte:ps.nt.startbyte))
+    push!(ps.diagnostics, Diagnostic{Diagnostics.typealiasDeprecation}(startbyte:ps.nt.startbyte, []))
 
     return EXPR(kw, SyntaxNode[arg1, arg2], ps.nt.startbyte - startbyte, [])
 end
@@ -123,14 +123,26 @@ function parse_struct(ps::ParseState, mutable)
     @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
 
     # Linting
-    format_typename(ps, sig)
+    _lint_struct(ps, startbyte, kw, sig, block)
+
+    # Construction
     T = mutable == TRUE ? Tokens.TYPE : Tokens.IMMUTABLE
+    next(ps)
+    ret = EXPR(kw, SyntaxNode[mutable, sig, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
+    ret.defs = [Variable(Expr(get_id(sig)), Expr(mutable) ? :mutable : :immutable, ret)]
+
+    return ret
+end
+
+
+function _lint_struct(ps::ParseState, startbyte::Int, kw, sig, block)
+    format_typename(ps, sig)
     hloc = ps.nt.startbyte - block.span
     for a in block.args
         if a isa EXPR && declares_function(a)
             fname = _get_fname(a.args[1])
             if Expr(fname) != Expr(get_id(sig))
-                push!(ps.diagnostics, Hint{Hints.MisnamedConstructor}(hloc + (0:a.span)))
+                push!(ps.diagnostics, Diagnostic{Diagnostics.MisnamedConstructor}(hloc + (0:a.span), []))
             end
         else
             id = get_id(a)
@@ -139,17 +151,10 @@ function parse_struct(ps::ParseState, mutable)
         hloc += a.span
     end
     if kw isa KEYWORD{Tokens.TYPE}
-        push!(ps.diagnostics, Hint{Hints.typeDeprecation}(startbyte + (0:kw.span)))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.typeDeprecation}(startbyte + (0:kw.span), []))
     elseif kw isa KEYWORD{Tokens.IMMUTABLE}
-        push!(ps.diagnostics, Hint{Hints.immutableDeprecation}(startbyte + (0:kw.span)))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.immutableDeprecation}(startbyte + (0:kw.span), []))
     end
-
-    # Construction
-    next(ps)
-    ret = EXPR(kw, SyntaxNode[mutable, sig, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
-    ret.defs = [Variable(Expr(get_id(sig)), Expr(mutable) ? :mutable : :immutable, ret)]
-
-    return ret
 end
 
 function next(x::EXPR, s::Iterator{:abstract})

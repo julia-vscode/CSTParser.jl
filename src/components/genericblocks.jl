@@ -38,7 +38,7 @@ function parse_block(ps::ParseState, start_col = 0; ret::EXPR = EXPR(BLOCK, [], 
     # Linting
     ps.nt.startpos[1] != start_line && format_indent(ps, start_col - 4)
     if deadcode > -1
-        push!(ps.diagnostics, Hint{Hints.DeadCode}(deadcode:ps.nt.startbyte))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(deadcode:ps.nt.startbyte, []))
     end
 
     ret.span = ps.nt.startbyte - startbyte
