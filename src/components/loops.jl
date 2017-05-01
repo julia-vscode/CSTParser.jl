@@ -78,7 +78,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
         push!(ps.diagnostics, Diagnostic{Diagnostics.CondAssignment}(start + kw.span + (0:cond.span), []))
     end
     if cond isa LITERAL{Tokens.FALSE}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(start:ps.nt.startbyte, []))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(startbyte:ps.nt.startbyte, []))
     end
 
     return ret
