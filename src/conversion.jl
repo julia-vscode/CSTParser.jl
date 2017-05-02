@@ -34,7 +34,7 @@ Expr(x::LITERAL{Tokens.MACRO}) = Symbol(x.val)
 # Expr(x::LITERAL{Tokens.CMD}) = x.val
 
 Expr{K}(x::PUNCTUATION{K}) = string(K)
-
+Expr(x::Void) = nothing
 
 function Expr(x::LITERAL{Tokens.STRING}) 
     x.val
