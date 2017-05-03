@@ -371,7 +371,7 @@ end
 function parse_file(path::String)
     x = parse(readstring(path), true)
     
-    File([], (f -> joinpath(dirname(path), f)).(_get_includes(x)), path, x, [])
+    File([], (f -> (joinpath(dirname(path), f[1]), f[2])).(_get_includes(x)), path, x, [])
 end
 
 function parse_directory(path::String, proj = Project(path, []))

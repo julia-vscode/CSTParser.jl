@@ -115,7 +115,7 @@ abstract type Scope{t} end
 
 mutable struct File
     imports
-    includes::Vector{String}
+    includes::Vector{Tuple{String, Any}}
     path::String
     ast::SyntaxNode
     errors
@@ -130,7 +130,7 @@ end
 mutable struct Variable
     id
     t
-    val
+    val::SyntaxNode
 end
 
 const NoVariable = Variable(NOTHING, NOTHING, NOTHING)

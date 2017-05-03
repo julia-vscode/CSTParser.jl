@@ -163,12 +163,20 @@ function _get_includes(x::EXPR, files = [])
 
     if x.head == CALL && x[1] isa IDENTIFIER && x[1].val == :include
         if x[3] isa LITERAL{Tokens.STRING} || x[3] isa LITERAL{Tokens.TRIPLE_STRING}
-            push!(files, x.args[2].val)
+            push!(files, (x.args[2].val, []))
         end
     else
         for a in x
             if a isa EXPR && !(a.head isa KEYWORD{Tokens.FUNCTION}) && !(a.head isa KEYWORD{Tokens.MACRO})
-                _get_includes(a, files)
+                if a.head isa KEYWORD{Tokens.MODULE}
+                    mname = Expr(a.args[2])
+                    files1 = _get_includes(a)
+                    for f in files1
+                        push!(files, (f[1], vcat(mname, f[2])))
+                    end
+                else
+                    _get_includes(a, files)
+                end
             end
         end
     end
