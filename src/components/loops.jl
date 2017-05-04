@@ -75,7 +75,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
 
     # Linting
     if cond isa EXPR && cond.head isa OPERATOR{AssignmentOp}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.CondAssignment}(start + kw.span + (0:cond.span), []))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.CondAssignment}(startbyte + kw.span + (0:cond.span), []))
     end
     if cond isa LITERAL{Tokens.FALSE}
         push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(startbyte:ps.nt.startbyte, []))

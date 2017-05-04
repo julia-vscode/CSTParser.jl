@@ -53,34 +53,6 @@ struct AddWS <: Action
     length::Int
 end
 
-# function apply(hints::Vector{Diagnostic}, str)
-#     str1 = deepcopy(str)
-#     ng = length(hints)
-#     for i = ng:-1:1
-#         str1 = apply(hints[i], str1)
-#     end
-#     str1
-# end
-
-# function apply(h::Diagnostic, str) 
-#     return str
-# end
-
-# function apply(h::Diagnostic{AddWhiteSpace}, str)
-#     if h.loc isa Tuple
-#         # loc = ind2chr(str, h.loc[1])
-#         str = string(str[1:h.loc[1]], " "^h.loc[2], str[h.loc[1] + 1:end])
-#     else
-#         # loc = ind2chr(str, h.loc)
-#         str = string(str[1:h.loc], " ", str[h.loc + 1:end])
-#     end
-# end
-
-# function apply(h::Diagnostic{DeleteWhiteSpace}, str)
-#     s1 = ind2chr(str, first(h.loc))
-#     s2 = ind2chr(str, last(h.loc) + 1)
-#     str = string(str[1:s1], str[s2:end])
-# end
 end
 
 # Formatting
