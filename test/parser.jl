@@ -646,7 +646,5 @@ end
                 @test DSE.keywords(f, m) == [:a, :b]
             end""" |> test_expr
     @test_broken "-1^a" |> test_expr
-    @test_broken "" |> test_expr
-    @test_broken "" |> test_expr
 end
 end
