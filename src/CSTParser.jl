@@ -3,7 +3,7 @@ module CSTParser
 global debug = true
 
 using Tokenize
-import Base: next, start, done, length, first, last, endof, +, isempty, getindex, setindex!
+import Base: next, start, done, length, first, last, endof, getindex, setindex!
 import Tokenize.Tokens
 import Tokenize.Tokens: Token, iskeyword, isliteral, isoperator
 import Tokenize.Lexers: Lexer, peekchar, iswhitespace
@@ -138,11 +138,11 @@ function parse_compound(ps::ParseState, ret)
     elseif isajuxtaposition(ps, ret)
         op = OPERATOR{TimesOp, Tokens.STAR, false}(0)
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
-    elseif ps.nt.kind == Tokens.LPAREN && isempty(ps.ws)
+    elseif ps.nt.kind == Tokens.LPAREN && isemptyws(ps.ws)
         @catcherror ps startbyte ret = @closer ps paren parse_call(ps, ret)
-    elseif ps.nt.kind == Tokens.LBRACE && isempty(ps.ws)
+    elseif ps.nt.kind == Tokens.LBRACE && isemptyws(ps.ws)
         @catcherror ps startbyte ret = parse_curly(ps, ret)
-    elseif ps.nt.kind == Tokens.LSQUARE && isempty(ps.ws) && !(ret isa OPERATOR)
+    elseif ps.nt.kind == Tokens.LSQUARE && isemptyws(ps.ws) && !(ret isa OPERATOR)
         @catcherror ps startbyte ret = @nocloser ps block parse_ref(ps, ret)
     elseif ps.nt.kind == Tokens.COMMA
         @catcherror ps startbyte ret = parse_tuple(ps, ret)

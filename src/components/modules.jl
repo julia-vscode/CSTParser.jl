@@ -205,51 +205,51 @@ function _start_toplevel(x::EXPR)
     end
 end
 
-next(x::EXPR, s::Iterator{:imports}) = x, +s
+next(x::EXPR, s::Iterator{:imports}) = x, next_iter(s)
 
 # function next(x::EXPR, s::Iterator{:imports})
 #     ndots = length(x.punctuation) - length(x.args) + 1
 #     if x.head.span == 0
 #         if s.i <= ndots
-#             return x.punctuation[s.i], +s
+#             return x.punctuation[s.i], next_iter(s)
 #         elseif isodd(s.i + ndots)
-#             return x.args[div(s.i + 1 - ndots, 2)], +s
+#             return x.args[div(s.i + 1 - ndots, 2)], next_iter(s)
 #         else
-#             return PUNCTUATION{Tokens.DOT}(1,0), +s
+#             return PUNCTUATION{Tokens.DOT}(1,0), next_iter(s)
 #         end
 #     else
 #         if s.i == 1
-#             return x.head, +s
+#             return x.head, next_iter(s)
 #         elseif s.i <=ndots+1
-#             return x.punctuation[s.i - 1], +s
+#             return x.punctuation[s.i - 1], next_iter(s)
 #         elseif isodd(s.i+ndots) 
-#             return PUNCTUATION{Tokens.DOT}(1,0), +s
+#             return PUNCTUATION{Tokens.DOT}(1,0), next_iter(s)
 #         else
-#             return x.args[div(s.i - ndots, 2)], +s
+#             return x.args[div(s.i - ndots, 2)], next_iter(s)
 #         end
 #     end
 # end
 
 function next(x::EXPR, s::Iterator{:export})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif isodd(s.i)
-        return x.punctuation[div(s.i - 1, 2)], +s
+        return x.punctuation[div(s.i - 1, 2)], next_iter(s)
     else
-        return x.args[div(s.i, 2)], +s
+        return x.args[div(s.i, 2)], next_iter(s)
     end
 end
 
 
 function next(x::EXPR, s::Iterator{:module})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == 2
-        return x.args[2], +s
+        return x.args[2], next_iter(s)
     elseif s.i == 3
-        return x.args[3], +s
+        return x.args[3], next_iter(s)
     elseif s.i == 4
-        return x.punctuation[1], +s
+        return x.punctuation[1], next_iter(s)
     end
 end
 
@@ -257,22 +257,22 @@ function next(x::EXPR, s::Iterator{:toplevel})
     col = findfirst(x -> x isa OPERATOR{9, Tokens.COLON}, x.punctuation)
     if col > 0
         if s.i ≤ col
-            return x.punctuation[s.i], +s
+            return x.punctuation[s.i], next_iter(s)
         else
             d = s.i - col
             if isodd(d)
-                return x.args[div(d + 1, 2)], +s
+                return x.args[div(d + 1, 2)], next_iter(s)
             else
-                return x.punctuation[div(d, 2) + col], +s
+                return x.punctuation[div(d, 2) + col], next_iter(s)
             end
         end
     else
         if s.i == 1
-            return x.punctuation[1], +s
+            return x.punctuation[1], next_iter(s)
         elseif iseven(s.i)
-            return x.args[div(s.i, 2)], +s
+            return x.args[div(s.i, 2)], next_iter(s)
         else
-            return x.punctuation[div(s.i + 1, 2)], +s
+            return x.punctuation[div(s.i + 1, 2)], next_iter(s)
         end
     end
 end

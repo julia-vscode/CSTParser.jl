@@ -159,92 +159,92 @@ end
 
 function next(x::EXPR, s::Iterator{:abstract})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == 2
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     end
 end
 
 function next(x::EXPR, s::Iterator{:abstracttype})
     if s.i == 1
-        return x.punctuation[1], +s
+        return x.punctuation[1], next_iter(s)
     elseif s.i == 2
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == 3
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     elseif s.i == 4
-        return x.punctuation[2], +s
+        return x.punctuation[2], next_iter(s)
     end
 end
 
 function next(x::EXPR, s::Iterator{:bitstype})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == 2
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     elseif s.i == 3
-        return x.args[2], +s
+        return x.args[2], next_iter(s)
     end
 end
 
 function next(x::EXPR, s::Iterator{:primitivetype})
     if s.i == 1
-        return x.punctuation[1], +s
+        return x.punctuation[1], next_iter(s)
     elseif s.i == 2
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == 3
-        return x.args[2], +s
+        return x.args[2], next_iter(s)
     elseif s.i == 4
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     elseif s.i == 5
-        return x.punctuation[2], +s
+        return x.punctuation[2], next_iter(s)
     end
 end
 
 function next(x::EXPR, s::Iterator{:type})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == 2
-        return x.args[2], +s
+        return x.args[2], next_iter(s)
     elseif s.i == 3
-        return x.args[3], +s
+        return x.args[3], next_iter(s)
     elseif s.i == 4
-        return x.punctuation[1], +s
+        return x.punctuation[1], next_iter(s)
     end
 end
 
 function next(x::EXPR, s::Iterator{:struct})
     if s.n == 5
         if s.i == 1
-            return x.punctuation[1], +s
+            return x.punctuation[1], next_iter(s)
         elseif s.i == 2
-            return x.head, +s
+            return x.head, next_iter(s)
         elseif s.i == 3
-            return x.args[2], +s
+            return x.args[2], next_iter(s)
         elseif s.i == 4
-            return x.args[3], +s
+            return x.args[3], next_iter(s)
         elseif s.i == 5
-            return x.punctuation[2], +s
+            return x.punctuation[2], next_iter(s)
         end
     else
         if s.i == 1
-            return x.head, +s
+            return x.head, next_iter(s)
         elseif s.i == 2
-            return x.args[2], +s
+            return x.args[2], next_iter(s)
         elseif s.i == 3
-            return x.args[3], +s
+            return x.args[3], next_iter(s)
         elseif s.i == 4
-            return x.punctuation[1], +s
+            return x.punctuation[1], next_iter(s)
         end
     end
 end
 
 function next(x::EXPR, s::Iterator{:typealias})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == 2
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     elseif s.i == 3
-        return x.args[2], +s
+        return x.args[2], next_iter(s)
     end
 end

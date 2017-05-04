@@ -93,26 +93,26 @@ end
 
 function next(x::EXPR, s::Iterator{:const})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == 2
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     end
 end
 
 function next(x::EXPR, s::Iterator{:local})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif iseven(s.i)
-        return x.args[div(s.i, 2)], +s
+        return x.args[div(s.i, 2)], next_iter(s)
     else
-        return x.punctuation[div(s.i - 1, 2)], +s
+        return x.punctuation[div(s.i - 1, 2)], next_iter(s)
     end
 end
 
 function next(x::EXPR, s::Iterator{:return})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == 2
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     end
 end

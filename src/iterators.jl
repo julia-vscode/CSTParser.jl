@@ -2,7 +2,7 @@ type Iterator{T}
     i::Int
     n::Int
 end
-+{T}(s::Iterator{T}) = (s.i += 1;s)
+next_iter{T}(s::Iterator{T}) = (s.i += 1;s)
 
 start(x::INSTANCE) = 1
 next(x::INSTANCE, i) = x, i + 1
@@ -163,7 +163,7 @@ function start(x::EXPR)
 end
 
 function next(x::EXPR, s::Iterator{:file})
-    return x.args[s.i], +s
+    return x.args[s.i], next_iter(s)
 end
 
 done(x::EXPR, s::Iterator) = s.i > s.n
@@ -220,7 +220,7 @@ end
 
 _find(x::Union{QUOTENODE, INSTANCE, ERROR}, n, path, ind, offsets) = x
 
-function Base.find(x::EXPR, n::Int)
+function _find(x::EXPR, n::Int)
     path = []
     ind = Int[]
     offsets = Int[]
@@ -228,22 +228,22 @@ function Base.find(x::EXPR, n::Int)
     return y, path, ind, offsets
 end
 
-Base.find(x::ERROR, n::Int) = x, [x], [1], [0]
+_find(x::ERROR, n::Int) = x, [x], [1], [0]
 
 
-Base.find(x, n::Symbol, loc = 0, list = Int[]) = nothing
-function Base.find(x::IDENTIFIER, n::Symbol, loc = 0, list = [])
+_find(x, n::Symbol, loc = 0, list = Int[]) = nothing
+function _find(x::IDENTIFIER, n::Symbol, loc = 0, list = [])
     if x.val == n
         push!(list, loc)
     end
 end
 
-function Base.find(x::EXPR, n::Symbol, loc = 0, list = Int[])
+function _find(x::EXPR, n::Symbol, loc = 0, list = Int[])
     if x.head == STRING 
         return list
     end
     for a in x
-        find(a, n, loc, list)
+        _find(a, n, loc, list)
         loc += a.span
     end
     list

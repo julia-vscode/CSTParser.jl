@@ -164,7 +164,7 @@ Having hit a unary operator at the start of an expression return a call.
 """
 function parse_unary{P, K}(ps::ParseState, op::OPERATOR{P, K})
     startbyte = ps.nt.startbyte - op.span
-    if (op isa OPERATOR{PlusOp, Tokens.PLUS} || op isa OPERATOR{PlusOp, Tokens.MINUS}) && (ps.nt.kind ==  Tokens.INTEGER || ps.nt.kind == Tokens.FLOAT) && isempty(ps.ws)
+    if (op isa OPERATOR{PlusOp, Tokens.PLUS} || op isa OPERATOR{PlusOp, Tokens.MINUS}) && (ps.nt.kind ==  Tokens.INTEGER || ps.nt.kind == Tokens.FLOAT) && isemptyws(ps.ws)
         next(ps)
         arg = INSTANCE(ps)
         arg.span += op.span
@@ -450,59 +450,59 @@ end
 function next(x::EXPR, s::Iterator{:op})
     if length(x.args) == 2
         if s.i == 1
-            return x.args[1], +s
+            return x.args[1], next_iter(s)
         elseif s.i == 2
-            return x.args[2], +s
+            return x.args[2], next_iter(s)
         end
     else
         if s.i == 1
-            return x.args[2], +s
+            return x.args[2], next_iter(s)
         elseif s.i == 2
-            return x.args[1], +s
+            return x.args[1], next_iter(s)
         elseif s.i == 3 
-            return x.args[3], +s
+            return x.args[3], next_iter(s)
         end
     end
 end
 
 function next(x::EXPR, s::Iterator{:opchain})
     if isodd(s.i)
-        return x.args[div(s.i + 1, 2) + 1], +s
+        return x.args[div(s.i + 1, 2) + 1], next_iter(s)
     elseif s.i == 2
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     else 
-        return x.punctuation[div(s.i, 2) - 1], +s
+        return x.punctuation[div(s.i, 2) - 1], next_iter(s)
     end
 end
 
 function next(x::EXPR, s::Iterator{:syntaxcall})
     if length(x.args) == 1
         if s.i == 1 
-            return x.head, +s
+            return x.head, next_iter(s)
         else
-            return x.args[1], +s
+            return x.args[1], next_iter(s)
         end
     elseif s.n == 3
         if s.i == 1
-            return x.args[1], +s
+            return x.args[1], next_iter(s)
         elseif s.i == 2
-            return x.head, +s
+            return x.head, next_iter(s)
         elseif s.i == 3 
-            return x.args[2], +s
+            return x.args[2], next_iter(s)
         end
     else
         if s.i == 1
-            return x.head, +s
+            return x.head, next_iter(s)
         elseif s.i == 2
-            return x.punctuation[1], +s
+            return x.punctuation[1], next_iter(s)
         elseif s.i == 3
-            return x.args[1], +s
+            return x.args[1], next_iter(s)
         elseif s.i == 4
-            return x.punctuation[2], +s
+            return x.punctuation[2], next_iter(s)
         elseif s.i == 5
-            return x.args[1], +s
+            return x.args[1], next_iter(s)
         elseif s.i == 6
-            return x.punctuation[3], +s
+            return x.punctuation[3], next_iter(s)
         end
     end
 end
@@ -510,38 +510,38 @@ end
 
 function next(x::EXPR, s::Iterator{:(:)})
     if s.i == 1
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     elseif s.i == 2
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == 3
-        return x.args[2], +s
+        return x.args[2], next_iter(s)
     elseif s.i == 4
-        return x.punctuation[1], +s
+        return x.punctuation[1], next_iter(s)
     elseif s.i == 5 
-        return x.args[3], +s
+        return x.args[3], next_iter(s)
     end
 end
 
 function next(x::EXPR, s::Iterator{:?})
     if s.i == 1
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     elseif s.i == 2 
-        return x.punctuation[1], +s
+        return x.punctuation[1], next_iter(s)
     elseif s.i == 3
-        return x.args[2], +s
+        return x.args[2], next_iter(s)
     elseif s.i == 4 
-        return x.punctuation[2], +s
+        return x.punctuation[2], next_iter(s)
     elseif s.i == 5
-        return x.args[3], +s
+        return x.args[3], next_iter(s)
     end 
 end
 
 function next(x::EXPR, s::Iterator{:comparison})
-    return x.args[s.i], +s
+    return x.args[s.i], next_iter(s)
 end
 
 function next(x::EXPR, s::Iterator{:prime})
-    return (s.i == 1 ? x.args[s.i] : x.head), +s
+    return (s.i == 1 ? x.args[s.i] : x.head), next_iter(s)
 end
 
 function _start_where(x::EXPR)
@@ -552,21 +552,21 @@ end
 function next(x::EXPR, s::Iterator{:where})
     if isempty(x.punctuation)
         if s.i == 1
-            return x.args[1], +s
+            return x.args[1], next_iter(s)
         elseif s.i ==2
-            return x.head, +s
+            return x.head, next_iter(s)
         else
-            return x.args[2], +s
+            return x.args[2], next_iter(s)
         end
     else
         if s.i == 1
-            return x.args[1], +s
+            return x.args[1], next_iter(s)
         elseif s.i == 2
-            return x.head, +s
+            return x.head, next_iter(s)
         elseif isodd(s.i)
-            return x.punctuation[div(s.i - 1, 2)], +s
+            return x.punctuation[div(s.i - 1, 2)], next_iter(s)
         elseif iseven(s.i)
-            return x.args[div(s.i, 2)], +s
+            return x.args[div(s.i, 2)], next_iter(s)
         end
     end
 end

@@ -25,17 +25,17 @@ end
 function next(x::EXPR, s::Iterator{:quote})
     if x.head.span > 0
         if s.i == 1
-            return x.head, +s
+            return x.head, next_iter(s)
         elseif s.i == s.n
-            return last(x.punctuation), +s
+            return last(x.punctuation), next_iter(s)
         else
-            return x.args[1], +s
+            return x.args[1], next_iter(s)
         end
     else
         if s.i == 1
-            return first(x.punctuation), +s
+            return first(x.punctuation), next_iter(s)
         else
-            return x.args[1], +s
+            return x.args[1], next_iter(s)
         end
     end
 end
@@ -43,13 +43,13 @@ end
 start(x::QUOTENODE) = Iterator{:quotenode}(1, 1 + length(x.punctuation))
 function next(x::QUOTENODE, s::Iterator{:quotenode})
     if isempty(x.punctuation)
-        return x.val, +s
+        return x.val, next_iter(s)
     end
 
     if s.i == 1
-        return first(x.punctuation), +s
+        return first(x.punctuation), next_iter(s)
     else
-        return x.val, +s
+        return x.val, next_iter(s)
     end
 end
 

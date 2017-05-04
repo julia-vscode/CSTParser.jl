@@ -68,15 +68,15 @@ end
 
 function next(x::EXPR, s::Iterator{:if})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == 2
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     elseif s.i == 3
-        return x.args[2], +s
+        return x.args[2], next_iter(s)
     elseif s.i == 4
-        return x.punctuation[1], +s
+        return x.punctuation[1], next_iter(s)
     elseif s.i == s.n
-        return last(x.punctuation), +s
+        return last(x.punctuation), next_iter(s)
     else
         haselse = x.punctuation[end - 1] isa KEYWORD{Tokens.ELSE}
         nesteds = length(x.punctuation) - 1 - haselse
@@ -86,24 +86,24 @@ function next(x::EXPR, s::Iterator{:if})
             for i = 1:n
                 y = y.args[3].args[1]
             end
-            return y.args[3], +s
+            return y.args[3], next_iter(s)
         end
         if mod(s.i - 1, 3) == 0
-            return x.punctuation[div(s.i - 1, 3)], +s
+            return x.punctuation[div(s.i - 1, 3)], next_iter(s)
         elseif mod(s.i - 2, 3) == 0
             n = div(s.i - 2, 3)
             y = x
             for i = 1:n
                 y = y.args[3].args[1]
             end
-            return y.args[1], +s
+            return y.args[1], next_iter(s)
         else
             n = div(s.i - 2, 3)
             y = x
             for i = 1:n
                 y = y.args[3].args[1]
             end
-            return y.args[2], +s
+            return y.args[2], next_iter(s)
         end
     end
 end

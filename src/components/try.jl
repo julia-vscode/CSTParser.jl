@@ -89,34 +89,34 @@ end
 
 function next(x::EXPR, s::Iterator{:try})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == 2
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     elseif s.i == s.n
-        return last(x.punctuation), +s
+        return last(x.punctuation), next_iter(s)
     elseif s.i == 3
-        return first(x.punctuation), +s
+        return first(x.punctuation), next_iter(s)
     elseif s.i == 4
         if x.args[2] != FALSE
-            return x.args[2], +s
+            return x.args[2], next_iter(s)
         elseif x.punctuation[1] isa KEYWORD{Tokens.FINALLY}
-            return x.args[4], +s
+            return x.args[4], next_iter(s)
         else
-            return x.args[3], +s
+            return x.args[3], next_iter(s)
         end
     elseif s.i == 5
         if x.args[2] != FALSE
-            return x.args[3], +s
+            return x.args[3], next_iter(s)
         else
-            return x.punctuation[2], +s
+            return x.punctuation[2], next_iter(s)
         end
     elseif s.i == 6
         if x.args[2] != FALSE
-            return x.punctuation[2], +s
+            return x.punctuation[2], next_iter(s)
         else
-            return x.args[4], +s
+            return x.args[4], next_iter(s)
         end
     elseif s.i == 7
-        return x.args[4], +s
+        return x.args[4], next_iter(s)
     end
 end

@@ -173,11 +173,11 @@ _start_typed_vcat(x::EXPR) = Iterator{:typed_vcat}(1, length(x.args) + length(x.
 
 function next(x::EXPR, s::Iterator{:vect})
     if isodd(s.i)
-        return x.punctuation[div(s.i + 1, 2)], +s
+        return x.punctuation[div(s.i + 1, 2)], next_iter(s)
     elseif s.i == s.n
-        return last(x.punctuation), +s
+        return last(x.punctuation), next_iter(s)
     else
-        return x.args[div(s.i, 2)], +s
+        return x.args[div(s.i, 2)], next_iter(s)
     end
 end
 
@@ -185,74 +185,74 @@ function next(x::EXPR, s::Iterator{:vcat})
     np = length(x.punctuation) - 2
     if np > 0
         if s.i == s.n
-            return last(x.punctuation), +s
+            return last(x.punctuation), next_iter(s)
         elseif s.i == s.n - 1 
-            return last(x.args), +s
+            return last(x.args), next_iter(s)
         elseif iseven(s.i)
-            return x.args[div(s.i, 2)], +s
+            return x.args[div(s.i, 2)], next_iter(s)
         else
-            return x.punctuation[div(s.i + 1, 2)], +s
+            return x.punctuation[div(s.i + 1, 2)], next_iter(s)
         end
     else
         if s.i == 1
-            return first(x.punctuation), +s
+            return first(x.punctuation), next_iter(s)
         elseif s.i == s.n
-            return last(x.punctuation), +s
+            return last(x.punctuation), next_iter(s)
         else
-            return x.args[s.i - 1], +s
+            return x.args[s.i - 1], next_iter(s)
         end
     end
 end
 
 function next(x::EXPR, s::Iterator{:hcat})
     if s.i == 1
-        return first(x.punctuation), +s
+        return first(x.punctuation), next_iter(s)
     elseif s.i == s.n
-        return last(x.punctuation), +s
+        return last(x.punctuation), next_iter(s)
     else
-        return x.args[s.i - 1], +s
+        return x.args[s.i - 1], next_iter(s)
     end
 end
 
-next(x::EXPR, s::Iterator{:row}) = x.args[s.i], +s
+next(x::EXPR, s::Iterator{:row}) = x.args[s.i], next_iter(s)
 
 function next(x::EXPR, s::Iterator{:typed_vcat})
     if length(x.args) > 0 && last(x.args) isa EXPR && last(x.args).head == PARAMETERS
         if s.i == s.n
-            return last(x.punctuation), +s
+            return last(x.punctuation), next_iter(s)
         elseif s.i == s.n - 1 
-            return last(x.args), +s
+            return last(x.args), next_iter(s)
         elseif s.i == 1
-            return x.args[1], +s
+            return x.args[1], next_iter(s)
         elseif s.i == 2
-            return first(x.punctuation), +s
+            return first(x.punctuation), next_iter(s)
         elseif isodd(s.i)
-            return x.args[div(s.i + 1, 2)], +s
+            return x.args[div(s.i + 1, 2)], next_iter(s)
         else
-            return x.punctuation[div(s.i, 2)], +s
+            return x.punctuation[div(s.i, 2)], next_iter(s)
         end
     else
         if s.i == 1
-            return x.args[1], +s
+            return x.args[1], next_iter(s)
         elseif s.i == 2
-            return first(x.punctuation), +s
+            return first(x.punctuation), next_iter(s)
         elseif s.i == s.n
-            return last(x.punctuation), +s
+            return last(x.punctuation), next_iter(s)
         else
-            return x.args[s.i - 1], +s
+            return x.args[s.i - 1], next_iter(s)
         end
     end
 end
 
 function next(x::EXPR, s::Iterator{:typed_hcat})
     if s.i == 1
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     elseif s.i == 2
-        return first(x.punctuation), +s
+        return first(x.punctuation), next_iter(s)
     elseif s.i == s.n
-        return last(x.punctuation), +s
+        return last(x.punctuation), next_iter(s)
     else
-        return x.args[s.i - 1], +s
+        return x.args[s.i - 1], next_iter(s)
     end
 end
 
@@ -260,10 +260,10 @@ _start_ref(x::EXPR) = Iterator{:ref}(1, length(x.args) + length(x.punctuation))
 
 function next(x::EXPR, s::Iterator{:ref})
     if  s.i == s.n
-        return last(x.punctuation), +s
+        return last(x.punctuation), next_iter(s)
     elseif isodd(s.i)
-        return x.args[div(s.i + 1, 2)], +s
+        return x.args[div(s.i + 1, 2)], next_iter(s)
     else
-        return x.punctuation[div(s.i, 2)], +s
+        return x.punctuation[div(s.i, 2)], next_iter(s)
     end
 end

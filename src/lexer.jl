@@ -206,4 +206,4 @@ function read_comment(l::Lexer)
 end
 
 
-isempty(t::Token) = t.kind == EmptyWS
+isemptyws(t::Token) = t.kind == EmptyWS
