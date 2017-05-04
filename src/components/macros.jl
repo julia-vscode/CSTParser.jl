@@ -31,7 +31,7 @@ function parse_macrocall(ps::ParseState)
     next(ps)
     mname = IDENTIFIER(ps.nt.startbyte - ps.lt.startbyte, string("@", ps.t.val))
     # Handle cases with @ at start of dotted expressions
-    if ps.nt.kind == Tokens.DOT && isempty(ps.ws)
+    if ps.nt.kind == Tokens.DOT && isemptyws(ps.ws)
         while ps.nt.kind == Tokens.DOT
             next(ps)
             op = INSTANCE(ps)
@@ -50,7 +50,7 @@ function parse_macrocall(ps::ParseState)
         ret.span = ps.nt.startbyte - startbyte
         return ret
     end
-    if isempty(ps.ws) && ps.nt.kind == Tokens.LPAREN
+    if isemptyws(ps.ws) && ps.nt.kind == Tokens.LPAREN
         next(ps)
         push!(ret.punctuation, INSTANCE(ps))
         @catcherror ps startbyte args = @default ps @nocloser ps newline @closer ps paren parse_list(ps, ret.punctuation)
@@ -77,14 +77,14 @@ end
 
 function next(x::EXPR, s::Iterator{:macrocall})
     if isempty(x.punctuation)
-        return x.args[s.i], +s
+        return x.args[s.i], next_iter(s)
     else
         if s.i == s.n
-            return last(x.punctuation), +s
+            return last(x.punctuation), next_iter(s)
         elseif isodd(s.i)
-            return x.args[div(s.i + 1, 2)], +s
+            return x.args[div(s.i + 1, 2)], next_iter(s)
         else
-            return x.punctuation[div(s.i, 2)], +s
+            return x.punctuation[div(s.i, 2)], next_iter(s)
         end
     end
 end
@@ -103,12 +103,12 @@ end
 
 function next(x::EXPR, s::Iterator{:macro})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == 2
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     elseif s.i == 3
-        return x.args[2], +s
+        return x.args[2], next_iter(s)
     elseif s.i == 4
-        return x.punctuation[1], +s
+        return x.punctuation[1], next_iter(s)
     end
 end

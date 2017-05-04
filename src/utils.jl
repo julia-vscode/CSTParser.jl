@@ -7,7 +7,7 @@ function closer(ps::ParseState)
     (ps.nt.kind == Tokens.LPAREN && ps.closer.precedence > 15) ||
     (ps.nt.kind == Tokens.LBRACE && ps.closer.precedence > 15) ||
     (ps.nt.kind == Tokens.LSQUARE && ps.closer.precedence > 15) ||
-    (ps.nt.kind == Tokens.STRING && isempty(ps.ws) && ps.closer.precedence > 15) ||
+    (ps.nt.kind == Tokens.STRING && isemptyws(ps.ws) && ps.closer.precedence > 15) ||
     (ps.closer.precedence > 15 && ps.t.kind == Tokens.RPAREN && ps.nt.kind == Tokens.IDENTIFIER) ||
     (ps.closer.precedence > 15 && ps.t.kind == Tokens.RSQUARE && ps.nt.kind == Tokens.IDENTIFIER) ||
     (ps.nt.kind == Tokens.COMMA && ps.closer.precedence > 0) ||
@@ -23,13 +23,13 @@ function closer(ps::ParseState)
     (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt) <= 0 || ps.nt.kind == Tokens.COLON)) ||
     (ps.closer.trycatch && (ps.nt.kind == Tokens.CATCH || ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END)) ||
     (ps.closer.range && ps.nt.kind == Tokens.FOR) ||
-    (ps.closer.ws && !isempty(ps.ws) &&
+    (ps.closer.ws && !isemptyws(ps.ws) &&
         !(ps.nt.kind == Tokens.COMMA) && 
         !(ps.t.kind == Tokens.COMMA) && 
         !(!ps.closer.inmacro && ps.nt.kind == Tokens.FOR) &&
         !(ps.nt.kind == Tokens.DO) && 
-        # !((isbinaryop(ps.nt.kind) && (!isempty(ps.nws) || !isunaryop(ps.nt))) || (!ps.closer.wsop && isbinaryop(ps.nt.kind)))) ||
-        !((isbinaryop(ps.nt) && !isempty(ps.nws)) ||
+        # !((isbinaryop(ps.nt.kind) && (!isemptyws(ps.nws) || !isunaryop(ps.nt))) || (!ps.closer.wsop && isbinaryop(ps.nt.kind)))) ||
+        !((isbinaryop(ps.nt) && !isemptyws(ps.nws)) ||
         (isbinaryop(ps.nt) && !isunaryop(ps.nt)) ||
         (isunaryop(ps.t) && ps.ws.kind == WS) ||
         (!ps.closer.wsop && isbinaryop(ps.nt.kind)))) ||
@@ -245,7 +245,7 @@ end
 function test_find(str)
     x = parse(str, true)
     for i = 1:sizeof(str)
-        find(x, i)
+        _find(x, i)
     end
 end
 
@@ -363,7 +363,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                         if display
                             c0, c1 = compare(x0, x1)
                             if !(c0 isa String && c1 isa String)
-                                aerr+=1
+                                aerr += 1
                                 print_with_color(:light_red, string("    ", c0), bold = true)
                                 println()
                                 print_with_color(:light_green, string("    ", c1), bold = true)

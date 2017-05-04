@@ -48,14 +48,14 @@ end
 
 function next(x::EXPR, s::Iterator{:do})
     if s.i == 1
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     elseif s.i == 2 
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == 3 
-        return x.args[2], +s
+        return x.args[2], next_iter(s)
     elseif s.i == 4
-        return x.args[3], +s
+        return x.args[3], next_iter(s)
     else
-        return x.punctuation[1], +s
+        return x.punctuation[1], next_iter(s)
     end
 end

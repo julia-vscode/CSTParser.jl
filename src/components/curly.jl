@@ -34,14 +34,14 @@ _start_curly(x::EXPR) = Iterator{:curly}(1, length(x.args) + length(x.punctuatio
 
 function next(x::EXPR, s::Iterator{:curly})
     if s.i == 1
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     elseif s.i == 2
-        return x.punctuation[1], +s
+        return x.punctuation[1], next_iter(s)
     elseif s.i == s.n
-        return last(x.punctuation), +s
+        return last(x.punctuation), next_iter(s)
     elseif isodd(s.i)
-        return x.args[div(s.i + 1, 2)], +s
+        return x.args[div(s.i + 1, 2)], next_iter(s)
     else
-        return x.punctuation[div(s.i, 2)], +s
+        return x.punctuation[div(s.i, 2)], next_iter(s)
     end
 end

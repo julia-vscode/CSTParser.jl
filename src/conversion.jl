@@ -1,12 +1,11 @@
-import Base: Expr, Symbol
+import Base: Expr
 # Converts EXPR to Base.Expr
 Expr{T}(x::HEAD{T}) = Symbol(lowercase(string(T)))
 Expr(x::HEAD{Tokens.LBRACE}) = :cell1d
 Expr{T}(x::KEYWORD{T}) = Symbol(lowercase(string(T)))
 
-function Expr(x::IDENTIFIER)
-    return x.val
-end
+Expr(x::IDENTIFIER) = x.val
+
 
 function Expr{O, K, dot}(x::OPERATOR{O, K, dot}) 
     if dot
@@ -18,31 +17,15 @@ end
 
 Expr(x::LITERAL{Tokens.TRUE}) = true
 Expr(x::LITERAL{Tokens.FALSE}) = false
-
 Expr(x::ERROR) = "Parsing error"
-
-# No reason 
-function Expr{T}(x::LITERAL{T})
-    Base.parse(x.val)
-end
-
-function Expr(x::LITERAL{Tokens.FLOAT}) 
-    Base.parse(x.val)
-end
-
+Expr{T}(x::LITERAL{T}) = Base.parse(x.val)
+Expr(x::LITERAL{Tokens.FLOAT}) = Base.parse(x.val)
 Expr(x::LITERAL{Tokens.MACRO}) = Symbol(x.val)
 # Expr(x::LITERAL{Tokens.CMD}) = x.val
+Expr(x::LITERAL{Tokens.STRING}) = x.val
+Expr(x::LITERAL{Tokens.TRIPLE_STRING}) = x.val
 
 Expr{K}(x::PUNCTUATION{K}) = string(K)
-Expr(x::Void) = nothing
-
-function Expr(x::LITERAL{Tokens.STRING}) 
-    x.val
-end
-function Expr(x::LITERAL{Tokens.TRIPLE_STRING}) 
-    x.val
-end
-
 Expr(x::QUOTENODE) = QuoteNode(Expr(x.val))
 
 function Expr(x::EXPR)

@@ -100,9 +100,9 @@ function unindent_triple_string(ps::ParseState)
 end
 
 _start_string(x::EXPR) = Iterator{:string}(1, 1)
-next(x::EXPR, s::Iterator{:string}) = x, +s
+next(x::EXPR, s::Iterator{:string}) = x, next_iter(s)
 
-next(x::EXPR, s::Iterator{:x_str}) = x.args[s.i], +s
+next(x::EXPR, s::Iterator{:x_str}) = x.args[s.i], next_iter(s)
 
 
 

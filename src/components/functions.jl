@@ -177,32 +177,32 @@ _start_parameters(x::EXPR) = Iterator{:parameters}(1, length(x.args) + length(x.
 
 function next(x::EXPR, s::Iterator{:function})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == s.n
-        return x.punctuation[1], +s
+        return x.punctuation[1], next_iter(s)
     else
-        return x.args[s.i - 1], +s
+        return x.args[s.i - 1], next_iter(s)
     end
 end
 
 function next(x::EXPR, s::Iterator{:call})
     if length(x.args) > 0 && last(x.args) isa EXPR && last(x.args).head == PARAMETERS && s.i == (s.n - 1)
-        return last(x.args), +s
+        return last(x.args), next_iter(s)
     end
     if  s.i == s.n
-        return last(x.punctuation), +s
+        return last(x.punctuation), next_iter(s)
     elseif isodd(s.i)
-        return x.args[div(s.i + 1, 2)], +s
+        return x.args[div(s.i + 1, 2)], next_iter(s)
     else
-        return x.punctuation[div(s.i, 2)], +s
+        return x.punctuation[div(s.i, 2)], next_iter(s)
     end
 end
 
 function next(x::EXPR, s::Iterator{:parameters})
     if  isodd(s.i)
-        return x.args[div(s.i + 1, 2)], +s
+        return x.args[div(s.i + 1, 2)], next_iter(s)
     elseif iseven(s.i)
-        return x.punctuation[div(s.i, 2)], +s
+        return x.punctuation[div(s.i, 2)], next_iter(s)
     end
 end
 
@@ -210,20 +210,20 @@ _start_ccall(x::EXPR) = Iterator{:ccall}(1, 1 + length(x.args) + length(x.punctu
 
 function next(x::EXPR, s::Iterator{:ccall})
     # if length(x.args)>0 && last(x.args) isa EXPR && last(x.args).head == PARAMETERS && s.i == (s.n-1)
-    #     return last(x.args), +s
+    #     return last(x.args), next_iter(s)
     # end
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == s.n
-        return last(x.punctuation), +s
+        return last(x.punctuation), next_iter(s)
     elseif iseven(s.i)
-        return x.punctuation[div(s.i, 2)], +s
+        return x.punctuation[div(s.i, 2)], next_iter(s)
     else
-        return x.args[div(s.i - 1, 2)], +s
+        return x.args[div(s.i - 1, 2)], next_iter(s)
     end
 end
 
-next(x::EXPR, s::Iterator{:stdcall}) = x.head, +s
+next(x::EXPR, s::Iterator{:stdcall}) = x.head, next_iter(s)
 
 
 # Linting

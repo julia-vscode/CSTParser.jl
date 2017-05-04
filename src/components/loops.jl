@@ -99,36 +99,36 @@ _start_while(x::EXPR) = Iterator{:while}(1, 4)
 
 function next(x::EXPR, s::Iterator{:while})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == 2
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     elseif s.i == 3
-        return x.args[2], +s
+        return x.args[2], next_iter(s)
     elseif s.i == 4
-        return x.punctuation[1], +s
+        return x.punctuation[1], next_iter(s)
     end
 end
 
 function next(x::EXPR, s::Iterator{:for})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     elseif s.i == 2
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     elseif s.i == 3
-        return x.args[2], +s
+        return x.args[2], next_iter(s)
     elseif s.i == 4
-        return x.punctuation[1], +s
+        return x.punctuation[1], next_iter(s)
     end
 end
 
 function next(x::EXPR, s::Iterator{:continue})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     end
 end
 
 function next(x::EXPR, s::Iterator{:break})
     if s.i == 1
-        return x.head, +s
+        return x.head, next_iter(s)
     end
 end

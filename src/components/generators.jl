@@ -55,9 +55,9 @@ end
 
 function next(x::EXPR, s::Iterator{:generator})
     if isodd(s.i)
-        return x.args[div(s.i + 1, 2)], +s
+        return x.args[div(s.i + 1, 2)], next_iter(s)
     else
-        return x.punctuation[div(s.i, 2)], +s
+        return x.punctuation[div(s.i, 2)], next_iter(s)
     end
 end
 
@@ -67,13 +67,13 @@ end
 
 function next(x::EXPR, s::Iterator{:filter})
     if s.i == s.n
-        return first(x.args), +s
+        return first(x.args), next_iter(s)
     elseif s.i == s.n - 1
-        return first(x.punctuation), +s
+        return first(x.punctuation), next_iter(s)
     elseif isodd(s.i)
-        return x.args[div(s.i + 1, 2) + 1], +s
+        return x.args[div(s.i + 1, 2) + 1], next_iter(s)
     else
-        return x.punctuation[div(s.i, 2) + 1], +s
+        return x.punctuation[div(s.i, 2) + 1], next_iter(s)
     end
 end
 
@@ -83,11 +83,11 @@ end
 
 function next(x::EXPR, s::Iterator{:comprehension})
     if s.i == 1
-        return x.punctuation[1], +s
+        return x.punctuation[1], next_iter(s)
     elseif s.i == 2
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     elseif s.i == 3 
-        return x.punctuation[2], +s
+        return x.punctuation[2], next_iter(s)
     end
 end
 
@@ -97,14 +97,14 @@ end
 
 function next(x::EXPR, s::Iterator{:typed_comprehension})
     if s.i == 1
-        return x.args[1], +s
+        return x.args[1], next_iter(s)
     elseif s.i == 2
-        return x.punctuation[1], +s
+        return x.punctuation[1], next_iter(s)
     elseif s.i == 3
-        return x.args[2], +s
+        return x.args[2], next_iter(s)
     elseif s.i == 4 
-        return x.punctuation[2], +s
+        return x.punctuation[2], next_iter(s)
     end
 end
 
-next(x::EXPR, s::Iterator{:flatten}) = x.args[1], +s
+next(x::EXPR, s::Iterator{:flatten}) = x.args[1], next_iter(s)
