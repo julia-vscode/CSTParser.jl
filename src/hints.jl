@@ -104,15 +104,15 @@ end
 
 function format_lbracket(ps)
     !ps.formatcheck && return
-    if ps.ws.kind != EmptyWS
-        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + 1:ps.nt.startbyte, [Diagnostics.Deletion(ps.lws.startbyte:ps.nt.startbyte)]))
+    if ps.ws.kind == WS
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + (0:1), [Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte)]))
     end
 end
 
 function format_rbracket(ps)
     !ps.formatcheck && return
-    if ps.lws.kind != EmptyWS
-        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + (0:1), [Diagnostics.Deletion(ps.lws.startbyte:ps.t.endbyte)]))
+    if ps.lws.kind == WS
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + (0:1), [Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte)]))
     end
 end
 
