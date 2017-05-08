@@ -104,15 +104,15 @@ end
 
 function format_lbracket(ps)
     !ps.formatcheck && return
-    if ps.ws.kind != EmptyWS
-        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + 1:ps.nt.startbyte, [Diagnostics.Deletion(ps.lws.startbyte:ps.nt.startbyte)]))
+    if ps.ws.kind == WS
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + (0:1), [Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte)]))
     end
 end
 
 function format_rbracket(ps)
     !ps.formatcheck && return
-    if ps.lws.kind != EmptyWS
-        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + (0:1), [Diagnostics.Deletion(ps.lws.startbyte:ps.t.endbyte)]))
+    if ps.lws.kind == WS
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + (0:1), [Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte)]))
     end
 end
 
@@ -121,9 +121,18 @@ function format_indent(ps, start_col)
     if (start_col > 0 && ps.nt.startpos[2] != start_col)
         dindent = start_col - ps.nt.startpos[2]
         if dindent > 0
-            push!(ps.diagnostics, Diagnostic{Diagnostics.MissingWS}(ps.nt.startbyte + (0:dindent), []))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.MissingWS}(ps.nt.startbyte + (0:dindent), [Diagnostics.AddWS(ps.nt.startbyte:ps.nt.startbyte, dindent)]))
         else
-            push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.nt.startbyte + (dindent + 1:0), []))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.nt.startbyte + (dindent + 1:0), [Diagnostics.Deletion(ps.nt.startbyte + (dindent:0))]))
+        end
+    end
+end
+
+function format_kw(ps)
+    !ps.formatcheck && return
+    if ps.ws.kind == WS 
+        if length(ps.ws.val) > 1
+            push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte:ps.nt.startbyte, [Diagnostics.Deletion(ps.ws.startbyte + 1:ps.nt.startbyte)]))
         end
     end
 end

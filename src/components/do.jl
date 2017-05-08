@@ -5,6 +5,7 @@ function parse_do(ps::ParseState, ret)
     # Parsing
     next(ps)
     kw = INSTANCE(ps)
+    format_kw(ps)
     
     args = EXPR(TUPLE, [], - ps.nt.startbyte)
     @default ps @closer ps comma @closer ps block while !closer(ps)

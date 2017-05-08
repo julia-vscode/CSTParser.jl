@@ -553,7 +553,7 @@ function next(x::EXPR, s::Iterator{:where})
     if isempty(x.punctuation)
         if s.i == 1
             return x.args[1], next_iter(s)
-        elseif s.i ==2
+        elseif s.i == 2
             return x.head, next_iter(s)
         else
             return x.args[2], next_iter(s)

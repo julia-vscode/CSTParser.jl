@@ -3,6 +3,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONST}})
     
     # Parsing
     kw = INSTANCE(ps)
+    format_kw(ps)
     @catcherror ps startbyte arg = parse_expression(ps)
 
     # Construction 
@@ -16,6 +17,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.GLOBAL}})
 
     # Parsing
     kw = INSTANCE(ps)
+    format_kw(ps)
     @catcherror ps startbyte arg = parse_expression(ps)
 
     # Construction
@@ -33,6 +35,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LOCAL}})
 
     # Parsing
     kw = INSTANCE(ps)
+    format_kw(ps)
     @catcherror ps startbyte arg = @default ps parse_expression(ps)
 
     # Construction
@@ -50,6 +53,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.RETURN}})
 
     # Parsing
     kw = INSTANCE(ps)
+    format_kw(ps)
     @catcherror ps startbyte args = @default ps SyntaxNode[closer(ps) ? NOTHING : parse_expression(ps)]
 
     # Construction

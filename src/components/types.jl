@@ -5,8 +5,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
     if ps.nt.kind == Tokens.TYPE
         # Parsing
         kw1 = INSTANCE(ps)
+        format_kw(ps)
         next(ps)
         kw2 = INSTANCE(ps)
+        format_kw(ps)
+
         @catcherror ps startbyte sig = @default ps @closer ps block parse_expression(ps)
 
         # Construction
@@ -36,6 +39,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
     
     # Parsing
     kw = INSTANCE(ps)
+    format_kw(ps)
+
     @catcherror ps startbyte arg1 = @default ps @closer ps ws @closer ps wsop parse_expression(ps) 
     @catcherror ps startbyte arg2 = @default ps parse_expression(ps)
 
@@ -56,8 +61,10 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.PRIMITIVE}})
     if ps.nt.kind == Tokens.TYPE
         # Parsing
         kw1 = INSTANCE(ps)
+        format_kw(ps)
         next(ps)
         kw2 = INSTANCE(ps)
+        format_kw(ps)
         @catcherror ps startbyte sig = @default ps @closer ps ws @closer ps wsop parse_expression(ps)
         @catcherror ps startbyte arg = @default ps @closer ps block parse_expression(ps)
 
@@ -81,6 +88,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
 
     # Parsing
     kw = INSTANCE(ps)
+    format_kw(ps)
+
     @catcherror ps startbyte arg1 = @closer ps ws @closer ps wsop parse_expression(ps) 
     @catcherror ps startbyte arg2 = parse_expression(ps)
 
@@ -102,6 +111,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MUTABLE}})
     
     if ps.nt.kind == Tokens.STRUCT
         kw = INSTANCE(ps)
+        format_kw(ps)
         next(ps)
         @catcherror ps startbyte ret = parse_struct(ps, TRUE)
         unshift!(ret.punctuation, kw)
@@ -119,6 +129,7 @@ function parse_struct(ps::ParseState, mutable)
 
     # Parsing
     kw = INSTANCE(ps)
+    format_kw(ps)
     @catcherror ps startbyte sig = @default ps @closer ps block @closer ps ws parse_expression(ps)
     @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
 

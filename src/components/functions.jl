@@ -4,6 +4,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
 
     # Parsing
     kw = INSTANCE(ps)
+    format_kw(ps)
     # signature
 
     if isoperator(ps.nt.kind) && ps.nt.kind != Tokens.EX_OR && ps.nnt.kind == Tokens.LPAREN
@@ -189,7 +190,7 @@ function next(x::EXPR, s::Iterator{:call})
     if length(x.args) > 0 && last(x.args) isa EXPR && last(x.args).head == PARAMETERS && s.i == (s.n - 1)
         return last(x.args), next_iter(s)
     end
-    if  s.i == s.n
+    if s.i == s.n
         return last(x.punctuation), next_iter(s)
     elseif isodd(s.i)
         return x.args[div(s.i + 1, 2)], next_iter(s)
@@ -199,7 +200,7 @@ function next(x::EXPR, s::Iterator{:call})
 end
 
 function next(x::EXPR, s::Iterator{:parameters})
-    if  isodd(s.i)
+    if isodd(s.i)
         return x.args[div(s.i + 1, 2)], next_iter(s)
     elseif iseven(s.i)
         return x.punctuation[div(s.i, 2)], next_iter(s)
@@ -270,8 +271,8 @@ function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
     a = _arg_id(arg)
     t = get_t(arg)
     !(a isa IDENTIFIER) && return
-    # push!(ps.current_scope.args, Variable(a, :Any, :argument))
-    if !(a.val in args)
+    # if !(a.val in args)
+    if !any(a.val == aa[1] for aa in args)
         push!(args, (a.val, t))
     else 
         push!(ps.diagnostics, Diagnostic{Diagnostics.DuplicateArgumentName}(loc, []))
@@ -313,6 +314,7 @@ end
 
 
 _arg_id(x::INSTANCE) = x
+_arg_id(x::QUOTENODE) = x.val
 
 function _arg_id(x::EXPR)
     if x.head isa OPERATOR{DeclarationOp, Tokens.DECLARATION} || x.head == CURLY || x.head isa OPERATOR{0, Tokens.DDDOT} || x.head isa HEAD{Tokens.KW}

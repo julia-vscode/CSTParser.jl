@@ -4,6 +4,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
 
     # Parsing
     kw = INSTANCE(ps)
+    format_kw(ps)
     @catcherror ps startbyte ranges = @default ps parse_ranges(ps)
     @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
     next(ps)
@@ -67,6 +68,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
 
     # Parsing
     kw = INSTANCE(ps)
+    format_kw(ps)
     @catcherror ps startbyte cond = @default ps @closer ps ws parse_expression(ps)
     @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
     next(ps)
