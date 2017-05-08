@@ -4,6 +4,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
 
     # Parsing
     kw = INSTANCE(ps)
+    format_kw(ps)
     # signature
 
     if isoperator(ps.nt.kind) && ps.nt.kind != Tokens.EX_OR && ps.nnt.kind == Tokens.LPAREN

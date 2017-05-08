@@ -4,6 +4,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
 
     # Parsing
     ret = EXPR(INSTANCE(ps), [], -startbyte)
+    format_kw(ps)
+        
     args = []
     @default ps @closer ps comma @closer ps block while !closer(ps)
         @catcherror ps startbyte a = parse_expression(ps)

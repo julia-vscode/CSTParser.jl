@@ -4,6 +4,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
 
     # Parsing
     kw = INSTANCE(ps)
+    format_kw(ps)
     ret = EXPR(kw, [], -ps.t.startbyte)
 
     @catcherror ps startbyte tryblock = @default ps @closer ps trycatch parse_block(ps, start_col)

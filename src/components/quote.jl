@@ -4,6 +4,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.QUOTE}})
 
     # Parsing
     kw = INSTANCE(ps)
+    format_kw(ps)
     @catcherror ps startbyte arg = @default ps parse_block(ps, start_col)
     next(ps)
 

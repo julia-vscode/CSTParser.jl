@@ -10,6 +10,7 @@ function parse_module(ps::ParseState)
 
     # Parsing
     kw = INSTANCE(ps)
+    format_kw(ps)
     if ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         arg = INSTANCE(ps)
@@ -107,6 +108,7 @@ end
 function parse_imports(ps::ParseState)
     startbyte = ps.t.startbyte
     kw = INSTANCE(ps)
+    format_kw(ps)
     tk = ps.t.kind
 
     arg, puncs = parse_dot_mod(ps)
@@ -165,6 +167,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
 
     # Parsing
     kw = INSTANCE(ps)
+    format_kw(ps)
     ret = EXPR(kw, parse_dot_mod(ps)[1], 0, [])
     
     while ps.nt.kind == Tokens.COMMA

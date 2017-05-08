@@ -6,6 +6,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
     startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2] + 4
     kw = INSTANCE(ps)
+    format_kw(ps)
     if ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         sig = INSTANCE(ps)
