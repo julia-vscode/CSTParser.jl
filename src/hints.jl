@@ -121,9 +121,9 @@ function format_indent(ps, start_col)
     if (start_col > 0 && ps.nt.startpos[2] != start_col)
         dindent = start_col - ps.nt.startpos[2]
         if dindent > 0
-            push!(ps.diagnostics, Diagnostic{Diagnostics.MissingWS}(ps.nt.startbyte + (0:dindent), []))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.MissingWS}(ps.nt.startbyte + (0:dindent), [Diagnostics.AddWS(ps.nt.startbyte:ps.nt.startbyte, dindent)]))
         else
-            push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.nt.startbyte + (dindent + 1:0), []))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.nt.startbyte + (dindent + 1:0), [Diagnostics.Deletion(ps.nt.startbyte + (dindent:0))]))
         end
     end
 end
