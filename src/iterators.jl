@@ -171,6 +171,10 @@ length(x::EXPR) = start(x).n
 last(x::EXPR) = x[length(x)]
 endof(x::EXPR) = length(x)
 
+start(x::ERROR) = x, 1
+next(x::ERROR, i) = x, i + 1
+done(x::ERROR, i) = i > 1
+
 function Base.getindex(x::EXPR, i::Int)
     s = start(x)
     @assert i <= s.n
