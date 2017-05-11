@@ -1,4 +1,5 @@
 module Diagnostics
+
 abstract type Format end
 abstract type Lint end
 abstract type Action end
@@ -8,6 +9,9 @@ mutable struct Diagnostic{C}
     actions::Vector{Action}
 end
 Diagnostic(r::UnitRange) = Diagnostic(r, [])
+
+@enum(ErrorCodes,
+ParseFailure)
 
 @enum(FormatCodes,
 Useelseif,
@@ -51,6 +55,11 @@ end
 struct AddWS <: Action
     range::UnitRange
     length::Int
+end
+
+struct TextEdit <: Action
+    range::UnitRange
+    text::String
 end
 
 end
