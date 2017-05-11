@@ -10,7 +10,7 @@ function parse_curly(ps::ParseState, ret)
     format_lbracket(ps)
     ret = EXPR(CURLY, [ret], ret.span - ps.t.startbyte, [INSTANCE(ps)])
 
-    @catcherror ps startbyte @default ps @nocloser ps inwhere @closer ps brace parse_comma_sep(ps, ret)
+    @catcherror ps startbyte @default ps @nocloser ps inwhere @closer ps brace parse_comma_sep(ps, ret, true, false, false)
     next(ps)
     format_rbracket(ps)
     push!(ret.punctuation, INSTANCE(ps))

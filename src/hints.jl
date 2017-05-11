@@ -137,6 +137,13 @@ function format_kw(ps)
     end
 end
 
+function format_no_rws(ps)
+    !ps.formatcheck && return
+    if ps.ws.kind != EmptyWS
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte:ps.nt.startbyte, [Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte)]))
+    end
+end
+
 function format_typename(ps, sig)
     !ps.formatcheck && return
 #     start_loc = ps.nt.startbyte - sig.span

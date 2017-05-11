@@ -120,7 +120,7 @@ function parse_call(ps::ParseState, ret)
     return ret
 end
 
-function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false)
+function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, formatcomma = true)
     startbyte = ps.nt.startbyte
 
     @catcherror ps startbyte @nocloser ps inwhere @noscope ps @nocloser ps newline @closer ps comma while !closer(ps)
@@ -132,7 +132,11 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false)
         if ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(ret.punctuation, INSTANCE(ps))
-            format_comma(ps)
+            if formatcomma
+                format_comma(ps)
+            else
+                format_no_rws(ps)
+            end
         end
         if ps.ws.kind == SemiColonWS
             break
