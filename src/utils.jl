@@ -422,5 +422,9 @@ function check_reformat()
 end
 
 function no_iter(x::EXPR)
-    (x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL} || x.head isa KEYWORD{Tokens.USING} || (x.head == TOPLEVEL && x.args[1] isa EXPR && (x.args[1].head isa KEYWORD{Tokens.IMPORT} || x.args[1].head isa KEYWORD{Tokens.IMPORTALL} || x.args[1].head isa KEYWORD{Tokens.USING}))) || x.head isa HEAD{Tokens.STRING}
+    x.head isa KEYWORD{Tokens.IMPORT} || 
+    x.head isa KEYWORD{Tokens.IMPORTALL} || 
+    x.head isa KEYWORD{Tokens.USING} || 
+    (x.head == TOPLEVEL && all(x.args[i] isa EXPR && (x.args[i].head isa KEYWORD{Tokens.IMPORT} || x.args[i].head isa KEYWORD{Tokens.IMPORTALL} || x.args[i].head isa KEYWORD{Tokens.USING}) for i = 1:length(x.args))) || 
+    x.head isa HEAD{Tokens.STRING}
 end

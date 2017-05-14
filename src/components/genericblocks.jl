@@ -27,7 +27,7 @@ function parse_block(ps::ParseState, start_col = 0; ret::EXPR = EXPR(BLOCK, [], 
     deadcode = -1
     # Parsing
     while !(ps.nt.kind in closers) && !ps.errored
-        ps.nt.startpos[1] != start_line && format_indent(ps, start_col)
+        ps.nt.startpos[1] != start_line && ps.ws.kind == NewLineWS && format_indent(ps, start_col)
         @catcherror ps startbyte a = @closer ps block parse_expression(ps)
         push!(ret.args, a)
 
