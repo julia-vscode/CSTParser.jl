@@ -220,7 +220,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{Assignment
             nextarg = EXPR(BLOCK, SyntaxNode[nextarg], nextarg.span)
         end
         # Linting
-        @scope ps Scope{Tokens.FUNCTION} _lint_func_sig(ps, ret)
+        @scope ps Scope{Tokens.FUNCTION} _lint_func_sig(ps, ret, startbyte + (0:ret.span))
         
         ret1 = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
         ret1.defs = [Variable(function_name(ret), :Function, ret1)]

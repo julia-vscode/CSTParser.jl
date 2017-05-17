@@ -46,7 +46,8 @@ typeDeprecation,
 immutableDeprecation,
 abstractDeprecation,
 bitstypeDeprecation,
-typealiasDeprecation)
+typealiasDeprecation,
+parameterisedDeprecation)
 
 struct Deletion <: Action
     range::UnitRange
