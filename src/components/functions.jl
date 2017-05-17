@@ -36,7 +36,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
         sig.args[1] = EXPR(TUPLE, [sig.args[1]], sig.args[1].span)
     end
 
-    _lint_func_sig(ps, sig)
+    _lint_func_sig(ps, sig, ps.nt.startbyte + (-sig.span:0))
 
     @catcherror ps startbyte block = @default ps @scope ps Scope{Tokens.FUNCTION} parse_block(ps, start_col)
     
@@ -244,14 +244,26 @@ next(x::EXPR, s::Iterator{:stdcall}) = x.head, next_iter(s)
 Runs linting on function argument, assumes `sig` has just been parsed such that 
 the byte offset is `ps.nt.startbyte - sig.span`.
 """
-function _lint_func_sig(ps::ParseState, sig::IDENTIFIER) end
+function _lint_func_sig(ps::ParseState, sig::IDENTIFIER, loc) end
     
-function _lint_func_sig(ps::ParseState, sig::EXPR)
-    loc = ps.nt.startbyte + (-sig.span:0)
+function _lint_func_sig(ps::ParseState, sig::EXPR, loc)
     if sig isa EXPR && sig.head isa OPERATOR{DeclarationOp, Tokens.DECLARATION}
-        return _lint_func_sig(ps, sig.args[1])
+        return _lint_func_sig(ps, sig.args[1], loc)
     end
     fname = _get_fname(sig)
+    # use where syntax
+    if sig isa EXPR && sig.head == CALL && sig.args[1] isa EXPR && sig.args[1].head == CURLY
+        push!(ps.diagnostics, Diagnostic{Diagnostics.parameterisedDeprecation}((first(loc) + sig.args[1].args[1].span):(first(loc) + sig.args[1].span), []))
+        # for a in reverse(sig.args[1].args[2:end]) 
+            # loc1 = first(loc) + sig.span
+            # push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((loc1):(loc1), string(" where {", Expr(a), "}")))
+        # end
+            
+        loc1 = first(loc) + sig.span
+        push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((loc1):(loc1), string(" where {", join((Expr(t) for t in sig.args[1].args[2:end]), ","), "}")))
+        push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((first(loc) + sig.args[1].args[1].span):(first(loc) + sig.args[1].span), ""))
+    end
+    
     format_funcname(ps, function_name(sig), sig.span)
     args = Tuple{Symbol, Any}[]
     nargs = length(sig.args) - 1

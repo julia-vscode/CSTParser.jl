@@ -22,7 +22,7 @@ function parse_cell1d(ps::ParseState)
     startbyte = ps.t.startbyte
     format_lbracket(ps)
     ret = EXPR(CELL1D, [], -startbyte, [INSTANCE(ps)])
-    @catcherror ps startbyte @default ps @closer ps brace parse_comma_sep(ps, ret)
+    @catcherror ps startbyte @default ps @closer ps brace parse_comma_sep(ps, ret, true, false, false)
     next(ps)
     push!(ret.punctuation, INSTANCE(ps))
     format_rbracket(ps)
