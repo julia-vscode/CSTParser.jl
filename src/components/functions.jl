@@ -46,7 +46,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
 
     # Construction
     if isempty(block.args)
-        if sig isa EXPR && !(sig.head isa OPERATOR{PlusOp, Tokens.EX_OR})
+        if sig isa EXPR && !(sig.head isa OPERATOR{PlusOp,Tokens.EX_OR})
             args = SyntaxNode[sig, block]
         else
             args = SyntaxNode[sig]
@@ -69,24 +69,24 @@ Parses a function call. Expects to start before the opening parentheses and is p
 function parse_call(ps::ParseState, ret)
     startbyte = ps.t.startbyte
     # Parsing
-    if ret isa OPERATOR{PlusOp, Tokens.EX_OR} || ret isa OPERATOR{DeclarationOp, Tokens.DECLARATION} || ret isa OPERATOR{TimesOp, Tokens.AND}
+    if ret isa OPERATOR{PlusOp,Tokens.EX_OR} || ret isa OPERATOR{DeclarationOp,Tokens.DECLARATION} || ret isa OPERATOR{TimesOp,Tokens.AND}
         arg = @precedence ps 20 parse_expression(ps)
         ret = EXPR(ret, [arg], ret.span + arg.span)
-    elseif ret isa OPERATOR{20, Tokens.NOT}
+    elseif ret isa OPERATOR{20,Tokens.NOT}
         arg = @precedence ps 13 parse_expression(ps)
         if arg isa EXPR && arg.head == TUPLE
             ret = EXPR(CALL, [ret; arg.args], ret.span + arg.span, arg.punctuation)
         else
             ret = EXPR(CALL, [ret, arg], ret.span + arg.span)
         end
-    elseif ret isa OPERATOR{PlusOp, Tokens.MINUS} || ret isa OPERATOR{PlusOp, Tokens.PLUS}
+    elseif ret isa OPERATOR{PlusOp,Tokens.MINUS} || ret isa OPERATOR{PlusOp,Tokens.PLUS}
         arg = @precedence ps 13 parse_expression(ps)
         if arg isa EXPR && arg.head == TUPLE
             ret = EXPR(CALL, [ret; arg.args], ret.span + arg.span, arg.punctuation)
         else
             ret = EXPR(CALL, [ret, arg], ret.span + arg.span)
         end
-    elseif ret isa OPERATOR{ComparisonOp, Tokens.ISSUBTYPE} || ret isa OPERATOR{ComparisonOp, Tokens.ISSUPERTYPE} || ret isa OPERATOR{ComparisonOp, Tokens.ISSUPERTYPE}
+    elseif ret isa OPERATOR{ComparisonOp,Tokens.ISSUBTYPE} || ret isa OPERATOR{ComparisonOp,Tokens.ISSUPERTYPE} || ret isa OPERATOR{ComparisonOp,Tokens.ISSUPERTYPE}
         arg = @precedence ps 13 parse_expression(ps)
         ret = EXPR(ret, arg.args, ret.span + arg.span, arg.punctuation)
     else
@@ -125,7 +125,7 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, fo
 
     @catcherror ps startbyte @nocloser ps inwhere @noscope ps @nocloser ps newline @closer ps comma while !closer(ps)
         a = parse_expression(ps)
-        if kw && !ps.closer.brace && a isa EXPR && a.head isa OPERATOR{AssignmentOp, Tokens.EQ}
+        if kw && !ps.closer.brace && a isa EXPR && a.head isa OPERATOR{AssignmentOp,Tokens.EQ}
             a.head = HEAD{Tokens.KW}(a.head.span)
         end
         push!(ret.args, a)
@@ -156,7 +156,7 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, fo
             paras = EXPR(PARAMETERS, [], -ps.nt.startbyte)
             @nocloser ps inwhere @nocloser ps newline @nocloser ps semicolon @closer ps comma while !closer(ps)
                 @catcherror ps startbyte a = parse_expression(ps)
-                if kw && !ps.closer.brace && a isa EXPR && a.head isa OPERATOR{AssignmentOp, Tokens.EQ}
+                if kw && !ps.closer.brace && a isa EXPR && a.head isa OPERATOR{AssignmentOp,Tokens.EQ}
                     a.head = HEAD{Tokens.KW}(a.head.span)
                 end
                 push!(paras.args, a)
@@ -247,29 +247,26 @@ the byte offset is `ps.nt.startbyte - sig.span`.
 function _lint_func_sig(ps::ParseState, sig::IDENTIFIER, loc) end
     
 function _lint_func_sig(ps::ParseState, sig::EXPR, loc)
-    if sig isa EXPR && sig.head isa OPERATOR{DeclarationOp, Tokens.DECLARATION}
+    if sig isa EXPR && sig.head isa OPERATOR{DeclarationOp,Tokens.DECLARATION}
         return _lint_func_sig(ps, sig.args[1], loc)
     end
     fname = _get_fname(sig)
     # use where syntax
     if sig isa EXPR && sig.head == CALL && sig.args[1] isa EXPR && sig.args[1].head == CURLY
         push!(ps.diagnostics, Diagnostic{Diagnostics.parameterisedDeprecation}((first(loc) + sig.args[1].args[1].span):(first(loc) + sig.args[1].span), []))
-        # for a in reverse(sig.args[1].args[2:end]) 
-            # loc1 = first(loc) + sig.span
-            # push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((loc1):(loc1), string(" where {", Expr(a), "}")))
-        # end
-            
-        loc1 = first(loc) + sig.span
+        
+        trailingws = last(sig) isa PUNCTUATION{Tokens.RPAREN} ? last(sig).span - 1 : 0
+        loc1 = first(loc) + sig.span - trailingws
         push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((loc1):(loc1), string(" where {", join((Expr(t) for t in sig.args[1].args[2:end]), ","), "}")))
         push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((first(loc) + sig.args[1].args[1].span):(first(loc) + sig.args[1].span), ""))
     end
     
     format_funcname(ps, function_name(sig), sig.span)
-    args = Tuple{Symbol, Any}[]
+    args = Tuple{Symbol,Any}[]
     nargs = length(sig.args) - 1
     firstkw  = nargs + 1
     for (i, arg) in enumerate(sig.args[2:end])
-        if arg isa EXPR && arg.head isa OPERATOR{DeclarationOp, Tokens.DECLARATION} && length(arg.args) == 1
+        if arg isa EXPR && arg.head isa OPERATOR{DeclarationOp,Tokens.DECLARATION} && length(arg.args) == 1
             #unhandled ::Type argument
             continue
         elseif arg isa EXPR && arg.head == PARAMETERS
@@ -296,7 +293,7 @@ function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
     if a.val == Expr(fname)
         push!(ps.diagnostics, Diagnostic{Diagnostics.ArgumentFunctionNameConflict}(loc, []))
     end
-    if arg isa EXPR && arg.head isa OPERATOR{0, Tokens.DDDOT} && i != nargs
+    if arg isa EXPR && arg.head isa OPERATOR{0,Tokens.DDDOT} && i != nargs
         push!(ps.diagnostics, Diagnostic{Diagnostics.SlurpingPosition}(loc, []))
     end
     if arg isa EXPR && arg.head isa HEAD{Tokens.KW} && i < firstkw
@@ -333,7 +330,7 @@ _arg_id(x::INSTANCE) = x
 _arg_id(x::QUOTENODE) = x.val
 
 function _arg_id(x::EXPR)
-    if x.head isa OPERATOR{DeclarationOp, Tokens.DECLARATION} || x.head == CURLY || x.head isa OPERATOR{0, Tokens.DDDOT} || x.head isa HEAD{Tokens.KW}
+    if x.head isa OPERATOR{DeclarationOp,Tokens.DECLARATION} || x.head == CURLY || x.head isa OPERATOR{0,Tokens.DDDOT} || x.head isa HEAD{Tokens.KW}
         return _arg_id(x.args[1])
     else
         return x
@@ -357,7 +354,7 @@ function _get_fname(sig)
         return sig
     elseif sig isa EXPR && sig.head == TUPLE
         return NOTHING
-    elseif sig isa EXPR && sig.head isa OPERATOR{DeclarationOp, Tokens.DECLARATION}
+    elseif sig isa EXPR && sig.head isa OPERATOR{DeclarationOp,Tokens.DECLARATION}
         get_id(sig.args[1].args[1])
     else
         get_id(sig.args[1])
@@ -368,7 +365,7 @@ function function_name(sig::SyntaxNode)
     if sig isa EXPR
         if sig.head == CALL || sig.head == CURLY
             return function_name(sig.args[1])
-        elseif sig.head isa OPERATOR{DotOp, Tokens.DOT}
+        elseif sig.head isa OPERATOR{DotOp,Tokens.DOT}
             return function_name(sig.args[2])
         end
     elseif sig isa QUOTENODE
@@ -387,7 +384,7 @@ function declares_function(x::SyntaxNode)
     if x isa EXPR
         if x.head isa KEYWORD{Tokens.FUNCTION}
             return true
-        elseif x.head isa OPERATOR{AssignmentOp, Tokens.EQ} && x.args[1] isa EXPR && x.args[1].head == CALL
+        elseif x.head isa OPERATOR{AssignmentOp,Tokens.EQ} && x.args[1] isa EXPR && x.args[1].head == CALL
             return true
         else
             return false
@@ -409,7 +406,7 @@ function _lint_dict(ps::ParseState, x::EXPR)
     if length(x.args) > 1 
         if x.args[2] isa EXPR && x.args[2].head == GENERATOR
             gen = x.args[2]
-            if gen.args[1].head isa OPERATOR{AssignmentOp} && !(gen.args[1].head isa OPERATOR{AssignmentOp, Tokens.PAIR_ARROW})
+            if gen.args[1].head isa OPERATOR{AssignmentOp} && !(gen.args[1].head isa OPERATOR{AssignmentOp,Tokens.PAIR_ARROW})
                 push!(ps.diagnostics, Diagnostic{Diagnostics.DictGenAssignment}(ps.nt.startbyte - x.span + (0:x.span), []))
             end
         # Lint items
@@ -417,7 +414,7 @@ function _lint_dict(ps::ParseState, x::EXPR)
             locstart = ps.nt.startbyte - x.span + x.args[1].span + first(x.punctuation).span
             for (i, a) in enumerate(x.args[2:end])
                 # non pair arrow assignment
-                if a isa EXPR && a.head isa OPERATOR{AssignmentOp} && !(a.head isa OPERATOR{AssignmentOp, Tokens.PAIR_ARROW})
+                if a isa EXPR && a.head isa OPERATOR{AssignmentOp} && !(a.head isa OPERATOR{AssignmentOp,Tokens.PAIR_ARROW})
                     push!(ps.diagnostics, Diagnostic{Diagnostics.DictGenAssignment}(locstart + (0:a.span), []))
                 end
                 locstart += a.span + x.punctuation[i + 1].span

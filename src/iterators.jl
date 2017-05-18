@@ -1,8 +1,8 @@
-type Iterator{T}
+mutable struct Iterator{T}
     i::Int
     n::Int
 end
-next_iter{T}(s::Iterator{T}) = (s.i += 1;s)
+next_iter(s::Iterator{T}) where {T} = (s.i += 1;s)
 
 start(x::INSTANCE) = 1
 next(x::INSTANCE, i) = x, i + 1
@@ -21,7 +21,7 @@ function start(x::EXPR)
     if x.head == FILE
         return Iterator{:file}(1, length(x.args))
     elseif x.head == CALL
-        if (x.args[1] isa OPERATOR{PlusOp, Tokens.PLUS} || x.args[1] isa OPERATOR{TimesOp, Tokens.STAR}) && length(x.args) > 3 && !(first(x.punctuation) isa PUNCTUATION{Tokens.LPAREN})
+        if (x.args[1] isa OPERATOR{PlusOp,Tokens.PLUS} || x.args[1] isa OPERATOR{TimesOp,Tokens.STAR}) && length(x.args) > 3 && !(first(x.punctuation) isa PUNCTUATION{Tokens.LPAREN})
             return Iterator{:opchain}(1, max(2, length(x.args) * 2 - 3))
         elseif x.args[1] isa OPERATOR && isempty(x.punctuation)
             return Iterator{:op}(1, length(x.args) + length(x.punctuation))
@@ -30,17 +30,17 @@ function start(x::EXPR)
         end
     elseif x.head isa HEAD{Tokens.CCALL}
         return _start_ccall(x)
-    elseif x.head isa OPERATOR{16, Tokens.PRIME}
+    elseif x.head isa OPERATOR{16,Tokens.PRIME}
         return Iterator{:prime}(1, 2)
-    elseif x.head isa OPERATOR{WhereOp, Tokens.WHERE}
+    elseif x.head isa OPERATOR{WhereOp,Tokens.WHERE}
         return _start_where(x)
-    elseif issyntaxcall(x.head) || x.head isa OPERATOR{AnonFuncOp, Tokens.ANON_FUNC}  || x.head isa OPERATOR{TimesOp, Tokens.AND} || x.head isa OPERATOR{PlusOp, Tokens.EX_OR}
+    elseif issyntaxcall(x.head) || x.head isa OPERATOR{AnonFuncOp,Tokens.ANON_FUNC}  || x.head isa OPERATOR{TimesOp,Tokens.AND} || x.head isa OPERATOR{PlusOp,Tokens.EX_OR}
     # elseif ps.nt.kind == Tokens.LPAREN && !(ret isa OPERATOR && !isbinaryop(ret) && isunaryop(ret))
-        if x.head isa OPERATOR{ColonOp, Tokens.COLON}
+        if x.head isa OPERATOR{ColonOp,Tokens.COLON}
             return Iterator{:(:)}(1, length(x.args) == 2 ? 3 : 5)
         end
         return Iterator{:syntaxcall}(1, 1 + length(x.args) + length(x.punctuation))
-    elseif x.head isa OPERATOR{20, Tokens.PRIME}
+    elseif x.head isa OPERATOR{20,Tokens.PRIME}
         return Iterator{:prime}(1, 2)
     elseif x.head == COMPARISON
         return Iterator{:comparison}(1, length(x.args))
@@ -222,7 +222,7 @@ function _find(x::EXPR, n, path, ind, offsets)
     end
 end
 
-_find(x::Union{QUOTENODE, INSTANCE, ERROR}, n, path, ind, offsets) = x
+_find(x::Union{QUOTENODE,INSTANCE,ERROR}, n, path, ind, offsets) = x
 
 function _find(x::EXPR, n::Int)
     path = []

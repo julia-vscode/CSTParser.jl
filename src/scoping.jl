@@ -15,10 +15,10 @@ end
 Get the IDENTIFIER name of a variable, possibly in the presence of 
 type declaration operators.
 """
-get_id{T<:INSTANCE}(x::T) = x
+get_id(x::T) where {T <: INSTANCE} = x
 
 function get_id(x::EXPR)
-    if x.head isa OPERATOR{ComparisonOp, Tokens.ISSUBTYPE} || x.head isa OPERATOR{DeclarationOp, Tokens.DECLARATION} || x.head == CURLY
+    if x.head isa OPERATOR{ComparisonOp,Tokens.ISSUBTYPE} || x.head isa OPERATOR{DeclarationOp,Tokens.DECLARATION} || x.head == CURLY
         return get_id(x.args[1])
     else
         return x
@@ -31,10 +31,10 @@ end
 
 Basic inference in the presence of type declarations.
 """
-get_t{T<:INSTANCE}(x::T) = :Any
+get_t(x::T) where {T <: INSTANCE} = :Any
 
 function get_t(x::EXPR)
-    if x.head isa OPERATOR{DeclarationOp, Tokens.DECLARATION}
+    if x.head isa OPERATOR{DeclarationOp,Tokens.DECLARATION}
         return Expr(x.args[2])
     else
         return :Any
@@ -48,7 +48,7 @@ function func_sig(x::EXPR)
         params = name.args[2]
         name = name.args[1]
     end
-    if name isa EXPR && name.head isa OPERATOR{DotOp, Tokens.DOT}
+    if name isa EXPR && name.head isa OPERATOR{DotOp,Tokens.DOT}
         mod = name.args[1]
         name = name.args[2]
     end
@@ -95,24 +95,24 @@ function infer_t(val)
         end
     elseif val isa EXPR
         if val.head == VECT 
-            t = :(Array{Any, 1})
+            t = :(Array{Any,1})
         elseif val.head == VCAT
-            t = :(Array{Any, N})
+            t = :(Array{Any,N})
         elseif val.head == TYPED_VCAT
-            t = :(Array{$(Expr(val.args[1])), N})
+            t = :(Array{$(Expr(val.args[1])),N})
         elseif val.head == HCAT
-            t = :(Array{Any, 2})
+            t = :(Array{Any,2})
         elseif val.head == TYPED_HCAT
-            t = :(Array{$(Expr(val.args[1])), 2})
+            t = :(Array{$(Expr(val.args[1])),2})
         elseif val.head == QUOTE
             t = :Expr
         elseif val.head == STRING
             t = :String
-        elseif val.head isa OPERATOR{ColonOp, Tokens.COLON}
+        elseif val.head isa OPERATOR{ColonOp,Tokens.COLON}
             if all(a isa LITERAL{Tokens.INTEGER} for a in val.args)
                 t = :(UnitRange{Int})
             elseif all(a isa LITERAL{Tokens.FLOAT} for a in val.args)
-                t = :(StepRangeLen{Float64, Any})
+                t = :(StepRangeLen{Float64,Any})
             else
                 t = :Any
             end
@@ -224,13 +224,13 @@ function _find_scope(x::EXPR, n, path, ind, offsets, scope)
     end
 end
 
-_find_scope(x::Union{QUOTENODE, INSTANCE, ERROR}, n, path, ind, offsets, scope) = x
+_find_scope(x::Union{QUOTENODE,INSTANCE,ERROR}, n, path, ind, offsets, scope) = x
 
 function find_scope(x::EXPR, n::Int)
     path = []
     ind = Int[]
     offsets = Int[]
-    scope = Tuple{Variable, UnitRange}[]
+    scope = Tuple{Variable,UnitRange}[]
     y = _find_scope(x, n, path, ind, offsets, scope)
     return y, path, ind, offsets, scope
 end

@@ -26,7 +26,7 @@ function parse_array(ps::ParseState)
                 push!(puncs, INSTANCE(ps))
                 format_rbracket(ps)
 
-                if first_arg.args[1] isa EXPR && first_arg.args[1].head isa OPERATOR{AssignmentOp, Tokens.PAIR_ARROW}
+                if first_arg.args[1] isa EXPR && first_arg.args[1].head isa OPERATOR{AssignmentOp,Tokens.PAIR_ARROW}
                     return EXPR(DICT_COMPREHENSION, [first_arg], ps.nt.startbyte - 
                     startbyte, puncs)
                 else
@@ -259,7 +259,7 @@ end
 _start_ref(x::EXPR) = Iterator{:ref}(1, length(x.args) + length(x.punctuation))
 
 function next(x::EXPR, s::Iterator{:ref})
-    if  s.i == s.n
+    if s.i == s.n
         return last(x.punctuation), next_iter(s)
     elseif isodd(s.i)
         return x.args[div(s.i + 1, 2)], next_iter(s)

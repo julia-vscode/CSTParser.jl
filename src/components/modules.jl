@@ -40,15 +40,15 @@ function parse_dot_mod(ps::ParseState, colon = false)
     while ps.nt.kind == Tokens.DOT || ps.nt.kind == Tokens.DDOT || ps.nt.kind == Tokens.DDDOT
         next(ps)
         d = INSTANCE(ps)
-        if d isa OPERATOR{DotOp, Tokens.DOT}
-            push!(puncs, OPERATOR{DotOp, Tokens.DOT, false}(1))
-        elseif d isa OPERATOR{ColonOp, Tokens.DDOT}
-            push!(puncs, OPERATOR{DotOp, Tokens.DOT, false}(1))
-            push!(puncs, OPERATOR{DotOp, Tokens.DOT, false}(1))
-        elseif d isa OPERATOR{DddotOp, Tokens.DDDOT}
-            push!(puncs, OPERATOR{DotOp, Tokens.DOT, false}(1))
-            push!(puncs, OPERATOR{DotOp, Tokens.DOT, false}(1))
-            push!(puncs, OPERATOR{DotOp, Tokens.DOT, false}(1))
+        if d isa OPERATOR{DotOp,Tokens.DOT}
+            push!(puncs, OPERATOR{DotOp,Tokens.DOT,false}(1))
+        elseif d isa OPERATOR{ColonOp,Tokens.DDOT}
+            push!(puncs, OPERATOR{DotOp,Tokens.DOT,false}(1))
+            push!(puncs, OPERATOR{DotOp,Tokens.DOT,false}(1))
+        elseif d isa OPERATOR{DddotOp,Tokens.DDDOT}
+            push!(puncs, OPERATOR{DotOp,Tokens.DOT,false}(1))
+            push!(puncs, OPERATOR{DotOp,Tokens.DOT,false}(1))
+            push!(puncs, OPERATOR{DotOp,Tokens.DOT,false}(1))
         end
     end
 
@@ -80,7 +80,7 @@ function parse_dot_mod(ps::ParseState, colon = false)
             push!(args, a)
         elseif !colon && isoperator(ps.nt) && ps.ndot
             next(ps)
-            push!(args, OPERATOR{precedence(ps.t), ps.t.kind, false}(ps.nt.startbyte - ps.t.startbyte - 1))
+            push!(args, OPERATOR{precedence(ps.t),ps.t.kind,false}(ps.nt.startbyte - ps.t.startbyte - 1))
         else
             next(ps)
             push!(args, INSTANCE(ps))
@@ -195,7 +195,7 @@ end
 
 
 function _start_imports(x::EXPR)
-    return Iterator{:imports}(1, (x.head.span>0) + length(x.args) + length(x.punctuation)) 
+    return Iterator{:imports}(1, (x.head.span > 0) + length(x.args) + length(x.punctuation)) 
     # return Iterator{:imports}(1, 1)
 end
 
@@ -232,9 +232,9 @@ function next(x::EXPR, s::Iterator{:imports})
         else
             if s.i == 1
                 return x.head, next_iter(s)
-            elseif s.i <=ndots+1
+            elseif s.i <= ndots + 1
                 return x.punctuation[s.i - 1], next_iter(s)
-            elseif isodd(s.i+ndots) 
+            elseif isodd(s.i + ndots) 
                 return x.punctuation[div(s.i - ndots + 1, 2)], next_iter(s)
             else
                 return x.args[div(s.i - ndots, 2)], next_iter(s)
@@ -267,7 +267,7 @@ function next(x::EXPR, s::Iterator{:module})
 end
 
 function next(x::EXPR, s::Iterator{:toplevel})
-    col = findfirst(x -> x isa OPERATOR{8, Tokens.COLON}, x.punctuation)
+    col = findfirst(x -> x isa OPERATOR{8,Tokens.COLON}, x.punctuation)
     if col > 0
         if s.i ≤ col
             return x.punctuation[s.i], next_iter(s)

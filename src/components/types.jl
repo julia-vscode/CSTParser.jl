@@ -95,7 +95,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
 
     # Linting
     format_typename(ps, arg1)
-    push!(ps.diagnostics, Diagnostic{Diagnostics.typealiasDeprecation}(startbyte + (0:(kw.span + arg1.span + arg2.span)), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("const ", Expr(arg1)," = ", Expr(arg2)))]))
+    push!(ps.diagnostics, Diagnostic{Diagnostics.typealiasDeprecation}(startbyte + (0:(kw.span + arg1.span + arg2.span)), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("const ", Expr(arg1), " = ", Expr(arg2)))]))
 
     return EXPR(kw, SyntaxNode[arg1, arg2], ps.nt.startbyte - startbyte, [])
 end

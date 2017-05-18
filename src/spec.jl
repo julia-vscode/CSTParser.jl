@@ -15,7 +15,7 @@ mutable struct KEYWORD{K} <: INSTANCE
     span::Int
 end
 
-mutable struct OPERATOR{P, K, dot} <: INSTANCE
+mutable struct OPERATOR{P,K,dot} <: INSTANCE
     span::Int
 end
 
@@ -43,7 +43,7 @@ end
 
 IDENTIFIER(ps::ParseState) = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, Symbol(ps.t.val))
 
-OPERATOR(ps::ParseState) = OPERATOR{precedence(ps.t), ps.t.kind, ps.dot}(ps.nt.startbyte - ps.t.startbyte)
+OPERATOR(ps::ParseState) = OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}(ps.nt.startbyte - ps.t.startbyte)
 
 KEYWORD(ps::ParseState) = KEYWORD{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte)
 
@@ -115,7 +115,7 @@ abstract type Scope{t} end
 
 mutable struct File
     imports
-    includes::Vector{Tuple{String, Any}}
+    includes::Vector{Tuple{String,Any}}
     path::String
     ast::SyntaxNode
     errors
