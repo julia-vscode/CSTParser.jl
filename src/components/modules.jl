@@ -18,7 +18,7 @@ function parse_module(ps::ParseState)
         @catcherror ps startbyte arg = @precedence ps 15 @closer ps block @closer ps ws parse_expression(ps)
     end
 
-    block = EXPR(BLOCK, [], -ps.nt.startbyte)
+    block = EXPR(Block, [], -ps.nt.startbyte)
     @scope ps Scope{Tokens.MODULE} @default ps while ps.nt.kind !== Tokens.END
         @catcherror ps startbyte a = @closer ps block parse_doc(ps)
         push!(block.args, a)
@@ -27,8 +27,8 @@ function parse_module(ps::ParseState)
     # Construction
     block.span += ps.nt.startbyte
     next(ps)
-    ret = EXPR(kw, [(kw isa KEYWORD{Tokens.MODULE} ? TRUE : FALSE), arg, block], ps.nt.startbyte - startbyte, [INSTANCE(ps)])
-    ret.defs = [Variable(Expr(arg), :module, ret)]
+    ret = EXPR((kw isa KEYWORD{Tokens.MODULE} ? Module : BareModule), [kw, arg, block. INSTANCE(ps)], ps.nt.startbyte - startbyte)
+    # ret.defs = [Variable(Expr(arg), :module, ret)]
     return ret
 end
 

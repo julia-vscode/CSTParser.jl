@@ -17,8 +17,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
     @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
 
     next(ps)
-    ret = EXPR(kw, SyntaxNode[sig, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
-    ret.defs =  [Variable(function_name(sig), :Macro, ret)]
+    ret = EXPR(Macro, SyntaxNode[kw, sig, block, INSTANCE(ps)], ps.nt.startbyte - startbyte)
+    # ret.defs =  [Variable(function_name(sig), :Macro, ret)]
     return ret
 end
 

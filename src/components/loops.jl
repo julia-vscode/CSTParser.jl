@@ -8,16 +8,16 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
     @catcherror ps startbyte ranges = @default ps parse_ranges(ps)
     @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
     next(ps)
-    ret = EXPR(kw, SyntaxNode[ranges, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
+    ret = EXPR(For, SyntaxNode[kw, ranges, block, INSTANCE(ps)], ps.nt.startbyte - startbyte)
 
     # Linting
-    if ranges isa EXPR && ranges.head == BLOCK
-        for r in ranges.args
-            _lint_range(ps, r, startbyte + kw.span + (0:ranges.span))
-        end
-    else
-        _lint_range(ps, ranges, startbyte + kw.span + (0:ranges.span))
-    end
+    # if ranges isa EXPR && ranges.head == BLOCK
+    #     for r in ranges.args
+    #         _lint_range(ps, r, startbyte + kw.span + (0:ranges.span))
+    #     end
+    # else
+    #     _lint_range(ps, ranges, startbyte + kw.span + (0:ranges.span))
+    # end
 
     return ret
 end
@@ -47,13 +47,13 @@ function parse_ranges(ps::ParseState)
     
     arg = @closer ps range @closer ps comma @closer ps ws parse_expression(ps)
     if ps.nt.kind == Tokens.COMMA
-        arg = EXPR(BLOCK, [arg], arg.span)
+        arg = EXPR(Block, [arg], arg.span)
         while ps.nt.kind == Tokens.COMMA
             next(ps)
-            push!(arg.punctuation, INSTANCE(ps))
+            push!(arg.args, INSTANCE(ps))
             format_comma(ps)
 
-            arg.span += last(arg.punctuation).span
+            arg.span += last(arg.args).span
             @catcherror ps startbyte push!(arg.args, @closer ps comma @closer ps ws parse_expression(ps))
             arg.span += last(arg.args).span
         end
@@ -73,10 +73,10 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
     @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
     next(ps)
 
-    ret = EXPR(kw, SyntaxNode[cond, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
+    ret = EXPR(While, SyntaxNode[kw, cond, block, INSTANCE(ps)], ps.nt.startbyte - startbyte)
 
     # Linting
-    if cond isa EXPR && cond.head isa OPERATOR{AssignmentOp}
+    if cond isa EXPR{BinarySyntaxOpCall} && cond.args[2] isa OPERATOR{AssignmentOp}
         push!(ps.diagnostics, Diagnostic{Diagnostics.CondAssignment}(startbyte + kw.span + (0:cond.span), []))
     end
     if cond isa LITERAL{Tokens.FALSE}
@@ -87,50 +87,10 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.BREAK}})
-    return EXPR(INSTANCE(ps), SyntaxNode[], ps.nt.startbyte - ps.t.startbyte)
+    return EXPR(Break, SyntaxNode[INSTANCE(ps)], ps.nt.startbyte - ps.t.startbyte)
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONTINUE}})
-    return EXPR(INSTANCE(ps), SyntaxNode[], ps.nt.startbyte - ps.t.startbyte)
+    return EXPR(Continue, SyntaxNode[INSTANCE(ps)], ps.nt.startbyte - ps.t.startbyte)
 end
 
-_start_for(x::EXPR) = Iterator{:for}(1, 4)
-_start_while(x::EXPR) = Iterator{:while}(1, 4)
-
-
-
-function next(x::EXPR, s::Iterator{:while})
-    if s.i == 1
-        return x.head, next_iter(s)
-    elseif s.i == 2
-        return x.args[1], next_iter(s)
-    elseif s.i == 3
-        return x.args[2], next_iter(s)
-    elseif s.i == 4
-        return x.punctuation[1], next_iter(s)
-    end
-end
-
-function next(x::EXPR, s::Iterator{:for})
-    if s.i == 1
-        return x.head, next_iter(s)
-    elseif s.i == 2
-        return x.args[1], next_iter(s)
-    elseif s.i == 3
-        return x.args[2], next_iter(s)
-    elseif s.i == 4
-        return x.punctuation[1], next_iter(s)
-    end
-end
-
-function next(x::EXPR, s::Iterator{:continue})
-    if s.i == 1
-        return x.head, next_iter(s)
-    end
-end
-
-function next(x::EXPR, s::Iterator{:break})
-    if s.i == 1
-        return x.head, next_iter(s)
-    end
-end

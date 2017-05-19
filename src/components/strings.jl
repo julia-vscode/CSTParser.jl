@@ -23,7 +23,7 @@ function parse_string(ps::ParseState, prefixed = false)
         return lit
     elseif ismatch(r"(?<!\\)\$", lit.val)
         io = IOBuffer(lit.val)
-        ret = EXPR(STRING, [], lit.span)
+        ret = EXPR(StringH, [], lit.span)
         lc = ' '
         while !eof(io)
             io2 = IOBuffer()
@@ -98,11 +98,3 @@ function unindent_triple_string(ps::ParseState)
     end
     lit = LITERAL{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte - ps.ndot, val)
 end
-
-_start_string(x::EXPR) = Iterator{:string}(1, 1)
-next(x::EXPR, s::Iterator{:string}) = x, next_iter(s)
-
-next(x::EXPR, s::Iterator{:x_str}) = x.args[s.i], next_iter(s)
-
-
-

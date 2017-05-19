@@ -7,7 +7,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONST}})
     @catcherror ps startbyte arg = parse_expression(ps)
 
     # Construction 
-    ret = EXPR(kw, [arg], ps.nt.startbyte - startbyte)
+    ret = EXPR(Const, [kw, arg], ps.nt.startbyte - startbyte)
 
     return ret
 end
@@ -21,11 +21,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.GLOBAL}})
     @catcherror ps startbyte arg = parse_expression(ps)
 
     # Construction
-    if arg isa EXPR && arg.head == TUPLE && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
-        ret = EXPR(kw, [arg.args...], ps.nt.startbyte - startbyte, arg.punctuation)
-    else
-        ret = EXPR(kw, [arg], ps.nt.startbyte - startbyte)
-    end
+    # if arg isa EXPR{TupleH} && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
+    #     ret = EXPR(Global, [kw, arg.args...], ps.nt.startbyte - startbyte, arg.punctuation)
+    # else
+        ret = EXPR(Global, [kw, arg], ps.nt.startbyte - startbyte)
+    # end
 
     return ret
 end
@@ -39,11 +39,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LOCAL}})
     @catcherror ps startbyte arg = @default ps parse_expression(ps)
 
     # Construction
-    if arg isa EXPR && arg.head == TUPLE && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
-        ret = EXPR(kw, [arg.args...], ps.nt.startbyte - startbyte, arg.punctuation)
-    else
-        ret = EXPR(kw, [arg], ps.nt.startbyte - startbyte)
-    end
+    # if arg isa EXPR && arg.head == TUPLE && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
+    #     ret = EXPR(Local, [kw, arg.args...], ps.nt.startbyte - startbyte, arg.punctuation)
+    # else
+        ret = EXPR(Local, [kw, arg], ps.nt.startbyte - startbyte)
+    # end
 
     return ret
 end
@@ -57,7 +57,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.RETURN}})
     @catcherror ps startbyte args = @default ps SyntaxNode[closer(ps) ? NOTHING : parse_expression(ps)]
 
     # Construction
-    ret = EXPR(kw, args, ps.nt.startbyte - startbyte)
+    ret = EXPR(Return, [kw; args], ps.nt.startbyte - startbyte)
     
     return ret
 end
@@ -93,30 +93,4 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FINALLY}})
     ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :finally)
     ps.errored = true
     return ERROR{UnexpectedFinally}(ret.span, ret)
-end
-
-function next(x::EXPR, s::Iterator{:const})
-    if s.i == 1
-        return x.head, next_iter(s)
-    elseif s.i == 2
-        return x.args[1], next_iter(s)
-    end
-end
-
-function next(x::EXPR, s::Iterator{:local})
-    if s.i == 1
-        return x.head, next_iter(s)
-    elseif iseven(s.i)
-        return x.args[div(s.i, 2)], next_iter(s)
-    else
-        return x.punctuation[div(s.i - 1, 2)], next_iter(s)
-    end
-end
-
-function next(x::EXPR, s::Iterator{:return})
-    if s.i == 1
-        return x.head, next_iter(s)
-    elseif s.i == 2
-        return x.args[1], next_iter(s)
-    end
 end

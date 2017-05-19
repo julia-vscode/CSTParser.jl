@@ -145,19 +145,33 @@ abstract type BinarySyntaxOpCall <: Head end
 abstract type ConditionalOpCall <: Head end
 abstract type ComparisonOpCall <: Head end
 
+abstract type Abstract <: Head end
 abstract type Begin <: Head end
+abstract type Bitstype <: Head end
 abstract type Block <: Head end
 abstract type Curly <: Head end
 abstract type Cell1d <: Head end
 abstract type Do <: Head end
 abstract type Filter <: Head end
-abstract type Generator <: Head end
-abstract type If <: Head end
-abstract type Parameters <: Head end
-abstract type InvisBrackets <: Head end
-abstract type TupleH <: Head end
+abstract type For <: Head end
 abstract type FunctionDef <: Head end
+abstract type Generator <: Head end
+abstract type Global <: Head end
+abstract type If <: Head end
+abstract type Let <: Head end
+abstract type Local <: Head end
+abstract type Mutable <: Head end
+abstract type Parameters <: Head end
+abstract type Primitive <: Head end
+abstract type Quote <: Head end
+abstract type InvisBrackets <: Head end
+abstract type StringH <: Head end
+abstract type Struct <: Head end
+abstract type Try <: Head end
+abstract type TupleH <: Head end
+abstract type TypeAlias <: Head end
 abstract type Return <: Head end
+abstract type While <: Head end
 
 
 mutable struct EXPR{T} <: SyntaxNode
@@ -170,3 +184,4 @@ end
 
 EXPR(T, args) = EXPR{T}(args, 0, [])
 EXPR(T, args, span::Int) = EXPR{T}(args, span, [])
+

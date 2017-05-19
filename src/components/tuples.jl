@@ -13,46 +13,28 @@ function parse_tuple(ps::ParseState, ret::SyntaxNode)
     format_comma(ps)
 
     if isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX
-        if ret isa EXPR && ret.head == TUPLE
-            push!(ret.punctuation, op)
+        if ret isa EXPR{TupleH}
+            push!(ret.args, op)
             ret.span += op.span
         else
-            ret =  EXPR(TUPLE, SyntaxNode[ret], ret.span + op.span, INSTANCE[op])
+            ret =  EXPR(TupleH, SyntaxNode[ret, op], ret.span + op.span)
         end
     elseif closer(ps)
-        if ret isa EXPR && ret.head == TUPLE && (length(ret.punctuation) == 0 || !(first(ret.punctuation) isa PUNCTUATION{Tokens.LPAREN}))
+        if ret isa EXPR{TupleH} && #(length(ret.punctuation) == 0 || !(first(ret.args) isa PUNCTUATION{Tokens.LPAREN}))
             push!(ret.punctuation, op)
             ret.span += op.span
         else
-            ret = EXPR(TUPLE, SyntaxNode[ret], ret.span + op.span, INSTANCE[op])
+            ret = EXPR(TupleH, SyntaxNode[ret, op], ret.span + op.span)
         end
     else
         @catcherror ps startbyte nextarg = @closer ps tuple parse_expression(ps)
-        if ret isa EXPR && ret.head == TUPLE && (length(ret.punctuation) == 0 || !(first(ret.punctuation) isa PUNCTUATION{Tokens.LPAREN}))
+        if ret isa EXPR{TupleH}# && (length(ret.punctuation) == 0 || !(first(ret.args) isa PUNCTUATION{Tokens.LPAREN}))
+            push!(ret.args, op)
             push!(ret.args, nextarg) 
-            push!(ret.punctuation, op)
             ret.span += ps.nt.startbyte - startbyte
         else
-            ret =  EXPR(TUPLE, SyntaxNode[ret, nextarg], ret.span + ps.nt.startbyte - startbyte, INSTANCE[op])
+            ret =  EXPR(TupleH, SyntaxNode[ret, op, nextarg], ret.span + ps.nt.startbyte - startbyte)
         end
     end
     return ret
-end
-
-function next(x::EXPR, s::Iterator{:tuple})
-    if isodd(s.i)
-        return x.punctuation[div(s.i + 1, 2)], next_iter(s)
-    elseif s.i == s.n
-        return last(x.punctuation), next_iter(s)
-    else
-        return x.args[div(s.i, 2)], next_iter(s)
-    end
-end
-
-function next(x::EXPR, s::Iterator{:tuplenoparen})
-    if isodd(s.i)
-        return x.args[div(s.i + 1, 2)], next_iter(s)
-    else
-        return x.punctuation[div(s.i, 2)], next_iter(s)
-    end
 end

@@ -3,7 +3,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
     start_col = ps.t.startpos[2] + 4
 
     # Parsing
-    ret = EXPR(INSTANCE(ps), [], -startbyte)
+    ret = EXPR(Let, [INSTANCE(ps)], -startbyte)
     format_kw(ps)
         
     args = []
@@ -12,7 +12,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
         push!(args, a)
         if ps.nt.kind == Tokens.COMMA
             next(ps)
-            push!(ret.punctuation, INSTANCE(ps))
+            push!(ret.args, INSTANCE(ps))
             format_comma(ps)
         end
     end
@@ -24,7 +24,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
         push!(ret.args, a)
     end
     next(ps)
-    push!(ret.punctuation, INSTANCE(ps))
+    push!(ret.args, INSTANCE(ps))
     ret.span += ps.nt.startbyte
 
     # Linting
@@ -37,20 +37,4 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
     #     end
     # end
     return ret
-end
-
-_start_let(x::EXPR) =  Iterator{:let}(1, 1 + length(x.args) + length(x.punctuation))
-
-function next(x::EXPR, s::Iterator{:let})
-    if s.i == 1
-        return x.head, next_iter(s)
-    elseif s.i == s.n
-        return x.punctuation[end], next_iter(s)
-    elseif s.i == s.n - 1
-        return x.args[1], next_iter(s)
-    elseif iseven(s.i) 
-        return x.args[div(s.i, 2) + 1], next_iter(s)
-    elseif isodd(s.i) 
-        return x.punctuation[div(s.i - 1, 2)], next_iter(s)
-    end
 end

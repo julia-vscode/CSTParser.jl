@@ -249,23 +249,22 @@ Parses an expression starting with a `(`.
 function parse_paren(ps::ParseState)
     startbyte = ps.t.startbyte
 
-    ret = EXPR(TUPLE, [], - startbyte, [INSTANCE(ps)])
+    ret = EXPR(TupleH, [INSTANCE(ps)], - startbyte)
     format_lbracket(ps)
     
     @catcherror ps startbyte @default ps @nocloser ps inwhere @closer ps paren parse_comma_sep(ps, ret, false, true)
 
-    if length(ret.args) == 1 && length(ret.punctuation) == 1 && !(ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{DddotOp,Tokens.DDDOT})
-        # if ret.args[1] isa EXPR && ret.args[1].head isa OPERATOR{0, Tokens.DDDOT} && ps.ws.kind != SemiColonWS
-        #     ret.args[1] = EXPR(TUPLE, [ret.args[1]], ret.args[1].span)
-        # end
+    if length(ret.args) == 2 !(ret.args[2] isa EXPR{UnarySyntaxOpCall} && ret.args[2].args[2] isa OPERATOR{DddotOp,Tokens.DDDOT})
+        
         if ps.ws.kind != SemiColonWS
-            ret.head = HEAD{InvisibleBrackets}(0)
+            # ret.head = HEAD{InvisibleBrackets}(0)
+            ret = EXPR(InvisBrackets, ret.args, ret.span)
         end
     end
 
     # handle closing ')'
     next(ps)
-    push!(ret.punctuation, INSTANCE(ps))
+    push!(ret.args, INSTANCE(ps))
     format_rbracket(ps)
     
     ret.span = ps.nt.startbyte - startbyte
