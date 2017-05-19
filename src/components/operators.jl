@@ -217,16 +217,17 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{Assignment
         # Construction
         # NOTE : issue w/ scheme parser
         if !(ret.head isa OPERATOR{DeclarationOp,Tokens.DECLARATION}) && ps.closer.precedence != 0
-            nextarg = EXPR(BLOCK, SyntaxNode[nextarg], nextarg.span)
+            nextarg = EXPR(Block, SyntaxNode[nextarg], nextarg.span)
         end
         # Linting
-        @scope ps Scope{Tokens.FUNCTION} _lint_func_sig(ps, ret, startbyte + (0:ret.span))
-        
-        ret1 = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
-        ret1.defs = [Variable(function_name(ret), :Function, ret1)]
+        # @scope ps Scope{Tokens.FUNCTION} _lint_func_sig(ps, ret, startbyte + (0:ret.span))
+
+
+        ret1 = EXPR(BinarySyntaxOpCall, SyntaxNode[ret, op, nextarg], op.span + ret.span + nextarg.span)
+        # ret1.defs = [Variable(function_name(ret), :Function, ret1)]
         return ret1
     else
-        defs = ps.trackscope ? _track_assignment(ps, ret, nextarg) : Variable[]
+        # defs = ps.trackscope ? _track_assignment(ps, ret, nextarg) : Variable[]
         ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
         ret.defs = defs
         return ret
@@ -243,7 +244,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{Conditiona
     @catcherror ps startbyte nextarg2 = @closer ps comma @precedence ps 0 parse_expression(ps)
 
     # Construction
-    ret = EXPR(IF, SyntaxNode[ret, nextarg, nextarg2], ps.nt.startbyte - startbyte, INSTANCE[op, op2])
+    ret = EXPR(ConditionalOpCall, SyntaxNode[ret, op, nextarg, op2, nextarg2], ps.nt.startbyte - startbyte)
     return ret
 end
 
@@ -296,14 +297,14 @@ parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{TimesOp,Tokens.STAR,false
 function parse_chain_operator(ps::ParseState, ret::EXPR, op::OPERATOR{P,K,false}) where {P, K}
     startbyte = ps.nt.startbyte - op.span - ret.span
     
-    if ret.head == CALL && ret.args[1] isa OPERATOR{P,K,false} && ret.args[1].span > 0
+    if ret isa EXPR{BinaryOpCall} && ret.args[2] isa OPERATOR{P,K,false} && ret.args[2].span > 0
         # Parsing
         @catcherror ps startbyte nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
 
         # Construction
+        push!(ret.args, op)
         push!(ret.args, nextarg)
         ret.span += nextarg.span + op.span
-        push!(ret.punctuation, op)
     else
         ret = invoke(parse_operator, Tuple{ParseState,SyntaxNode,OPERATOR}, ps, ret, op)
     end
@@ -339,22 +340,22 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{WhereOp,To
     startbyte = ps.nt.startbyte - op.span - ret.span
     
     # Parsing
-    ret = EXPR(op, SyntaxNode[ret], 0)
+    ret = EXPR(BinarySyntaxOpCall, [ret, op], 0)
     # Parsing
     if ps.nt.kind == Tokens.LBRACE
         next(ps)
-        push!(ret.punctuation, INSTANCE(ps))
+        push!(ret.args, INSTANCE(ps))
         while ps.nt.kind != Tokens.RBRACE
             @catcherror ps startbyte a = @default ps @nocloser ps newline @closer ps comma @closer ps brace parse_expression(ps)
             push!(ret.args, a)
             if ps.nt.kind == Tokens.COMMA
                 next(ps)
-                push!(ret.punctuation, INSTANCE(ps))
+                push!(ret.args, INSTANCE(ps))
                 format_comma(ps)
             end
         end
         next(ps)
-        push!(ret.punctuation, INSTANCE(ps))
+        push!(ret.args, INSTANCE(ps))
     else
         @catcherror ps startbyte nextarg = @precedence ps 5 @closer ps inwhere parse_expression(ps)
         push!(ret.args, nextarg)
@@ -411,11 +412,11 @@ end
 
 
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{DddotOp,Tokens.DDDOT})
-    return EXPR(op, SyntaxNode[ret], op.span + ret.span)
+    return EXPR(UnarySyntaxOpCall, [ret, op], op.span + ret.span)
 end
 
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{16,Tokens.PRIME})
-    return EXPR(op, SyntaxNode[ret], op.span + ret.span)
+    return EXPR(UnarySyntaxOpCall, [ret, op], op.span + ret.span)
 end
 
 function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{P,Tokens.ANON_FUNC}) where {P}
@@ -424,7 +425,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{P,Tokens.A
     @catcherror ps startbyte arg = @closer ps comma @precedence ps 0 parse_expression(ps)
 
     # Construction
-    ret = EXPR(op, [ret, EXPR(BLOCK, [arg], arg.span)], ps.nt.startbyte - startbyte)
+    ret = EXPR(BinarySyntaxOpCall, [ret, EXPR(Block, [arg], arg.span)], ps.nt.startbyte - startbyte)
     
     return ret
 end
@@ -437,9 +438,9 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{P,K}) wher
     
     # Construction
     if issyntaxcall(op)
-        ret = EXPR(op, SyntaxNode[ret, nextarg], op.span + ret.span + nextarg.span)
+        ret = EXPR(BinarySyntaxOpCall, [ret, op, nextarg], op.span + ret.span + nextarg.span)
     else
-        ret = EXPR(CALL, SyntaxNode[op, ret, nextarg], op.span + ret.span + nextarg.span)
+        ret = EXPR(BinaryOpCall, [ret, op, nextarg], op.span + ret.span + nextarg.span)
     end
     return ret
 end

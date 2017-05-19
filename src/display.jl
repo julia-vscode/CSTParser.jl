@@ -38,16 +38,9 @@ function Base.show(io::IO, x::ERROR, indent = 0)
     println(io, " "^indent, " ERROR")
 end
 
-# function Base.show(io::IO, x::EXPR, indent = 0)
-#     name = sprint(show, x.head)
-#     println(io, " "^indent, "↘ ", name, "    [", x.span, "]")
-#     for a in x.args[(1 + (x.head == CALL)):end]
-#         show(io, a, indent + 1)
-#     end 
-# end
-function Base.show(io::IO, x::EXPR, indent = 0)
-    name = sprint(show, x.head)
-    print(io, " "^indent, "head: ", Expr(x.head))
+function Base.show(io::IO, x::EXPR{T}, indent = 0) where T
+    name = sprint(show, T)
+    print(io, " "^indent, "head: ", T)
     if isempty(x.defs)
         println()
     else

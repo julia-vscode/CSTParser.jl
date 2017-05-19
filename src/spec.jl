@@ -135,14 +135,38 @@ end
 
 const NoVariable = Variable(NOTHING, NOTHING, NOTHING)
 
-mutable struct EXPR <: SyntaxNode
-    head::SyntaxNode
+abstract type Head end
+
+abstract type Call <: Head end
+abstract type UnaryOpCall <: Head end
+abstract type UnarySyntaxOpCall <: Head end
+abstract type BinaryOpCall <: Head end
+abstract type BinarySyntaxOpCall <: Head end
+abstract type ConditionalOpCall <: Head end
+abstract type ComparisonOpCall <: Head end
+
+abstract type Begin <: Head end
+abstract type Block <: Head end
+abstract type Curly <: Head end
+abstract type Cell1d <: Head end
+abstract type Do <: Head end
+abstract type Filter <: Head end
+abstract type Generator <: Head end
+abstract type If <: Head end
+abstract type Parameters <: Head end
+abstract type InvisBrackets <: Head end
+abstract type TupleH <: Head end
+abstract type FunctionDef <: Head end
+abstract type Return <: Head end
+
+
+mutable struct EXPR{T} <: SyntaxNode
     args::Vector{SyntaxNode}
     span::Int
-    punctuation::Vector{SyntaxNode}
     defs::Vector{Variable}
 end
 
-EXPR(head, args) = EXPR(head, args, 0, [], [])
-EXPR(head, args, span::Int) = EXPR(head, args, span, [], [])
-EXPR(head, args, span::Int, puncs) = EXPR(head, args, span, puncs, [])
+
+
+EXPR(T, args) = EXPR{T}(args, 0, [])
+EXPR(T, args, span::Int) = EXPR{T}(args, span, [])
