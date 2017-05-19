@@ -30,7 +30,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
         # Construction
         ret = EXPR(kw, SyntaxNode[sig], ps.nt.startbyte - startbyte)
     end
-    ret.defs = [Variable(get_id(sig), :abstract, ret)]
+    ret.defs = [Variable(Expr(get_id(sig)), :abstract, ret)]
     return ret
 end
 
@@ -50,7 +50,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
 
     # Construction
     ret = EXPR(kw, SyntaxNode[arg1, arg2], ps.nt.startbyte - startbyte, [])
-    ret.defs = [Variable(get_id(arg2), :bitstype, ret)]
+    ret.defs = [Variable(Expr(get_id(arg2)), :bitstype, ret)]
 
     return ret
 end
@@ -76,7 +76,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.PRIMITIVE}})
             ret = EXPR(kw2, [arg, sig], ps.nt.startbyte - startbyte, [kw1, INSTANCE(ps)])
             # ret.defs = [Variable(get_id(sig), :bitstype, ret)]
         end
-        
+        ret.defs = [Variable(Expr(get_id(sig)), :bitstype, ret)]
     else
         ret = IDENTIFIER(ps.nt.startbyte - startbyte, :primitive)
     end
