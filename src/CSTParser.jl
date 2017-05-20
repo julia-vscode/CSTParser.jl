@@ -84,22 +84,22 @@ function parse_expression(ps::ParseState)
 ################################################################################
     elseif ps.t.kind == Tokens.ENDMARKER
         ps.errored = true
-        return ERROR{UnexpectedEndmarker}(0, INSTANCE(ps))
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected end of file")
     elseif ps.t.kind == Tokens.COMMA
         ps.errored = true
-        return ERROR{UnexpectedComma}(0, INSTANCE(ps))
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected comma")
     elseif ps.t.kind == Tokens.RPAREN
         ps.errored = true
-        return ERROR{UnexpectedRParen}(0, INSTANCE(ps))
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected )")
     elseif ps.t.kind == Tokens.RBRACE
         ps.errored = true
-        return ERROR{UnexpectedRBrace}(0, INSTANCE(ps))
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected }")
     elseif ps.t.kind == Tokens.RSQUARE
         ps.errored = true
-        return ERROR{UnexpectedRSquare}(0, INSTANCE(ps))
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected ]")
     else
         ps.errored = true
-        return ERROR{UnknownError}(0, INSTANCE(ps))
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unknown error")
     end
 
     while !closer(ps) && !(ps.closer.precedence == DotOp && ismacro(ret))
@@ -181,34 +181,34 @@ function parse_compound(ps::ParseState, ret::SyntaxNode)
 ################################################################################
     elseif ps.nt.kind == Tokens.ENDMARKER
         ps.errored = true
-        return ERROR{UnexpectedEndmarker}(ret.span, ret)
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected end of file")
     elseif ps.nt.kind == Tokens.LPAREN
         ps.errored = true
-        return ERROR{UnexpectedLParen}(ret.span, ret)
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected (")
     elseif ps.nt.kind == Tokens.RPAREN
         ps.errored = true
-        return ERROR{UnexpectedRParen}(ret.span, ret)
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected )")
     elseif ps.nt.kind == Tokens.LBRACE
         ps.errored = true
-        return ERROR{UnexpectedLBrace}(ret.span, ret)
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected {")
     elseif ps.nt.kind == Tokens.RBRACE
         ps.errored = true
-        return ERROR{UnexpectedRBrace}(ret.span, ret)
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected }")
     elseif ps.nt.kind == Tokens.LSQUARE
         ps.errored = true
-        return ERROR{UnexpectedLSquare}(ret.span, ret)
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected [")
     elseif ps.nt.kind == Tokens.RSQUARE
         ps.errored = true
-        return ERROR{UnexpectedRSquare}(ret.span, ret)
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected ]")
     elseif ret isa OPERATOR
         ps.errored = true
-        return ERROR{UnexpectedOperator}(ret.span, ret)
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected operator")
     else
         ps.errored = true
-        return ERROR{UnknownError}(ret.span, ret)
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unknown error")
     end
     if ps.errored
-        return ERROR{UnknownError}(ps.nt.startbyte - startbyte, NOTHING)
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unknown error")
     end
     return ret
 end

@@ -5,7 +5,7 @@ Expr(x::HEAD{Tokens.LBRACE}) = :cell1d
 Expr(x::KEYWORD{T}) where {T} = Symbol(lowercase(string(T)))
 
 Expr(x::IDENTIFIER) = x.val
-
+Expr(x::EXPR{IDENTIFIER}) = Symbol(x.val)
 
 function Expr(x::OPERATOR{O,K,dot}) where {O, K, dot} 
     if dot
@@ -350,6 +350,8 @@ function Expr(x::EXPR{Generator})
     end
     ret
 end
+
+
 
 function Expr(x::EXPR{TypedComprehension})
     ret = Expr(:typed_comprehension)

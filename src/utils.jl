@@ -181,7 +181,7 @@ macro catcherror(ps, startbyte, body)
     quote
         $(esc(body))
         if $(esc(ps)).errored
-            return ERROR{UnknownError}($(esc(ps)).nt.startbyte - $(esc(startbyte)), NOTHING)
+            return EXPR{ERROR}(EXPR[INSTANCE($(esc(ps)))], 0, Variable[], "Unknown error")
         end
     end
 end

@@ -130,6 +130,7 @@ abstract type Mutable <: Head end
 abstract type Parameters <: Head end
 abstract type Primitive <: Head end
 abstract type Quote <: Head end
+abstract type Quotenode <: Head end
 abstract type InvisBrackets <: Head end
 abstract type StringH <: Head end
 abstract type Struct <: Head end
