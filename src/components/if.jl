@@ -17,7 +17,7 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
     @catcherror ps startbyte ifblock = @default ps @closer ps ifelse parse_block(ps, start_col, closers = [Tokens.END, Tokens.ELSE, Tokens.ELSEIF])
     ret = EXPR(If, [kw, cond, ifblock], 0)
 
-    elseblock = EXPR(Block, SyntaxNode[], 0)
+    elseblock = EXPR{Block}(EXPR[], 0, Variable[], "")
     if ps.nt.kind == Tokens.ELSEIF
         next(ps)
         push!(ret.args, INSTANCE(ps))

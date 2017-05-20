@@ -54,7 +54,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.RETURN}})
     # Parsing
     kw = INSTANCE(ps)
     format_kw(ps)
-    @catcherror ps startbyte args = @default ps SyntaxNode[closer(ps) ? NOTHING : parse_expression(ps)]
+    @catcherror ps startbyte args = @default ps EXPR[closer(ps) ? NOTHING : parse_expression(ps)]
 
     # Construction
     ret = EXPR(Return, [kw; args], ps.nt.startbyte - startbyte)

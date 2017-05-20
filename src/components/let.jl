@@ -3,7 +3,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
     start_col = ps.t.startpos[2] + 4
 
     # Parsing
-    ret = EXPR(Let, [INSTANCE(ps)], -startbyte)
+    ret = EXPR{Let}(EXPR[INSTANCE(ps)], -startbyte, Variable[], "")
     format_kw(ps)
         
     

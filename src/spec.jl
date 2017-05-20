@@ -1,10 +1,10 @@
-abstract type SyntaxNode end
+
 mutable struct Variable
     id
     t
-    val::SyntaxNode
+    val
 end
-mutable struct EXPR{T} <: SyntaxNode
+mutable struct EXPR{T}
     args::Vector{EXPR}
     span::Int
     defs::Vector{Variable}
@@ -13,7 +13,7 @@ end
 EXPR(T, args) = EXPR{T}(args, 0, [], "")
 EXPR(T, args, span::Int) = EXPR{T}(args, span, [], "")
 
-abstract type INSTANCE <: SyntaxNode end
+abstract type INSTANCE end
 abstract type IDENTIFIER end
 abstract type LITERAL{K} end
 abstract type KEYWORD{K} end
@@ -53,12 +53,7 @@ function INSTANCE(ps::ParseState)
 end
 
 
-mutable struct QUOTENODE <: SyntaxNode
-    val::SyntaxNode
-    span::Int
-    punctuation::Vector{SyntaxNode}
-end
-QUOTENODE(val::SyntaxNode) = QUOTENODE(val, val.span, [])
+
 
 # heads
 
@@ -77,7 +72,7 @@ mutable struct File
     imports
     includes::Vector{Tuple{String,Any}}
     path::String
-    ast::SyntaxNode
+    ast::EXPR
     errors
 end
 File(path::String) = File([], [], path, EXPR(FILE, []), [])

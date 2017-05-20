@@ -17,7 +17,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
         #     return ERROR{MissingEnd}(ps.nt.startbyte - startbyte, EXPR(kw2, [sig], ps.nt.startbyte - startbyte, [kw1]))
         # end
         next(ps)
-        ret = EXPR(Abstract, [kw1, kw2, sig, INSTANCE(ps)], ps.nt.startbyte - startbyte)
+        ret = EXPR{Abstract}(EXPR[kw1, kw2, sig, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
     else
         # Parsing
         kw = INSTANCE(ps)
@@ -28,7 +28,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
         push!(ps.diagnostics, Diagnostic{Diagnostics.abstractDeprecation}(startbyte + (0:8), [Diagnostics.TextEdit(ps.t.endbyte + 1:ps.t.endbyte + 1, " end"), Diagnostics.TextEdit(startbyte + (0:kw.span), "abstract type ")]))
 
         # Construction
-        ret = EXPR(Abstract, SyntaxNode[kw, sig], ps.nt.startbyte - startbyte)
+        ret = EXPR{Abstract}(EXPR[kw, sig], ps.nt.startbyte - startbyte, Variable[], "")
     end
     # ret.defs = [Variable(Expr(get_id(sig)), :abstract, ret)]
     return ret
@@ -49,7 +49,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
     # push!(ps.diagnostics, Diagnostic{Diagnostics.bitstypeDeprecation}(startbyte + (0:(kw.span + arg1.span + arg2.span)), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("primitive type ", Expr(arg2)," ", Expr(arg1), " end"))]))
 
     # Construction
-    ret = EXPR(Bitstype, SyntaxNode[kw, arg1, arg2], ps.nt.startbyte - startbyte)
+    ret = EXPR{Bitstype}(EXPR[kw, arg1, arg2], ps.nt.startbyte - startbyte, Variable[], "")
     # ret.defs = [Variable(Expr(get_id(arg2)), :bitstype, ret)]
 
     return ret
@@ -73,12 +73,12 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.PRIMITIVE}})
             # return ERROR{MissingEnd}(ps.nt.startbyte - startbyte, EXPR(kw2, [sig, arg], ps.nt.startbyte - startbyte, [kw1]))
         # else
             next(ps)
-            ret = EXPR(Primitive, [kw1, kw2, sig, arg, INSTANCE(ps)], ps.nt.startbyte - startbyte)
+            ret = EXPR{Primitive}(EXPR[kw1, kw2, sig, arg, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
             # ret.defs = [Variable(get_id(sig), :bitstype, ret)]
         # end
         # ret.defs = [Variable(Expr(get_id(sig)), :bitstype, ret)]
     else
-        ret = IDENTIFIER(ps.nt.startbyte - startbyte, :primitive)
+        ret = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - startbyte, Variable[], "primitive")
     end
     return ret
 end
@@ -97,7 +97,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
     format_typename(ps, arg1)
     push!(ps.diagnostics, Diagnostic{Diagnostics.typealiasDeprecation}(startbyte + (0:(kw.span + arg1.span + arg2.span)), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("const ", Expr(arg1), " = ", Expr(arg2)))]))
 
-    return EXPR(TypeAlias, SyntaxNode[kw, arg1, arg2], ps.nt.startbyte - startbyte)
+    return EXPR{TypeAlias}(EXPR[kw, arg1, arg2], ps.nt.startbyte - startbyte, Variable[], "")
 end
 
 parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPE}}) = parse_struct(ps, TRUE)
@@ -117,7 +117,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MUTABLE}})
         unshift!(ret.args, kw)
         ret.span += kw.span
     else
-        ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :mutable)
+        ret = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], "mutable")
     end
     return ret
 end
@@ -139,7 +139,7 @@ function parse_struct(ps::ParseState, mutable)
     # Construction
     T = mutable == TRUE ? Tokens.TYPE : Tokens.IMMUTABLE
     next(ps)
-    ret = EXPR(mutable == TRUE ? Mutable : Struct, SyntaxNode[kw, sig, block, INSTANCE(ps)], ps.nt.startbyte - startbyte)
+    ret = EXPR{mutable == TRUE ? Mutable : Struct}(EXPR[kw, sig, block, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
     # ret.defs = [Variable(Expr(get_id(sig)), Expr(mutable) ? :mutable : :immutable, ret)]
 
     return ret

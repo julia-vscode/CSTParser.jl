@@ -129,7 +129,7 @@ Handles cases where an expression - `ret` - is not followed by
 + an expression preceded by a unary operator
 + A number followed by an expression (with no seperating white space)
 """
-function parse_compound(ps::ParseState, ret::SyntaxNode)
+function parse_compound(ps::ParseState, ret)
     startbyte = ps.nt.startbyte - ret.span
     if ps.nt.kind == Tokens.FOR
         ret = parse_generator(ps, ret)
@@ -142,8 +142,8 @@ function parse_compound(ps::ParseState, ret::SyntaxNode)
         ret = @closer ps paren parse_call(ps, ret)
     elseif ps.nt.kind == Tokens.LBRACE && isemptyws(ps.ws)
         ret = parse_curly(ps, ret)
-    elseif ps.nt.kind == Tokens.LSQUARE && isemptyws(ps.ws) && !(ret isa OPERATOR)
-        et = @nocloser ps block parse_ref(ps, ret)
+    elseif ps.nt.kind == Tokens.LSQUARE && isemptyws(ps.ws) && !(ret isa EXPR{OPERATOR{p,k,dot}} where {p,k,dot})
+        ret = @nocloser ps block parse_ref(ps, ret)
     elseif ps.nt.kind == Tokens.COMMA
         ret = parse_tuple(ps, ret)
     elseif isunaryop(ret) && ps.nt.kind != Tokens.EQ
@@ -226,7 +226,7 @@ Should be replaced with the approach taken in `parse_call`
 function parse_list(ps::ParseState, puncs)
     startbyte = ps.nt.startbyte
 
-    args = SyntaxNode[]
+    args = EXPR[]
 
     while !closer(ps)
         @catcherror ps startbyte a = @nocloser ps newline @closer ps comma parse_expression(ps)

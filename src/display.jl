@@ -30,9 +30,6 @@ function Base.show(io::IO, x::HEAD{:globalrefdoc}, indent = 0)
     println(io, "  "^indent, " @doc", "    [", x.span, "]")
 end
 
-function Base.show(io::IO, x::QUOTENODE, indent = 0)
-    println(io, "  "^indent, " QUOTENODE")
-end
 
 function Base.show(io::IO, x::ERROR, indent = 0)
     println(io, "  "^indent, " ERROR")

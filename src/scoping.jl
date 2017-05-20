@@ -41,6 +41,7 @@ function get_t(x::EXPR)
     end
 end
 
+# NEEDS FIX
 function func_sig(x::EXPR)
     name = x.args[1]
     args = x.args[2:end]
@@ -52,7 +53,7 @@ function func_sig(x::EXPR)
         mod = name.args[1]
         name = name.args[2]
     end
-    if name isa QUOTENODE
+    if name isa EXPR{Quotenode}
         name = name.val
     end
 end
@@ -119,7 +120,7 @@ function infer_t(val)
         else
             t = :Any
         end
-    elseif val isa QUOTENODE
+    elseif val isa EXPR{Quotenode}
         t = :QuoteNode
     else
         t = :Any
@@ -224,7 +225,7 @@ function _find_scope(x::EXPR, n, path, ind, offsets, scope)
     end
 end
 
-_find_scope(x::Union{QUOTENODE,INSTANCE,ERROR}, n, path, ind, offsets, scope) = x
+_find_scope(x::Union{INSTANCE,ERROR}, n, path, ind, offsets, scope) = x
 
 function find_scope(x::EXPR, n::Int)
     path = []

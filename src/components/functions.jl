@@ -73,7 +73,7 @@ function parse_call(ps::ParseState, ret)
     if ret isa EXPR{OPERATOR{PlusOp,Tokens.EX_OR,false}} || ret isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} || ret isa EXPR{OPERATOR{TimesOp,Tokens.AND, d1}} where d1
         arg = @precedence ps 20 parse_expression(ps)
         ret = EXPR{UnarySyntaxOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
-    elseif ret isa OPERATOR{20,Tokens.NOT,d1} where d1 || ret isa OPERATOR{PlusOp,Tokens.MINUS, d2} where d2 || ret isa OPERATOR{PlusOp,Tokens.PLUS, d3} where d3
+    elseif ret isa EXPR{OPERATOR{20,Tokens.NOT,d1}} where d1 || ret isa EXPR{OPERATOR{PlusOp,Tokens.MINUS, d2}} where d2 || ret isa EXPR{OPERATOR{PlusOp,Tokens.PLUS, d3}} where d3
         arg = @precedence ps 13 parse_expression(ps)
         if arg isa EXPR{TupleH}
             ret = EXPR{Call}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
@@ -267,9 +267,9 @@ end
 
 
 
-
+# NEEDS FIX
 _arg_id(x::INSTANCE) = x
-_arg_id(x::QUOTENODE) = x.val
+_arg_id(x::EXPR{Quotenode}) = x.val
 
 function _arg_id(x::EXPR)
     if x.head isa OPERATOR{DeclarationOp,Tokens.DECLARATION} || x.head == CURLY || x.head isa OPERATOR{0,Tokens.DDDOT} || x.head isa HEAD{Tokens.KW}
@@ -303,14 +303,14 @@ function _get_fname(sig)
     end
 end
 
-function function_name(sig::SyntaxNode)
+function function_name(sig::EXPR)
     if sig isa EXPR
         if sig.head == CALL || sig.head == CURLY
             return function_name(sig.args[1])
         elseif sig.head isa OPERATOR{DotOp,Tokens.DOT}
             return function_name(sig.args[2])
         end
-    elseif sig isa QUOTENODE
+    elseif sig isa EXPR{Quotenode}
         function_name(sig.val)
     elseif sig isa IDENTIFIER
         return sig.val
@@ -322,7 +322,7 @@ function function_name(sig::SyntaxNode)
 end
 
 
-function declares_function(x::SyntaxNode)
+function declares_function(x::EXPR)
     if x isa EXPR
         if x.head isa KEYWORD{Tokens.FUNCTION}
             return true

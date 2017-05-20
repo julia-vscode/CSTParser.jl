@@ -4,10 +4,6 @@ mutable struct Iterator{T}
 end
 next_iter(s::Iterator{T}) where {T} = (s.i += 1;s)
 
-start(x::INSTANCE) = 1
-next(x::INSTANCE, i) = x, i + 1
-length(x::INSTANCE) = 1
-done(x::INSTANCE, i) = i > 1
 
 
 """
@@ -222,7 +218,7 @@ function _find(x::EXPR, n, path, ind, offsets)
     end
 end
 
-_find(x::Union{QUOTENODE,INSTANCE,ERROR}, n, path, ind, offsets) = x
+_find(x::Union{INSTANCE,ERROR}, n, path, ind, offsets) = x
 
 function _find(x::EXPR, n::Int)
     path = []

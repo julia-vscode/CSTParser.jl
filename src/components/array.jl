@@ -8,7 +8,7 @@ Having hit '[' return either:
 """
 function parse_array(ps::ParseState)
     startbyte = ps.t.startbyte
-    args = SyntaxNode[INSTANCE(ps)]
+    args = EXPR[INSTANCE(ps)]
     format_lbracket(ps)
 
     if ps.nt.kind == Tokens.RSQUARE
@@ -26,7 +26,7 @@ function parse_array(ps::ParseState)
                 push!(args, INSTANCE(ps))
                 format_rbracket(ps)
 
-                if first_arg.args[1] isa EXPR{BinaryOpCall} && first_arg.args[2].head isa OPERATOR{AssignmentOp,Tokens.PAIR_ARROW}
+                if first_arg.args[1] isa EXPR{BinaryOpCall} && first_arg.args[2].head isa EXPR{OPERATOR{AssignmentOp,Tokens.PAIR_ARROW,false}}
                     return EXPR(DictComprehension, [args[1], first_arg, INSTANCE(ps)], ps.nt.startbyte - 
                     startbyte)
                 else
@@ -173,7 +173,7 @@ end
 _parse_ref(ret, ref) = EXPR(TypedComprehension, [ret, ref.args...], ret.span + ref.span)
 
 function _lint_hcat(ps::ParseState, ret)
-    if length(ret.args) == 3 && ret.args[3] isa QUOTENODE && ret.args[3].val isa KEYWORD{Tokens.END}
+    if length(ret.args) == 3 && ret.args[3] isa EXPR{Quotenode} && ret.args[3].val isa KEYWORD{Tokens.END}
         push!(ps.diagnostics, Diagnostic{Diagnostics.PossibleTypo}(ps.nt.startbyte + (-ret.span:0), []))
     end
 end

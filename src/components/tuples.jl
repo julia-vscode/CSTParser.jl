@@ -4,7 +4,7 @@
 `ret` is followed by a comma so tries to parse the rest of the
 tuple.
 """
-function parse_tuple(ps::ParseState, ret::SyntaxNode)
+function parse_tuple(ps::ParseState, ret)
     startbyte = ps.nt.startbyte
 
     # Parsing
@@ -28,7 +28,7 @@ function parse_tuple(ps::ParseState, ret::SyntaxNode)
         end
     else
         @catcherror ps startbyte nextarg = @closer ps tuple parse_expression(ps)
-        if ret isa EXPR{TupleH} && (!(first(ret.args) isa PUNCTUATION{Tokens.LPAREN})) # && length(ret.punctuation) == 0 ||
+        if ret isa EXPR{TupleH} && (!(first(ret.args) isa EXPR{PUNCTUATION{Tokens.LPAREN}})) # && length(ret.punctuation) == 0 ||
             push!(ret.args, op)
             push!(ret.args, nextarg) 
             ret.span += ps.nt.startbyte - startbyte

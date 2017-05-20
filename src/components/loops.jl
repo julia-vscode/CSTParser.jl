@@ -8,7 +8,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
     @catcherror ps startbyte ranges = @default ps parse_ranges(ps)
     @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
     next(ps)
-    ret = EXPR(For, SyntaxNode[kw, ranges, block, INSTANCE(ps)], ps.nt.startbyte - startbyte)
+    ret = EXPR{For}(EXPR[kw, ranges, block, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
 
     # Linting
     # if ranges isa EXPR && ranges.head == BLOCK
@@ -47,7 +47,7 @@ function parse_ranges(ps::ParseState)
     
     arg = @closer ps range @closer ps comma @closer ps ws parse_expression(ps)
     if ps.nt.kind == Tokens.COMMA
-        arg = EXPR(Block, [arg], arg.span)
+        arg = EXPR{Block}(EXPR[arg], arg.span, Variable[], "")
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(arg.args, INSTANCE(ps))
@@ -73,13 +73,13 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
     @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
     next(ps)
 
-    ret = EXPR(While, SyntaxNode[kw, cond, block, INSTANCE(ps)], ps.nt.startbyte - startbyte)
+    ret = EXPR{While}(EXPR[kw, cond, block, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
 
     # Linting
     if cond isa EXPR{BinarySyntaxOpCall} && cond.args[2] isa EXPR{OPERATOR{AssignmentOp,k1,d1}} where {k1,d1}
         push!(ps.diagnostics, Diagnostic{Diagnostics.CondAssignment}(startbyte + kw.span + (0:cond.span), []))
     end
-    if cond isa LITERAL{Tokens.FALSE}
+    if cond isa EXPR{LITERAL{Tokens.FALSE}}
         push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(startbyte:ps.nt.startbyte, []))
     end
 
@@ -87,10 +87,10 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.BREAK}})
-    return EXPR(Break, SyntaxNode[INSTANCE(ps)], ps.nt.startbyte - ps.t.startbyte)
+    return EXPR{Break}(EXPR[INSTANCE(ps)], ps.nt.startbyte - ps.t.startbyte, Variable[], "")
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONTINUE}})
-    return EXPR(Continue, SyntaxNode[INSTANCE(ps)], ps.nt.startbyte - ps.t.startbyte)
+    return EXPR{Continue}(EXPR[INSTANCE(ps)], ps.nt.startbyte - ps.t.startbyte, Variable[], "")
 end
 

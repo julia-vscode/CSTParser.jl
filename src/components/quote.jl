@@ -9,7 +9,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.QUOTE}})
     next(ps)
 
     # Construction
-    ret = EXPR(Quote, SyntaxNode[kw, arg, INSTANCE(ps)], ps.nt.startbyte - startbyte)
+    ret = EXPR{Quote}(EXPR[kw, arg, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
     
     return ret
 end

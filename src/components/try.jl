@@ -5,7 +5,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
     # Parsing
     kw = INSTANCE(ps)
     format_kw(ps)
-    ret = EXPR(Try, [kw], -ps.t.startbyte)
+    ret = EXPR{Try}(EXPR[kw], -ps.t.startbyte, Variable[], "")
 
     @catcherror ps startbyte tryblock = @default ps @closer ps trycatch parse_block(ps, start_col)
     push!(ret.args, tryblock)
@@ -14,7 +14,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
     if ps.nt.kind == Tokens.END
         next(ps)
         push!(ret.args, FALSE)
-        push!(ret.args, EXPR(Block, SyntaxNode[]))
+        push!(ret.args, EXPR{Block}(EXPR[], 0, Variable[], ""))
         push!(ret.args, INSTANCE(ps))
         ret.span += ps.nt.startbyte
         return ret
@@ -27,7 +27,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
         if ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END
             push!(ret.args, INSTANCE(ps))
             caught = FALSE
-            catchblock = EXPR(Block, SyntaxNode[])
+            catchblock = EXPR{Block}(EXPR[], 0, Variable[], "")
         else
             start1 = ps.nt.startbyte
             start_col = ps.t.startpos[2] + 4
@@ -38,7 +38,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
                 @catcherror ps startbyte caught = @default ps @closer ps ws @closer ps trycatch parse_expression(ps)
             end
             @catcherror ps startbyte catchblock = @default ps @closer ps trycatch parse_block(ps, start_col)
-            if !(caught isa IDENTIFIER || caught == FALSE)
+            if !(caught isa EXPR{IDENTIFIER} || caught == FALSE)
                 unshift!(catchblock.args, caught)
                 catchblock.span += caught.span
                 caught = FALSE
@@ -46,7 +46,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
         end
     else
         caught = FALSE
-        catchblock = EXPR(Block, SyntaxNode[])
+        catchblock = EXPR{Block}(EXPR[], 0, Variable[], "")
     end
     push!(ret.args, caught)
     push!(ret.args, catchblock)

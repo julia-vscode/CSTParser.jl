@@ -13,7 +13,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
     @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
 
     next(ps)
-    ret = EXPR(Macro, SyntaxNode[kw, sig, block, INSTANCE(ps)], ps.nt.startbyte - startbyte)
+    ret = EXPR{Macro}(EXPR[kw, sig, block, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
     # ret.defs =  [Variable(function_name(sig), :Macro, ret)]
     return ret
 end
@@ -26,22 +26,21 @@ Parses a macro call. Expects to start on the `@`.
 function parse_macrocall(ps::ParseState)
     startbyte = ps.t.startbyte
     next(ps)
-    mname = IDENTIFIER(ps.nt.startbyte - ps.lt.startbyte, string("@", ps.t.val))
+    mname = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.lt.startbyte, Variable[], string("@", ps.t.val))
     # Handle cases with @ at start of dotted expressions
     if ps.nt.kind == Tokens.DOT && isemptyws(ps.ws)
         while ps.nt.kind == Tokens.DOT
             next(ps)
             op = INSTANCE(ps)
             if ps.nt.kind != Tokens.IDENTIFIER
-                return ERROR{InvalidMacroName}(startbyte:ps.nt.startbyte, mname)
-                
+                return EXPR{ERROR}(EXPR[], 0, Variable[], "Invalid macro name")
             end
             next(ps)
             nextarg = INSTANCE(ps)
-            mname = EXPR(BinarySyntaxOpCall, [mname, op, QUOTENODE(nextarg)], mname.span + op.span + nextarg.span)
+            mname = EXPR{BinarySyntaxOpCall}(EXPR[mname, op, Quotenode(nextarg)], mname.span + op.span + nextarg.span, Variable[], "")
         end
     end
-    ret = EXPR(MacroCall, [mname], 0)
+    ret = EXPR{MacroCall}(EXPR[mname], 0, Variable[], "")
 
     if ps.nt.kind == Tokens.COMMA
         ret.span = ps.nt.startbyte - startbyte
@@ -71,7 +70,7 @@ end
 
 ismacro(x) = false
 ismacro(x::EXPR{LITERAL{Tokens.MACRO}}) = true
-ismacro(x::QUOTENODE) = ismacro(x.val)
+ismacro(x::EXPR{Quotenode}) = ismacro(x.args[1])
 function ismacro(x::EXPR{BinarySyntaxOpCall})
     if x.args[2] isa OPERATOR{DotOp,Tokens.DOT}
         return ismacro(x.args[2])

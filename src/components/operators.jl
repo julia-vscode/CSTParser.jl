@@ -58,6 +58,8 @@ precedence(op::Token) = op.kind == Tokens.DDDOT ? DddotOp :
                        op.kind == Tokens.PRIME ?             16 : 20
 
 precedence(x) = 0
+precedence(x::EXPR{OPERATOR{P,K,dot}}) where {P,K,dot} = P
+
 
 isoperator(kind) = Tokens.begin_ops < kind < Tokens.end_ops
 isoperator(t::Token) = isoperator(t.kind)

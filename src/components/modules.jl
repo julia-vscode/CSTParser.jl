@@ -34,7 +34,7 @@ end
 
 function parse_dot_mod(ps::ParseState, colon = false)
     startbyte = ps.nt.startbyte
-    args = SyntaxNode[]
+    args = EXPR[]
 
     while ps.nt.kind == Tokens.DOT || ps.nt.kind == Tokens.DDOT || ps.nt.kind == Tokens.DDDOT
         next(ps)
@@ -54,7 +54,7 @@ function parse_dot_mod(ps::ParseState, colon = false)
     # import/export ..
     if ps.nt.kind == Tokens.COMMA || ps.ws.kind == NewLineWS || ps.nt.kind == Tokens.ENDMARKER
         if length(args) == 2
-            return SyntaxNode[INSTANCE(ps)]
+            return EXPR[INSTANCE(ps)]
         end
     end
 
