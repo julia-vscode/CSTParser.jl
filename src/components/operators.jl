@@ -181,9 +181,9 @@ function parse_unary(ps::ParseState, op::EXPR{OPERATOR{P,K,dot}}) where {P,K,dot
     @catcherror ps startbyte arg = @precedence ps prec parse_expression(ps)
     
     if issyntaxunarycall(op)
-        ret = EXPR{UnarySyntaxOpCall}(EXPR[op, arg], op.span + arg.span, Variable[], "")::EXPR{Call}
+        ret = EXPR{UnarySyntaxOpCall}(EXPR[op, arg], op.span + arg.span, Variable[], "")
     else
-        ret = EXPR{Call}(EXPR[op, arg], op.span + arg.span, Variable[], "")::EXPR{Call}
+        ret = EXPR{Call}(EXPR[op, arg], op.span + arg.span, Variable[], "")
     end
     return ret
 end
@@ -203,7 +203,7 @@ function parse_unary(ps::ParseState, op::EXPR{OPERATOR{ColonOp,Tokens.COLON,fals
     else
         # Parsing
         @catcherror ps startbyte arg = @precedence ps 20 parse_expression(ps)
-        return EXPR(Quote, EXPR[op, arg], op.span + arg.span, Variable[], "")
+        return EXPR{Quote}(EXPR[op, arg], op.span + arg.span, Variable[], "")
     end
 end
 
@@ -309,7 +309,7 @@ function parse_chain_operator(ps::ParseState, ret::EXPR{ChainOpCall}, op::EXPR{O
         push!(ret.args, nextarg)
         ret.span += nextarg.span + op.span
     else
-        ret = invoke(parse_operator, Tuple{ParseState,EXPR,EXPR{OPERATOR{P,K, dot}} where {P, K, dot}}, ps, ret, op)
+        ret = invoke(parse_operator, Tuple{ParseState,EXPR,EXPR{OPERATOR{P1,K1, dot}} where {P1,K1,dot}}, ps, ret, op)
     end
     return ret
 end
@@ -324,7 +324,7 @@ function parse_chain_operator(ps::ParseState, ret::EXPR{BinaryOpCall}, op::EXPR{
         push!(ret.args, nextarg)
         ret.span += nextarg.span + op.span
     else
-        ret = invoke(parse_operator, Tuple{ParseState,EXPR,EXPR{OPERATOR{P,K, dot}} where {P, K, dot}}, ps, ret, op)
+        ret = invoke(parse_operator, Tuple{ParseState,EXPR,EXPR{OPERATOR{P,K, dot}} where {P1,K1,dot}}, ps, ret, op)
     end
     return ret
 end
@@ -357,7 +357,7 @@ end
 
 
 # parse where
-function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{WhereOp,Tokens.WHERE,false})
+function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}})
     startbyte = ps.nt.startbyte - op.span - ret.span
     
     # Parsing
@@ -384,7 +384,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{WhereOp,Tokens.W
     
     # Construction
     ret.span = ps.nt.startbyte - startbyte
-    return ret::Union{EXPR{BinarySyntaxOpCall},EXPR{ERROR}}
+    return ret
 end
 
 # parse dot access
@@ -434,11 +434,11 @@ end
 
 
 function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{DddotOp,Tokens.DDDOT,false}})
-    return EXPR{UnarySyntaxOpCall}(EXPR[ret, op], op.span + ret.span)
+    return EXPR{UnarySyntaxOpCall}(EXPR[ret, op], op.span + ret.span, Variable[], "")
 end
 
 function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{16,Tokens.PRIME,false}})
-    return EXPR{UnarySyntaxOpCall}([ret, op], op.span + ret.span)
+    return EXPR{UnarySyntaxOpCall}([ret, op], op.span + ret.span, Variable[], "")
 end
 
 function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{P,Tokens.ANON_FUNC, false}}) where {P}

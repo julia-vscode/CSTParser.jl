@@ -23,7 +23,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
 end
 
 function _lint_range(ps::ParseState, x, loc)
-    if x isa EXPR && (x.head == CALL && (x.args[1] isa OPERATOR{ComparisonOp,Tokens.IN} || x.args[1] isa OPERATOR{ComparisonOp,Tokens.ELEMENT_OF}))
+    if x isa EXPR{BinaryOpCall} && ((x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}}))
         if x.args[2] isa IDENTIFIER
             id = Expr(x.args[2])
             t = infer_t(x.args[3])
@@ -33,7 +33,7 @@ function _lint_range(ps::ParseState, x, loc)
             push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, []))
         end
         
-    elseif x isa EXPR && x.head isa OPERATOR{AssignmentOp,Tokens.EQ}
+    elseif x isa EXPR{BinarySyntaxOpCall} && x.head isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
         if x.args[2] isa LITERAL
             push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, []))
         end
@@ -76,7 +76,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
     ret = EXPR(While, SyntaxNode[kw, cond, block, INSTANCE(ps)], ps.nt.startbyte - startbyte)
 
     # Linting
-    if cond isa EXPR{BinarySyntaxOpCall} && cond.args[2] isa OPERATOR{AssignmentOp}
+    if cond isa EXPR{BinarySyntaxOpCall} && cond.args[2] isa EXPR{OPERATOR{AssignmentOp,k1,d1}} where {k1,d1}
         push!(ps.diagnostics, Diagnostic{Diagnostics.CondAssignment}(startbyte + kw.span + (0:cond.span), []))
     end
     if cond isa LITERAL{Tokens.FALSE}

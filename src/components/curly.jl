@@ -8,7 +8,7 @@ function parse_curly(ps::ParseState, ret)
     startbyte = ps.nt.startbyte - ret.span
     next(ps)
     format_lbracket(ps)
-    ret = EXPR(Curly, [ret, INSTANCE(ps)], ret.span - ps.t.startbyte)
+    ret = EXPR{Curly}(EXPR[ret, INSTANCE(ps)], ret.span - ps.t.startbyte, Variable[], "")
 
     @catcherror ps startbyte @default ps @nocloser ps inwhere @closer ps brace parse_comma_sep(ps, ret, true, false, false)
     next(ps)
@@ -21,7 +21,7 @@ end
 function parse_cell1d(ps::ParseState)
     startbyte = ps.t.startbyte
     format_lbracket(ps)
-    ret = EXPR(Cell1d, [INSTANCE(ps)], -startbyte)
+    ret = EXPR{Cell1d}(EXPR[INSTANCE(ps)], -startbyte, Variable[], "")
     @catcherror ps startbyte @default ps @closer ps brace parse_comma_sep(ps, ret, true, false, false)
     next(ps)
     push!(ret.args, INSTANCE(ps))

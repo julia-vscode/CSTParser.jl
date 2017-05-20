@@ -160,7 +160,6 @@ end
 
         @test "a where b where c" |> test_expr
     end
-
 end
 
 
