@@ -6,16 +6,16 @@ Comprehensions are parsed as SQUAREs containing a generator.
 """
 function parse_generator(ps::ParseState, ret)
     startbyte = ps.nt.startbyte
-    ret = EXPR(Generator, [ret], ret.span - startbyte)
+    ret = EXPR(Generator, SyntaxNode[ret], ret.span - startbyte)
     next(ps)
     push!(ret.args, INSTANCE(ps))
     @catcherror ps startbyte ranges = @closer ps paren @closer ps square parse_ranges(ps)
     
     if ps.nt.kind == Tokens.IF
         if ranges isa EXPR{Block}
-            ranges = EXPR(Filter, [ranges.args...], ranges.span)
+            ranges = EXPR(Filter, SyntaxNode[ranges.args...], ranges.span)
         else
-            ranges = EXPR(Filter, [ranges], ranges.span)
+            ranges = EXPR(Filter, SyntaxNode[ranges], ranges.span)
         end
         next(ps)
         unshift!(ranges.args, INSTANCE(ps))

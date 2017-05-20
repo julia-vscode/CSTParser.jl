@@ -16,15 +16,11 @@ randop() = rand(["-->", "→",
 
 
 function test_expr(str)
-    try
-        x, ps = CSTParser.parse(ParseState(str))
-        true
-    catch e
-        false
-    end
-    # x0 = Expr(x)
-    # x1 = remlineinfo!(Base.parse(str))
-    # !ps.errored && x0 == x1 && isempty(span(x))
+    x, ps = CSTParser.parse(ParseState(str))
+
+    x0 = Expr(x)
+    x1 = remlineinfo!(Base.parse(str))
+    !ps.errored && x0 == x1# && isempty(span(x))
 end
 
 @testset "All tests" begin
@@ -300,23 +296,23 @@ end
 end
 
 
-@testset "Modules" begin
-    @testset "Import/using " begin
-        @test "import ModA" |> test_expr
-        @test "import .ModA" |> test_expr
-        @test "import ..ModA.a" |> test_expr
-        @test "import ModA.subModA" |> test_expr
-        @test "import ModA.subModA: a" |> test_expr
-        @test "import ModA.subModA: a, b" |> test_expr
-        @test "import ModA.subModA: a, b.c" |> test_expr
-        @test "import .ModA.subModA: a, b.c" |> test_expr
-        @test "import ..ModA.subModA: a, b.c" |> test_expr
-    end
-    @testset "Export " begin
-        @test "export ModA" |> test_expr
-        @test "export a, b, c" |> test_expr
-    end
-end
+# @testset "Modules" begin
+#     @testset "Import/using " begin
+#         @test "import ModA" |> test_expr
+#         @test "import .ModA" |> test_expr
+#         @test "import ..ModA.a" |> test_expr
+#         @test "import ModA.subModA" |> test_expr
+#         @test "import ModA.subModA: a" |> test_expr
+#         @test "import ModA.subModA: a, b" |> test_expr
+#         @test "import ModA.subModA: a, b.c" |> test_expr
+#         @test "import .ModA.subModA: a, b.c" |> test_expr
+#         @test "import ..ModA.subModA: a, b.c" |> test_expr
+#     end
+#     @testset "Export " begin
+#         @test "export ModA" |> test_expr
+#         @test "export a, b, c" |> test_expr
+#     end
+# end
 
 @testset "Generators" begin
     @test "(y for y in X)" |> test_expr
@@ -513,141 +509,141 @@ end
     end
 end
 
-@testset "No longer broken things" begin
-    @test "[ V[j][i]::T for i=1:length(V[1]), j=1:length(V) ]" |> test_expr
-    @test "all(d ≥ 0 for d in B.dims)" |> test_expr
-    @test ":(=)" |> test_expr
-    @test ":(1)" |> test_expr
-    @test ":(a)" |> test_expr
-    @test "\"dimension \$d is not 1 ≤ \$d ≤ \$nd\" " |> test_expr
-    @test "(@_inline_meta(); f(x))" |> test_expr
-    @test "isa(a,b) != c" |> test_expr
-    @test "isa(a,a) != isa(a,a)" |> test_expr
-    @test "@mac return x" |> test_expr
-    @test "ccall(:gethostname, stdcall, Int32, ())" |> test_expr
-    @test "a,b," |> test_expr
-    @test "m!=m" |> test_expr
-    @test """
-    ccall(:jl_finalize_th, Void, (Ptr{Void}, Any,),
-                Core.getptls(), o)
-    """ |> test_expr
-    @test "\$(x...)" |> test_expr
-    @test "(Base.@_pure_meta;)" |> test_expr
-    @test "@inbounds @ncall a b c" |> test_expr
-    @test "(Base.@_pure_meta;)" |> test_expr
-    @test "@M a b->(@N c = @O d e f->g)" |> test_expr
-    @test "4x/y" |> test_expr
-    @test """
-    A[if n == d
-        i
-    else
-        (indices(A,n) for n = 1:nd)
-    end...]
-    """ |> test_expr
-    @test """Base.@__doc__(bitstype \$(sizeof(basetype) * 8) \$(esc(typename)) <: Enum{\$(basetype)})""" |> test_expr
-    @test """
-    @spawnat(p,
-        let m = a
-            isa(m, Exception) ? m : nothing
-        end)
-    """ |> test_expr
-    @test "[@spawn f(R, first(c), last(c)) for c in splitrange(length(R), nworkers())]" |> test_expr
-    @test "M.:(a)" |> test_expr
-    @test "-(-x)^1" |> test_expr
-    @test "f(a for a in A if cond)" |> test_expr
-    @test "M.r\"str\" " |> test_expr
-    @test "! = f" |> test_expr
-    @test """
-            begin
-                for i in I for j in J
-                    if cond
-                        a
-                    end
-                end end
-            end""" |> test_expr
-    @test "-f.(a.b + c)" |> test_expr
-    @test ":(import Base: @doc)" |> test_expr
-    @test "a.\$(b)" |> test_expr
-    @test "a.\$f()" |> test_expr
-    @test "[a for a in A for b in B]" |> test_expr
-    @test "[a=>1, b=>2]" |> test_expr
-    @test """@testset a for t in T
-        t
-    end""" |> test_expr
-    @test "(-, ~)" |> test_expr
-    @test "import Base.==" |> test_expr
-    @test "(a+b)``" |> test_expr
-    @test "a`text`" |> test_expr
-    @test "a``" |> test_expr
-    @test "a`text`b" |> test_expr
-    @test "[a; a 0]" |> test_expr
-    @test "[a, b; c]" |> test_expr
-    @test "t{a; b} " |> test_expr
-    @test "a ~ b + c -d" |> test_expr
-    @test "y[j=1:10,k=3:2:9; isodd(j+k) && k <= 8]" |> test_expr
-    @test "+(a,b,c...)" |> test_expr
-    @test "(8=>32.0, 12=>33.1, 6=>18.2)" |> test_expr
-    @test "(a,b = c,d)" |> test_expr
-    @test "[ -1 -2;]" |> test_expr
-    @test "-2y" |> test_expr # precedence
-    @test "'''" |> test_expr #tokenize
-    @test """
-        if j+k <= deg +1
-        end
-        """ |> test_expr
-    @test "function f() ::T end" |> test_expr # ws closer
-    @test "import Base: +, -, .+, .-" |> test_expr
-    @test "[a +   + l]" |> test_expr #ws closer
-    @test "@inbounds C[i,j] = - α[i] * αjc" |> test_expr
-    @test "@inbounds C[i,j] = - n * p[i] * pj" |> test_expr
-    @test """
-        if ! a
-            b
-        end
-        """ |> test_expr # ws closer
-    @test "[:-\n:+]" |> test_expr
-    @test "::a::b" |> test_expr
-    @test "-[1:nc]" |> test_expr
-    @test "f() where {a} = b" |> test_expr
-    @test "@assert .!(isna(res[2]))" |> test_expr # v0.6
-    @test "-((attr.rise / PANGO_SCALE)pt).value" |> test_expr
-    @test "!(a = b)" |> test_expr
-    @test "-(1)a" |> test_expr
-    @test "!(a)::T" |> test_expr
-    @test "a::b where T<:S" |> test_expr
-    @test "+(x::Bool, y::T)::promote_type(Bool,T) where T<:AbstractFloat" |> test_expr
-    @test "T where V<:(T where T)" |> test_expr
-    @test "function ^(z::Complex{T}, p::Complex{T})::Complex{T} where T<:AbstractFloat end" |> test_expr
-    @test "function +(a) where T where S end" |> test_expr
-    @test "function -(x::Rational{T}) where T<:Signed end" |> test_expr
-    @test "+(x...)" |> test_expr
-    @test "+(promote(x,y)...)" |> test_expr
-    @test "\$(a)(b)" |> test_expr
-    @test "if !(a) break end" |> test_expr
-    @test """function +(x::Bool, y::T)::promote_type(Bool,T) where T<:AbstractFloat
-                return ifelse(x, oneunit(y) + y, y)
-            end""" |> test_expr
-    @test """finalizer(x,x::GClosure->begin
-                    ccall((:g_closure_unref,Gtk.GLib.libgobject),Void,(Ptr{GClosure},),x.handle)
-                end)""" |> test_expr
-    @test "function \$A end" |> test_expr
-    @test "&ctx->exe_ctx_ref" |> test_expr
-    @test ":(\$(docstr).\$(TEMP_SYM)[\$(key)])" |> test_expr
-    @test "SpecialFunctions.\$(fsym)(n::Dual)" |> test_expr
-    @test "module a() end" |> test_expr
-end
+# @testset "No longer broken things" begin
+#     @test "[ V[j][i]::T for i=1:length(V[1]), j=1:length(V) ]" |> test_expr
+#     @test "all(d ≥ 0 for d in B.dims)" |> test_expr
+#     @test ":(=)" |> test_expr
+#     @test ":(1)" |> test_expr
+#     @test ":(a)" |> test_expr
+#     @test "\"dimension \$d is not 1 ≤ \$d ≤ \$nd\" " |> test_expr
+#     @test "(@_inline_meta(); f(x))" |> test_expr
+#     @test "isa(a,b) != c" |> test_expr
+#     @test "isa(a,a) != isa(a,a)" |> test_expr
+#     @test "@mac return x" |> test_expr
+#     @test "ccall(:gethostname, stdcall, Int32, ())" |> test_expr
+#     @test "a,b," |> test_expr
+#     @test "m!=m" |> test_expr
+#     @test """
+#     ccall(:jl_finalize_th, Void, (Ptr{Void}, Any,),
+#                 Core.getptls(), o)
+#     """ |> test_expr
+#     @test "\$(x...)" |> test_expr
+#     @test "(Base.@_pure_meta;)" |> test_expr
+#     @test "@inbounds @ncall a b c" |> test_expr
+#     @test "(Base.@_pure_meta;)" |> test_expr
+#     @test "@M a b->(@N c = @O d e f->g)" |> test_expr
+#     @test "4x/y" |> test_expr
+#     @test """
+#     A[if n == d
+#         i
+#     else
+#         (indices(A,n) for n = 1:nd)
+#     end...]
+#     """ |> test_expr
+#     @test """Base.@__doc__(bitstype \$(sizeof(basetype) * 8) \$(esc(typename)) <: Enum{\$(basetype)})""" |> test_expr
+#     @test """
+#     @spawnat(p,
+#         let m = a
+#             isa(m, Exception) ? m : nothing
+#         end)
+#     """ |> test_expr
+#     @test "[@spawn f(R, first(c), last(c)) for c in splitrange(length(R), nworkers())]" |> test_expr
+#     @test "M.:(a)" |> test_expr
+#     @test "-(-x)^1" |> test_expr
+#     @test "f(a for a in A if cond)" |> test_expr
+#     @test "M.r\"str\" " |> test_expr
+#     @test "! = f" |> test_expr
+#     @test """
+#             begin
+#                 for i in I for j in J
+#                     if cond
+#                         a
+#                     end
+#                 end end
+#             end""" |> test_expr
+#     @test "-f.(a.b + c)" |> test_expr
+#     @test ":(import Base: @doc)" |> test_expr
+#     @test "a.\$(b)" |> test_expr
+#     @test "a.\$f()" |> test_expr
+#     @test "[a for a in A for b in B]" |> test_expr
+#     @test "[a=>1, b=>2]" |> test_expr
+#     @test """@testset a for t in T
+#         t
+#     end""" |> test_expr
+#     @test "(-, ~)" |> test_expr
+#     @test "import Base.==" |> test_expr
+#     @test "(a+b)``" |> test_expr
+#     @test "a`text`" |> test_expr
+#     @test "a``" |> test_expr
+#     @test "a`text`b" |> test_expr
+#     @test "[a; a 0]" |> test_expr
+#     @test "[a, b; c]" |> test_expr
+#     @test "t{a; b} " |> test_expr
+#     @test "a ~ b + c -d" |> test_expr
+#     @test "y[j=1:10,k=3:2:9; isodd(j+k) && k <= 8]" |> test_expr
+#     @test "+(a,b,c...)" |> test_expr
+#     @test "(8=>32.0, 12=>33.1, 6=>18.2)" |> test_expr
+#     @test "(a,b = c,d)" |> test_expr
+#     @test "[ -1 -2;]" |> test_expr
+#     @test "-2y" |> test_expr # precedence
+#     @test "'''" |> test_expr #tokenize
+#     @test """
+#         if j+k <= deg +1
+#         end
+#         """ |> test_expr
+#     @test "function f() ::T end" |> test_expr # ws closer
+#     @test "import Base: +, -, .+, .-" |> test_expr
+#     @test "[a +   + l]" |> test_expr #ws closer
+#     @test "@inbounds C[i,j] = - α[i] * αjc" |> test_expr
+#     @test "@inbounds C[i,j] = - n * p[i] * pj" |> test_expr
+#     @test """
+#         if ! a
+#             b
+#         end
+#         """ |> test_expr # ws closer
+#     @test "[:-\n:+]" |> test_expr
+#     @test "::a::b" |> test_expr
+#     @test "-[1:nc]" |> test_expr
+#     @test "f() where {a} = b" |> test_expr
+#     @test "@assert .!(isna(res[2]))" |> test_expr # v0.6
+#     @test "-((attr.rise / PANGO_SCALE)pt).value" |> test_expr
+#     @test "!(a = b)" |> test_expr
+#     @test "-(1)a" |> test_expr
+#     @test "!(a)::T" |> test_expr
+#     @test "a::b where T<:S" |> test_expr
+#     @test "+(x::Bool, y::T)::promote_type(Bool,T) where T<:AbstractFloat" |> test_expr
+#     @test "T where V<:(T where T)" |> test_expr
+#     @test "function ^(z::Complex{T}, p::Complex{T})::Complex{T} where T<:AbstractFloat end" |> test_expr
+#     @test "function +(a) where T where S end" |> test_expr
+#     @test "function -(x::Rational{T}) where T<:Signed end" |> test_expr
+#     @test "+(x...)" |> test_expr
+#     @test "+(promote(x,y)...)" |> test_expr
+#     @test "\$(a)(b)" |> test_expr
+#     @test "if !(a) break end" |> test_expr
+#     @test """function +(x::Bool, y::T)::promote_type(Bool,T) where T<:AbstractFloat
+#                 return ifelse(x, oneunit(y) + y, y)
+#             end""" |> test_expr
+#     @test """finalizer(x,x::GClosure->begin
+#                     ccall((:g_closure_unref,Gtk.GLib.libgobject),Void,(Ptr{GClosure},),x.handle)
+#                 end)""" |> test_expr
+#     @test "function \$A end" |> test_expr
+#     @test "&ctx->exe_ctx_ref" |> test_expr
+#     @test ":(\$(docstr).\$(TEMP_SYM)[\$(key)])" |> test_expr
+#     @test "SpecialFunctions.\$(fsym)(n::Dual)" |> test_expr
+#     @test "module a() end" |> test_expr
+# end
 
-@testset "Broken things" begin
-    @test_broken "\$(a) * -\$(b)" |> test_expr
-    @test_broken "function(f, args...; kw...) end" |> test_expr
-    @test_broken """
-        "\\\\\$ch"
-        """ |> test_expr
-    @test_broken "µs" |> test_expr # normalize unicode
-    @test_broken """let f = ((; a = 1, b = 2) -> ()),
-                m = first(methods(f))
-                @test DSE.keywords(f, m) == [:a, :b]
-            end""" |> test_expr
-    @test_broken "-1^a" |> test_expr
-end
+# @testset "Broken things" begin
+#     @test_broken "\$(a) * -\$(b)" |> test_expr
+#     @test_broken "function(f, args...; kw...) end" |> test_expr
+#     @test_broken """
+#         "\\\\\$ch"
+#         """ |> test_expr
+#     @test_broken "µs" |> test_expr # normalize unicode
+#     @test_broken """let f = ((; a = 1, b = 2) -> ()),
+#                 m = first(methods(f))
+#                 @test DSE.keywords(f, m) == [:a, :b]
+#             end""" |> test_expr
+#     @test_broken "-1^a" |> test_expr
+# end
 end

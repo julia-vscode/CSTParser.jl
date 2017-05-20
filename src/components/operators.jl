@@ -280,6 +280,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{ColonOp,To
 
     # Construction
     if ret isa EXPR{BinarySyntaxOpCall} && ret.args[2] isa OPERATOR{ColonOp,Tokens.COLON} && length(ret.args) == 3
+        ret = EXPR(ColonOpCall, ret.args)
         push!(ret.args, op)
         push!(ret.args, nextarg)
         ret.span += ps.nt.startbyte - startbyte
@@ -296,11 +297,17 @@ parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{TimesOp,Tokens.STAR,false
 function parse_chain_operator(ps::ParseState, ret::EXPR, op::OPERATOR{P,K,false}) where {P, K}
     startbyte = ps.nt.startbyte - op.span - ret.span
     
-    if ret isa EXPR{BinaryOpCall} && ret.args[2] isa OPERATOR{P,K,false} && ret.args[2].span > 0
+    if ret isa EXPR{ChainOpCall} && ret.args[2] isa OPERATOR{P,K,false}
         # Parsing
         @catcherror ps startbyte nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
 
         # Construction
+        push!(ret.args, op)
+        push!(ret.args, nextarg)
+        ret.span += nextarg.span + op.span
+    elseif ret isa EXPR{BinaryOpCall} && ret.args[2] isa OPERATOR{P,K,false} && ret.args[2].span > 0
+        @catcherror ps startbyte nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
+        ret = EXPR(ChainOpCall, ret.args, ret.span)
         push!(ret.args, op)
         push!(ret.args, nextarg)
         ret.span += nextarg.span + op.span
@@ -322,7 +329,8 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{PowerOp,K}
     if ret isa EXPR{BinaryOpCall} && ret.args[2] isa OPERATOR && isunaryop(ret.args[2])
         # if !isempty(ret.punctuation)
         if false
-            xx = EXPR(HEAD{InvisibleBrackets}(0), [ret.args[2]], ret.args[2].span + sum(p.span for p in ret.punctuation), ret.punctuation)
+            # xx = EXPR(HEAD{InvisibleBrackets}(0), [ret.args[2]], ret.args[2].span + sum(p.span for p in ret.punctuation), ret.punctuation)
+            xx = EXPR(InvisBrackets, ret)
             nextarg = EXPR(BinaryOpCall, [op, xx, nextarg], op.span + xx.span + nextarg.span) 
         else
             nextarg = EXPR(BinaryOpCall, [ret.args[2], op, nextarg], op.span + ret.args[2].span + nextarg.span)
@@ -402,7 +410,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{DotOp})
         ret = EXPR(BinarySyntaxOpCall, SyntaxNode[ret, op, QUOTENODE(nextarg)], op.span + ret.span + nextarg.span)
     elseif nextarg isa EXPR{MacroCall}
         mname = EXPR(BinarySyntaxOpCall, [ret, op, QUOTENODE(nextarg.args[1])], ret.span + op.span + nextarg.args[1].span)
-        ret = EXPR(MacroCall, [mname, nextarg.args[2:end]...], ret.span + op.span + nextarg.span, nextarg.punctuation)
+        ret = EXPR(MacroCall, [mname, nextarg.args[2:end]...], ret.span + op.span + nextarg.span)
     else
         ret = EXPR(BinarySyntaxOpCall, SyntaxNode[ret, op, nextarg], op.span + ret.span + nextarg.span)
     end
@@ -424,7 +432,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{P,Tokens.A
     @catcherror ps startbyte arg = @closer ps comma @precedence ps 0 parse_expression(ps)
 
     # Construction
-    ret = EXPR(BinarySyntaxOpCall, [ret, EXPR(Block, [arg], arg.span)], ps.nt.startbyte - startbyte)
+    ret = EXPR(BinarySyntaxOpCall, [ret, op, EXPR(Block, [arg], arg.span)], ps.nt.startbyte - startbyte)
     
     return ret
 end
@@ -442,131 +450,4 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{P,K}) wher
         ret = EXPR(BinaryOpCall, [ret, op, nextarg], op.span + ret.span + nextarg.span)
     end
     return ret
-end
-
-
-
-
-function next(x::EXPR, s::Iterator{:op})
-    if length(x.args) == 2
-        if s.i == 1
-            return x.args[1], next_iter(s)
-        elseif s.i == 2
-            return x.args[2], next_iter(s)
-        end
-    else
-        if s.i == 1
-            return x.args[2], next_iter(s)
-        elseif s.i == 2
-            return x.args[1], next_iter(s)
-        elseif s.i == 3 
-            return x.args[3], next_iter(s)
-        end
-    end
-end
-
-function next(x::EXPR, s::Iterator{:opchain})
-    if isodd(s.i)
-        return x.args[div(s.i + 1, 2) + 1], next_iter(s)
-    elseif s.i == 2
-        return x.args[1], next_iter(s)
-    else 
-        return x.punctuation[div(s.i, 2) - 1], next_iter(s)
-    end
-end
-
-function next(x::EXPR, s::Iterator{:syntaxcall})
-    if length(x.args) == 1
-        if s.i == 1 
-            return x.head, next_iter(s)
-        else
-            return x.args[1], next_iter(s)
-        end
-    elseif s.n == 3
-        if s.i == 1
-            return x.args[1], next_iter(s)
-        elseif s.i == 2
-            return x.head, next_iter(s)
-        elseif s.i == 3 
-            return x.args[2], next_iter(s)
-        end
-    else
-        if s.i == 1
-            return x.head, next_iter(s)
-        elseif s.i == 2
-            return x.punctuation[1], next_iter(s)
-        elseif s.i == 3
-            return x.args[1], next_iter(s)
-        elseif s.i == 4
-            return x.punctuation[2], next_iter(s)
-        elseif s.i == 5
-            return x.args[1], next_iter(s)
-        elseif s.i == 6
-            return x.punctuation[3], next_iter(s)
-        end
-    end
-end
-
-
-function next(x::EXPR, s::Iterator{:(:)})
-    if s.i == 1
-        return x.args[1], next_iter(s)
-    elseif s.i == 2
-        return x.head, next_iter(s)
-    elseif s.i == 3
-        return x.args[2], next_iter(s)
-    elseif s.i == 4
-        return x.punctuation[1], next_iter(s)
-    elseif s.i == 5 
-        return x.args[3], next_iter(s)
-    end
-end
-
-function next(x::EXPR, s::Iterator{:?})
-    if s.i == 1
-        return x.args[1], next_iter(s)
-    elseif s.i == 2 
-        return x.punctuation[1], next_iter(s)
-    elseif s.i == 3
-        return x.args[2], next_iter(s)
-    elseif s.i == 4 
-        return x.punctuation[2], next_iter(s)
-    elseif s.i == 5
-        return x.args[3], next_iter(s)
-    end 
-end
-
-function next(x::EXPR, s::Iterator{:comparison})
-    return x.args[s.i], next_iter(s)
-end
-
-function next(x::EXPR, s::Iterator{:prime})
-    return (s.i == 1 ? x.args[s.i] : x.head), next_iter(s)
-end
-
-function _start_where(x::EXPR)
-    return Iterator{:where}(1, 1 + length(x.args) + length(x.punctuation))
-end
-
-
-function next(x::EXPR, s::Iterator{:where})
-    if isempty(x.punctuation)
-        if s.i == 1
-            return x.args[1], next_iter(s)
-        elseif s.i == 2
-            return x.head, next_iter(s)
-        else
-            return x.args[2], next_iter(s)
-        end
-    else
-        if s.i == 1
-            return x.args[1], next_iter(s)
-        elseif s.i == 2
-            return x.head, next_iter(s)
-        elseif isodd(s.i)
-            return x.punctuation[div(s.i - 1, 2)], next_iter(s)
-        elseif iseven(s.i)
-            return x.args[div(s.i, 2)], next_iter(s)
-        end
-    end
 end

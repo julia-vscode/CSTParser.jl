@@ -144,6 +144,8 @@ abstract type BinaryOpCall <: Head end
 abstract type BinarySyntaxOpCall <: Head end
 abstract type ConditionalOpCall <: Head end
 abstract type ComparisonOpCall <: Head end
+abstract type ChainOpCall <: Head end
+abstract type ColonOpCall <: Head end
 
 abstract type Abstract <: Head end
 abstract type Begin <: Head end
@@ -160,6 +162,7 @@ abstract type FunctionDef <: Head end
 abstract type Generator <: Head end
 abstract type Global <: Head end
 abstract type If <: Head end
+abstract type Kw <: Head end
 abstract type Let <: Head end
 abstract type Local <: Head end
 abstract type Macro <: Head end
@@ -179,6 +182,17 @@ abstract type Vect <: Head end
 abstract type While <: Head end
 abstract type x_Cmd <: Head end
 abstract type x_Str <: Head end
+
+abstract type Comprehension <: Head end
+abstract type DictComprehension <: Head end
+abstract type TypedComprehension <: Head end
+abstract type Hcat <: Head end
+abstract type TypedHcat <: Head end
+abstract type Ref <: Head end
+abstract type Row <: Head end
+abstract type Vcat <: Head end
+abstract type TypedVcat <: Head end
+abstract type Vect <: Head end
 
 
 mutable struct EXPR{T} <: SyntaxNode

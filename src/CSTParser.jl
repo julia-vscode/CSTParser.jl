@@ -129,7 +129,7 @@ Handles cases where an expression - `ret` - is not followed by
 + an expression preceded by a unary operator
 + A number followed by an expression (with no seperating white space)
 """
-function parse_compound(ps::ParseState, ret)
+function parse_compound(ps::ParseState, ret::SyntaxNode)
     startbyte = ps.nt.startbyte - ret.span
     if ps.nt.kind == Tokens.FOR
         @catcherror ps startbyte ret = parse_generator(ps, ret)
@@ -254,7 +254,7 @@ function parse_paren(ps::ParseState)
     
     @catcherror ps startbyte @default ps @nocloser ps inwhere @closer ps paren parse_comma_sep(ps, ret, false, true)
 
-    if length(ret.args) == 2 !(ret.args[2] isa EXPR{UnarySyntaxOpCall} && ret.args[2].args[2] isa OPERATOR{DddotOp,Tokens.DDDOT})
+    if length(ret.args) == 2 && !(ret.args[2] isa EXPR{UnarySyntaxOpCall} && ret.args[2].args[2] isa OPERATOR{DddotOp,Tokens.DDDOT})
         
         if ps.ws.kind != SemiColonWS
             # ret.head = HEAD{InvisibleBrackets}(0)

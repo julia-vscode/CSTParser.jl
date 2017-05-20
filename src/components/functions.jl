@@ -126,6 +126,9 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, fo
         # if kw && !ps.closer.brace && a isa EXPR && a.head isa OPERATOR{AssignmentOp,Tokens.EQ}
         #     a.head = HEAD{Tokens.KW}(a.head.span)
         # end
+        if kw && !ps.closer.brace && a isa EXPR{BinarySyntaxOpCall} && a.args[2] isa OPERATOR{AssignmentOp,Tokens.EQ}
+            a = EXPR(Kw, a.args, a.span)
+        end
         push!(ret.args, a)
         if ps.nt.kind == Tokens.COMMA
             next(ps)
