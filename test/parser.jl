@@ -32,8 +32,8 @@ end
     @testset "Binary Operators" begin
         for iter = 1:250
             str = join([["x$(randop())" for i = 1:19];"x"])
-            x = parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
+            
+            @test test_expr(str)
         end
     end
     @testset "Conditional Operator" begin
@@ -41,8 +41,7 @@ end
                 "a ? b:c : d"
                 "a ? b:c : d:e"]
         for str in strs
-            x = parse(str)
-            @test Expr(x) == remlineinfo!(Base.parse(str))
+            @test test_expr(str)
         end
     end
 
@@ -86,7 +85,6 @@ end
         @test "a::b..." |> test_expr
         @test "a where b..." |> test_expr
         @test "a.b..." |> test_expr
-        
     end
 
     @testset "unary op calls" begin

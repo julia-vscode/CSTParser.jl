@@ -153,29 +153,29 @@ function parse_compound(ps::ParseState, ret)
         op = INSTANCE(ps)
         format_op(ps, precedence(ps.t))
         @catcherror ps startbyte ret = parse_operator(ps, ret, op)
-    elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{DotOp,Tokens.DOT})) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
+    elseif (ret isa IDENTIFIER || (ret isa EXPR{BinarySyntaxOpCall} && ret.args[2] isa OPERATOR{DotOp,Tokens.DOT})) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
         next(ps)
         @catcherror ps startbyte arg = parse_string(ps, ret)
         ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
     # Suffix on x_str
-    elseif ret isa EXPR && ret.head == x_STR && ps.nt.kind == Tokens.IDENTIFIER
+    elseif ret isa EXPR{x_Str} && ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         arg = INSTANCE(ps)
         push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.val))
         ret.span += arg.span
-    elseif (ret isa IDENTIFIER || (ret isa EXPR && ret.head isa OPERATOR{DotOp,Tokens.DOT})) && ps.nt.kind == Tokens.CMD
+    elseif (ret isa IDENTIFIER || (ret isa EXPR{BinarySyntaxOpCall} && ret.args[2] isa OPERATOR{DotOp,Tokens.DOT})) && ps.nt.kind == Tokens.CMD
         next(ps)
         @catcherror ps startbyte arg = parse_string(ps, ret)
         ret = EXPR(x_CMD, [ret, arg], ret.span + arg.span)
-    elseif ret isa EXPR && ret.head == x_CMD && ps.nt.kind == Tokens.IDENTIFIER
+    elseif ret isa EXPR{x_Cmd} && ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         arg = INSTANCE(ps)
         push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.val))
         ret.span += arg.span
-    elseif ret isa EXPR && ret.head isa OPERATOR{20,Tokens.PRIME} 
+    elseif ret isa EXPR{UnarySyntaxOpCall} && ret.args[2] isa OPERATOR{20,Tokens.PRIME} 
         # prime operator followed by an identifier has an implicit multiplication
         @catcherror ps startbyte nextarg = @precedence ps 11 parse_expression(ps)
-        ret = EXPR(CALL, [OPERATOR{TimesOp,Tokens.STAR,false}(0), ret, nextarg], ret.span + nextarg.span)
+        ret = EXPR(Call, [ret, OPERATOR{TimesOp,Tokens.STAR,false}(0), nextarg], ret.span + nextarg.span)
 ################################################################################
 # Everything below here is an error
 ################################################################################

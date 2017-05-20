@@ -1,8 +1,8 @@
 is_func_call(x) = false
-function is_func_call(x::EXPR) 
-    if x.head == CALL
-        return true
-    elseif x.head isa OPERATOR{WhereOp} || x.head isa OPERATOR{DeclarationOp}
+is_func_call(x::EXPR) = false
+is_func_call(x::EXPR{Call}) = true
+function is_func_call(x::EXPR{BinarySyntaxOpCall}) 
+    if x.args[2] isa OPERATOR{WhereOp} || x.args[2] isa OPERATOR{DeclarationOp}
         return is_func_call(x.args[1])
     else
         return false

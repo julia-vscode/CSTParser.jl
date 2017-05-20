@@ -45,8 +45,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
     @catcherror ps startbyte arg2 = @default ps parse_expression(ps)
 
     # Linting
-    format_typename(ps, arg2)
-    push!(ps.diagnostics, Diagnostic{Diagnostics.bitstypeDeprecation}(startbyte + (0:(kw.span + arg1.span + arg2.span)), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("primitive type ", Expr(arg2)," ", Expr(arg1), " end"))]))
+    # format_typename(ps, arg2)
+    # push!(ps.diagnostics, Diagnostic{Diagnostics.bitstypeDeprecation}(startbyte + (0:(kw.span + arg1.span + arg2.span)), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("primitive type ", Expr(arg2)," ", Expr(arg1), " end"))]))
 
     # Construction
     ret = EXPR(Bitstype, SyntaxNode[kw, arg1, arg2], ps.nt.startbyte - startbyte)

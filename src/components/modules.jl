@@ -27,7 +27,7 @@ function parse_module(ps::ParseState)
     # Construction
     block.span += ps.nt.startbyte
     next(ps)
-    ret = EXPR((kw isa KEYWORD{Tokens.MODULE} ? Module : BareModule), [kw, arg, block. INSTANCE(ps)], ps.nt.startbyte - startbyte)
+    ret = EXPR((kw isa KEYWORD{Tokens.MODULE} ? Module : BareModule), [kw, arg, block, INSTANCE(ps)], ps.nt.startbyte - startbyte)
     # ret.defs = [Variable(Expr(arg), :module, ret)]
     return ret
 end

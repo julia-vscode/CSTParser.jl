@@ -76,7 +76,7 @@ function parse_call(ps::ParseState, ret)
         ret = EXPR(UnarySyntaxOpCall, [ret, arg], ret.span + arg.span)
     elseif ret isa OPERATOR{20,Tokens.NOT} || ret isa OPERATOR{PlusOp,Tokens.MINUS} || ret isa OPERATOR{PlusOp,Tokens.PLUS}
         arg = @precedence ps 13 parse_expression(ps)
-        if arg isa EXPR && arg.head == TUPLE
+        if arg isa EXPR{TupleH}
             # ret = EXPR(CALL, [ret; arg.args], ret.span + arg.span, arg.punctuation)
             ret = EXPR(Call, [ret; arg.args], ret.span + arg.span)
         else
@@ -85,8 +85,7 @@ function parse_call(ps::ParseState, ret)
         end
     elseif ret isa OPERATOR{ComparisonOp,Tokens.ISSUBTYPE} || ret isa OPERATOR{ComparisonOp,Tokens.ISSUPERTYPE} || ret isa OPERATOR{ComparisonOp,Tokens.ISSUPERTYPE}
         arg = @precedence ps 13 parse_expression(ps)
-        # ret = EXPR(ret, arg.args, ret.span + arg.span, arg.punctuation)
-        ret = EXPR(UnaryOpCall, [ret; arg.args], ret.span + arg.span, arg.punctuation)
+        ret = EXPR(Call, [ret; arg.args], ret.span + arg.span)
     else
         next(ps)
         # ret = EXPR(CALL, [ret], ret.span - ps.t.startbyte, [INSTANCE(ps)])

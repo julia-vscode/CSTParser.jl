@@ -28,6 +28,48 @@ Expr(x::LITERAL{Tokens.TRIPLE_STRING}) = x.val
 Expr(x::PUNCTUATION{K}) where {K} = string(K)
 Expr(x::QUOTENODE) = QuoteNode(Expr(x.val))
 
+function Expr(x::EXPR{Call})
+    ret = Expr(:call)
+    for a in x.args
+        if !(a isa PUNCTUATION)
+            push!(ret.args, Expr(a))
+        end
+    end
+    ret
+end
+
+function Expr(x::EXPR{Comparison})
+    ret = Expr(:comparison)
+    for a in x.args
+        if !(a isa PUNCTUATION)
+            push!(ret.args, Expr(a))
+        end
+    end
+    ret
+end
+Expr(x::EXPR{BinaryOpCall}) = Expr(:call, Expr(x.args[2]), Expr(x.args[1]), Expr(x.args[3]))
+
+Expr(x::EXPR{BinarySyntaxOpCall}) = Expr(Expr(x.args[2]), Expr(x.args[1]), Expr(x.args[3]))
+
+Expr(x::EXPR{FunctionDef}) = Expr(:function, Expr(x.args[2]), Expr(x.args[3]))
+Expr(x::EXPR{Struct}) = Expr(:type, false, Expr(x.args[2]), Expr(x.args[3]))
+Expr(x::EXPR{Mutable}) = Expr(:type, true, Expr(x.args[3]), Expr(x.args[4]))
+Expr(x::EXPR{Abstract}) = length(x.args) == 2 ? Expr(:abstract, Expr(x.args[2])) : Expr(:abstract, Expr(x.args[3]))
+Expr(x::EXPR{Bitstype}) = Expr(:bitstype, Expr(x.args[2]), Expr(x.args[3]))
+Expr(x::EXPR{Primitive}) = Expr(:bitstype, Expr(x.args[4]), Expr(x.args[3]))
+
+function Expr(x::EXPR{Block})
+    ret = Expr(:block)
+    for a in x.args
+        push!(ret.args, Expr(a))
+    end
+    return ret
+end
+
+Expr(x::EXPR{InvisBrackets}) = Expr(x.args[2])
+Expr(x::EXPR{Begin}) = Expr(x.args[2])
+
+
 function Expr(x::EXPR)
     if x.head isa HEAD{InvisibleBrackets}
         return Expr(x.args[1])
