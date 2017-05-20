@@ -433,7 +433,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{P,Tokens.AN
     @catcherror ps startbyte arg = @closer ps comma @precedence ps 0 parse_expression(ps)
 
     # Construction
-    ret = EXPR(BinarySyntaxOpCall, [ret, op, EXPR(Block, [arg], arg.span)], ps.nt.startbyte - startbyte)
+    ret = EXPR{BinarySyntaxOpCall}([ret, op, EXPR{Block}([arg], arg.span, Variable[], "")], ps.nt.startbyte - startbyte, Variable[], "")
     
     return ret
 end
@@ -446,11 +446,11 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{P,K, dot}})
     
     # Construction
     if issyntaxcall(op)
-        ret = EXPR(BinarySyntaxOpCall, [ret, op, nextarg], op.span + ret.span + nextarg.span)
+        ret = EXPR{BinarySyntaxOpCall}([ret, op, nextarg], op.span + ret.span + nextarg.span, Variable[], "")
     else
-        ret = EXPR(BinaryOpCall, [ret, op, nextarg], op.span + ret.span + nextarg.span)
+        ret = EXPR{BinaryOpCall}([ret, op, nextarg], op.span + ret.span + nextarg.span, Variable[], "")
     end
     return ret
 end
 
-parse_operator(ps::ParseState, ret::EXPR, op)
+

@@ -20,30 +20,26 @@ abstract type KEYWORD{K} end
 abstract type OPERATOR{P,K,dot} end
 abstract type PUNCTUATION{K} end
 abstract type HEAD{K} end
+abstract type ERROR end
 
 
-
-mutable struct ERROR{K} <: SyntaxNode
-    span::Int
-    partial::SyntaxNode
-end
 
 function LITERAL(ps::ParseState)
     span = ps.nt.startbyte - ps.t.startbyte
-    if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING
-        return parse_string(ps)
-    else
-        EXPR(LITERAL{ps.t.kind}, span, ps.t.val)
-    end
+    # if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING
+    #     return parse_string(ps)
+    # else
+        EXPR{LITERAL{ps.t.kind}}(EXPR[], span, Variable[], ps.t.val)
+    # end
 end
 
 IDENTIFIER(ps::ParseState) = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], ps.t.val)
 
 OPERATOR(ps::ParseState) = EXPR{OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], "")
 
-KEYWORD(ps::ParseState) = EXPR{KEYWORD{ps.t.kind}}([], ps.nt.startbyte - ps.t.startbyte)
+KEYWORD(ps::ParseState) = EXPR{KEYWORD{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], "")
 
-PUNCTUATION(ps::ParseState) = EXPR{PUNCTUATION{ps.t.kind}}([], ps.nt.startbyte - ps.t.startbyte)
+PUNCTUATION(ps::ParseState) = EXPR{PUNCTUATION{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], "")
 
 function INSTANCE(ps::ParseState)
     span = ps.nt.startbyte - ps.t.startbyte
@@ -53,7 +49,7 @@ function INSTANCE(ps::ParseState)
         isoperator(ps.t) ? OPERATOR(ps) :
         ispunctuation(ps.t) ? PUNCTUATION(ps) :
         ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION(ps) : 
-        ERROR{ps.t.kind}(0, NOTHING)
+        EXPR{ERROR}(EXPR[], span, Variable[], "")
 end
 
 
