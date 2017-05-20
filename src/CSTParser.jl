@@ -74,7 +74,7 @@ function parse_expression(ps::ParseState)
         else
             ret = INSTANCE(ps)
         end
-        if (ret isa OPERATOR{ColonOp,Tokens.COLON}) && ps.nt.kind != Tokens.COMMA
+        if (ret isa EXPR{OPERATOR{ColonOp,Tokens.COLON, false}}) && ps.nt.kind != Tokens.COMMA
             @catcherror ps startbyte ret = parse_unary(ps, ret)
         end
     elseif ps.t.kind == Tokens.AT_SIGN

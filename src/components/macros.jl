@@ -70,7 +70,7 @@ end
 
 
 ismacro(x) = false
-ismacro(x::LITERAL{Tokens.MACRO}) = true
+ismacro(x::EXPR{LITERAL{Tokens.MACRO}}) = true
 ismacro(x::QUOTENODE) = ismacro(x.val)
 function ismacro(x::EXPR{BinarySyntaxOpCall})
     if x.args[2] isa OPERATOR{DotOp,Tokens.DOT}
