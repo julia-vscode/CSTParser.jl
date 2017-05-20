@@ -1,31 +1,27 @@
 abstract type SyntaxNode end
-abstract type INSTANCE <: SyntaxNode end
-
-mutable struct IDENTIFIER <: INSTANCE
-    span::Int
-    val::Symbol
+mutable struct Variable
+    id
+    t
+    val::SyntaxNode
 end
-
-mutable struct LITERAL{K} <: INSTANCE
+mutable struct EXPR{T} <: SyntaxNode
+    args::Vector{EXPR}
     span::Int
+    defs::Vector{Variable}
     val::String
 end
+EXPR(T, args) = EXPR{T}(args, 0, [], "")
+EXPR(T, args, span::Int) = EXPR{T}(args, span, [], "")
 
-mutable struct KEYWORD{K} <: INSTANCE
-    span::Int
-end
+abstract type INSTANCE <: SyntaxNode end
+abstract type IDENTIFIER end
+abstract type LITERAL{K} end
+abstract type KEYWORD{K} end
+abstract type OPERATOR{P,K,dot} end
+abstract type PUNCTUATION{K} end
+abstract type HEAD{K} end
 
-mutable struct OPERATOR{P,K,dot} <: INSTANCE
-    span::Int
-end
 
-mutable struct PUNCTUATION{K} <: INSTANCE
-    span::Int
-end
-
-mutable struct HEAD{K} <: INSTANCE
-    span::Int
-end
 
 mutable struct ERROR{K} <: SyntaxNode
     span::Int
@@ -37,17 +33,17 @@ function LITERAL(ps::ParseState)
     if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING
         return parse_string(ps)
     else
-        LITERAL{ps.t.kind}(span, ps.t.val)
+        EXPR(LITERAL{ps.t.kind}, span, ps.t.val)
     end
 end
 
-IDENTIFIER(ps::ParseState) = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, Symbol(ps.t.val))
+IDENTIFIER(ps::ParseState) = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], ps.t.val)
 
-OPERATOR(ps::ParseState) = OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}(ps.nt.startbyte - ps.t.startbyte)
+OPERATOR(ps::ParseState) = EXPR{OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], "")
 
-KEYWORD(ps::ParseState) = KEYWORD{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte)
+KEYWORD(ps::ParseState) = EXPR{KEYWORD{ps.t.kind}}([], ps.nt.startbyte - ps.t.startbyte)
 
-PUNCTUATION(ps::ParseState) = PUNCTUATION{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte)
+PUNCTUATION(ps::ParseState) = EXPR{PUNCTUATION{ps.t.kind}}([], ps.nt.startbyte - ps.t.startbyte)
 
 function INSTANCE(ps::ParseState)
     span = ps.nt.startbyte - ps.t.startbyte
@@ -55,8 +51,8 @@ function INSTANCE(ps::ParseState)
         isliteral(ps.t) ? LITERAL(ps) :
         iskw(ps.t) ? KEYWORD(ps) :
         isoperator(ps.t) ? OPERATOR(ps) :
-        ispunctuation(ps.t) ? PUNCTUATION{ps.t.kind}(span) :
-        ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION{ps.t.kind}(span) : 
+        ispunctuation(ps.t) ? PUNCTUATION(ps) :
+        ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION(ps) : 
         ERROR{ps.t.kind}(0, NOTHING)
 end
 
@@ -70,45 +66,13 @@ QUOTENODE(val::SyntaxNode) = QUOTENODE(val, val.span, [])
 
 # heads
 
-const NOTHING = LITERAL{nothing}(0, "")
-const BLOCK = HEAD{Tokens.BLOCK}(0)
-const CALL = HEAD{Tokens.CALL}(0)
-const CCALL = HEAD{Tokens.CCALL}(0)
-const CELL1D = HEAD{Tokens.LBRACE}(0)
-const COMPARISON = HEAD{Tokens.COMPARISON}(0)
-const COMPREHENSION = HEAD{Tokens.COMPREHENSION}(0)
-const CURLY = HEAD{Tokens.CURLY}(0)
-const DICT_COMPREHENSION = HEAD{Tokens.DICT_COMPREHENSION}(0)
-const FILTER = HEAD{Tokens.FILTER}(0)
-const FLATTEN = HEAD{Tokens.FLATTEN}(0)
-const GENERATOR = HEAD{Tokens.GENERATOR}(0)
-const HCAT = HEAD{Tokens.HCAT}(0)
-const IF = HEAD{Tokens.IF}(0)
-const KW = HEAD{Tokens.KW}(0)
-const LINE = HEAD{Tokens.LINE}(0)
-const MACROCALL = HEAD{Tokens.MACROCALL}(0)
-const PARAMETERS = HEAD{Tokens.PARAMETERS}(0)
-const QUOTE = HEAD{Tokens.QUOTE}(0)
-const REF = HEAD{Tokens.REF}(0)
-const ROW = HEAD{Tokens.ROW}(0)
-const STRING = HEAD{Tokens.STRING}(0)
-const TOPLEVEL = HEAD{Tokens.TOPLEVEL}(0)
-const TUPLE = HEAD{Tokens.TUPLE}(0)
-const TYPED_COMPREHENSION = HEAD{Tokens.TYPED_COMPREHENSION}(0)
-const TYPED_HCAT = HEAD{Tokens.TYPED_HCAT}(0)
-const TYPED_VCAT = HEAD{Tokens.TYPED_VCAT}(0)
-const VCAT = HEAD{Tokens.VCAT}(0)
-const VECT = HEAD{Tokens.VECT}(0)
 
-# Misc items
-const x_STR = HEAD{Tokens.x_STR}(1)
-const x_CMD = HEAD{Tokens.x_CMD}(1)
-const FILE = HEAD{:file}(0)
+const TRUE = EXPR(LITERAL{Tokens.TRUE}, [], 0)
+const FALSE = EXPR(LITERAL{Tokens.FALSE}, [], 0)
+# const NOTHING = EXPR{LITERAL{nothing}}(EXPR[], 0, Variable[], "NOTHING")
+const NOTHING = EXPR{HEAD{:nothing}}(EXPR[], 0, Variable[], "nothing")
+const GlobalRefDOC = EXPR{HEAD{:globalrefdoc}}(EXPR[], 0, Variable[], "globalrefdoc")
 
-const TRUE = LITERAL{Tokens.TRUE}(0, "")
-const FALSE = LITERAL{Tokens.FALSE}(0, "")
-const AT_SIGN = PUNCTUATION{Tokens.AT_SIGN}(1)
-const GlobalRefDOC = HEAD{:globalrefdoc}(0)
 
 
 abstract type Scope{t} end
@@ -127,11 +91,7 @@ mutable struct Project
     files::Vector{File}
 end
 
-mutable struct Variable
-    id
-    t
-    val::SyntaxNode
-end
+
 
 const NoVariable = Variable(NOTHING, NOTHING, NOTHING)
 
@@ -207,14 +167,9 @@ abstract type Vect <: Head end
 
 
 
-mutable struct EXPR{T} <: SyntaxNode
-    args::Vector{SyntaxNode}
-    span::Int
-    defs::Vector{Variable}
-end
 
 
 
-EXPR(T, args) = EXPR{T}(args, 0, [])
-EXPR(T, args, span::Int) = EXPR{T}(args, span, [])
+
+
 

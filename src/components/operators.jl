@@ -344,7 +344,7 @@ end
 
 
 # parse where
-function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{WhereOp,Tokens.WHERE})
+function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{WhereOp,Tokens.WHERE,dot}) where {dot}
     startbyte = ps.nt.startbyte - op.span - ret.span
     
     # Parsing
@@ -375,7 +375,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{WhereOp,To
 end
 
 # parse dot access
-function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{DotOp})
+function parse_operator(ps::ParseState, ret::EXPR, op::OPERATOR{DotOp,K,dot}) where {K,dot}
     startbyte = ps.nt.startbyte - op.span - ret.span
 
     # Parsing
@@ -387,7 +387,8 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{DotOp})
         return ret
     elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA || ps.nt.kind == Tokens.WHERE
         next(ps)
-        nextarg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, Symbol(lowercase(string(ps.t.kind))))
+        # nextarg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, Symbol(lowercase(string(ps.t.kind))))
+        nextarg = EXPR{IDENTIFIER}([], ps.nt.startbyte - ps.t.startbyte, [], "where")
     elseif ps.nt.kind == Tokens.COLON
         next(ps)
         op2 = INSTANCE(ps)
@@ -406,7 +407,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{DotOp})
     end
 
     # Construction
-    if nextarg isa INSTANCE || (nextarg isa EXPR{Vect}) || nextarg isa EXPR{UnarySyntaxOpCall} && nextarg.args[1] isa OPERATOR{PlusOp,Tokens.EX_OR}
+    if nextarg isa EXPR{INSTANCE} || (nextarg isa EXPR{Vect}) || nextarg isa EXPR{UnarySyntaxOpCall} && nextarg.args[1] isa EXPRs{OPERATOR{PlusOp,Tokens.EX_OR, false}}
         ret = EXPR(BinarySyntaxOpCall, SyntaxNode[ret, op, QUOTENODE(nextarg)], op.span + ret.span + nextarg.span)
     elseif nextarg isa EXPR{MacroCall}
         mname = EXPR(BinarySyntaxOpCall, [ret, op, QUOTENODE(nextarg.args[1])], ret.span + op.span + nextarg.args[1].span)
@@ -418,15 +419,15 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{DotOp})
 end
 
 
-function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{DddotOp,Tokens.DDDOT})
+function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{DddotOp,Tokens.DDDOT,dot}) where {dot}
     return EXPR(UnarySyntaxOpCall, [ret, op], op.span + ret.span)
 end
 
-function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{16,Tokens.PRIME})
+function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{16,Tokens.PRIME,dot}}) where {dot}
     return EXPR(UnarySyntaxOpCall, [ret, op], op.span + ret.span)
 end
 
-function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{P,Tokens.ANON_FUNC}) where {P}
+function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{P,Tokens.ANON_FUNC, dot}}) where {P, dot}
     startbyte = ps.nt.startbyte - op.span - ret.span
     # Parsing
     @catcherror ps startbyte arg = @closer ps comma @precedence ps 0 parse_expression(ps)
@@ -437,7 +438,7 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{P,Tokens.A
     return ret
 end
 
-function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{P,K}) where {P, K}
+function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{P,K, dot}}) where {P, K, dot}
     startbyte = ps.nt.startbyte - op.span - ret.span
     
     # Parsing
@@ -451,3 +452,5 @@ function parse_operator(ps::ParseState, ret::SyntaxNode, op::OPERATOR{P,K}) wher
     end
     return ret
 end
+
+parse_operator(ps::ParseState, ret::EXPR, op)
