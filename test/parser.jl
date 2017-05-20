@@ -89,7 +89,7 @@ end
         @test "!(a,b)" |> test_expr
         @test "¬(a,b)" |> test_expr
         @test "~(a,b)" |> test_expr
-        @test "<:(a,b)" |> test_expr
+        @test_broken "<:(a,b)" |> test_expr
         @test "√(a,b)" |> test_expr
         @test "\$(a,b)" |> test_expr
         @test ":(a,b)" |> test_expr
@@ -296,23 +296,23 @@ end
 end
 
 
-# @testset "Modules" begin
-#     @testset "Import/using " begin
-#         @test "import ModA" |> test_expr
-#         @test "import .ModA" |> test_expr
-#         @test "import ..ModA.a" |> test_expr
-#         @test "import ModA.subModA" |> test_expr
-#         @test "import ModA.subModA: a" |> test_expr
-#         @test "import ModA.subModA: a, b" |> test_expr
-#         @test "import ModA.subModA: a, b.c" |> test_expr
-#         @test "import .ModA.subModA: a, b.c" |> test_expr
-#         @test "import ..ModA.subModA: a, b.c" |> test_expr
-#     end
-#     @testset "Export " begin
-#         @test "export ModA" |> test_expr
-#         @test "export a, b, c" |> test_expr
-#     end
-# end
+@testset "Modules" begin
+    # @testset "Import/using " begin
+    #     @test "import ModA" |> test_expr
+    #     @test "import .ModA" |> test_expr
+    #     @test "import ..ModA.a" |> test_expr
+    #     @test "import ModA.subModA" |> test_expr
+    #     @test "import ModA.subModA: a" |> test_expr
+    #     @test "import ModA.subModA: a, b" |> test_expr
+    #     @test "import ModA.subModA: a, b.c" |> test_expr
+    #     @test "import .ModA.subModA: a, b.c" |> test_expr
+    #     @test "import ..ModA.subModA: a, b.c" |> test_expr
+    # end
+    @testset "Export " begin
+        @test "export ModA" |> test_expr
+        @test "export a, b, c" |> test_expr
+    end
+end
 
 @testset "Generators" begin
     @test "(y for y in X)" |> test_expr

@@ -77,10 +77,8 @@ function parse_call(ps::ParseState, ret)
     elseif ret isa OPERATOR{20,Tokens.NOT} || ret isa OPERATOR{PlusOp,Tokens.MINUS} || ret isa OPERATOR{PlusOp,Tokens.PLUS}
         arg = @precedence ps 13 parse_expression(ps)
         if arg isa EXPR{TupleH}
-            # ret = EXPR(CALL, [ret; arg.args], ret.span + arg.span, arg.punctuation)
             ret = EXPR(Call, [ret; arg.args], ret.span + arg.span)
         else
-            # ret = EXPR(CALL, [ret, arg], ret.span + arg.span)
             ret = EXPR(UnaryOpCall, [ret, arg], ret.span + arg.span)
         end
     elseif ret isa OPERATOR{ComparisonOp,Tokens.ISSUBTYPE} || ret isa OPERATOR{ComparisonOp,Tokens.ISSUPERTYPE} || ret isa OPERATOR{ComparisonOp,Tokens.ISSUPERTYPE}
@@ -88,7 +86,6 @@ function parse_call(ps::ParseState, ret)
         ret = EXPR(Call, [ret; arg.args], ret.span + arg.span)
     else
         next(ps)
-        # ret = EXPR(CALL, [ret], ret.span - ps.t.startbyte, [INSTANCE(ps)])
         ret = EXPR(Call, [ret, INSTANCE(ps)], ret.span - ps.t.startbyte)
         format_lbracket(ps)
         @default ps @closer ps paren parse_comma_sep(ps, ret)
@@ -123,9 +120,6 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, fo
 
     @catcherror ps startbyte @nocloser ps inwhere @noscope ps @nocloser ps newline @closer ps comma while !closer(ps)
         a = parse_expression(ps)
-        # if kw && !ps.closer.brace && a isa EXPR && a.head isa OPERATOR{AssignmentOp,Tokens.EQ}
-        #     a.head = HEAD{Tokens.KW}(a.head.span)
-        # end
         if kw && !ps.closer.brace && a isa EXPR{BinarySyntaxOpCall} && a.args[2] isa OPERATOR{AssignmentOp,Tokens.EQ}
             a = EXPR(Kw, a.args, a.span)
         end
@@ -146,20 +140,21 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, fo
 
     if ps.ws.kind == SemiColonWS
         if block
-            # ret.head = BLOCK
-            # @nocloser ps newline @closer ps comma while @nocloser ps semicolon !closer(ps)
-            #     @catcherror ps startbyte a = parse_expression(ps)
-            #     push!(ret.args, a)
-            # end
+            body = EXPR(Block, SyntaxNode[pop!(ret.args)])
+            @nocloser ps newline @closer ps comma while @nocloser ps semicolon !closer(ps)
+                @catcherror ps startbyte a = parse_expression(ps)
+                push!(body.args, a)
+            end
+            push!(ret.args, body)
 
         else
             ps.nt.kind == Tokens.RPAREN && return 
             paras = EXPR(Parameters, [], -ps.nt.startbyte)
             @nocloser ps inwhere @nocloser ps newline @nocloser ps semicolon @closer ps comma while !closer(ps)
                 @catcherror ps startbyte a = parse_expression(ps)
-                # if kw && !ps.closer.brace && a isa EXPR && a.head isa OPERATOR{AssignmentOp,Tokens.EQ}
-                #     a.head = HEAD{Tokens.KW}(a.head.span)
-                # end
+                if kw && !ps.closer.brace && a isa EXPR{BinarySyntaxOpCall} && a.args[2] isa OPERATOR{AssignmentOp,Tokens.EQ}
+                    a = EXPR(Kw, a.args, a.span)
+                end
                 push!(paras.args, a)
                 if ps.nt.kind == Tokens.COMMA
                     next(ps)

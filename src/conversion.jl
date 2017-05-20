@@ -80,16 +80,21 @@ end
 
 # Expr(x::EXPR{FunctionDef}) = Expr(:function, Expr(x.args[2]), Expr(x.args[3]))
 Expr(x::EXPR{Struct}) = Expr(:type, false, Expr(x.args[2]), Expr(x.args[3]))
-Expr(x::EXPR{Mutable}) = Expr(:type, true, Expr(x.args[3]), Expr(x.args[4]))
+
+Expr(x::EXPR{Mutable}) = length(x.args) == 4 ? Expr(:type, true, Expr(x.args[2]), Expr(x.args[3])) : Expr(:type, true, Expr(x.args[3]), Expr(x.args[4]))
+
 Expr(x::EXPR{Abstract}) = length(x.args) == 2 ? Expr(:abstract, Expr(x.args[2])) : Expr(:abstract, Expr(x.args[3]))
 Expr(x::EXPR{Bitstype}) = Expr(:bitstype, Expr(x.args[2]), Expr(x.args[3]))
 Expr(x::EXPR{Primitive}) = Expr(:bitstype, Expr(x.args[4]), Expr(x.args[3]))
+Expr(x::EXPR{TypeAlias}) = Expr(:typealias, Expr(x.args[2]), Expr(x.args[3]))
 
 
 function Expr(x::EXPR{Block})
     ret = Expr(:block)
     for a in x.args
-        push!(ret.args, Expr(a))
+        if !(a isa PUNCTUATION)
+            push!(ret.args, Expr(a))
+        end
     end
     return ret
 end
@@ -149,6 +154,23 @@ function Expr(x::EXPR{Try})
     ret
 end
 
+function Expr(x::EXPR{Let})
+    ret = Expr(:let, Expr(x.args[end-1]))
+    for i = 1:length(x.args)-2
+        a = x.args[i]
+        if !(a isa PUNCTUATION || a isa KEYWORD)
+            push!(ret.args, Expr(a))
+        end
+    end
+    ret
+end
+
+function Expr(x::EXPR{Do})
+    ret = Expr(x.args[1])
+    insert!(ret.args, 2, Expr(:->, Expr(x.args[3]), Expr(x.args[4])))
+    ret
+end
+
 function Expr(x::EXPR{For})
     ret = Expr(:for)
     for a in x.args
@@ -170,8 +192,41 @@ function Expr(x::EXPR{While})
 end
 
 
+function Expr(x::EXPR{Return})
+    ret = Expr(:return)
+    for i = 2:length(x.args)
+        a = x.args[i]
+        push!(ret.args, Expr(a))
+    end
+    ret
+end
 
+function Expr(x::EXPR{Global})
+    ret = Expr(:global)
+    for i = 2:length(x.args)
+        a = x.args[i]
+        push!(ret.args, Expr(a))
+    end
+    ret
+end
 
+function Expr(x::EXPR{Local})
+    ret = Expr(:local)
+    for i = 2:length(x.args)
+        a = x.args[i]
+        push!(ret.args, Expr(a))
+    end
+    ret
+end
+
+function Expr(x::EXPR{Const})
+    ret = Expr(:const)
+    for i = 2:length(x.args)
+        a = x.args[i]
+        push!(ret.args, Expr(a))
+    end
+    ret
+end
 
 
 
@@ -239,7 +294,9 @@ end
 function Expr(x::EXPR{Ref})
     ret = Expr(:ref)
     for a in x.args
-        if !(a isa PUNCTUATION)
+        if a isa EXPR{Parameters}
+            insert!(ret.args, 2, Expr(a))
+        elseif !(a isa PUNCTUATION)
             push!(ret.args, Expr(a))
         end
     end
@@ -258,8 +315,11 @@ end
 
 function Expr(x::EXPR{TypedVcat})
     ret = Expr(:typed_vcat)
+    
     for a in x.args
-        if !(a isa PUNCTUATION)
+        if a isa EXPR{Parameters}
+            insert!(ret.args, 2, Expr(a))
+        elseif !(a isa PUNCTUATION)
             push!(ret.args, Expr(a))
         end
     end
@@ -277,10 +337,15 @@ function Expr(x::EXPR{Comprehension})
 end
 
 function Expr(x::EXPR{Generator})
-    ret = Expr(:Generator)
-    for a in x.args
-        if !(a isa PUNCTUATION) && !(a isa KEYWORD{Tokens.FOR})
-            push!(ret.args, Expr(a))
+    ret = Expr(:generator, Expr(x.args[1]))
+    for i = 3:length(x.args)
+        a = x.args[i]
+        if !(a isa PUNCTUATION)
+            if a isa EXPR{BinaryOpCall} && a.args[2] isa OPERATOR{ComparisonOp, Tokens.IN}
+                push!(ret.args, Expr(:(=), Expr(a.args[1]), Expr(a.args[3])))
+            else
+                push!(ret.args, Expr(a))
+            end
         end
     end
     ret
@@ -290,6 +355,29 @@ function Expr(x::EXPR{TypedComprehension})
     ret = Expr(:typed_comprehension)
     for a in x.args
         if !(a isa PUNCTUATION)
+            push!(ret.args, Expr(a))
+        end
+    end
+    ret
+end
+
+
+function Expr(x::EXPR{Export})
+    ret = Expr(:export)
+    for i = 2:length(x.args)
+        a = x.args[i]
+        if !(a isa PUNCTUATION)
+            push!(ret.args, Expr(a))
+        end
+    end
+    ret
+end
+
+function Expr(x::EXPR{Import})
+    ret = Expr(:import)
+    for i = 2:length(x.args)
+        a = x.args[i]
+        if !(a isa PUNCTUATION) || (a isa PUNCTUATION{Tokens.DOT} && a.span>0)
             push!(ret.args, Expr(a))
         end
     end

@@ -6,10 +6,10 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
     ret = EXPR(Let, [INSTANCE(ps)], -startbyte)
     format_kw(ps)
         
-    args = []
+    
     @default ps @closer ps comma @closer ps block while !closer(ps)
         @catcherror ps startbyte a = parse_expression(ps)
-        push!(args, a)
+        push!(ret.args, a)
         if ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(ret.args, INSTANCE(ps))
@@ -20,9 +20,6 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
 
     # Construction
     push!(ret.args, block)
-    for a in args
-        push!(ret.args, a)
-    end
     next(ps)
     push!(ret.args, INSTANCE(ps))
     ret.span += ps.nt.startbyte

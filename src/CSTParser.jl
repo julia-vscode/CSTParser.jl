@@ -106,7 +106,7 @@ function parse_expression(ps::ParseState)
         @catcherror ps startbyte ret = parse_compound(ps, ret)
     end
     if ps.closer.precedence != DotOp && closer(ps) && ret isa LITERAL{Tokens.MACRO}
-        ret = EXPR(MACROCALL, [ret], ret.span)
+        ret = EXPR(MacroCall, [ret], ret.span)
     end
 
     return ret
@@ -132,27 +132,27 @@ Handles cases where an expression - `ret` - is not followed by
 function parse_compound(ps::ParseState, ret::SyntaxNode)
     startbyte = ps.nt.startbyte - ret.span
     if ps.nt.kind == Tokens.FOR
-        @catcherror ps startbyte ret = parse_generator(ps, ret)
+        ret = parse_generator(ps, ret)
     elseif ps.nt.kind == Tokens.DO
-        @catcherror ps startbyte ret = parse_do(ps, ret)
+        ret = parse_do(ps, ret)
     elseif isajuxtaposition(ps, ret)
         op = OPERATOR{TimesOp,Tokens.STAR,false}(0)
-        @catcherror ps startbyte ret = parse_operator(ps, ret, op)
+        ret = parse_operator(ps, ret, op)
     elseif ps.nt.kind == Tokens.LPAREN && isemptyws(ps.ws)
-        @catcherror ps startbyte ret = @closer ps paren parse_call(ps, ret)
+        ret = @closer ps paren parse_call(ps, ret)
     elseif ps.nt.kind == Tokens.LBRACE && isemptyws(ps.ws)
-        @catcherror ps startbyte ret = parse_curly(ps, ret)
+        ret = parse_curly(ps, ret)
     elseif ps.nt.kind == Tokens.LSQUARE && isemptyws(ps.ws) && !(ret isa OPERATOR)
-        @catcherror ps startbyte ret = @nocloser ps block parse_ref(ps, ret)
+        et = @nocloser ps block parse_ref(ps, ret)
     elseif ps.nt.kind == Tokens.COMMA
-        @catcherror ps startbyte ret = parse_tuple(ps, ret)
+        ret = parse_tuple(ps, ret)
     elseif isunaryop(ret) && ps.nt.kind != Tokens.EQ
-        @catcherror ps startbyte ret = parse_unary(ps, ret)
+        ret = parse_unary(ps, ret)
     elseif isoperator(ps.nt)
         next(ps)
         op = INSTANCE(ps)
         format_op(ps, precedence(ps.t))
-        @catcherror ps startbyte ret = parse_operator(ps, ret, op)
+        ret = parse_operator(ps, ret, op)
     elseif (ret isa IDENTIFIER || (ret isa EXPR{BinarySyntaxOpCall} && ret.args[2] isa OPERATOR{DotOp,Tokens.DOT})) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
         next(ps)
         @catcherror ps startbyte arg = parse_string(ps, ret)
@@ -206,6 +206,9 @@ function parse_compound(ps::ParseState, ret::SyntaxNode)
     else
         ps.errored = true
         return ERROR{UnknownError}(ret.span, ret)
+    end
+    if ps.errored
+        return ERROR{UnknownError}(ps.nt.startbyte - startbyte, NOTHING)
     end
     return ret
 end
@@ -298,7 +301,7 @@ function parse_doc(ps::ParseState)
         end
 
         ret = parse_expression(ps)
-        ret = EXPR(MACROCALL, [GlobalRefDOC, doc, ret], doc.span + ret.span)
+        ret = EXPR(MacroCall, [GlobalRefDOC, doc, ret], doc.span + ret.span)
     elseif ps.nt.kind == Tokens.IDENTIFIER && ps.nt.val == "doc" && (ps.nnt.kind == Tokens.STRING || ps.nnt.kind == Tokens.TRIPLE_STRING)
         next(ps)
         doc = INSTANCE(ps)
@@ -306,7 +309,7 @@ function parse_doc(ps::ParseState)
         @catcherror ps startbyte arg = parse_string(ps, doc)
         doc = EXPR(x_STR, [doc, arg], doc.span + arg.span)
         ret = parse_expression(ps)
-        ret = EXPR(MACROCALL, [GlobalRefDOC, doc, ret], doc.span + ret.span)
+        ret = EXPR(MacroCall, [GlobalRefDOC, doc, ret], doc.span + ret.span)
     else
         ret = parse_expression(ps)
     end
@@ -315,13 +318,13 @@ end
 
 function parse(ps::ParseState, cont = false)
     if ps.l.io.size == 0
-        return (cont ? EXPR(FILE, [], 0) : nothing), ps
+        return (cont ? EXPR(FileH, [], 0) : nothing), ps
     end
     last_line = 0
     curr_line = 0
 
     if cont
-        top = EXPR(FILE, [], 0)
+        top = EXPR(FileH, [], 0)
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
             push!(top.args, LITERAL{nothing}(ps.nt.startbyte, :nothing))
@@ -332,11 +335,11 @@ function parse(ps::ParseState, cont = false)
             ret = parse_doc(ps)
 
             # join semicolon sep items
-            if curr_line == last_line && last(top.args) isa EXPR && last(top.args).head == TOPLEVEL
+            if curr_line == last_line && last(top.args) isa EXPR{TopLevel}
                 push!(last(top.args).args, ret)
                 last(top.args).span += ret.span
             elseif ps.ws.kind == SemiColonWS
-                push!(top.args, EXPR(TOPLEVEL, [ret], ret.span))
+                push!(top.args, EXPR(TopLevel, [ret], ret.span))
             else
                 push!(top.args, ret)
             end
@@ -351,7 +354,7 @@ function parse(ps::ParseState, cont = false)
             top = parse_doc(ps)
             last_line = ps.nt.startpos[1]
             if ps.ws.kind == SemiColonWS
-                top = EXPR(TOPLEVEL, [top], top.span)
+                top = EXPR(TopLevel, [top], top.span)
                 while ps.ws.kind == SemiColonWS && ps.nt.startpos[1] == last_line
                     ret = parse_doc(ps)
                     push!(top.args, ret)

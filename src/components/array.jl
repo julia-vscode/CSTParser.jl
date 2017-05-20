@@ -56,16 +56,18 @@ function parse_array(ps::ParseState)
             format_comma(ps)
             @catcherror ps startbyte @default ps @closer ps square parse_comma_sep(ps, ret, false)
 
-            next(ps)
-            push!(ret.args, INSTANCE(ps))
-            format_rbracket(ps)
+            
             
             if last(ret.args) isa EXPR{Parameters}
                 ret = EXPR(Vcat, ret.args, 0)
-                if isempty(last(ret.args).args)
-                    pop!(ret.args)
-                end
+                unshift!(ret.args, pop!(ret.args))
+                # if isempty(last(ret.args).args)
+                #     pop!(ret.args)
+                # end
             end
+            next(ps)
+            push!(ret.args, INSTANCE(ps))
+            format_rbracket(ps)
 
             ret.span = ps.nt.startbyte - startbyte
             return ret

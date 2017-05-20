@@ -323,7 +323,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                     ps = ParseState(str)
                     io = IOBuffer(str)
                     x, ps = parse(ps, true)
-                    sp = span(x)
+                    # sp = span(x)
                     if length(x.args) > 0 && x.args[1] isa LITERAL{nothing}
                         shift!(x.args)
                     end
