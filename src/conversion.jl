@@ -7,7 +7,7 @@ Expr(x::KEYWORD{T}) where {T} = Symbol(lowercase(string(T)))
 Expr(x::IDENTIFIER) = x.val
 Expr(x::EXPR{IDENTIFIER}) = Symbol(x.val)
 
-function Expr(x::OPERATOR{O,K,dot}) where {O, K, dot} 
+function Expr(x::EXPR{OPERATOR{O,K,dot}}) where {O, K, dot} 
     if dot
         Symbol(:., UNICODE_OPS_REVERSE[K])
     else
@@ -26,7 +26,8 @@ Expr(x::LITERAL{Tokens.STRING}) = x.val
 Expr(x::LITERAL{Tokens.TRIPLE_STRING}) = x.val
 
 Expr(x::PUNCTUATION{K}) where {K} = string(K)
-Expr(x::QUOTENODE) = QuoteNode(Expr(x.val))
+
+Expr(x::EXPR{Quotenode}) = QuoteNode(Expr(x.args[1]))
 
 function Expr(x::EXPR{Call})
     ret = Expr(:call)

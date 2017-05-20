@@ -163,9 +163,7 @@ abstract type Vect <: Head end
 
 
 
-
-
-
+Quotenode(x::EXPR) = EXPR{Quotenode}(EXPR[x], x.span, Variable[], "")
 
 
 
