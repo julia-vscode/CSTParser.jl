@@ -20,8 +20,8 @@ function parse_tuple(ps::ParseState, ret)
             ret =  EXPR{TupleH}(EXPR[ret, op], ret.span + op.span, Variable[], "")
         end
     elseif closer(ps)
-        if ret isa EXPR{TupleH} && #(length(ret.punctuation) == 0 || !(first(ret.args) isa PUNCTUATION{Tokens.LPAREN}))
-            push!(ret.punctuation, op)
+        if ret isa EXPR{TupleH}  #(length(ret.punctuation) == 0 || !(first(ret.args) isa PUNCTUATION{Tokens.LPAREN}))
+            push!(ret.args, op)
             ret.span += op.span
         else
             ret = EXPR{TupleH}(EXPR[ret, op], ret.span + op.span, Variable[], "")

@@ -27,7 +27,7 @@ Expr(x::EXPR{LITERAL{Tokens.TRIPLE_STRING}}) = x.val
 
 Expr(x::EXPR{PUNCTUATION{K}}) where {K} = string(K)
 
-Expr(x::EXPR{Quotenode}) = QuoteNode(Expr(x.args[1]))
+Expr(x::EXPR{Quotenode}) = QuoteNode(Expr(x.args[end]))
 
 function Expr(x::EXPR{Call})
     ret = Expr(:call)
@@ -122,7 +122,14 @@ end
 
 Expr(x::EXPR{InvisBrackets}) = Expr(x.args[2])
 Expr(x::EXPR{Begin}) = Expr(x.args[2])
-Expr(x::EXPR{Quote}) = Expr(:quote, Expr(x.args[2]))
+
+function Expr(x::EXPR{Quote}) 
+    if x.args[2] isa EXPR{InvisBrackets} && (x.args[2].args[2] isa EXPR{OPERATOR{p,k,d}} where {p,k,d} || x.args[2].args[2] isa EXPR{LITERAL{k1}} where k1 || x.args[2].args[2] isa EXPR{IDENTIFIER})
+        return QuoteNode(Expr(x.args[2]))
+    else
+        return Expr(:quote, Expr(x.args[2]))
+    end
+end
 
 
 function Expr(x::EXPR{If})

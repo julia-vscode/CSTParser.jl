@@ -136,7 +136,7 @@ function parse_compound(ps::ParseState, ret)
     elseif ps.nt.kind == Tokens.DO
         ret = parse_do(ps, ret)
     elseif isajuxtaposition(ps, ret)
-        op = OPERATOR{TimesOp,Tokens.STAR,false}(0)
+        op = EXPR{OPERATOR{TimesOp,Tokens.STAR,false}}(EXPR[], 0, Variable[], "")
         ret = parse_operator(ps, ret, op)
     elseif ps.nt.kind == Tokens.LPAREN && isemptyws(ps.ws)
         ret = @closer ps paren parse_call(ps, ret)
@@ -284,7 +284,7 @@ function parse(str::String, cont = false)
     ps = ParseState(str)
     x, ps = parse(ps, cont)
     if ps.errored
-        x = ERROR{UnknownError}(ps.nt.startbyte, x)
+        x = EXPR{ERROR}(EXPR[], 0, Variable[], "Unknown error")
     end
     return x
 end
