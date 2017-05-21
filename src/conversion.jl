@@ -515,7 +515,7 @@ function Expr(x::EXPR{Export})
     ret
 end
 
-Expr(x::EXPR{Module}) =Expr(:module, true, Expr(x.args[2]), Expr(x.args[3]))
+Expr(x::EXPR{ModuleH}) =Expr(:module, true, Expr(x.args[2]), Expr(x.args[3]))
 Expr(x::EXPR{BareModule}) =Expr(:module, false, Expr(x.args[2]), Expr(x.args[3]))
     
 

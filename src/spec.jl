@@ -136,6 +136,7 @@ abstract type While <: Head end
 abstract type x_Cmd <: Head end
 abstract type x_Str <: Head end
 
+abstract type ModuleH <: Head end
 abstract type BareModule <: Head end
 abstract type TopLevel <: Head end
 abstract type Export <: Head end
