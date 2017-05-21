@@ -11,36 +11,43 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
     ret = EXPR{For}(EXPR[kw, ranges, block, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
 
     # Linting
-    # if ranges isa EXPR && ranges.head == BLOCK
-    #     for r in ranges.args
-    #         _lint_range(ps, r, startbyte + kw.span + (0:ranges.span))
-    #     end
-    # else
-    #     _lint_range(ps, ranges, startbyte + kw.span + (0:ranges.span))
-    # end
+    if ranges isa EXPR{Block}
+        for r in ranges.args
+            _lint_range(ps, r, startbyte + kw.span + (0:ranges.span))
+        end
+    else
+        _lint_range(ps, ranges, startbyte + kw.span + (0:ranges.span))
+    end
 
     return ret
 end
 
-# function _lint_range(ps::ParseState, x, loc)
-#     if x isa EXPR{BinaryOpCall} && ((x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}}))
-#         if x.args[2] isa IDENTIFIER
-#             id = Expr(x.args[2])
-#             t = infer_t(x.args[3])
-#             push!(x.defs, Variable(id, t, x))
-#         end
-#         if x.args[3] isa LITERAL
-#             push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, []))
-#         end
-        
-#     elseif x isa EXPR{BinarySyntaxOpCall} && x.head isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
-#         if x.args[2] isa LITERAL
-#             push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, []))
-#         end
-#     else
-#         push!(ps.diagnostics, Diagnostic{Diagnostics.RangeNonAssignment}(loc, []))
-#     end
-# end
+function _lint_range(ps::ParseState, x::EXPR{BinaryOpCall}, loc)
+    if ((x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}}))
+        if x.args[2] isa EXPR{IDENTIFIER}
+            id = Expr(x.args[2])
+            t = infer_t(x.args[3])
+            push!(x.defs, Variable(id, t, x))
+        end
+        if x.args[3] isa EXPR{LITERAL{k}} where k
+            push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, []))
+        end
+    end
+end
+
+function _lint_range(ps::ParseState, x::EXPR{BinarySyntaxOpCall}, loc)
+    if x.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
+        if x.args[3] isa EXPR{LITERAL}
+            push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, []))
+        end
+    end
+end
+function _lint_range(ps::ParseState, x, loc)
+    push!(ps.diagnostics, Diagnostic{Diagnostics.RangeNonAssignment}(loc, []))
+end
+function _lint_range(ps::ParseState, x::EXPR{PUNCTUATION{k}}, loc) where k
+end
+
 
 function parse_ranges(ps::ParseState)
     startbyte = ps.nt.startbyte

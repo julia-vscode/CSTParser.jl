@@ -17,7 +17,6 @@ include("lexer.jl")
 include("errors.jl")
 include("spec.jl")
 include("utils.jl")
-# include("scoping.jl")
 include("deprecations.jl")
 include("components/array.jl")
 include("components/curly.jl")
@@ -39,6 +38,7 @@ include("components/types.jl")
 include("components/tuples.jl")
 include("conversion.jl")
 include("display.jl")
+include("scoping.jl")
 
 
 """
