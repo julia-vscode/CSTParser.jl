@@ -288,16 +288,28 @@ end
 
 function Expr(x::EXPR{Global})
     ret = Expr(:global)
-    for i = 2:length(x.args)
-        a = x.args[i]
-        push!(ret.args, Expr(a))
+    if x.args[2] isa EXPR{Const}
+        ret = Expr(:const, Expr(:global, Expr(x.args[2].args[2])))
+    elseif length(x.args) == 2 && x.args[2] isa EXPR{TupleH}
+        for a in x.args[2].args
+            if !(a isa EXPR{PUNCTUATION{pt}} where pt)
+                push!(ret.args, Expr(a))
+            end
+        end
+    else
+        for i = 2:length(x.args)
+            a = x.args[i]
+            push!(ret.args, Expr(a))
+        end
     end
     ret
 end
 
 function Expr(x::EXPR{Local})
     ret = Expr(:local)
-    if length(x.args) == 2 && x.args[2] isa EXPR{TupleH}
+    if x.args[2] isa EXPR{Const}
+        ret = Expr(:const, Expr(:global, Expr(x.args[2].args[2])))
+    elseif length(x.args) == 2 && x.args[2] isa EXPR{TupleH}
         for a in x.args[2].args
             if !(a isa EXPR{PUNCTUATION{pt}} where pt)
                 push!(ret.args, Expr(a))

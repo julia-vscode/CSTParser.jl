@@ -394,8 +394,6 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
         println(" : $neq    $(100*neq/N)%", "  -  $aerr     $(100*aerr/N)%")
         print_with_color(:magenta, "base failed")
         println(" : $bfail    $(100*bfail/N)%")
-        tic
-        println("inference.jl : ", @timed(parse(readstring(joinpath(dir, "inference.jl")), true))[2])
     end
     ret
 end

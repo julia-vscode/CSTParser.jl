@@ -172,7 +172,7 @@ function parse_compound(ps::ParseState, ret)
         arg = INSTANCE(ps)
         push!(ret.args, EXPR{LITERAL{Tokens.STRING}}(EXPR[], arg.span, Variable[], arg.val))
         ret.span += arg.span
-    elseif ret isa EXPR{UnarySyntaxOpCall} && ret.args[2] isa OPERATOR{20,Tokens.PRIME} 
+    elseif ret isa EXPR{UnarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{16,Tokens.PRIME, d1}} where d1
         # prime operator followed by an identifier has an implicit multiplication
         @catcherror ps startbyte nextarg = @precedence ps 11 parse_expression(ps)
         ret = EXPR{BinaryOpCall}(EXPR[ret, EXPR{OPERATOR{TimesOp,Tokens.STAR,false}}(EXPR[], 0, Variable[], ""), nextarg], ret.span + nextarg.span, Variable[], "")
@@ -306,7 +306,7 @@ function parse_doc(ps::ParseState)
         doc = INSTANCE(ps)
         next(ps)
         @catcherror ps startbyte arg = parse_string(ps, doc)
-        doc = EXPR{x_STR}(EXPR[doc, arg], doc.span + arg.span, Variable[], "")
+        doc = EXPR{x_Str}(EXPR[doc, arg], doc.span + arg.span, Variable[], "")
         ret = parse_expression(ps)
         ret = EXPR{MacroCall}(EXPR[GlobalRefDOC, doc, ret], doc.span + ret.span, Variable[], "")
     else

@@ -12,7 +12,7 @@ function parse_string(ps::ParseState, prefixed = false)
     if istrip
         lit = unindent_triple_string(ps)
     else
-        lit = EXPR{LITERAL{ps.t.kind}}(Expr[], span, Variable[], ps.t.val[2:end - 1])
+        lit = EXPR{LITERAL{ps.t.kind}}(Expr[], span, Variable[], ps.t.val[2:end - 1])   
     end
 
     # there are interpolations in the string
@@ -21,19 +21,25 @@ function parse_string(ps::ParseState, prefixed = false)
             lit.val = replace(lit.val, "\\\"", "\"")
         end
         return lit
-    elseif ismatch(r"(?<!\\)\$", lit.val)
+    elseif ismatch(r"(?<!\\)\$", lit.val) # _has_interp(lit.val)
         io = IOBuffer(lit.val)
         ret = EXPR{StringH}(EXPR[], lit.span, Variable[], "")
         lc = ' '
         while !eof(io)
             io2 = IOBuffer()
+            # conseq_slash = 0
             while !eof(io)
                 c = read(io, Char)
                 write(io2, c)
-                if c == '$' && lc != '\\'
+                if c == '$' && lc != '\\' # && iseven(conseq_slash) 
                     break
                 end
                 lc = c
+                # if c == '\\'
+                #     conseq_slash +=1
+                # else
+                #     conseq_slash = 0
+                # end
             end
             str1 = String(take!(io2))
 
@@ -73,6 +79,21 @@ function parse_string(ps::ParseState, prefixed = false)
     return ret
 end
 
+function _has_interp(str)
+    i = 1
+    conseq_slash = 0
+    while i < endof(str)
+        if str[i] == '$' && iseven(conseq_slash)
+            return true
+        elseif str[i] == '\\'
+            conseq_slash += 1
+        else 
+            conseq_slash = 0
+        end
+        i = nextind(str, i)
+    end
+    return false
+end
 
 function unindent_triple_string(ps::ParseState)
     indent = -1

@@ -32,8 +32,9 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
         @catcherror ps startbyte sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_compound(ps, sig)
     end
 
-    if sig isa EXPR{InvisBrackets} && !(sig.args[1] isa EXPR{TupleH})
-        sig.args[1] = EXPR{TupleH}(EXPR[sig.args[1]], sig.args[1].span, Variable[], "")
+    if sig isa EXPR{InvisBrackets} && !(sig.args[2] isa EXPR{TupleH})
+        # sig.args[1] = EXPR{TupleH}(EXPR[sig.args[1]], sig.args[1].span, Variable[], "")
+        sig = EXPR{TupleH}(sig.args, sig.span, Variable[], "")
     end
 
     # _lint_func_sig(ps, sig, ps.nt.startbyte + (-sig.span:0))
