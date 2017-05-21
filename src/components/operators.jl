@@ -173,7 +173,7 @@ function parse_unary(ps::ParseState, op::EXPR{OPERATOR{P,K,dot}}) where {P,K,dot
         if op isa EXPR{OPERATOR{PlusOp,Tokens.MINUS,false}}
             arg.val = string("-", arg.val)
         end
-        return arg::EXPR{LITERAL}
+        return arg
     end
 
     # Parsing

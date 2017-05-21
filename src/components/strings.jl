@@ -12,7 +12,7 @@ function parse_string(ps::ParseState, prefixed = false)
     if istrip
         lit = unindent_triple_string(ps)
     else
-        lit = LITERAL{ps.t.kind}(span, ps.t.val[2:end - 1])
+        lit = EXPR{LITERAL{ps.t.kind}}(Expr[], span, Variable[], ps.t.val[2:end - 1])
     end
 
     # there are interpolations in the string
@@ -23,7 +23,7 @@ function parse_string(ps::ParseState, prefixed = false)
         return lit
     elseif ismatch(r"(?<!\\)\$", lit.val)
         io = IOBuffer(lit.val)
-        ret = EXPR(StringH, [], lit.span)
+        ret = EXPR{StringH}(EXPR[], lit.span, Variable[], "")
         lc = ' '
         while !eof(io)
             io2 = IOBuffer()
@@ -38,7 +38,7 @@ function parse_string(ps::ParseState, prefixed = false)
             str1 = String(take!(io2))
 
             if length(str1) > 0 && last(str1) === '$' && (length(str1) == 1 || str1[chr2ind(str1, length(str1) - 1)] != '\\')
-                lit2 = LITERAL{Tokens.STRING}(endof(str1) - 1, unescape_string(str1[1:end - 1]))
+                lit2 = EXPR{LITERAL{Tokens.STRING}}(EXPR[], endof(str1) - 1, Variable[], unescape_string(str1[1:end - 1]))
                 if !isempty(lit2.val)
                     push!(ret.args, lit2)
                 end

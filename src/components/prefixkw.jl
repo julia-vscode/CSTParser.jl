@@ -63,34 +63,34 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.RETURN}})
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.END}})
-    ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :end)
+    ret = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], "end")
     if !ps.closer.square
         ps.errored = true
-        return ERROR{UnexpectedEnd}(ret.span, ret)
+        return EXPR{ERROR}(EXPR[], 0, Variable[], "incorrect use of end")
     end
     return ret
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.ELSE}})
-    ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :else)
+    ret = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], "else")
     ps.errored = true
-    return ERROR{UnexpectedElse}(ret.span, ret)
+    return EXPR{ERROR}(EXPR[], 0, Variable[], "incorrect use of else")
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.ELSEIF}})
-    ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :elseif)
+    ret = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], "elseif")
     ps.errored = true
-    return ERROR{UnexpectedElseIf}(ret.span, ret)
+    return EXPR{ERROR}(EXPR[], 0, Variable[], "incorrect use of else")
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.CATCH}})
-    ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :catch)
+    ret = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], "catch")
     ps.errored = true
-    return ERROR{UnexpectedCatch}(ret.span, ret)
+    return EXPR{ERROR}(EXPR[], 0, Variable[], "incorrect use of catch")
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.FINALLY}})
     ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :finally)
     ps.errored = true
-    return ERROR{UnexpectedFinally}(ret.span, ret)
+    return EXPR{ERROR}(EXPR[], 0, Variable[], "incorrect use of finally")
 end

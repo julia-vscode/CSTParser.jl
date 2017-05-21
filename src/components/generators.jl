@@ -15,7 +15,7 @@ function parse_generator(ps::ParseState, ret)
         if ranges isa EXPR{Block}
             ranges = EXPR{Filter}(EXPR[ranges.args...], ranges.span, Variable[], "")
         else
-            ranges = EXPR{Filter}(EXRP[ranges], ranges.span, Variable[], "")
+            ranges = EXPR{Filter}(EXPR[ranges], ranges.span, Variable[], "")
         end
         next(ps)
         unshift!(ranges.args, INSTANCE(ps))

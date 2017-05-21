@@ -163,7 +163,7 @@ function parse_compound(ps::ParseState, ret)
         arg = INSTANCE(ps)
         push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.val))
         ret.span += arg.span
-    elseif (ret isa IDENTIFIER || (ret isa EXPR{BinarySyntaxOpCall} && ret.args[2] isa OPERATOR{DotOp,Tokens.DOT})) && ps.nt.kind == Tokens.CMD
+    elseif (ret isa EXPR{IDENTIFIER} || (ret isa EXPR{BinarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}})) && ps.nt.kind == Tokens.CMD
         next(ps)
         @catcherror ps startbyte arg = parse_string(ps, ret)
         ret = EXPR(x_CMD, [ret, arg], ret.span + arg.span)
@@ -327,7 +327,7 @@ function parse(ps::ParseState, cont = false)
         top = EXPR(FileH, [], 0)
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
-            push!(top.args, LITERAL{nothing}(ps.nt.startbyte, :nothing))
+            push!(top.args, EXPR{LITERAL{nothing}}(EXPR[], ps.nt.startbyte, Variable[], "comments"))
         end
         
         while !ps.done && !ps.errored
@@ -339,7 +339,7 @@ function parse(ps::ParseState, cont = false)
                 push!(last(top.args).args, ret)
                 last(top.args).span += ret.span
             elseif ps.ws.kind == SemiColonWS
-                push!(top.args, EXPR(TopLevel, [ret], ret.span))
+                push!(top.args, EXPR{TopLevel}(EXPR[ret], ret.span, Variable[], ""))
             else
                 push!(top.args, ret)
             end
@@ -349,7 +349,7 @@ function parse(ps::ParseState, cont = false)
     else
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
-            top = LITERAL{nothing}(ps.nt.startbyte, :nothing)
+            top = EXPR{LITERAL{nothing}}(EXPR[], ps.nt.startbyte, Variable[], "comments")
         else
             top = parse_doc(ps)
             last_line = ps.nt.startpos[1]

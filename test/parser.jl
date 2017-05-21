@@ -564,11 +564,6 @@ end
     """ |> test_expr
     @test "[@spawn f(R, first(c), last(c)) for c in splitrange(length(R), nworkers())]" |> test_expr
     @test "M.:(a)" |> test_expr
-    @test "-(-x)^1" |> test_expr
-    @test "\"dimension \$d is not 1 ≤ \$d ≤ \$nd\" " |> test_expr
-    @test "f(a for a in A if cond)" |> test_expr
-    @test "M.r\"str\" " |> test_expr
-    @test "(Base.@_pure_meta;)" |> test_expr
     @test """
             begin
                 for i in I for j in J
@@ -630,6 +625,11 @@ end
     @test "\$(a)(b)" |> test_expr
     @test "if !(a) break end" |> test_expr
     @test "module a() end" |> test_expr
+    @test "M.r\"str\" " |> test_expr
+    @test "f(a for a in A if cond)" |> test_expr
+    @test "\"dimension \$d is not 1 ≤ \$d ≤ \$nd\" " |> test_expr
+    @test "-(-x)^1" |> test_expr
+    @test "(Base.@_pure_meta;)" |> test_expr
 end
 
 @testset "Broken things" begin

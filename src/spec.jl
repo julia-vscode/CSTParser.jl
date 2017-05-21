@@ -100,6 +100,7 @@ abstract type ColonOpCall <: Head end
 
 abstract type Abstract <: Head end
 abstract type Begin <: Head end
+abstract type BareModule <: Head end
 abstract type Bitstype <: Head end
 abstract type Block <: Head end
 abstract type Break <: Head end

@@ -78,6 +78,10 @@ function Expr(x::EXPR{UnarySyntaxOpCall})
     end
 end
 
+function Expr(x::EXPR{UnaryOpCall}) 
+    return Expr(:call, Expr(x.args[1]), Expr(x.args[2]))
+end
+
 
 # Expr(x::EXPR{FunctionDef}) = Expr(:function, Expr(x.args[2]), Expr(x.args[3]))
 Expr(x::EXPR{Struct}) = Expr(:type, false, Expr(x.args[2]), Expr(x.args[3]))
@@ -235,6 +239,8 @@ function Expr(x::EXPR{Const})
     end
     ret
 end
+Expr(x::EXPR{Break}) = Expr(:break)
+Expr(x::EXPR{Continue}) = Expr(:continue)
 
 
 
@@ -394,188 +400,18 @@ function Expr(x::EXPR{Import})
     ret
 end
 
+function Expr(x::EXPR{Export})
+    ret = Expr(:file)
+    for a in x.args
+        push!(ret.args, Expr(a))
+    end
+    ret
+end
 
 
 
 
-# function Expr(x::EXPR)
-#     if x.head isa HEAD{InvisibleBrackets}
-#         return Expr(x.args[1])
-#     elseif x.head isa KEYWORD{Tokens.BEGIN}
-#         return Expr(x.args[1])
-#     elseif x.head isa KEYWORD{Tokens.ELSEIF}
-#         ret = Expr(:if)
-#         for a in x.args
-#             push!(ret.args, Expr(a))
-#         end
-#         return ret
-#     elseif x.head isa HEAD{Tokens.GENERATOR} ||  x.head isa HEAD{Tokens.FILTER}
-#         ret = Expr(Expr(x.head), Expr(x.args[1]))
-#         for a in x.args[2:end]
-#             push!(ret.args, fixranges(a))
-#         end
-#         return ret
-#     elseif x.head == FLATTEN
-#         x0 = deepcopy(x)
-#         x0 = Expr(x0.args[1])
-#         r2 = x0.args[1].args[2]
-#         x0.args[1].args[2] = x0.args[2]
-#         x0.args[2] = r2
-#         return Expr(:flatten, x0)
-#     elseif x.head isa KEYWORD{Tokens.STRUCT}
-#         ret = Expr(:type, Expr(x.args[1]))
-#         for a in x.args[2:end]
-#             push!(ret.args, Expr(a))
-#         end
-#         return ret
-#     elseif x.head isa KEYWORD{Tokens.IMMUTABLE}
-#         ret = Expr(:type, false)
-#         for a in x.args[2:end]
-#             push!(ret.args, Expr(a))
-#         end
-#         return ret
-#     elseif x.head isa KEYWORD{Tokens.TYPE} && length(x.punctuation) == 2
-#         if x.punctuation[1] isa KEYWORD{Tokens.ABSTRACT}
-#             return Expr(:abstract, Expr(x.args[1]))
-#         elseif x.punctuation[1] isa KEYWORD{Tokens.PRIMITIVE}
-#             return Expr(:bitstype, Expr(x.args[1]), Expr(x.args[2]))
-#         end
-#     elseif x.head isa HEAD{Tokens.QUOTE} && 
-#            x.args[1] isa EXPR && 
-#            x.args[1].head isa HEAD{InvisibleBrackets} && 
-#            length(x.args[1].args[1]) == 1 &&
-#            (first(x.args[1].args[1]) isa OPERATOR || first(x.args[1].args[1]) isa LITERAL || first(x.args[1].args[1]) isa IDENTIFIER)
-#         return QuoteNode(Expr(x.args[1].args[1]))
-#     elseif (x.head isa KEYWORD{Tokens.GLOBAL} || x.head isa KEYWORD{Tokens.LOCAL}) && x.args[1] isa EXPR && x.args[1].head isa KEYWORD{Tokens.CONST}
-#         return Expr(:const, Expr(Expr(x.head), Expr.(x.args[1].args)...))
-#     elseif x.head isa KEYWORD{Tokens.BAREMODULE}
-#         ret = Expr(:module)
-#         for a in x.args
-#             push!(ret.args, Expr(a))
-#         end 
-#         return ret
-#     elseif x.head isa KEYWORD{Tokens.DO}
-#         ret = Expr(x.args[1])
-#         i = 2
-#         while length(ret.args) >= i && ret.args[i] isa Expr && ret.args[i].head == :parameters
-#             i += 1
-#         end
-#         insert!(ret.args, i, Expr(:->, Expr(x.args[2]), Expr(x.args[3])))
-#         return ret
-#     elseif x.head == x_STR
-#         if x.args[1] isa IDENTIFIER
-#             return Expr(:macrocall, Symbol('@', Expr(x.args[1]), "_str"), Expr.(x.args[2:end])...)
-#         else
-#             head = Expr(x.args[1])
-#             if head.args[2] isa QuoteNode
-#                 head.args[2] = QuoteNode(Symbol('@', head.args[2].value, "_str"))
-#             end
-#             return Expr(:macrocall, head, Expr.(x.args[2:end])...)
-#         end
-#     elseif x.head == x_CMD
-#         if x.args[1] isa IDENTIFIER
-#             head = Symbol('@', Expr(x.args[1]), "_cmd")
-#         else
-#             head = Expr(x.args[1])
-#             if head.args[2] isa QuoteNode
-#                 head.args[2] = QuoteNode(Symbol('@', head.args[2].value, "_cmd"))
-#             end
-#         end
-#         ret = Expr(:macrocall, head)
-#         for a in x.args[2:end]
-#             if a isa LITERAL{Tokens.CMD}
-#                 push!(ret.args, a.val)
-#             else
-#                 push!(ret.args, Expr(a))
-#             end
-#         end
-#         return ret
-#     elseif x.head == MACROCALL
-#         if x.args[1] isa HEAD{:globalrefdoc}
-#             ret = Expr(:macrocall, GlobalRef(Core, Symbol("@doc")))
-#             for a in x.args[2:end]
-#                 push!(ret.args, Expr(a))
-#             end
-#             return ret
-#         elseif x.args[1] isa EXPR && x.args[1].head isa OPERATOR{DotOp,Tokens.DOT} && string(x.args[1].args[2].val.val)[1] != '@'
-#             x1 = deepcopy(x)
-#             x1.args[1].args[2].val.val = Symbol("@", x1.args[1].args[2].val.val)
-#             remove_first_at!(x1.args[1])
-#             return Expr(x1)
-#         end
-#     elseif x.head isa KEYWORD{Tokens.IMPORT} || x.head isa KEYWORD{Tokens.IMPORTALL} || x.head isa KEYWORD{Tokens.USING}
-#         ret = Expr(Expr(x.head))
-#         for i = 1:(length(x.punctuation) - length(x.args) + 1)
-#             push!(ret.args, :.)
-#         end
-#         for a in x.args
-#             push!(ret.args, Expr(a))
-#         end 
-#         return ret
-#     elseif x.head == TOPLEVEL && !(isempty(x.punctuation)) && (x.punctuation[1] isa KEYWORD{Tokens.IMPORT} || x.punctuation[1] isa KEYWORD{Tokens.IMPORTALL} || x.punctuation[1] isa KEYWORD{Tokens.USING})
-#         ret = Expr(Expr(x.head))
-#         col = findfirst(x -> x isa OPERATOR{ColonOp,Tokens.COLON}, x.punctuation)
-#         ndots = 0
-#         while x.punctuation[ndots + 2] isa OPERATOR{DotOp,Tokens.DOT}
-#             ndots += 1
-#         end
 
-#         if length(x.args) == 1
-#             a = first(x.args)
-#             aa = Expr(a)
-#             return Expr(Expr(a.head), (:. for i = 1:ndots)..., Expr.(x.punctuation[ndots + 2:2:col])..., aa.args...)
-#         end
-#         for a in x.args
-#             aa = Expr(a)
-#             push!(ret.args, Expr(Expr(a.head), (:. for i = 1:ndots)..., Expr.(x.punctuation[ndots + 2:2:col])..., aa.args...))
-
-#         end 
-#         return ret
-#     elseif x.head == CALL || x.head == CURLY || x.head == TYPED_VCAT
-#         # if x.head == CALL && x.args[1] isa OPERATOR{9, Tokens.MINUS} && length(x.args) == 2 && (x.args[2] isa LITERAL{Tokens.INTEGER} || x.args[2] isa LITERAL{Tokens.FLOAT})
-#         #     return -Expr(x.args[2])
-#         # end
-#         ret = Expr(Expr(x.head))
-#         for a in (x.args)
-#             if a isa EXPR && a.head == PARAMETERS
-#                 insert!(ret.args, 2, Expr(a))
-#             else
-#                 push!(ret.args, Expr(a))
-#             end
-#         end
-#         return ret
-#     elseif x.head == TUPLE || x.head == VCAT
-#         ret = Expr(Expr(x.head))
-#         for a in (x.args)
-#             if a isa EXPR && a.head == PARAMETERS
-#                 unshift!(ret.args, Expr(a))
-#             else
-#                 push!(ret.args, Expr(a))
-#             end
-#         end
-#         return ret
-#     elseif x.head isa KEYWORD{Tokens.FOR}
-#         ret = Expr(Expr(x.head))
-#         if x.args[1] isa EXPR && x.args[1].head == BLOCK
-#             ranges = Expr(:block)
-#             for a in x.args[1].args
-#                 push!(ranges.args, fixranges(a))
-#             end
-#             push!(ret.args, ranges)
-#         else
-#             push!(ret.args, fixranges(x.args[1]))
-#         end
-#         for a in x.args[2:end]
-#             push!(ret.args, Expr(a))
-#         end 
-#         return ret
-#     end
-#     ret = Expr(Expr(x.head))
-#     for a in x.args
-#         push!(ret.args, Expr(a))
-#     end 
-#     return ret
-# end
 
 function remove_first_at!(x)
     if x isa EXPR{BinarySyntaxOpCall} && x.head isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}}
