@@ -2,7 +2,7 @@ is_func_call(x) = false
 is_func_call(x::EXPR) = false
 is_func_call(x::EXPR{Call}) = true
 function is_func_call(x::EXPR{BinarySyntaxOpCall}) 
-    if x.args[2] isa OPERATOR{WhereOp} || x.args[2] isa OPERATOR{DeclarationOp}
+    if x.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}} || x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}
         return is_func_call(x.args[1])
     else
         return false

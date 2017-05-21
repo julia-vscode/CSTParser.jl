@@ -45,7 +45,13 @@ Expr(x::EXPR{LITERAL{Tokens.STRING}}) = x.val
 Expr(x::EXPR{LITERAL{Tokens.TRIPLE_STRING}}) = x.val
 
 function Expr(x::EXPR{x_Str})
-    ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_str"))
+    if x.args[1] isa EXPR{BinarySyntaxOpCall}
+        mname = Expr(x.args[1])
+        mname.args[2] = QuoteNode(Symbol("@",mname.args[2].value, "_str"))
+        ret = Expr(:macrocall, mname)
+    else
+        ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_str"))
+    end
     for i = 2:length(x.args)
         push!(ret.args, x.args[i].val)
     end
@@ -98,7 +104,20 @@ end
 
 Expr(x::EXPR{BinaryOpCall}) = Expr(:call, Expr(x.args[2]), Expr(x.args[1]), Expr(x.args[3]))
 
-Expr(x::EXPR{BinarySyntaxOpCall}) = Expr(Expr(x.args[2]), Expr(x.args[1]), Expr(x.args[3]))
+function Expr(x::EXPR{BinarySyntaxOpCall})
+    if x.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}}
+        ret = Expr(:where, Expr(x.args[1]))
+        for i = 3:length(x.args)
+            a = x.args[i]
+            if !(a isa EXPR{PUNCTUATION{pt}} where pt || a isa EXPR{KEYWORD{kt}} where kt)
+                push!(ret.args, Expr(a))
+            end
+        end
+    else
+        ret = Expr(Expr(x.args[2]), Expr(x.args[1]), Expr(x.args[3]))
+    end
+    return ret
+end
 
 
 Expr(x::EXPR{ConditionalOpCall}) = Expr(:if, Expr(x.args[1]), Expr(x.args[3]), Expr(x.args[5]))
@@ -222,7 +241,11 @@ function Expr(x::EXPR{For})
     ret = Expr(:for)
     for a in x.args
         if !(a isa EXPR{PUNCTUATION{pt}} where pt || a isa EXPR{KEYWORD{kt}} where kt)
-            push!(ret.args, Expr(a))
+                if a isa EXPR{BinaryOpCall} && (a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}})
+                    push!(ret.args, Expr(:(=), Expr(a.args[1]), Expr(a.args[3])))
+                else
+                    push!(ret.args, Expr(a))
+                end
         end
     end
     ret
@@ -386,6 +409,16 @@ function Expr(x::EXPR{Comprehension})
     end
     ret
 end
+# NEEDS FIX (only works for 2 levels )
+function Expr(x::EXPR{Flatten})
+    ret = Expr(:flatten, Expr(x.args[1]))
+
+    gen1 = ret.args[1].args[1].args[2]
+    gen2 = ret.args[1].args[2]
+    ret.args[1].args[1].args[2] = gen2
+    ret.args[1].args[2] = gen1
+    return ret
+end
 
 function Expr(x::EXPR{Generator})
     ret = Expr(:generator, Expr(x.args[1]))
@@ -401,6 +434,21 @@ function Expr(x::EXPR{Generator})
     end
     ret
 end
+
+function Expr(x::EXPR{Filter})
+    ret = Expr(:filter)
+    for a in x.args
+        if !(a isa EXPR{KEYWORD{Tokens.IF}})
+            if a isa EXPR{BinaryOpCall} && (a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}})
+                push!(ret.args, Expr(:(=), Expr(a.args[1]), Expr(a.args[3])))
+            else
+                push!(ret.args, Expr(a))
+            end
+        end
+    end
+    ret
+end
+
 
 
 
@@ -426,6 +474,10 @@ function Expr(x::EXPR{Export})
     ret
 end
 
+Expr(x::EXPR{Module}) =Expr(:module, true, Expr(x.args[2]), Expr(x.args[3]))
+Expr(x::EXPR{BareModule}) =Expr(:module, false, Expr(x.args[2]), Expr(x.args[3]))
+    
+
 
 
 function _get_import_block(x, i, ret)
@@ -436,7 +488,7 @@ function _get_import_block(x, i, ret)
     while i < length(x.args) && !(x.args[i+1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
         i += 1
         a = x.args[i]
-        if !(a isa EXPR{PUNCTUATION{pt}} where pt) && !(a isa EXPR{o} where o <: OPERATOR) 
+        if !(a isa EXPR{PUNCTUATION{pt}} where pt) && !(a isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}} || a isa EXPR{OPERATOR{ColonOp,Tokens.COLON,false}}) 
             push!(ret.args, Expr(a))
         end
     end
@@ -444,18 +496,23 @@ function _get_import_block(x, i, ret)
     return i
 end
 
-function Expr(x::EXPR{Import})
+
+Expr(x::EXPR{Import}) = expr_import(x, :import)
+Expr(x::EXPR{ImportAll}) = expr_import(x, :importall)
+Expr(x::EXPR{Using}) = expr_import(x, :using)
+
+function expr_import(x, kw)
     col = find(a isa EXPR{o} where o <: OPERATOR{ColonOp} for a in x.args)
     comma = find(a isa EXPR{PUNCTUATION{Tokens.COMMA}} for a in x.args)
     if isempty(comma)
-        ret = Expr(:import)
+        ret = Expr(kw)
         i = 1
         _get_import_block(x, i, ret)
     elseif isempty(col)
         ret = Expr(:toplevel)
         i = 1
         while i < length(x.args) 
-            nextarg = Expr(:import)
+            nextarg = Expr(kw)
             i = _get_import_block(x, i, nextarg)
             if i < length(x.args) &&(x.args[i+1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
                 i+=1
@@ -464,7 +521,7 @@ function Expr(x::EXPR{Import})
         end
     else
         ret = Expr(:toplevel)
-        top = Expr(:import)
+        top = Expr(kw)
         i = 1
         while x.args[i+1] isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}}
             i += 1
@@ -473,12 +530,12 @@ function Expr(x::EXPR{Import})
         while i < length(x.args) && !(x.args[i+1] isa EXPR{o} where o <: OPERATOR{ColonOp})
             i += 1
             a = x.args[i]
-            if !(a isa EXPR{PUNCTUATION{pt}} where pt) && !(a isa EXPR{o} where o <: OPERATOR) 
+            if !(a isa EXPR{PUNCTUATION{pt}} where pt) && !(a isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}} || a isa EXPR{OPERATOR{ColonOp,Tokens.COLON,false}}) 
                 push!(top.args, Expr(a))
             end
         end
         while i < length(x.args) 
-            nextarg = Expr(:import, top.args...)
+            nextarg = Expr(kw, top.args...)
             i = _get_import_block(x, i, nextarg)
             if i < length(x.args) &&(x.args[i+1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
                 i+=1
@@ -488,6 +545,51 @@ function Expr(x::EXPR{Import})
     end
     return ret
 end
+
+# function Expr(x::EXPR{Import})
+#     col = find(a isa EXPR{o} where o <: OPERATOR{ColonOp} for a in x.args)
+#     comma = find(a isa EXPR{PUNCTUATION{Tokens.COMMA}} for a in x.args)
+#     if isempty(comma)
+#         ret = Expr(:import)
+#         i = 1
+#         _get_import_block(x, i, ret)
+#     elseif isempty(col)
+#         ret = Expr(:toplevel)
+#         i = 1
+#         while i < length(x.args) 
+#             nextarg = Expr(:import)
+#             i = _get_import_block(x, i, nextarg)
+#             if i < length(x.args) &&(x.args[i+1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
+#                 i+=1
+#             end
+#             push!(ret.args, nextarg)
+#         end
+#     else
+#         ret = Expr(:toplevel)
+#         top = Expr(:import)
+#         i = 1
+#         while x.args[i+1] isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}}
+#             i += 1
+#             push!(top.args, :.)
+#         end
+#         while i < length(x.args) && !(x.args[i+1] isa EXPR{o} where o <: OPERATOR{ColonOp})
+#             i += 1
+#             a = x.args[i]
+#             if !(a isa EXPR{PUNCTUATION{pt}} where pt) && !(a isa EXPR{o} where o <: OPERATOR) 
+#                 push!(top.args, Expr(a))
+#             end
+#         end
+#         while i < length(x.args) 
+#             nextarg = Expr(:import, top.args...)
+#             i = _get_import_block(x, i, nextarg)
+#             if i < length(x.args) &&(x.args[i+1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
+#                 i+=1
+#             end
+#             push!(ret.args, nextarg)
+#         end
+#     end
+#     return ret
+# end
 
 function Expr(x::EXPR{FileH})
     ret = Expr(:file)

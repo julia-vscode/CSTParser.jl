@@ -27,7 +27,7 @@ function parse_module(ps::ParseState)
     # Construction
     block.span += ps.nt.startbyte
     next(ps)
-    ret = EXPR((kw isa KEYWORD{Tokens.MODULE} ? Module : BareModule), [kw, arg, block, INSTANCE(ps)], ps.nt.startbyte - startbyte)
+    ret = EXPR((kw isa EXPR{KEYWORD{Tokens.MODULE}} ? Module : BareModule), [kw, arg, block, INSTANCE(ps)], ps.nt.startbyte - startbyte)
     # ret.defs = [Variable(Expr(arg), :module, ret)]
     return ret
 end
@@ -63,7 +63,7 @@ function parse_dot_mod(ps::ParseState, colon = false)
             next(ps)
             next(ps)
             a = INSTANCE(ps)
-            a = EXPR{IDENTIFIER}(EXPR[], a.span + 1, Variable[], string("a", a.val))
+            a = EXPR{IDENTIFIER}(EXPR[], a.span + 1, Variable[], string("@", a.val))
             push!(args, a)
         elseif ps.nt.kind == Tokens.LPAREN
             next(ps)

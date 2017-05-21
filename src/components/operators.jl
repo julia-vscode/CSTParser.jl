@@ -341,16 +341,14 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{PowerOp,K,d
 
     # Construction
     # NEEDS FIX
-    if ret isa EXPR{BinaryOpCall} && isunaryop(ret.args[2])
-        # if !isempty(ret.punctuation)
+    if ret isa EXPR{UnaryOpCall} 
         if false
-            # xx = EXPR(HEAD{InvisibleBrackets}(0), [ret.args[2]], ret.args[2].span + sum(p.span for p in ret.punctuation), ret.punctuation)
-            xx = EXPR(InvisBrackets, ret)
+            xx = EXPR{InvisBrackets}([ret], ret.span, Variable[], "")
             nextarg = EXPR{BinaryOpCall}(EXPR[op, xx, nextarg], op.span + xx.span + nextarg.span, Variable[], "") 
         else
             nextarg = EXPR{BinaryOpCall}(EXPR[ret.args[2], op, nextarg], op.span + ret.args[2].span + nextarg.span, Variable[], "")
         end
-        ret = EXPR{BinaryOpCall}(EXPR[ret.args[1], op, nextarg], ret.args[1].span + nextarg.span, Variable[], "")
+        ret = EXPR{UnaryOpCall}(EXPR[ret.args[1], nextarg], ret.args[1].span + nextarg.span, Variable[], "")
     else
         ret = EXPR{BinaryOpCall}(EXPR[ret, op, nextarg], op.span + ret.span + nextarg.span, Variable[], "")
     end
