@@ -400,6 +400,16 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
     ret
 end
 
+function speed_test()
+    dir = dirname(Base.find_source_file("base.jl"))
+    println("speed test : ", @timed(for i = 1:5
+    parse(readstring(joinpath(dir, "inference.jl")), true);
+    parse(readstring(joinpath(dir, "random.jl")), true);
+    parse(readstring(joinpath(dir, "show.jl")), true);
+    parse(readstring(joinpath(dir, "abstractarray.jl")), true);
+end)[2])
+end
+
 """
     check_reformat()
 
