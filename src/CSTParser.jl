@@ -105,7 +105,7 @@ function parse_expression(ps::ParseState)
     while !closer(ps) && !(ps.closer.precedence == DotOp && ismacro(ret))
         @catcherror ps startbyte ret = parse_compound(ps, ret)
     end
-    if ps.closer.precedence != DotOp && closer(ps) && ret isa LITERAL{Tokens.MACRO}
+    if ps.closer.precedence != DotOp && closer(ps) && ret isa EXPR{LITERAL{Tokens.MACRO}}
         ret = EXPR(MacroCall, [ret], ret.span)
     end
 
@@ -354,13 +354,12 @@ function parse(ps::ParseState, cont = false)
             top = parse_doc(ps)
             last_line = ps.nt.startpos[1]
             if ps.ws.kind == SemiColonWS
-                top = EXPR(TopLevel, [top], top.span)
-                while ps.ws.kind == SemiColonWS && ps.nt.startpos[1] == last_line
+                top = EXPR{TopLevel}(EXPR[top], top.span, Variable[], "")
+                while ps.ws.kind == SemiColonWS && ps.nt.startpos[1] == last_line && ps.nt.kind != Tokens.ENDMARKER
                     ret = parse_doc(ps)
                     push!(top.args, ret)
                     top.span += ret.span
                     last_line = ps.nt.startpos[1]
-
                 end
             end
         end

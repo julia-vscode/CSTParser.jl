@@ -296,17 +296,17 @@ end
 
 
 @testset "Modules" begin
-    # @testset "Import/using " begin
-    #     @test "import ModA" |> test_expr
-    #     @test "import .ModA" |> test_expr
-    #     @test "import ..ModA.a" |> test_expr
-    #     @test "import ModA.subModA" |> test_expr
-    #     @test "import ModA.subModA: a" |> test_expr
-    #     @test "import ModA.subModA: a, b" |> test_expr
-    #     @test "import ModA.subModA: a, b.c" |> test_expr
-    #     @test "import .ModA.subModA: a, b.c" |> test_expr
-    #     @test "import ..ModA.subModA: a, b.c" |> test_expr
-    # end
+    @testset "Imports " begin
+        @test "import ModA" |> test_expr
+        @test "import .ModA" |> test_expr
+        @test "import ..ModA.a" |> test_expr
+        @test "import ModA.subModA" |> test_expr
+        @test "import ModA.subModA: a" |> test_expr
+        @test "import ModA.subModA: a, b" |> test_expr
+        @test "import ModA.subModA: a, b.c" |> test_expr
+        @test "import .ModA.subModA: a, b.c" |> test_expr
+        @test "import ..ModA.subModA: a, b.c" |> test_expr
+    end
     @testset "Export " begin
         @test "export ModA" |> test_expr
         @test "export a, b, c" |> test_expr

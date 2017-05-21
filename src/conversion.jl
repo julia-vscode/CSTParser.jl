@@ -1,10 +1,19 @@
 import Base: Expr
-# Converts EXPR to Base.Expr
+
+function Expr(x::EXPR)
+    ret = Expr(:call)
+    for a in x.args
+        if !(a isa EXPR{PUNCTUATION{t}} where t)
+            push!(ret.args, Expr(a))
+        end
+    end
+    ret
+end
 Expr(x::HEAD{T}) where {T} = Symbol(lowercase(string(T)))
 Expr(x::HEAD{Tokens.LBRACE}) = :cell1d
 Expr(x::KEYWORD{T}) where {T} = Symbol(lowercase(string(T)))
 
-Expr(x::IDENTIFIER) = x.val
+
 Expr(x::EXPR{IDENTIFIER}) = Symbol(x.val)
 
 function Expr(x::EXPR{OPERATOR{O,K,dot}}) where {O, K, dot} 
@@ -409,6 +418,10 @@ end
 
 function Expr(x::EXPR{Import})
     ret = Expr(:import)
+    col = find(a isa EXPR{PUNCTUATION{Tokens.COLON}} for a in x.args)
+    for i = 1:length(x.args)
+
+    end
     for i = 2:length(x.args)
         a = x.args[i]
         if (a isa EXPR{PUNCTUATION{Tokens.DOT}} && a.span>0) || !(a isa EXPR{PUNCTUATION{pt}} where pt) 
