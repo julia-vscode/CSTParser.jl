@@ -1,7 +1,3 @@
-# Macro expressions :
-#     definitions
-#     calls (ws and tuple form)
-
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
     startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2] + 4
@@ -17,8 +13,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
     @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
 
     next(ps)
-    ret = EXPR(kw, SyntaxNode[sig, block], ps.nt.startbyte - startbyte, INSTANCE[INSTANCE(ps)])
-    ret.defs =  [Variable(function_name(sig), :Macro, ret)]
+    ret = EXPR{Macro}(EXPR[kw, sig, block, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
+    # ret.defs =  [Variable(function_name(sig), :Macro, ret)]
     return ret
 end
 
@@ -30,22 +26,21 @@ Parses a macro call. Expects to start on the `@`.
 function parse_macrocall(ps::ParseState)
     startbyte = ps.t.startbyte
     next(ps)
-    mname = IDENTIFIER(ps.nt.startbyte - ps.lt.startbyte, string("@", ps.t.val))
+    mname = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.lt.startbyte, Variable[], string("@", ps.t.val))
     # Handle cases with @ at start of dotted expressions
     if ps.nt.kind == Tokens.DOT && isemptyws(ps.ws)
         while ps.nt.kind == Tokens.DOT
             next(ps)
             op = INSTANCE(ps)
             if ps.nt.kind != Tokens.IDENTIFIER
-                return ERROR{InvalidMacroName}(startbyte:ps.nt.startbyte, mname)
-                
+                return EXPR{ERROR}(EXPR[], 0, Variable[], "Invalid macro name")
             end
             next(ps)
             nextarg = INSTANCE(ps)
-            mname = EXPR(op, [mname, QUOTENODE(nextarg)], mname.span + op.span + nextarg.span)
+            mname = EXPR{BinarySyntaxOpCall}(EXPR[mname, op, Quotenode(nextarg)], mname.span + op.span + nextarg.span, Variable[], "")
         end
     end
-    ret = EXPR(MACROCALL, [mname], 0)
+    ret = EXPR{MacroCall}(EXPR[mname], 0, Variable[], "")
 
     if ps.nt.kind == Tokens.COMMA
         ret.span = ps.nt.startbyte - startbyte
@@ -53,11 +48,11 @@ function parse_macrocall(ps::ParseState)
     end
     if isemptyws(ps.ws) && ps.nt.kind == Tokens.LPAREN
         next(ps)
-        push!(ret.punctuation, INSTANCE(ps))
-        @catcherror ps startbyte args = @default ps @nocloser ps newline @closer ps paren parse_list(ps, ret.punctuation)
+        push!(ret.args, INSTANCE(ps))
+        @catcherror ps startbyte args = @default ps @nocloser ps newline @closer ps paren parse_list(ps, ret.args)
         append!(ret.args, args)
         next(ps)
-        push!(ret.punctuation, INSTANCE(ps))
+        push!(ret.args, INSTANCE(ps))
     else
         insquare = ps.closer.insquare
         @default ps while !closer(ps)
@@ -72,29 +67,12 @@ function parse_macrocall(ps::ParseState)
     return ret
 end
 
-function _start_macrocall(x::EXPR)
-    return Iterator{:macrocall}(1, length(x.args) + length(x.punctuation))
-end
-
-function next(x::EXPR, s::Iterator{:macrocall})
-    if isempty(x.punctuation)
-        return x.args[s.i], next_iter(s)
-    else
-        if s.i == s.n
-            return last(x.punctuation), next_iter(s)
-        elseif isodd(s.i)
-            return x.args[div(s.i + 1, 2)], next_iter(s)
-        else
-            return x.punctuation[div(s.i, 2)], next_iter(s)
-        end
-    end
-end
 
 ismacro(x) = false
-ismacro(x::LITERAL{Tokens.MACRO}) = true
-ismacro(x::QUOTENODE) = ismacro(x.val)
-function ismacro(x::EXPR)
-    if x.head isa OPERATOR{DotOp,Tokens.DOT}
+ismacro(x::EXPR{LITERAL{Tokens.MACRO}}) = true
+ismacro(x::EXPR{Quotenode}) = ismacro(x.args[1])
+function ismacro(x::EXPR{BinarySyntaxOpCall})
+    if x.args[2] isa OPERATOR{DotOp,Tokens.DOT}
         return ismacro(x.args[2])
     else
         return false
@@ -102,14 +80,3 @@ function ismacro(x::EXPR)
 end
 
 
-function next(x::EXPR, s::Iterator{:macro})
-    if s.i == 1
-        return x.head, next_iter(s)
-    elseif s.i == 2
-        return x.args[1], next_iter(s)
-    elseif s.i == 3
-        return x.args[2], next_iter(s)
-    elseif s.i == 4
-        return x.punctuation[1], next_iter(s)
-    end
-end

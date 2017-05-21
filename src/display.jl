@@ -1,53 +1,6 @@
-# function Base.show{T, K}(io::IO, x::INSTANCE{T,K},indent=0)
-#     println(io, " "^indent, " $((Tokens.Kind[K][1]))","    [",x.span,"]")
-# end
-
-Base.show(io::IO, x::IDENTIFIER, indent = 0) =
-    println(io, " "^indent, " $(x.val)")
-
-Base.show(io::IO, x::LITERAL{nothing}, indent = 0) =
-    println(io, " "^indent, " nothing", "    [", x.span, "]")
-
-Base.show(io::IO, x::LITERAL{K}, indent = 0) where {K} =
-    println(io, " "^indent, " $((Tokens.Kind[K][1]))", "    [", x.span, "]")
-
-Base.show(io::IO, x::KEYWORD{K}, indent = 0) where {K} =
-    println(io, " "^indent, " $((Tokens.Kind[K][1]))", "    [", x.span, "]")
-
-Base.show(io::IO, x::OPERATOR{P,K}, indent = 0) where {P,K} =
-    println(io, " "^indent, " $((Tokens.Kind[K][1]))", "    [", x.span, "]")
-
-Base.show(io::IO, x::PUNCTUATION{K}, indent = 0) where {K} =
-    println(io, " "^indent, " $((Tokens.Kind[K][1]))", "    [", x.span, "]")
-
-Base.show(io::IO, x::HEAD{:file}, indent = 0) =
-    println(io, " "^indent, " file", "    [", x.span, "]")
-
-Base.show(io::IO, x::HEAD{K}, indent = 0) where {K} =
-    println(io, " "^indent, " $((Tokens.Kind[K][1]))", "    [", x.span, "]")
-
-function Base.show(io::IO, x::HEAD{:globalrefdoc}, indent = 0)
-    println(io, " "^indent, " @doc", "    [", x.span, "]")
-end
-
-function Base.show(io::IO, x::QUOTENODE, indent = 0)
-    println(io, " "^indent, " QUOTENODE")
-end
-
-function Base.show(io::IO, x::ERROR, indent = 0)
-    println(io, " "^indent, " ERROR")
-end
-
-# function Base.show(io::IO, x::EXPR, indent = 0)
-#     name = sprint(show, x.head)
-#     println(io, " "^indent, "↘ ", name, "    [", x.span, "]")
-#     for a in x.args[(1 + (x.head == CALL)):end]
-#         show(io, a, indent + 1)
-#     end 
-# end
-function Base.show(io::IO, x::EXPR, indent = 0)
-    name = sprint(show, x.head)
-    print(io, " "^indent, "head: ", Expr(x.head))
+function Base.show(io::IO, x::EXPR{T}, indent = 0) where T
+    name = sprint(show, T)
+    print(io, "  "^indent, T, "  ", x.span)
     if isempty(x.defs)
         println()
     else
@@ -60,7 +13,7 @@ end
 
 
 function Base.show(io::IO, x::Scope{T}, indent = 0) where {T}
-    print(io, " "^indent, "↘ ", T, " (", length(x.args), ") ")
+    print(io, "  "^indent, "↘ ", T, " (", length(x.args), ") ")
     println("[", join(collect(a.id.val for a in x.args if a isa Variable), ", "), "]")
     for a in x.args
         if a isa Scope

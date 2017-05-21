@@ -7,7 +7,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONST}})
     @catcherror ps startbyte arg = parse_expression(ps)
 
     # Construction 
-    ret = EXPR(kw, [arg], ps.nt.startbyte - startbyte)
+    ret = EXPR{Const}(EXPR[kw, arg], ps.nt.startbyte - startbyte, Variable[], "")
 
     return ret
 end
@@ -21,11 +21,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.GLOBAL}})
     @catcherror ps startbyte arg = parse_expression(ps)
 
     # Construction
-    if arg isa EXPR && arg.head == TUPLE && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
-        ret = EXPR(kw, [arg.args...], ps.nt.startbyte - startbyte, arg.punctuation)
-    else
-        ret = EXPR(kw, [arg], ps.nt.startbyte - startbyte)
-    end
+    # if arg isa EXPR{TupleH} && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
+    #     ret = EXPR(Global, [kw, arg.args...], ps.nt.startbyte - startbyte, arg.punctuation)
+    # else
+    ret = EXPR{Global}(EXPR[kw, arg], ps.nt.startbyte - startbyte, Variable[], "")
+    # end
 
     return ret
 end
@@ -39,11 +39,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LOCAL}})
     @catcherror ps startbyte arg = @default ps parse_expression(ps)
 
     # Construction
-    if arg isa EXPR && arg.head == TUPLE && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
-        ret = EXPR(kw, [arg.args...], ps.nt.startbyte - startbyte, arg.punctuation)
-    else
-        ret = EXPR(kw, [arg], ps.nt.startbyte - startbyte)
-    end
+    # if arg isa EXPR && arg.head == TUPLE && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
+    #     ret = EXPR(Local, [kw, arg.args...], ps.nt.startbyte - startbyte, arg.punctuation)
+    # else
+    ret = EXPR{Local}(EXPR[kw, arg], ps.nt.startbyte - startbyte, Variable[], "")
+    # end
 
     return ret
 end
@@ -54,69 +54,43 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.RETURN}})
     # Parsing
     kw = INSTANCE(ps)
     format_kw(ps)
-    @catcherror ps startbyte args = @default ps SyntaxNode[closer(ps) ? NOTHING : parse_expression(ps)]
+    @catcherror ps startbyte args = @default ps EXPR[closer(ps) ? NOTHING : parse_expression(ps)]
 
     # Construction
-    ret = EXPR(kw, args, ps.nt.startbyte - startbyte)
+    ret = EXPR{Return}(EXPR[kw; args], ps.nt.startbyte - startbyte, Variable[], "")
     
     return ret
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.END}})
-    ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :end)
+    ret = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], "end")
     if !ps.closer.square
         ps.errored = true
-        return ERROR{UnexpectedEnd}(ret.span, ret)
+        return EXPR{ERROR}(EXPR[], 0, Variable[], "incorrect use of end")
     end
     return ret
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.ELSE}})
-    ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :else)
+    ret = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], "else")
     ps.errored = true
-    return ERROR{UnexpectedElse}(ret.span, ret)
+    return EXPR{ERROR}(EXPR[], 0, Variable[], "incorrect use of else")
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.ELSEIF}})
-    ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :elseif)
+    ret = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], "elseif")
     ps.errored = true
-    return ERROR{UnexpectedElseIf}(ret.span, ret)
+    return EXPR{ERROR}(EXPR[], 0, Variable[], "incorrect use of else")
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.CATCH}})
-    ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :catch)
+    ret = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], "catch")
     ps.errored = true
-    return ERROR{UnexpectedCatch}(ret.span, ret)
+    return EXPR{ERROR}(EXPR[], 0, Variable[], "incorrect use of catch")
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.FINALLY}})
     ret = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, :finally)
     ps.errored = true
-    return ERROR{UnexpectedFinally}(ret.span, ret)
-end
-
-function next(x::EXPR, s::Iterator{:const})
-    if s.i == 1
-        return x.head, next_iter(s)
-    elseif s.i == 2
-        return x.args[1], next_iter(s)
-    end
-end
-
-function next(x::EXPR, s::Iterator{:local})
-    if s.i == 1
-        return x.head, next_iter(s)
-    elseif iseven(s.i)
-        return x.args[div(s.i, 2)], next_iter(s)
-    else
-        return x.punctuation[div(s.i - 1, 2)], next_iter(s)
-    end
-end
-
-function next(x::EXPR, s::Iterator{:return})
-    if s.i == 1
-        return x.head, next_iter(s)
-    elseif s.i == 2
-        return x.args[1], next_iter(s)
-    end
+    return EXPR{ERROR}(EXPR[], 0, Variable[], "incorrect use of finally")
 end

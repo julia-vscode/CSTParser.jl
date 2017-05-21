@@ -1,8 +1,9 @@
 is_func_call(x) = false
-function is_func_call(x::EXPR) 
-    if x.head == CALL
-        return true
-    elseif x.head isa OPERATOR{WhereOp} || x.head isa OPERATOR{DeclarationOp}
+is_func_call(x::EXPR) = false
+is_func_call(x::EXPR{Call}) = true
+is_func_call(x::EXPR{UnaryOpCall}) = true
+function is_func_call(x::EXPR{BinarySyntaxOpCall}) 
+    if length(x.args) > 1 && (x.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}} || x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}})
         return is_func_call(x.args[1])
     else
         return false
@@ -15,7 +16,7 @@ end
 Get the IDENTIFIER name of a variable, possibly in the presence of 
 type declaration operators.
 """
-get_id(x::T) where {T <: INSTANCE} = x
+# get_id(x::T) where {T <: INSTANCE} = x
 
 function get_id(x::EXPR)
     if x.head isa OPERATOR{ComparisonOp,Tokens.ISSUBTYPE} || x.head isa OPERATOR{DeclarationOp,Tokens.DECLARATION} || x.head == CURLY
@@ -41,6 +42,7 @@ function get_t(x::EXPR)
     end
 end
 
+# NEEDS FIX
 function func_sig(x::EXPR)
     name = x.args[1]
     args = x.args[2:end]
@@ -52,7 +54,7 @@ function func_sig(x::EXPR)
         mod = name.args[1]
         name = name.args[2]
     end
-    if name isa QUOTENODE
+    if name isa EXPR{Quotenode}
         name = name.val
     end
 end
@@ -119,7 +121,7 @@ function infer_t(val)
         else
             t = :Any
         end
-    elseif val isa QUOTENODE
+    elseif val isa EXPR{Quotenode}
         t = :QuoteNode
     else
         t = :Any
@@ -224,7 +226,7 @@ function _find_scope(x::EXPR, n, path, ind, offsets, scope)
     end
 end
 
-_find_scope(x::Union{QUOTENODE,INSTANCE,ERROR}, n, path, ind, offsets, scope) = x
+# _find_scope(x::Union{INSTANCE,ERROR}, n, path, ind, offsets, scope) = x
 
 function find_scope(x::EXPR, n::Int)
     path = []

@@ -18,7 +18,7 @@ function parse_module(ps::ParseState)
         @catcherror ps startbyte arg = @precedence ps 15 @closer ps block @closer ps ws parse_expression(ps)
     end
 
-    block = EXPR(BLOCK, [], -ps.nt.startbyte)
+    block = EXPR{Block}(EXPR[], -ps.nt.startbyte, Variable[], "")
     @scope ps Scope{Tokens.MODULE} @default ps while ps.nt.kind !== Tokens.END
         @catcherror ps startbyte a = @closer ps block parse_doc(ps)
         push!(block.args, a)
@@ -27,35 +27,34 @@ function parse_module(ps::ParseState)
     # Construction
     block.span += ps.nt.startbyte
     next(ps)
-    ret = EXPR(kw, [(kw isa KEYWORD{Tokens.MODULE} ? TRUE : FALSE), arg, block], ps.nt.startbyte - startbyte, [INSTANCE(ps)])
-    ret.defs = [Variable(Expr(arg), :module, ret)]
+    ret = EXPR{(kw isa EXPR{KEYWORD{Tokens.MODULE}} ? ModuleH : BareModule)}(EXPR[kw, arg, block, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
+    # ret.defs = [Variable(Expr(arg), :module, ret)]
     return ret
 end
 
 function parse_dot_mod(ps::ParseState, colon = false)
     startbyte = ps.nt.startbyte
-    args = SyntaxNode[]
-    puncs = SyntaxNode[]
+    args = EXPR[]
 
     while ps.nt.kind == Tokens.DOT || ps.nt.kind == Tokens.DDOT || ps.nt.kind == Tokens.DDDOT
         next(ps)
         d = INSTANCE(ps)
-        if d isa OPERATOR{DotOp,Tokens.DOT}
-            push!(puncs, OPERATOR{DotOp,Tokens.DOT,false}(1))
-        elseif d isa OPERATOR{ColonOp,Tokens.DDOT}
-            push!(puncs, OPERATOR{DotOp,Tokens.DOT,false}(1))
-            push!(puncs, OPERATOR{DotOp,Tokens.DOT,false}(1))
-        elseif d isa OPERATOR{DddotOp,Tokens.DDDOT}
-            push!(puncs, OPERATOR{DotOp,Tokens.DOT,false}(1))
-            push!(puncs, OPERATOR{DotOp,Tokens.DOT,false}(1))
-            push!(puncs, OPERATOR{DotOp,Tokens.DOT,false}(1))
+        if d isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}}
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
+        elseif d isa EXPR{OPERATOR{ColonOp,Tokens.DDOT,false}}
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
+        elseif d isa EXPR{OPERATOR{DddotOp,Tokens.DDDOT,false}}
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
         end
     end
 
     # import/export ..
     if ps.nt.kind == Tokens.COMMA || ps.ws.kind == NewLineWS || ps.nt.kind == Tokens.ENDMARKER
-        if length(puncs) == 2
-            return SyntaxNode[INSTANCE(ps)], SyntaxNode[]
+        if length(args) == 2
+            return EXPR[INSTANCE(ps)]
         end
     end
 
@@ -64,23 +63,22 @@ function parse_dot_mod(ps::ParseState, colon = false)
             next(ps)
             next(ps)
             a = INSTANCE(ps)
-            # a.val = Symbol('@', a.val)
-            # a.span +=1
-            a = IDENTIFIER(a.span + 1, Symbol('@', Expr(a)))
+            a = EXPR{IDENTIFIER}(EXPR[], a.span + 1, Variable[], string("@", a.val))
             push!(args, a)
         elseif ps.nt.kind == Tokens.LPAREN
             next(ps)
-            a = EXPR(HEAD{InvisibleBrackets}(0), [], -ps.t.startbyte, [INSTANCE(ps)])
+            a = EXPR{InvisBrackets}(EXPR[INSTANCE(ps)], -ps.t.startbyte, Variable[], "")
             @catcherror ps startbyte push!(a.args, @default ps @closer ps paren parse_expression(ps))
             next(ps)
-            push!(a.punctuation, INSTANCE(ps))
+            push!(a.args, INSTANCE(ps))
+            a.span += ps.nt.startbyte
             push!(args, a)
         elseif ps.nt.kind == Tokens.EX_OR
             @catcherror ps startbyte a = @closer ps comma parse_expression(ps)
             push!(args, a)
         elseif !colon && isoperator(ps.nt) && ps.ndot
             next(ps)
-            push!(args, OPERATOR{precedence(ps.t),ps.t.kind,false}(ps.nt.startbyte - ps.t.startbyte - 1))
+            push!(args, EXPR{OPERATOR{precedence(ps.t),ps.t.kind,false}}(EXPR[], ps.nt.startbyte - ps.t.startbyte - 1, Variable[], ""))
         else
             next(ps)
             push!(args, INSTANCE(ps))
@@ -88,9 +86,9 @@ function parse_dot_mod(ps::ParseState, colon = false)
 
         if ps.nt.kind == Tokens.DOT
             next(ps)
-            push!(puncs, INSTANCE(ps))
+            push!(args, INSTANCE(ps))
         elseif isoperator(ps.nt) && ps.ndot
-            push!(puncs, PUNCTUATION{Tokens.DOT}(1))
+            push!(args, EXPR{PUNCTUATION{Tokens.DOT}}(EXPR[], 1, Variable[], ""))
         else
             break
         end
@@ -101,64 +99,60 @@ function parse_dot_mod(ps::ParseState, colon = false)
         #     push!(puncs, INSTANCE(ps))
         # end
     end
-    args, puncs
+    args
 end
 
 
 function parse_imports(ps::ParseState)
     startbyte = ps.t.startbyte
     kw = INSTANCE(ps)
+    kwt = kw isa EXPR{KEYWORD{Tokens.IMPORT}} ? Import :
+          kw isa EXPR{KEYWORD{Tokens.IMPORTALL}} ? ImportAll :
+          Using
     format_kw(ps)
     tk = ps.t.kind
 
-    arg, puncs = parse_dot_mod(ps)
+    arg = parse_dot_mod(ps)
 
     if ps.nt.kind != Tokens.COMMA && ps.nt.kind != Tokens.COLON
-        ret = EXPR(kw, arg, ps.nt.startbyte - startbyte, puncs)
-        ret.defs = [Variable(Expr(ret), :IMPORTS, ret)]
+        ret = EXPR{kwt}(EXPR[kw; arg], ps.nt.startbyte - startbyte, Variable[], "")
+        # ret.defs = [Variable(Expr(ret), :IMPORTS, ret)]
     elseif ps.nt.kind == Tokens.COLON
-        ret = EXPR(TOPLEVEL, [], 0, [kw])
+        
+        ret = EXPR{kwt}(EXPR[kw;arg], 0, Variable[], "")
         t = 0
-        for t = 1:length(puncs) - length(arg) + 1
-            push!(ret.punctuation, puncs[t])
-        end
 
         next(ps)
-        push!(puncs, INSTANCE(ps))
-        for i = 1:length(arg)
-            push!(ret.punctuation, arg[i])
-            push!(ret.punctuation, puncs[i + t])
-        end
+        push!(ret.args, INSTANCE(ps))
         
-        M = arg
-        @catcherror ps startbyte arg, puncs = parse_dot_mod(ps, true)
-        push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg) - 1, puncs))
+        
+        @catcherror ps startbyte arg = parse_dot_mod(ps, true)
+        append!(ret.args, arg)
         while ps.nt.kind == Tokens.COMMA
             next(ps)
-            push!(ret.punctuation, INSTANCE(ps))
-            @catcherror ps startbyte arg, puncs = parse_dot_mod(ps, true)
-            push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg) - 1, puncs))
+            push!(ret.args, INSTANCE(ps))
+            @catcherror ps startbyte arg = parse_dot_mod(ps, true)
+            append!(ret.args, arg)
         end
-        ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
+        # ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
     else
-        ret = EXPR(TOPLEVEL, [], 0, [kw])
-        push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg) - 1, puncs))
+        ret = EXPR{kwt}(EXPR[kw;arg], 0, Variable[], "")
         while ps.nt.kind == Tokens.COMMA
             next(ps)
-            push!(ret.punctuation, INSTANCE(ps))
-            @catcherror ps startbyte arg, puncs = parse_dot_mod(ps)
-            push!(ret.args, EXPR(KEYWORD{tk}(0), arg, sum(x.span for x in arg) + length(arg) - 1, puncs))
+            push!(ret.args, INSTANCE(ps))
+            @catcherror ps startbyte arg = parse_dot_mod(ps)
+            append!(ret.args, arg)
         end
-        ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
+        # ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
     end
     
     # Linting
-    if ps.current_scope == Scope{Tokens.FUNCTION}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.ImportInFunction}(startbyte:ps.nt.startbyte, []))
-    end
+    # if ps.current_scope == Scope{Tokens.FUNCTION}
+    #     push!(ps.diagnostics, Diagnostic{Diagnostics.ImportInFunction}(startbyte:ps.nt.startbyte, []))
+    # end
 
     ret.span = ps.nt.startbyte - startbyte
-    ret::EXPR
+
     return ret
 end
 
@@ -168,12 +162,12 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
     # Parsing
     kw = INSTANCE(ps)
     format_kw(ps)
-    ret = EXPR(kw, parse_dot_mod(ps)[1], 0, [])
+    ret = EXPR{Export}(EXPR[kw; parse_dot_mod(ps)], 0, Variable[], "")
     
     while ps.nt.kind == Tokens.COMMA
         next(ps)
-        push!(ret.punctuation, INSTANCE(ps))
-        @catcherror ps startbyte arg = parse_dot_mod(ps)[1][1]
+        push!(ret.args, INSTANCE(ps))
+        @catcherror ps startbyte arg = parse_dot_mod(ps)[1]
         push!(ret.args, arg)
     end
     ret.span = ps.nt.startbyte - startbyte
@@ -181,111 +175,16 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
     # Linting
 
     # check for duplicates
-    let idargs = filter(a -> a isa IDENTIFIER, ret.args)
-        if length(idargs) != length(unique((a -> a.val).(idargs)))
-            push!(ps.diagnostics, Diagnostic{Diagnostics.DuplicateArgument}(startbyte:ps.nt.startbyte, []))
-        end
-    end
-    if ps.current_scope == Scope{Tokens.FUNCTION}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.ImportInFunction}(startbyte:ps.nt.startbyte, []))
-    end
+    # let idargs = filter(a -> a isa IDENTIFIER, ret.args)
+    #     if length(idargs) != length(unique((a -> a.val).(idargs)))
+    #         push!(ps.diagnostics, Diagnostic{Diagnostics.DuplicateArgument}(startbyte:ps.nt.startbyte, []))
+    #     end
+    # end
+    # if ps.current_scope == Scope{Tokens.FUNCTION}
+    #     push!(ps.diagnostics, Diagnostic{Diagnostics.ImportInFunction}(startbyte:ps.nt.startbyte, []))
+    # end
     return ret
 end
 
 
 
-function _start_imports(x::EXPR)
-    return Iterator{:imports}(1, (x.head.span > 0) + length(x.args) + length(x.punctuation)) 
-    # return Iterator{:imports}(1, 1)
-end
-
-function _start_toplevel(x::EXPR)
-    if !all(x.args[i] isa EXPR && (x.args[i].head isa KEYWORD{Tokens.IMPORT} || x.args[i].head isa KEYWORD{Tokens.IMPORTALL} || x.args[i].head isa KEYWORD{Tokens.USING}) for i = 1:length(x.args)) 
-        return Iterator{:toplevelblock}(1, length(x.args) + length(x.punctuation))
-    else
-        return Iterator{:toplevel}(1, length(x.args) + length(x.punctuation))
-        # return Iterator{:toplevel}(1, 1)
-    end
-end
-
-# next(x::EXPR, s::Iterator{:imports}) = x, next_iter(s)
-
-function next(x::EXPR, s::Iterator{:imports})
-    ndots = length(x.punctuation) - length(x.args) + 1
-    if x.head.span == 0
-        if s.i <= ndots
-            return x.punctuation[s.i], next_iter(s)
-        elseif isodd(s.i + ndots)
-            return x.args[div(s.i + 1 - ndots, 2)], next_iter(s)
-        else
-            return x.punctuation[div(s.i + 1 - ndots, 2)], next_iter(s)
-        end
-    else
-        if ndots == 0
-            if s.i == 1
-                return x.head, next_iter(s)
-            elseif iseven(s.i)
-                x.args[div(s.i, 2)], next_iter(s)
-            else
-                x.punctuation[div(s.i - 1, 2)], next_iter(s)
-            end
-        else
-            if s.i == 1
-                return x.head, next_iter(s)
-            elseif s.i <= ndots + 1
-                return x.punctuation[s.i - 1], next_iter(s)
-            elseif isodd(s.i + ndots) 
-                return x.punctuation[div(s.i - ndots + 1, 2)], next_iter(s)
-            else
-                return x.args[div(s.i - ndots, 2)], next_iter(s)
-            end
-        end
-    end
-end
-
-function next(x::EXPR, s::Iterator{:export})
-    if s.i == 1
-        return x.head, next_iter(s)
-    elseif isodd(s.i)
-        return x.punctuation[div(s.i - 1, 2)], next_iter(s)
-    else
-        return x.args[div(s.i, 2)], next_iter(s)
-    end
-end
-
-
-function next(x::EXPR, s::Iterator{:module})
-    if s.i == 1
-        return x.head, next_iter(s)
-    elseif s.i == 2
-        return x.args[2], next_iter(s)
-    elseif s.i == 3
-        return x.args[3], next_iter(s)
-    elseif s.i == 4
-        return x.punctuation[1], next_iter(s)
-    end
-end
-
-function next(x::EXPR, s::Iterator{:toplevel})
-    col = findfirst(x -> x isa OPERATOR{8,Tokens.COLON}, x.punctuation)
-    if col > 0
-        if s.i ≤ col
-            return x.punctuation[s.i], next_iter(s)
-        else
-            d = s.i - col
-            if isodd(d)
-                return x.args[div(d + 1, 2)], next_iter(s)
-            else
-                return x.punctuation[div(d, 2) + col], next_iter(s)
-            end
-        end
-    else
-        if s.i == 1
-            return x.punctuation[1], next_iter(s)
-        elseif iseven(s.i)
-            return x.args[div(s.i, 2)], next_iter(s)
-        else
-            return x.punctuation[div(s.i + 1, 2)], next_iter(s)
-        end
-    end
-end

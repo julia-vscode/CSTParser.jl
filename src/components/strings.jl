@@ -12,33 +12,39 @@ function parse_string(ps::ParseState, prefixed = false)
     if istrip
         lit = unindent_triple_string(ps)
     else
-        lit = LITERAL{ps.t.kind}(span, ps.t.val[2:end - 1])
+        lit = EXPR{LITERAL{ps.t.kind}}(Expr[], span, Variable[], ps.t.val[2:end - 1])   
     end
 
     # there are interpolations in the string
     if prefixed != false
-        if prefixed isa INSTANCE && prefixed.val == :r
+        if prefixed.val == :r
             lit.val = replace(lit.val, "\\\"", "\"")
         end
         return lit
-    elseif ismatch(r"(?<!\\)\$", lit.val)
+    elseif ismatch(r"(?<!\\)\$", lit.val) # _has_interp(lit.val)
         io = IOBuffer(lit.val)
-        ret = EXPR(STRING, [], lit.span)
+        ret = EXPR{StringH}(EXPR[], lit.span, Variable[], "")
         lc = ' '
         while !eof(io)
             io2 = IOBuffer()
+            # conseq_slash = 0
             while !eof(io)
                 c = read(io, Char)
                 write(io2, c)
-                if c == '$' && lc != '\\'
+                if c == '$' && lc != '\\' # && iseven(conseq_slash) 
                     break
                 end
                 lc = c
+                # if c == '\\'
+                #     conseq_slash +=1
+                # else
+                #     conseq_slash = 0
+                # end
             end
             str1 = String(take!(io2))
 
             if length(str1) > 0 && last(str1) === '$' && (length(str1) == 1 || str1[chr2ind(str1, length(str1) - 1)] != '\\')
-                lit2 = LITERAL{Tokens.STRING}(endof(str1) - 1, unescape_string(str1[1:end - 1]))
+                lit2 = EXPR{LITERAL{Tokens.STRING}}(EXPR[], endof(str1) - 1, Variable[], unescape_string(str1[1:end - 1]))
                 if !isempty(lit2.val)
                     push!(ret.args, lit2)
                 end
@@ -61,7 +67,7 @@ function parse_string(ps::ParseState, prefixed = false)
                     skip(io, interp.span - length(ps1.ws.val))
                 end
             else
-                push!(ret.args, LITERAL{Tokens.STRING}(sizeof(str1) - 1, unescape_string(str1)))
+                push!(ret.args, EXPR{LITERAL{Tokens.STRING}}(EXPR[], sizeof(str1) - 1, Variable[], unescape_string(str1)))
             end
         end
         return ret
@@ -73,6 +79,21 @@ function parse_string(ps::ParseState, prefixed = false)
     return ret
 end
 
+function _has_interp(str)
+    i = 1
+    conseq_slash = 0
+    while i < endof(str)
+        if str[i] == '$' && iseven(conseq_slash)
+            return true
+        elseif str[i] == '\\'
+            conseq_slash += 1
+        else 
+            conseq_slash = 0
+        end
+        i = nextind(str, i)
+    end
+    return false
+end
 
 function unindent_triple_string(ps::ParseState)
     indent = -1
@@ -96,13 +117,5 @@ function unindent_triple_string(ps::ParseState)
         #     val = string(" "^indent, val)
         # end
     end
-    lit = LITERAL{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte - ps.ndot, val)
+    lit = EXPR{LITERAL{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte - ps.ndot, Variable[], val)
 end
-
-_start_string(x::EXPR) = Iterator{:string}(1, 1)
-next(x::EXPR, s::Iterator{:string}) = x, next_iter(s)
-
-next(x::EXPR, s::Iterator{:x_str}) = x.args[s.i], next_iter(s)
-
-
-

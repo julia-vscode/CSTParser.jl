@@ -8,78 +8,84 @@ Having hit '[' return either:
 """
 function parse_array(ps::ParseState)
     startbyte = ps.t.startbyte
-    puncs = INSTANCE[INSTANCE(ps)]
+    args = EXPR[INSTANCE(ps)]
     format_lbracket(ps)
 
     if ps.nt.kind == Tokens.RSQUARE
         next(ps)
-        push!(puncs, INSTANCE(ps))
+        push!(args, INSTANCE(ps))
         format_rbracket(ps)
 
-        return EXPR(VECT, [], ps.nt.startbyte - startbyte, puncs)
+        return EXPR{Vect}(args, ps.nt.startbyte - startbyte, Variable[], "")
     else
         @catcherror ps startbyte first_arg = @default ps @nocloser ps newline @closer ps square @closer ps insquare @closer ps ws @closer ps wsop @closer ps comma parse_expression(ps)
 
         if ps.nt.kind == Tokens.RSQUARE
-            if first_arg isa EXPR && (first_arg.head == GENERATOR || first_arg.head == FLATTEN)
+            if first_arg isa EXPR{Generator} || first_arg isa EXPR{Flatten}
                 next(ps)
-                push!(puncs, INSTANCE(ps))
+                push!(args, INSTANCE(ps))
                 format_rbracket(ps)
 
-                if first_arg.args[1] isa EXPR && first_arg.args[1].head isa OPERATOR{AssignmentOp,Tokens.PAIR_ARROW}
-                    return EXPR(DICT_COMPREHENSION, [first_arg], ps.nt.startbyte - 
-                    startbyte, puncs)
+                if first_arg.args[1] isa EXPR{BinaryOpCall} && first_arg.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.PAIR_ARROW,false}}
+                    return EXPR{DictComprehension}(EXPR[args[1], first_arg, INSTANCE(ps)], ps.nt.startbyte - 
+                    startbyte, Variable[], "")
                 else
-                    return EXPR(COMPREHENSION, [first_arg], ps.nt.startbyte - 
-                    startbyte, puncs)
+                    return EXPR{Comprehension}(EXPR[args[1], first_arg, INSTANCE(ps)], ps.nt.startbyte - 
+                    startbyte, Variable[], "")
                 end
             elseif ps.ws.kind == SemiColonWS
                 next(ps)
-                push!(puncs, INSTANCE(ps))
+                push!(args, first_arg)
+                push!(args, INSTANCE(ps))
                 format_rbracket(ps)
 
-                return EXPR(VCAT, [first_arg], ps.nt.startbyte - startbyte, puncs)
+                return EXPR{Vcat}(args, ps.nt.startbyte - startbyte, Variable[], "")
             else
                 next(ps)
-                push!(puncs, INSTANCE(ps))
+                push!(args, first_arg)
+                push!(args, INSTANCE(ps))
                 format_rbracket(ps)
 
-                ret = EXPR(VECT, [first_arg], ps.nt.startbyte - startbyte, puncs)
+                ret = EXPR{Vect}(args, ps.nt.startbyte - startbyte, Variable[], "")
             end
         elseif ps.nt.kind == Tokens.COMMA
-            ret = EXPR(VECT, [first_arg], -startbyte, puncs)
+            ret = EXPR{Vect}(args, -startbyte, Variable[], "")
+            push!(ret.args, first_arg)
             next(ps)
-            push!(ret.punctuation, INSTANCE(ps))
+            push!(ret.args, INSTANCE(ps))
             format_comma(ps)
             @catcherror ps startbyte @default ps @closer ps square parse_comma_sep(ps, ret, false)
 
-            next(ps)
-            push!(ret.punctuation, INSTANCE(ps))
-            format_rbracket(ps)
             
-            if last(ret.args) isa EXPR && last(ret.args).head == PARAMETERS
-                ret.head = VCAT
-                if isempty(last(ret.args).args)
-                    pop!(ret.args)
-                end
+            
+            if last(ret.args) isa EXPR{Parameters}
+                ret = EXPR{Vcat}(ret.args, 0, Variable[], "")
+                unshift!(ret.args, pop!(ret.args))
+                # if isempty(last(ret.args).args)
+                #     pop!(ret.args)
+                # end
             end
+            next(ps)
+            push!(ret.args, INSTANCE(ps))
+            format_rbracket(ps)
 
             ret.span = ps.nt.startbyte - startbyte
             return ret
         elseif ps.ws.kind == NewLineWS
-            ret = EXPR(VCAT, [first_arg], - startbyte, puncs)
+            ret = EXPR{Vcat}(args, - startbyte, Variable[], "")
+            push!(ret.args, first_arg)
             while ps.nt.kind != Tokens.RSQUARE
                 @catcherror ps startbyte a = @default ps @closer ps square parse_expression(ps)
                 push!(ret.args, a)
             end
             next(ps)
-            push!(ret.punctuation, INSTANCE(ps))
+            push!(ret.args, INSTANCE(ps))
             format_rbracket(ps)
             
             ret.span += ps.nt.startbyte
             return ret
         elseif ps.ws.kind == WS || ps.ws.kind == SemiColonWS
-            first_row = EXPR(HCAT, [first_arg], -(ps.nt.startbyte - first_arg.span))
+            first_row = EXPR{Hcat}(EXPR[first_arg], -(ps.nt.startbyte - first_arg.span), Variable[], "")
             while ps.nt.kind != Tokens.RSQUARE && ps.ws.kind != NewLineWS && ps.ws.kind != SemiColonWS
                 @catcherror ps startbyte a = @default ps @closer ps square @closer ps ws @closer ps wsop parse_expression(ps)
                 push!(first_row.args, a)
@@ -87,23 +93,23 @@ function parse_array(ps::ParseState)
             first_row.span += ps.nt.startbyte
             if ps.nt.kind == Tokens.RSQUARE && ps.ws.kind != SemiColonWS
                 if length(first_row.args) == 1
-                    first_row.head == VCAT
+                    first_row = EXPR{VCAT}(first_row.args, first_row.span, Variable[], "")
                 end
                 next(ps)
-                push!(puncs, INSTANCE(ps))
-                first_row.punctuation = puncs
-                first_row.span += first(puncs).span + last(puncs).span
+                push!(first_row.args, INSTANCE(ps))
+                unshift!(first_row.args, args[1])
+                first_row.span += first(first_row.args).span + last(first_row.args).span
                 return first_row
             else
                 if length(first_row.args) == 1
                     first_row = first_row.args[1]
                 else
-                    first_row.head = ROW
+                    first_row = EXPR{Row}(first_row.args, first_row.span, Variable[], "")
                 end
-                ret = EXPR(VCAT, [first_row], 0)
+                ret = EXPR{Vcat}(EXPR[args[1], first_row], 0, Variable[], "")
                 while ps.nt.kind != Tokens.RSQUARE
                     @catcherror ps startbyte first_arg = @default ps @closer ps square @closer ps ws @closer ps wsop parse_expression(ps)
-                    push!(ret.args, EXPR(ROW, [first_arg], first_arg.span))
+                    push!(ret.args, EXPR{Row}(EXPR[first_arg], first_arg.span, Variable[], ""))
                     while ps.nt.kind != Tokens.RSQUARE && ps.ws.kind != NewLineWS && ps.ws.kind != SemiColonWS
                         @catcherror ps startbyte a = @default ps @closer ps square @closer ps ws @closer ps wsop parse_expression(ps)
                         push!(last(ret.args).args, a)
@@ -115,8 +121,7 @@ function parse_array(ps::ParseState)
                     end
                 end
                 next(ps)
-                push!(puncs, INSTANCE(ps))
-                ret.punctuation = puncs
+                push!(ret.args, INSTANCE(ps))
                 ret.span = ps.nt.startbyte - startbyte
                 return ret
             end
@@ -137,133 +142,38 @@ function parse_ref(ps::ParseState, ret)
     
     next(ps)
     @catcherror ps startbyte ref = parse_array(ps)
-    if ref isa EXPR && ref.head == VECT
-        ret = EXPR(REF, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
-    elseif ref isa EXPR && ref.head == HCAT
-        ret = EXPR(TYPED_HCAT, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
-        _lint_hcat(ps, ret)
-    elseif ref isa EXPR && ref.head == VCAT
-        ret = EXPR(TYPED_VCAT, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
-    else#if ref isa EXPR && ref.head == COMPREHENSION
-        ret = EXPR(TYPED_COMPREHENSION, [ret, ref.args...], ret.span + ref.span, ref.punctuation)
+    # if ref isa EXPR{Vect}
+    #     ret = EXPR(Ref, [ret, ref.args...], ret.span + ref.span)
+    # elseif ref isa EXPR{Hcat}
+    #     ret = EXPR(TypedHcat, [ret, ref.args...], ret.span + ref.span)
+    #     # _lint_hcat(ps, ret)
+    # elseif ref isa EXPR{Vcat}
+    #     ret = EXPR(TypedVcat, [ret, ref.args...], ret.span + ref.span)
     # else
-    #     ps.errored = true
-    #     return ERROR{}(0)
-    end
+    #     ret = EXPR(TypedComprehension, [ret, ref.args...], ret.span + ref.span)
+    # end
+    # return ret
+    return _parse_ref(ret, ref)
+end
+
+function _parse_ref(ret, ref::EXPR{Vect})
+    ret = EXPR{Ref}(EXPR[ret, ref.args...], ret.span + ref.span, Variable[], "")
+    # _lint_hcat(ps, ret)
     return ret
 end
 
+function _parse_ref(ret, ref::EXPR{Hcat})
+    EXPR{TypedHcat}(EXPR[ret, ref.args...], ret.span + ref.span, Variable[], "")
+end
 
+function _parse_ref(ret, ref::EXPR{Vcat})
+    EXPR{TypedVcat}(EXPR[ret, ref.args...], ret.span + ref.span, Variable[], "")
+end
+
+_parse_ref(ret, ref) = EXPR{TypedComprehension}(EXPR[ret, ref.args...], ret.span + ref.span, Variable[], "")
 
 function _lint_hcat(ps::ParseState, ret)
-    if length(ret.args) == 3 && ret.args[3] isa QUOTENODE && ret.args[3].val isa KEYWORD{Tokens.END}
+    if length(ret.args) == 3 && ret.args[3] isa EXPR{Quotenode} && ret.args[3].val isa KEYWORD{Tokens.END}
         push!(ps.diagnostics, Diagnostic{Diagnostics.PossibleTypo}(ps.nt.startbyte + (-ret.span:0), []))
-    end
-end
-
-
-_start_vect(x::EXPR) = Iterator{:vect}(1, length(x.args) + length(x.punctuation))
-
-_start_vcat(x::EXPR) = Iterator{:vcat}(1, length(x.args) + length(x.punctuation))
-_start_hcat(x::EXPR) = Iterator{:hcat}(1, length(x.args) + length(x.punctuation))
-_start_row(x::EXPR) = Iterator{:row}(1, length(x.args))
-
-_start_typed_vcat(x::EXPR) = Iterator{:typed_vcat}(1, length(x.args) + length(x.punctuation))
-
-
-function next(x::EXPR, s::Iterator{:vect})
-    if isodd(s.i)
-        return x.punctuation[div(s.i + 1, 2)], next_iter(s)
-    elseif s.i == s.n
-        return last(x.punctuation), next_iter(s)
-    else
-        return x.args[div(s.i, 2)], next_iter(s)
-    end
-end
-
-function next(x::EXPR, s::Iterator{:vcat})
-    np = length(x.punctuation) - 2
-    if np > 0
-        if s.i == s.n
-            return last(x.punctuation), next_iter(s)
-        elseif s.i == s.n - 1 
-            return last(x.args), next_iter(s)
-        elseif iseven(s.i)
-            return x.args[div(s.i, 2)], next_iter(s)
-        else
-            return x.punctuation[div(s.i + 1, 2)], next_iter(s)
-        end
-    else
-        if s.i == 1
-            return first(x.punctuation), next_iter(s)
-        elseif s.i == s.n
-            return last(x.punctuation), next_iter(s)
-        else
-            return x.args[s.i - 1], next_iter(s)
-        end
-    end
-end
-
-function next(x::EXPR, s::Iterator{:hcat})
-    if s.i == 1
-        return first(x.punctuation), next_iter(s)
-    elseif s.i == s.n
-        return last(x.punctuation), next_iter(s)
-    else
-        return x.args[s.i - 1], next_iter(s)
-    end
-end
-
-next(x::EXPR, s::Iterator{:row}) = x.args[s.i], next_iter(s)
-
-function next(x::EXPR, s::Iterator{:typed_vcat})
-    if length(x.args) > 0 && last(x.args) isa EXPR && last(x.args).head == PARAMETERS
-        if s.i == s.n
-            return last(x.punctuation), next_iter(s)
-        elseif s.i == s.n - 1 
-            return last(x.args), next_iter(s)
-        elseif s.i == 1
-            return x.args[1], next_iter(s)
-        elseif s.i == 2
-            return first(x.punctuation), next_iter(s)
-        elseif isodd(s.i)
-            return x.args[div(s.i + 1, 2)], next_iter(s)
-        else
-            return x.punctuation[div(s.i, 2)], next_iter(s)
-        end
-    else
-        if s.i == 1
-            return x.args[1], next_iter(s)
-        elseif s.i == 2
-            return first(x.punctuation), next_iter(s)
-        elseif s.i == s.n
-            return last(x.punctuation), next_iter(s)
-        else
-            return x.args[s.i - 1], next_iter(s)
-        end
-    end
-end
-
-function next(x::EXPR, s::Iterator{:typed_hcat})
-    if s.i == 1
-        return x.args[1], next_iter(s)
-    elseif s.i == 2
-        return first(x.punctuation), next_iter(s)
-    elseif s.i == s.n
-        return last(x.punctuation), next_iter(s)
-    else
-        return x.args[s.i - 1], next_iter(s)
-    end
-end
-
-_start_ref(x::EXPR) = Iterator{:ref}(1, length(x.args) + length(x.punctuation))
-
-function next(x::EXPR, s::Iterator{:ref})
-    if s.i == s.n
-        return last(x.punctuation), next_iter(s)
-    elseif isodd(s.i)
-        return x.args[div(s.i + 1, 2)], next_iter(s)
-    else
-        return x.punctuation[div(s.i, 2)], next_iter(s)
     end
 end

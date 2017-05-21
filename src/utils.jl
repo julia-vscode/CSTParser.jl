@@ -181,7 +181,7 @@ macro catcherror(ps, startbyte, body)
     quote
         $(esc(body))
         if $(esc(ps)).errored
-            return ERROR{UnknownError}($(esc(ps)).nt.startbyte - $(esc(startbyte)), NOTHING)
+            return EXPR{ERROR}(EXPR[INSTANCE($(esc(ps)))], 0, Variable[], "Unknown error")
         end
     end
 end
@@ -206,8 +206,8 @@ ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
                           t.kind == Tokens.END ||
                           Tokens.LSQUARE ≤ t.kind ≤ Tokens.RPAREN
 
-isajuxtaposition(ps::ParseState, ret) = ((ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || 
-        (ret isa EXPR && ret.head isa OPERATOR{16,Tokens.PRIME} && ps.nt.kind == Tokens.IDENTIFIER) || 
+isajuxtaposition(ps::ParseState, ret) = ((ret isa EXPR{LITERAL{Tokens.INTEGER}} || ret isa EXPR{LITERAL{Tokens.FLOAT}}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || 
+        (ret isa EXPR{UnarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{16,Tokens.PRIME,false}} && ps.nt.kind == Tokens.IDENTIFIER) || 
         ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
         ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING))
 
@@ -283,19 +283,15 @@ end
 Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
+function span(x::EXPR{StringH}, neq = []) end
 function span(x, neq = [])
-    if x isa EXPR && !no_iter(x)
-        cnt = 0
-        for a in x
-            try
-                span(a, neq)
-            catch
-                push!(neq, a)
-            end
-        end
-        if x.span != (length(x) == 0 ? 0 : sum(a.span for a in x))
-            push!(neq, x)
-        end
+    s = 0
+    for a in x.args
+        span(a, neq)
+        s += a.span
+    end
+    if length(x.args) > 0 && s != x.span
+        push!(neq, x)
     end
     neq
 end
@@ -324,10 +320,10 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                     io = IOBuffer(str)
                     x, ps = parse(ps, true)
                     sp = span(x)
-                    if length(x.args) > 0 && x.args[1] isa LITERAL{nothing}
+                    if length(x.args) > 0 && x.args[1] isa EXPR{LITERAL{nothing}}
                         shift!(x.args)
                     end
-                    if length(x.args) > 0 && x.args[end] isa LITERAL{nothing}
+                    if length(x.args) > 0 && x.args[end] isa EXPR{LITERAL{nothing}}
                         pop!(x.args)
                     end
                     x0 = Expr(x)
@@ -394,10 +390,18 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
         println(" : $neq    $(100*neq/N)%", "  -  $aerr     $(100*aerr/N)%")
         print_with_color(:magenta, "base failed")
         println(" : $bfail    $(100*bfail/N)%")
-        tic
-        println("inference.jl : ", @timed(parse(readstring(joinpath(dir, "inference.jl")), true))[2])
     end
     ret
+end
+
+function speed_test()
+    dir = dirname(Base.find_source_file("base.jl"))
+    println("speed test : ", @timed(for i = 1:5
+    parse(readstring(joinpath(dir, "inference.jl")), true);
+    parse(readstring(joinpath(dir, "random.jl")), true);
+    parse(readstring(joinpath(dir, "show.jl")), true);
+    parse(readstring(joinpath(dir, "abstractarray.jl")), true);
+end)[2])
 end
 
 """
@@ -423,10 +427,16 @@ function check_reformat()
     end
 end
 
-function no_iter(x::EXPR)
-    x.head isa KEYWORD{Tokens.IMPORT} || 
-    x.head isa KEYWORD{Tokens.IMPORTALL} || 
-    x.head isa KEYWORD{Tokens.USING} || 
-    (x.head == TOPLEVEL && all(x.args[i] isa EXPR && (x.args[i].head isa KEYWORD{Tokens.IMPORT} || x.args[i].head isa KEYWORD{Tokens.IMPORTALL} || x.args[i].head isa KEYWORD{Tokens.USING}) for i = 1:length(x.args))) || 
-    x.head isa HEAD{Tokens.STRING}
+
+
+is_func_call(x) = false
+is_func_call(x::EXPR) = false
+is_func_call(x::EXPR{Call}) = true
+is_func_call(x::EXPR{UnaryOpCall}) = true
+function is_func_call(x::EXPR{BinarySyntaxOpCall}) 
+    if length(x.args) > 1 && (x.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}} || x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}})
+        return is_func_call(x.args[1])
+    else
+        return false
+    end
 end
