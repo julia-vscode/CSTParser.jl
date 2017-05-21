@@ -9,6 +9,16 @@ function Expr(x::EXPR)
     end
     ret
 end
+
+function Expr(x::EXPR{TopLevel})
+    ret = Expr(:toplevel)
+    for a in x.args
+        if !(a isa EXPR{PUNCTUATION{t}} where t)
+            push!(ret.args, Expr(a))
+        end
+    end
+    ret
+end
 Expr(x::HEAD{T}) where {T} = Symbol(lowercase(string(T)))
 Expr(x::HEAD{Tokens.LBRACE}) = :cell1d
 Expr(x::KEYWORD{T}) where {T} = Symbol(lowercase(string(T)))
@@ -416,19 +426,67 @@ function Expr(x::EXPR{Export})
     ret
 end
 
-function Expr(x::EXPR{Import})
-    ret = Expr(:import)
-    col = find(a isa EXPR{PUNCTUATION{Tokens.COLON}} for a in x.args)
-    for i = 1:length(x.args)
 
+
+function _get_import_block(x, i, ret)
+    while x.args[i+1] isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}}
+        i += 1
+        push!(ret.args, :.)
     end
-    for i = 2:length(x.args)
+    while i < length(x.args) && !(x.args[i+1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
+        i += 1
         a = x.args[i]
-        if (a isa EXPR{PUNCTUATION{Tokens.DOT}} && a.span>0) || !(a isa EXPR{PUNCTUATION{pt}} where pt) 
+        if !(a isa EXPR{PUNCTUATION{pt}} where pt) && !(a isa EXPR{o} where o <: OPERATOR) 
             push!(ret.args, Expr(a))
         end
     end
-    ret
+    
+    return i
+end
+
+function Expr(x::EXPR{Import})
+    col = find(a isa EXPR{o} where o <: OPERATOR{ColonOp} for a in x.args)
+    comma = find(a isa EXPR{PUNCTUATION{Tokens.COMMA}} for a in x.args)
+    if isempty(comma)
+        ret = Expr(:import)
+        i = 1
+        _get_import_block(x, i, ret)
+    elseif isempty(col)
+        ret = Expr(:toplevel)
+        i = 1
+        while i < length(x.args) 
+            nextarg = Expr(:import)
+            i = _get_import_block(x, i, nextarg)
+            if i < length(x.args) &&(x.args[i+1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
+                i+=1
+            end
+            push!(ret.args, nextarg)
+        end
+    else
+        ret = Expr(:toplevel)
+        top = Expr(:import)
+        i = 1
+        while x.args[i+1] isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}}
+            i += 1
+            push!(top.args, :.)
+        end
+        while i < length(x.args) && !(x.args[i+1] isa EXPR{o} where o <: OPERATOR{ColonOp})
+            i += 1
+            a = x.args[i]
+            if !(a isa EXPR{PUNCTUATION{pt}} where pt) && !(a isa EXPR{o} where o <: OPERATOR) 
+                push!(top.args, Expr(a))
+            end
+        end
+        while i < length(x.args) 
+            nextarg = Expr(:import, top.args...)
+            i = _get_import_block(x, i, nextarg)
+            if i < length(x.args) &&(x.args[i+1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
+                i+=1
+            end
+            push!(ret.args, nextarg)
+        end
+    end
+    return ret
 end
 
 function Expr(x::EXPR{FileH})

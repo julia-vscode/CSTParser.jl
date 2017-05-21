@@ -615,6 +615,7 @@ end
     @test "-((attr.rise / PANGO_SCALE)pt).value" |> test_expr
     @test "!(a = b)" |> test_expr
     @test "-(1)a" |> test_expr
+    @test "(Base.@_pure_meta;)" |> test_expr
     @test "!(a)::T" |> test_expr
     @test "a::b where T<:S" |> test_expr
     @test "+(x::Bool, y::T)::promote_type(Bool,T) where T<:AbstractFloat" |> test_expr
@@ -629,7 +630,6 @@ end
     @test "f(a for a in A if cond)" |> test_expr
     @test "\"dimension \$d is not 1 ≤ \$d ≤ \$nd\" " |> test_expr
     @test "-(-x)^1" |> test_expr
-    @test "(Base.@_pure_meta;)" |> test_expr
 end
 
 @testset "Broken things" begin

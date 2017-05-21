@@ -46,7 +46,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
 
     # Construction
     if isempty(block.args)
-        if sig isa EXPR{Call} && !(sig.args[1] isa EXPR{OPERATOR{PlusOp,Tokens.EX_OR,false}})
+        if sig isa EXPR{Call} || sig isa EXPR{BinarySyntaxOpCall} && !(sig.args[1] isa EXPR{OPERATOR{PlusOp,Tokens.EX_OR,false}})
             args = EXPR[sig, block]
         else
             args = EXPR[sig]
@@ -145,9 +145,10 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, fo
             @nocloser ps newline @closer ps comma while @nocloser ps semicolon !closer(ps)
                 @catcherror ps startbyte a = parse_expression(ps)
                 push!(body.args, a)
+                body.span += a.span
             end
             push!(ret.args, body)
-
+            return body
         else
             ps.nt.kind == Tokens.RPAREN && return 
             paras = EXPR{Parameters}(EXPR[], -ps.nt.startbyte, Variable[], "")

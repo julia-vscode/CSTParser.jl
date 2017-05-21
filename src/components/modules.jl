@@ -39,15 +39,15 @@ function parse_dot_mod(ps::ParseState, colon = false)
     while ps.nt.kind == Tokens.DOT || ps.nt.kind == Tokens.DDOT || ps.nt.kind == Tokens.DDDOT
         next(ps)
         d = INSTANCE(ps)
-        if d isa OPERATOR{DotOp,Tokens.DOT}
-            push!(args, OPERATOR{DotOp,Tokens.DOT,false}(1))
-        elseif d isa OPERATOR{ColonOp,Tokens.DDOT}
-            push!(args, OPERATOR{DotOp,Tokens.DOT,false}(1))
-            push!(args, OPERATOR{DotOp,Tokens.DOT,false}(1))
-        elseif d isa OPERATOR{DddotOp,Tokens.DDDOT}
-            push!(args, OPERATOR{DotOp,Tokens.DOT,false}(1))
-            push!(args, OPERATOR{DotOp,Tokens.DOT,false}(1))
-            push!(args, OPERATOR{DotOp,Tokens.DOT,false}(1))
+        if d isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}}
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
+        elseif d isa EXPR{OPERATOR{ColonOp,Tokens.DDOT,false}}
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
+        elseif d isa EXPR{OPERATOR{DddotOp,Tokens.DDDOT,false}}
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
         end
     end
 
@@ -105,8 +105,8 @@ end
 function parse_imports(ps::ParseState)
     startbyte = ps.t.startbyte
     kw = INSTANCE(ps)
-    kwt = kw isa KEYWORD{Tokens.IMPORT} ? Import :
-          kw isa KEYWORD{Tokens.IMPORTALL} ? ImportAll :
+    kwt = kw isa EXPR{KEYWORD{Tokens.IMPORT}} ? Import :
+          kw isa EXPR{KEYWORD{Tokens.IMPORTALL}} ? ImportAll :
           Using
     format_kw(ps)
     tk = ps.t.kind
@@ -117,33 +117,30 @@ function parse_imports(ps::ParseState)
         ret = EXPR(kwt, [kw; arg], ps.nt.startbyte - startbyte)
         # ret.defs = [Variable(Expr(ret), :IMPORTS, ret)]
     elseif ps.nt.kind == Tokens.COLON
-        ret = EXPR(TopLevel, [kw], 0)
+        
+        ret = EXPR(kwt, [kw;arg], 0)
         t = 0
 
         next(ps)
-        push!(arg, INSTANCE(ps))
-        for i = 1:length(arg)
-            push!(ret.args, arg[i])
-        end
+        push!(ret.args, INSTANCE(ps))
         
-        M = arg
+        
         @catcherror ps startbyte arg = parse_dot_mod(ps, true)
-        push!(ret.args, EXPR(kwt, arg, sum(x.span for x in arg)))
+        append!(ret.args, arg)
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(ret.args, INSTANCE(ps))
-            @catcherror ps startbyte args = parse_dot_mod(ps, true)
-            push!(ret.args, EXPR(kwt, arg, sum(x.span for x in arg)))
+            @catcherror ps startbyte arg = parse_dot_mod(ps, true)
+            append!(ret.args, arg)
         end
         # ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
     else
-        ret = EXPR(TopLevel, [kw], 0)
-        push!(ret.args, EXPR(kwt, arg, sum(x.span for x in arg)))
+        ret = EXPR(kwt, [kw;arg], 0)
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(ret.args, INSTANCE(ps))
             @catcherror ps startbyte arg = parse_dot_mod(ps)
-            push!(ret.args, EXPR(kwt, arg, sum(x.span for x in arg)))
+            append!(ret.args, arg)
         end
         # ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
     end
