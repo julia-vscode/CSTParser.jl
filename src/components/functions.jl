@@ -15,7 +15,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
         if issyntaxunarycall(op)
             sig = EXPR{UnarySyntaxOpCall}(EXPR[op, INSTANCE(ps)], 0, Variable[], "")
         else
-            sig = EXPR{Call}(EXPR[op, INSTANCE(ps)], 0, Variable[])
+            sig = EXPR{Call}(EXPR[op, INSTANCE(ps)], 0, Variable[], "")
         end
         @catcherror ps startbyte @default ps @closer ps paren parse_comma_sep(ps, sig)
         next(ps)

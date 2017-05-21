@@ -161,7 +161,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
     # Parsing
     kw = INSTANCE(ps)
     format_kw(ps)
-    ret = EXPR(Export, [kw; parse_dot_mod(ps)], 0)
+    ret = EXPR{Export}(EXPR[kw; parse_dot_mod(ps)], 0, Variable[], "")
     
     while ps.nt.kind == Tokens.COMMA
         next(ps)

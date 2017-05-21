@@ -5,7 +5,7 @@ mutable struct Variable
     val
 end
 mutable struct EXPR{T}
-    args::Vector{EXPR}
+    args::Vector
     span::Int
     defs::Vector{Variable}
     val::String
@@ -57,9 +57,8 @@ end
 # heads
 
 
-const TRUE = EXPR(LITERAL{Tokens.TRUE}, [], 0)
-const FALSE = EXPR(LITERAL{Tokens.FALSE}, [], 0)
-# const NOTHING = EXPR{LITERAL{nothing}}(EXPR[], 0, Variable[], "NOTHING")
+const TRUE = EXPR{LITERAL{Tokens.TRUE}}(EXPR[], 0, Variable[], "")
+const FALSE = EXPR{LITERAL{Tokens.FALSE}}(EXPR[], 0, Variable[], "")
 const NOTHING = EXPR{HEAD{:nothing}}(EXPR[], 0, Variable[], "nothing")
 const GlobalRefDOC = EXPR{HEAD{:globalrefdoc}}(EXPR[], 0, Variable[], "globalrefdoc")
 

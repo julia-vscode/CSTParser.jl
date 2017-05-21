@@ -7,7 +7,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONST}})
     @catcherror ps startbyte arg = parse_expression(ps)
 
     # Construction 
-    ret = EXPR(Const, [kw, arg], ps.nt.startbyte - startbyte)
+    ret = EXPR{Const}(EXPR[kw, arg], ps.nt.startbyte - startbyte, Variable[], "")
 
     return ret
 end
@@ -24,7 +24,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.GLOBAL}})
     # if arg isa EXPR{TupleH} && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
     #     ret = EXPR(Global, [kw, arg.args...], ps.nt.startbyte - startbyte, arg.punctuation)
     # else
-        ret = EXPR(Global, [kw, arg], ps.nt.startbyte - startbyte)
+        ret = EXPR{Global}(EXPR[kw, arg], ps.nt.startbyte - startbyte, Variable[], "")
     # end
 
     return ret
@@ -42,7 +42,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LOCAL}})
     # if arg isa EXPR && arg.head == TUPLE && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
     #     ret = EXPR(Local, [kw, arg.args...], ps.nt.startbyte - startbyte, arg.punctuation)
     # else
-        ret = EXPR(Local, [kw, arg], ps.nt.startbyte - startbyte)
+        ret = EXPR{Local}(EXPR[kw, arg], ps.nt.startbyte - startbyte, Variable[], "")
     # end
 
     return ret
@@ -57,7 +57,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.RETURN}})
     @catcherror ps startbyte args = @default ps EXPR[closer(ps) ? NOTHING : parse_expression(ps)]
 
     # Construction
-    ret = EXPR(Return, [kw; args], ps.nt.startbyte - startbyte)
+    ret = EXPR{Return}(EXPR[kw; args], ps.nt.startbyte - startbyte, Variable[], "")
     
     return ret
 end
