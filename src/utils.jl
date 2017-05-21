@@ -433,10 +433,3 @@ function check_reformat()
     end
 end
 
-function no_iter(x::EXPR)
-    x.head isa KEYWORD{Tokens.IMPORT} || 
-    x.head isa KEYWORD{Tokens.IMPORTALL} || 
-    x.head isa KEYWORD{Tokens.USING} || 
-    (x.head == TOPLEVEL && all(x.args[i] isa EXPR && (x.args[i].head isa KEYWORD{Tokens.IMPORT} || x.args[i].head isa KEYWORD{Tokens.IMPORTALL} || x.args[i].head isa KEYWORD{Tokens.USING}) for i = 1:length(x.args))) || 
-    x.head isa HEAD{Tokens.STRING}
-end

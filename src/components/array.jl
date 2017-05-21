@@ -26,7 +26,7 @@ function parse_array(ps::ParseState)
                 push!(args, INSTANCE(ps))
                 format_rbracket(ps)
 
-                if first_arg.args[1] isa EXPR{BinaryOpCall} && first_arg.args[2].head isa EXPR{OPERATOR{AssignmentOp,Tokens.PAIR_ARROW,false}}
+                if first_arg.args[1] isa EXPR{BinaryOpCall} && first_arg.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.PAIR_ARROW,false}}
                     return EXPR(DictComprehension, [args[1], first_arg, INSTANCE(ps)], ps.nt.startbyte - 
                     startbyte)
                 else
@@ -93,7 +93,7 @@ function parse_array(ps::ParseState)
             first_row.span += ps.nt.startbyte
             if ps.nt.kind == Tokens.RSQUARE && ps.ws.kind != SemiColonWS
                 if length(first_row.args) == 1
-                    first_row.head == VCAT
+                    first_row = EXPR{VCAT}(first_row.args, first_row.span, Variable[], "")
                 end
                 next(ps)
                 push!(first_row.args, INSTANCE(ps))

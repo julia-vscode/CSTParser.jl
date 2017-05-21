@@ -69,6 +69,7 @@ end
 Expr(x::EXPR{PUNCTUATION{K}}) where {K} = string(K)
 
 Expr(x::EXPR{Quotenode}) = QuoteNode(Expr(x.args[end]))
+Expr(x::EXPR{KEYWORD{t}}) where t = Symbol(lowercase(string(t)))
 
 function Expr(x::EXPR{Call})
     ret = Expr(:call)
@@ -173,7 +174,9 @@ Expr(x::EXPR{Kw}) = Expr(:kw, Expr(x.args[1]), Expr(x.args[3]))
 function Expr(x::EXPR{Parameters})
     ret = Expr(:parameters)
     for a in x.args
-        push!(ret.args, Expr(a))
+        if !(a isa EXPR{PUNCTUATION{pt}} where pt)
+            push!(ret.args, Expr(a))
+        end
     end
     return ret
 end
@@ -237,17 +240,29 @@ function Expr(x::EXPR{Do})
     ret
 end
 
+fix_range(a) = Expr(a)
+function fix_range(a::EXPR{BinaryOpCall})
+    if (a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}})
+        Expr(:(=), Expr(a.args[1]), Expr(a.args[3]))
+    else
+        Expr(a)
+    end
+end
+
 function Expr(x::EXPR{For})
     ret = Expr(:for)
-    for a in x.args
-        if !(a isa EXPR{PUNCTUATION{pt}} where pt || a isa EXPR{KEYWORD{kt}} where kt)
-                if a isa EXPR{BinaryOpCall} && (a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}})
-                    push!(ret.args, Expr(:(=), Expr(a.args[1]), Expr(a.args[3])))
-                else
-                    push!(ret.args, Expr(a))
-                end
+    if x.args[2] isa EXPR{Block}
+        arg = Expr(:block)
+        for a in x.args[2].args
+            if !(a isa EXPR{PUNCTUATION{pt}} where pt)
+                push!(arg.args, fix_range(a))
+            end
         end
+        push!(ret.args, arg)
+    else
+        push!(ret.args, fix_range(x.args[2]))
     end
+    push!(ret.args, Expr(x.args[3]))    
     ret
 end
 
@@ -282,9 +297,17 @@ end
 
 function Expr(x::EXPR{Local})
     ret = Expr(:local)
-    for i = 2:length(x.args)
-        a = x.args[i]
-        push!(ret.args, Expr(a))
+    if length(x.args) == 2 && x.args[2] isa EXPR{TupleH}
+        for a in x.args[2].args
+            if !(a isa EXPR{PUNCTUATION{pt}} where pt)
+                push!(ret.args, Expr(a))
+            end
+        end
+    else
+        for i = 2:length(x.args)
+            a = x.args[i]
+            push!(ret.args, Expr(a))
+        end
     end
     ret
 end
@@ -322,6 +345,10 @@ function Expr(x::EXPR{Vect})
         end
     end
     ret
+end
+
+function Expr(x::EXPR{Macro})
+    Expr(:macro, Expr(x.args[2]), Expr(x.args[3]))
 end
 
 function Expr(x::EXPR{MacroCall})
@@ -613,28 +640,6 @@ end
 
 
 
-
-function remove_first_at!(x)
-    if x isa EXPR{BinarySyntaxOpCall} && x.head isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}}
-        return remove_first_at!(x.args[1])
-    else
-        return x.val = Symbol(string(x.val)[2:end])
-    end
-end
-
-
-fixranges(a::INSTANCE) = Expr(a)
-function fixranges(a::EXPR)
-    if a.head isa HEAD{Tokens.CALL} && a.args[1] isa OPERATOR{ComparisonOp,Tokens.IN} || a.args[1] isa OPERATOR{ComparisonOp,Tokens.ELEMENT_OF}
-        ret = Expr(:(=))
-        for x in a.args[2:end]
-            push!(ret.args, Expr(x))
-        end
-        return ret
-    else
-        return Expr(a)
-    end
-end
 
 
 UNICODE_OPS_REVERSE = Dict{Tokenize.Tokens.Kind,Symbol}()

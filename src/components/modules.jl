@@ -151,7 +151,7 @@ function parse_imports(ps::ParseState)
     # end
 
     ret.span = ps.nt.startbyte - startbyte
-    ret::EXPR
+
     return ret
 end
 
