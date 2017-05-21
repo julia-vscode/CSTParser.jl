@@ -1,39 +1,6 @@
-Base.show(io::IO, x::IDENTIFIER, indent = 0) =
-    println(io, "  "^indent, " $(x.val)")
-
-Base.show(io::IO, x::LITERAL{nothing}, indent = 0) =
-    println(io, "  "^indent, " nothing", "    [", x.span, "]")
-
-Base.show(io::IO, x::LITERAL{K}, indent = 0) where {K} =
-    println(io, "  "^indent, " $((Tokens.Kind[K][1]))", "    [", x.span, "]")
-
-Base.show(io::IO, x::KEYWORD{K}, indent = 0) where {K} =
-    println(io, "  "^indent, " $((Tokens.Kind[K][1]))", "    [", x.span, "]")
-
-Base.show(io::IO, x::OPERATOR{P,K}, indent = 0) where {P,K} =
-    println(io, "  "^indent, " $((Tokens.Kind[K][1]))", "    [", x.span, "]")
-
-Base.show(io::IO, x::PUNCTUATION{K}, indent = 0) where {K} =
-    println(io, "  "^indent, " $((Tokens.Kind[K][1]))", "    [", x.span, "]")
-
-Base.show(io::IO, x::HEAD{:file}, indent = 0) =
-    println(io, "  "^indent, " file", "    [", x.span, "]")
-
-Base.show(io::IO, x::HEAD{K}, indent = 0) where {K} =
-    println(io, "  "^indent, " $((Tokens.Kind[K][1]))", "    [", x.span, "]")
-
-function Base.show(io::IO, x::HEAD{:globalrefdoc}, indent = 0)
-    println(io, "  "^indent, " @doc", "    [", x.span, "]")
-end
-
-
-function Base.show(io::IO, x::ERROR, indent = 0)
-    println(io, "  "^indent, " ERROR")
-end
-
 function Base.show(io::IO, x::EXPR{T}, indent = 0) where T
     name = sprint(show, T)
-    print(io, "  "^indent, T)
+    print(io, "  "^indent, T, "  ", x.span)
     if isempty(x.defs)
         println()
     else

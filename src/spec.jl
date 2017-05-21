@@ -1,4 +1,3 @@
-
 mutable struct Variable
     id
     t
@@ -98,7 +97,6 @@ abstract type ColonOpCall <: Head end
 
 abstract type Abstract <: Head end
 abstract type Begin <: Head end
-abstract type BareModule <: Head end
 abstract type Bitstype <: Head end
 abstract type Block <: Head end
 abstract type Break <: Head end
@@ -132,17 +130,18 @@ abstract type Try <: Head end
 abstract type TupleH <: Head end
 abstract type TypeAlias <: Head end
 abstract type FileH <: Head end
-abstract type TopLevel <: Head end
 abstract type Return <: Head end
 abstract type Vect <: Head end
 abstract type While <: Head end
 abstract type x_Cmd <: Head end
 abstract type x_Str <: Head end
 
+abstract type BareModule <: Head end
+abstract type TopLevel <: Head end
+abstract type Export <: Head end
 abstract type Import <: Head end
 abstract type ImportAll <: Head end
 abstract type Using <: Head end
-abstract type Export <: Head end
 
 abstract type Comprehension <: Head end
 abstract type DictComprehension <: Head end
@@ -155,10 +154,4 @@ abstract type Vcat <: Head end
 abstract type TypedVcat <: Head end
 abstract type Vect <: Head end
 
-
-
 Quotenode(x::EXPR) = EXPR{Quotenode}(EXPR[x], x.span, Variable[], "")
-
-
-
-

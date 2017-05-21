@@ -71,6 +71,7 @@ function parse_dot_mod(ps::ParseState, colon = false)
             @catcherror ps startbyte push!(a.args, @default ps @closer ps paren parse_expression(ps))
             next(ps)
             push!(a.args, INSTANCE(ps))
+            a.span += ps.nt.startbyte
             push!(args, a)
         elseif ps.nt.kind == Tokens.EX_OR
             @catcherror ps startbyte a = @closer ps comma parse_expression(ps)

@@ -5,7 +5,7 @@ parse_kw(ps::ParseState, ::Type{Val{Tokens.IF}}) = parse_if(ps)
 
 Parse an `if` block.
 """
-function parse_if(ps::ParseState, nested = false, puncs = [])
+function parse_if(ps::ParseState, nested = false)
     startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2] + 4
 
@@ -15,7 +15,12 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
     @catcherror ps startbyte cond = @default ps @closer ps block @closer ps ws parse_expression(ps)
 
     @catcherror ps startbyte ifblock = @default ps @closer ps ifelse parse_block(ps, start_col, closers = [Tokens.END, Tokens.ELSE, Tokens.ELSEIF])
-    ret = EXPR{If}(EXPR[kw, cond, ifblock], 0, Variable[], "")
+    # ret = EXPR{If}(EXPR[kw, cond, ifblock], 0, Variable[], "")
+    if nested
+        ret = EXPR{If}(EXPR[cond, ifblock], 0, Variable[], "")
+    else
+        ret = EXPR{If}(EXPR[kw, cond, ifblock], 0, Variable[], "")
+    end
 
     elseblock = EXPR{Block}(EXPR[], 0, Variable[], "")
     if ps.nt.kind == Tokens.ELSEIF
@@ -23,7 +28,7 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
         push!(ret.args, INSTANCE(ps))
         startelseblock = ps.nt.startbyte
         
-        @catcherror ps startbyte push!(elseblock.args, parse_if(ps, true, puncs))
+        @catcherror ps startbyte push!(elseblock.args, parse_if(ps, true))
         elseblock.span = ps.nt.startbyte - startelseblock
     end
     elsekw = ps.nt.kind == Tokens.ELSE
@@ -57,6 +62,6 @@ function parse_if(ps::ParseState, nested = false, puncs = [])
     #         push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(startbyte + kw.span + cond.span + (0:ret.args[2].span), []))
     #     end
     # end
-
+    ret.span = sum(a.span for a in ret.args)
     return ret
 end

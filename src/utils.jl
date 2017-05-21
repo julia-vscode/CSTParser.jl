@@ -283,19 +283,15 @@ end
 Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
+function span(x::EXPR{StringH}, neq =[]) end
 function span(x, neq = [])
-    if x isa EXPR && !no_iter(x)
-        cnt = 0
-        for a in x
-            try
-                span(a, neq)
-            catch
-                push!(neq, a)
-            end
-        end
-        if x.span != (length(x) == 0 ? 0 : sum(a.span for a in x))
-            push!(neq, x)
-        end
+    s = 0
+    for a in x.args
+        span(a, neq)
+        s += a.span
+    end
+    if length(x.args) > 0 && s != x.span
+        push!(neq, x)
     end
     neq
 end
@@ -323,7 +319,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                     ps = ParseState(str)
                     io = IOBuffer(str)
                     x, ps = parse(ps, true)
-                    # sp = span(x)
+                    sp = span(x)
                     if length(x.args) > 0 && x.args[1] isa EXPR{LITERAL{nothing}}
                         shift!(x.args)
                     end
@@ -345,11 +341,11 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                     end
                     remlineinfo!(x1)
                     print("\r                             ")
-                    # if !isempty(sp)
-                    #     print_with_color(:blue, file)
-                    #     println()
-                    #     push!(ret, (file, :span))
-                    # end
+                    if !isempty(sp)
+                        print_with_color(:blue, file)
+                        println()
+                        push!(ret, (file, :span))
+                    end
                     if ps.errored
                         err += 1
                         print_with_color(:yellow, file)

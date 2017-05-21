@@ -262,7 +262,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{ComparisonO
         push!(ret.args, nextarg)
         ret.span += op.span + nextarg.span
     elseif ret isa EXPR{BinaryOpCall} && precedence(ret.args[2]) == ComparisonOp
-        ret = EXPR{Comparison}(EXPR[ret.args[1], ret.args[2], ret.args[3], op, nextarg], ret.args[2].span + ret.span + op.span + nextarg.span, Variable[], "")
+        ret = EXPR{Comparison}(EXPR[ret.args[1], ret.args[2], ret.args[3], op, nextarg], ret.span + op.span + nextarg.span, Variable[], "")
     elseif ret isa EXPR{BinarySyntaxOpCall} && (ret.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUBTYPE,false}} || ret.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUPERTYPE,false}})
         ret = EXPR{Comparison}(EXPR[ret.args[1], ret.args[2], ret.args[3], op, nextarg], ret.span + op.span + nextarg.span, Variable[], "")
     elseif (op isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUBTYPE,false}} || op isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUPERTYPE,false}})
