@@ -24,7 +24,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.GLOBAL}})
     # if arg isa EXPR{TupleH} && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
     #     ret = EXPR(Global, [kw, arg.args...], ps.nt.startbyte - startbyte, arg.punctuation)
     # else
-        ret = EXPR{Global}(EXPR[kw, arg], ps.nt.startbyte - startbyte, Variable[], "")
+    ret = EXPR{Global}(EXPR[kw, arg], ps.nt.startbyte - startbyte, Variable[], "")
     # end
 
     return ret
@@ -42,7 +42,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LOCAL}})
     # if arg isa EXPR && arg.head == TUPLE && first(arg.punctuation) isa PUNCTUATION{Tokens.COMMA}
     #     ret = EXPR(Local, [kw, arg.args...], ps.nt.startbyte - startbyte, arg.punctuation)
     # else
-        ret = EXPR{Local}(EXPR[kw, arg], ps.nt.startbyte - startbyte, Variable[], "")
+    ret = EXPR{Local}(EXPR[kw, arg], ps.nt.startbyte - startbyte, Variable[], "")
     # end
 
     return ret

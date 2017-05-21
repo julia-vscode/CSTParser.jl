@@ -74,7 +74,7 @@ function parse_expression(ps::ParseState)
         else
             ret = INSTANCE(ps)
         end
-        if (ret isa EXPR{OPERATOR{ColonOp,Tokens.COLON, false}}) && ps.nt.kind != Tokens.COMMA
+        if (ret isa EXPR{OPERATOR{ColonOp,Tokens.COLON,false}}) && ps.nt.kind != Tokens.COMMA
             @catcherror ps startbyte ret = parse_unary(ps, ret)
         end
     elseif ps.t.kind == Tokens.AT_SIGN
@@ -142,7 +142,7 @@ function parse_compound(ps::ParseState, ret)
         ret = @closer ps paren parse_call(ps, ret)
     elseif ps.nt.kind == Tokens.LBRACE && isemptyws(ps.ws)
         ret = parse_curly(ps, ret)
-    elseif ps.nt.kind == Tokens.LSQUARE && isemptyws(ps.ws) && !(ret isa EXPR{OPERATOR{p,k,dot}} where {p,k,dot})
+    elseif ps.nt.kind == Tokens.LSQUARE && isemptyws(ps.ws) && !(ret isa EXPR{OPERATOR{p,k,dot}} where {p, k, dot})
         ret = @nocloser ps block parse_ref(ps, ret)
     elseif ps.nt.kind == Tokens.COMMA
         ret = parse_tuple(ps, ret)
@@ -172,7 +172,7 @@ function parse_compound(ps::ParseState, ret)
         arg = INSTANCE(ps)
         push!(ret.args, EXPR{LITERAL{Tokens.STRING}}(EXPR[], arg.span, Variable[], arg.val))
         ret.span += arg.span
-    elseif ret isa EXPR{UnarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{16,Tokens.PRIME, d1}} where d1
+    elseif ret isa EXPR{UnarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{16,Tokens.PRIME,d1}} where d1
         # prime operator followed by an identifier has an implicit multiplication
         @catcherror ps startbyte nextarg = @precedence ps 11 parse_expression(ps)
         ret = EXPR{BinaryOpCall}(EXPR[ret, EXPR{OPERATOR{TimesOp,Tokens.STAR,false}}(EXPR[], 0, Variable[], ""), nextarg], ret.span + nextarg.span, Variable[], "")

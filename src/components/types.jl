@@ -72,8 +72,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.PRIMITIVE}})
         # if ps.nt.kind != Tokens.END
             # return ERROR{MissingEnd}(ps.nt.startbyte - startbyte, EXPR(kw2, [sig, arg], ps.nt.startbyte - startbyte, [kw1]))
         # else
-            next(ps)
-            ret = EXPR{Primitive}(EXPR[kw1, kw2, sig, arg, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
+        next(ps)
+        ret = EXPR{Primitive}(EXPR[kw1, kw2, sig, arg, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
             # ret.defs = [Variable(get_id(sig), :bitstype, ret)]
         # end
         # ret.defs = [Variable(Expr(get_id(sig)), :bitstype, ret)]

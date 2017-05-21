@@ -283,7 +283,7 @@ end
 Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
-function span(x::EXPR{StringH}, neq =[]) end
+function span(x::EXPR{StringH}, neq = []) end
 function span(x, neq = [])
     s = 0
     for a in x.args

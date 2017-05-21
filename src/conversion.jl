@@ -47,7 +47,7 @@ Expr(x::EXPR{LITERAL{Tokens.TRIPLE_STRING}}) = x.val
 function Expr(x::EXPR{x_Str})
     if x.args[1] isa EXPR{BinarySyntaxOpCall}
         mname = Expr(x.args[1])
-        mname.args[2] = QuoteNode(Symbol("@",mname.args[2].value, "_str"))
+        mname.args[2] = QuoteNode(Symbol("@", mname.args[2].value, "_str"))
         ret = Expr(:macrocall, mname)
     else
         ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_str"))
@@ -126,7 +126,7 @@ Expr(x::EXPR{ConditionalOpCall}) = Expr(:if, Expr(x.args[1]), Expr(x.args[3]), E
 Expr(x::EXPR{ColonOpCall}) = Expr(:(:), Expr(x.args[1]), Expr(x.args[3]), Expr(x.args[5]))
 
 function Expr(x::EXPR{UnarySyntaxOpCall}) 
-    if x.args[1] isa EXPR{OPERATOR{p,k,d}} where {p,k,d}
+    if x.args[1] isa EXPR{OPERATOR{p,k,d}} where {p, k, d}
         return Expr(Expr(x.args[1]), Expr(x.args[2]))
     else
         return Expr(Expr(x.args[2]), Expr(x.args[1]))
@@ -185,7 +185,7 @@ Expr(x::EXPR{InvisBrackets}) = Expr(x.args[2])
 Expr(x::EXPR{Begin}) = Expr(x.args[2])
 
 function Expr(x::EXPR{Quote}) 
-    if x.args[2] isa EXPR{InvisBrackets} && (x.args[2].args[2] isa EXPR{OPERATOR{p,k,d}} where {p,k,d} || x.args[2].args[2] isa EXPR{LITERAL{k1}} where k1 || x.args[2].args[2] isa EXPR{IDENTIFIER})
+    if x.args[2] isa EXPR{InvisBrackets} && (x.args[2].args[2] isa EXPR{OPERATOR{p,k,d}} where {p, k, d} || x.args[2].args[2] isa EXPR{LITERAL{k1}} where k1 || x.args[2].args[2] isa EXPR{IDENTIFIER})
         return QuoteNode(Expr(x.args[2]))
     else
         return Expr(:quote, Expr(x.args[2]))
@@ -224,8 +224,8 @@ function Expr(x::EXPR{Try})
 end
 
 function Expr(x::EXPR{Let})
-    ret = Expr(:let, Expr(x.args[end-1]))
-    for i = 1:length(x.args)-2
+    ret = Expr(:let, Expr(x.args[end - 1]))
+    for i = 1:length(x.args) - 2
         a = x.args[i]
         if !(a isa EXPR{PUNCTUATION{pt}} where pt || a isa EXPR{KEYWORD{kt}} where kt)
             push!(ret.args, Expr(a))
@@ -515,18 +515,18 @@ function Expr(x::EXPR{Export})
     ret
 end
 
-Expr(x::EXPR{ModuleH}) =Expr(:module, true, Expr(x.args[2]), Expr(x.args[3]))
-Expr(x::EXPR{BareModule}) =Expr(:module, false, Expr(x.args[2]), Expr(x.args[3]))
+Expr(x::EXPR{ModuleH}) = Expr(:module, true, Expr(x.args[2]), Expr(x.args[3]))
+Expr(x::EXPR{BareModule}) = Expr(:module, false, Expr(x.args[2]), Expr(x.args[3]))
     
 
 
 
 function _get_import_block(x, i, ret)
-    while x.args[i+1] isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}}
+    while x.args[i + 1] isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}}
         i += 1
         push!(ret.args, :.)
     end
-    while i < length(x.args) && !(x.args[i+1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
+    while i < length(x.args) && !(x.args[i + 1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
         i += 1
         a = x.args[i]
         if !(a isa EXPR{PUNCTUATION{pt}} where pt) && !(a isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}} || a isa EXPR{OPERATOR{ColonOp,Tokens.COLON,false}}) 
@@ -555,8 +555,8 @@ function expr_import(x, kw)
         while i < length(x.args) 
             nextarg = Expr(kw)
             i = _get_import_block(x, i, nextarg)
-            if i < length(x.args) &&(x.args[i+1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
-                i+=1
+            if i < length(x.args) && (x.args[i + 1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
+                i += 1
             end
             push!(ret.args, nextarg)
         end
@@ -564,11 +564,11 @@ function expr_import(x, kw)
         ret = Expr(:toplevel)
         top = Expr(kw)
         i = 1
-        while x.args[i+1] isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}}
+        while x.args[i + 1] isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}}
             i += 1
             push!(top.args, :.)
         end
-        while i < length(x.args) && !(x.args[i+1] isa EXPR{o} where o <: OPERATOR{ColonOp})
+        while i < length(x.args) && !(x.args[i + 1] isa EXPR{o} where o <: OPERATOR{ColonOp})
             i += 1
             a = x.args[i]
             if !(a isa EXPR{PUNCTUATION{pt}} where pt) && !(a isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}} || a isa EXPR{OPERATOR{ColonOp,Tokens.COLON,false}}) 
@@ -578,8 +578,8 @@ function expr_import(x, kw)
         while i < length(x.args) 
             nextarg = Expr(kw, top.args...)
             i = _get_import_block(x, i, nextarg)
-            if i < length(x.args) &&(x.args[i+1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
-                i+=1
+            if i < length(x.args) && (x.args[i + 1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
+                i += 1
             end
             push!(ret.args, nextarg)
         end

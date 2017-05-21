@@ -71,10 +71,10 @@ Parses a function call. Expects to start before the opening parentheses and is p
 function parse_call(ps::ParseState, ret)
     startbyte = ps.t.startbyte
     # Parsing
-    if ret isa EXPR{OPERATOR{PlusOp,Tokens.EX_OR,false}} || ret isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} || ret isa EXPR{OPERATOR{TimesOp,Tokens.AND, d1}} where d1
+    if ret isa EXPR{OPERATOR{PlusOp,Tokens.EX_OR,false}} || ret isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} || ret isa EXPR{OPERATOR{TimesOp,Tokens.AND,d1}} where d1
         arg = @precedence ps 20 parse_expression(ps)
         ret = EXPR{UnarySyntaxOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
-    elseif ret isa EXPR{OPERATOR{20,Tokens.NOT,d1}} where d1 || ret isa EXPR{OPERATOR{PlusOp,Tokens.MINUS, d2}} where d2 || ret isa EXPR{OPERATOR{PlusOp,Tokens.PLUS, d3}} where d3
+    elseif ret isa EXPR{OPERATOR{20,Tokens.NOT,d1}} where d1 || ret isa EXPR{OPERATOR{PlusOp,Tokens.MINUS,d2}} where d2 || ret isa EXPR{OPERATOR{PlusOp,Tokens.PLUS,d3}} where d3
         arg = @precedence ps 13 parse_expression(ps)
         if arg isa EXPR{TupleH}
             ret = EXPR{Call}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")

@@ -76,7 +76,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
     ret = EXPR{While}(EXPR[kw, cond, block, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
 
     # Linting
-    if cond isa EXPR{BinarySyntaxOpCall} && cond.args[2] isa EXPR{OPERATOR{AssignmentOp,k1,d1}} where {k1,d1}
+    if cond isa EXPR{BinarySyntaxOpCall} && cond.args[2] isa EXPR{OPERATOR{AssignmentOp,k1,d1}} where {k1, d1}
         push!(ps.diagnostics, Diagnostic{Diagnostics.CondAssignment}(startbyte + kw.span + (0:cond.span), []))
     end
     if cond isa EXPR{LITERAL{Tokens.FALSE}}
