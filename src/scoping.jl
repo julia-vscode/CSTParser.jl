@@ -3,7 +3,7 @@ is_func_call(x::EXPR) = false
 is_func_call(x::EXPR{Call}) = true
 is_func_call(x::EXPR{UnaryOpCall}) = true
 function is_func_call(x::EXPR{BinarySyntaxOpCall}) 
-    if x.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}} || x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}
+    if length(x.args) > 1 && (x.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}} || x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}})
         return is_func_call(x.args[1])
     else
         return false
@@ -16,7 +16,7 @@ end
 Get the IDENTIFIER name of a variable, possibly in the presence of 
 type declaration operators.
 """
-get_id(x::T) where {T <: INSTANCE} = x
+# get_id(x::T) where {T <: INSTANCE} = x
 
 function get_id(x::EXPR)
     if x.head isa OPERATOR{ComparisonOp,Tokens.ISSUBTYPE} || x.head isa OPERATOR{DeclarationOp,Tokens.DECLARATION} || x.head == CURLY
@@ -226,7 +226,7 @@ function _find_scope(x::EXPR, n, path, ind, offsets, scope)
     end
 end
 
-_find_scope(x::Union{INSTANCE,ERROR}, n, path, ind, offsets, scope) = x
+# _find_scope(x::Union{INSTANCE,ERROR}, n, path, ind, offsets, scope) = x
 
 function find_scope(x::EXPR, n::Int)
     path = []

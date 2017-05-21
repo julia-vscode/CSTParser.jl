@@ -1,7 +1,3 @@
-# function Base.show{T, K}(io::IO, x::INSTANCE{T,K},indent=0)
-#     println(io, " "^indent, " $((Tokens.Kind[K][1]))","    [",x.span,"]")
-# end
-
 Base.show(io::IO, x::IDENTIFIER, indent = 0) =
     println(io, "  "^indent, " $(x.val)")
 

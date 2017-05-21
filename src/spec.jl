@@ -13,7 +13,6 @@ end
 EXPR(T, args) = EXPR{T}(args, 0, [], "")
 EXPR(T, args, span::Int) = EXPR{T}(args, span, [], "")
 
-abstract type INSTANCE end
 abstract type IDENTIFIER end
 abstract type LITERAL{K} end
 abstract type KEYWORD{K} end

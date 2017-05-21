@@ -17,7 +17,7 @@ function parse_string(ps::ParseState, prefixed = false)
 
     # there are interpolations in the string
     if prefixed != false
-        if prefixed isa INSTANCE && prefixed.val == :r
+        if prefixed.val == :r
             lit.val = replace(lit.val, "\\\"", "\"")
         end
         return lit

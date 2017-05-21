@@ -15,7 +15,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
         if issyntaxunarycall(op)
             sig = EXPR{UnarySyntaxOpCall}(EXPR[op, INSTANCE(ps)], 0, Variable[], "")
         else
-            sig = EXPR(Call, EXPR[op, INSTANCE(ps)], 0)
+            sig = EXPR{Call}(EXPR[op, INSTANCE(ps)], 0, Variable[])
         end
         @catcherror ps startbyte @default ps @closer ps paren parse_comma_sep(ps, sig)
         next(ps)
@@ -33,7 +33,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     end
 
     if sig isa EXPR{InvisBrackets} && !(sig.args[1] isa EXPR{TupleH})
-        sig.args[1] = EXPR(TupleH, EXPR[sig.args[1]], sig.args[1].span)
+        sig.args[1] = EXPR{TupleH}(EXPR[sig.args[1]], sig.args[1].span, Variable[], "")
     end
 
     # _lint_func_sig(ps, sig, ps.nt.startbyte + (-sig.span:0))
@@ -187,181 +187,181 @@ end
 Runs linting on function argument, assumes `sig` has just been parsed such that 
 the byte offset is `ps.nt.startbyte - sig.span`.
 """
-function _lint_func_sig(ps::ParseState, sig::IDENTIFIER, loc) end
+# function _lint_func_sig(ps::ParseState, sig::IDENTIFIER, loc) end
     
-function _lint_func_sig(ps::ParseState, sig::EXPR, loc)
-    if sig isa EXPR && sig.head isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}
-        return _lint_func_sig(ps, sig.args[1], loc)
-    end
-    fname = _get_fname(sig)
-    # use where syntax
-    if sig isa EXPR && sig.head == CALL && sig.args[1] isa EXPR && sig.args[1].head == CURLY
-        push!(ps.diagnostics, Diagnostic{Diagnostics.parameterisedDeprecation}((first(loc) + sig.args[1].args[1].span):(first(loc) + sig.args[1].span), []))
+# function _lint_func_sig(ps::ParseState, sig::EXPR, loc)
+#     if sig isa EXPR && sig.head isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}
+#         return _lint_func_sig(ps, sig.args[1], loc)
+#     end
+#     fname = _get_fname(sig)
+#     # use where syntax
+#     if sig isa EXPR && sig.head == CALL && sig.args[1] isa EXPR && sig.args[1].head == CURLY
+#         push!(ps.diagnostics, Diagnostic{Diagnostics.parameterisedDeprecation}((first(loc) + sig.args[1].args[1].span):(first(loc) + sig.args[1].span), []))
         
-        trailingws = last(sig) isa PUNCTUATION{Tokens.RPAREN} ? last(sig).span - 1 : 0
-        loc1 = first(loc) + sig.span - trailingws
-        push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((loc1):(loc1), string(" where {", join((Expr(t) for t in sig.args[1].args[2:end]), ","), "}")))
-        push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((first(loc) + sig.args[1].args[1].span):(first(loc) + sig.args[1].span), ""))
-    end
+#         trailingws = last(sig) isa PUNCTUATION{Tokens.RPAREN} ? last(sig).span - 1 : 0
+#         loc1 = first(loc) + sig.span - trailingws
+#         push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((loc1):(loc1), string(" where {", join((Expr(t) for t in sig.args[1].args[2:end]), ","), "}")))
+#         push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((first(loc) + sig.args[1].args[1].span):(first(loc) + sig.args[1].span), ""))
+#     end
     
-    format_funcname(ps, function_name(sig), sig.span)
-    args = Tuple{Symbol,Any}[]
-    nargs = length(sig.args) - 1
-    firstkw  = nargs + 1
-    for (i, arg) in enumerate(sig.args[2:end])
-        if arg isa EXPR && arg.head isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} && length(arg.args) == 1
-            #unhandled ::Type argument
-            continue
-        elseif arg isa EXPR && arg.head == PARAMETERS
-            for (i1, arg1) in enumerate(arg.args)
-                _lint_arg(ps, arg1, args, i + i1 - 1, fname, nargs, i - 1, loc)
-            end
-        else
-            _lint_arg(ps, arg, args, i, fname, nargs, firstkw, loc)
-        end
-    end
-    sig.defs = (a -> Variable(a[1], a[2], sig)).(args)
-end
+#     format_funcname(ps, function_name(sig), sig.span)
+#     args = Tuple{Symbol,Any}[]
+#     nargs = length(sig.args) - 1
+#     firstkw  = nargs + 1
+#     for (i, arg) in enumerate(sig.args[2:end])
+#         if arg isa EXPR && arg.head isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} && length(arg.args) == 1
+#             #unhandled ::Type argument
+#             continue
+#         elseif arg isa EXPR && arg.head == PARAMETERS
+#             for (i1, arg1) in enumerate(arg.args)
+#                 _lint_arg(ps, arg1, args, i + i1 - 1, fname, nargs, i - 1, loc)
+#             end
+#         else
+#             _lint_arg(ps, arg, args, i, fname, nargs, firstkw, loc)
+#         end
+#     end
+#     sig.defs = (a -> Variable(a[1], a[2], sig)).(args)
+# end
     
-function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
-    a = _arg_id(arg)
-    t = get_t(arg)
-    !(a isa IDENTIFIER) && return
-    # if !(a.val in args)
-    if !any(a.val == aa[1] for aa in args)
-        push!(args, (a.val, t))
-    else 
-        push!(ps.diagnostics, Diagnostic{Diagnostics.DuplicateArgumentName}(loc, []))
-    end
-    if a.val == Expr(fname)
-        push!(ps.diagnostics, Diagnostic{Diagnostics.ArgumentFunctionNameConflict}(loc, []))
-    end
-    if arg isa EXPR && arg.head isa OPERATOR{0,Tokens.DDDOT} && i != nargs
-        push!(ps.diagnostics, Diagnostic{Diagnostics.SlurpingPosition}(loc, []))
-    end
-    if arg isa EXPR && arg.head isa HEAD{Tokens.KW} && i < firstkw
-        firstkw = i
-    end
-    if !(arg isa EXPR && arg.head isa HEAD{Tokens.KW}) && i > firstkw
-        push!(ps.diagnostics, Diagnostic{Diagnostics.KWPosition}(loc, []))
-    end
-    # Check 
-end
+# function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
+#     a = _arg_id(arg)
+#     t = get_t(arg)
+#     !(a isa IDENTIFIER) && return
+#     # if !(a.val in args)
+#     if !any(a.val == aa[1] for aa in args)
+#         push!(args, (a.val, t))
+#     else 
+#         push!(ps.diagnostics, Diagnostic{Diagnostics.DuplicateArgumentName}(loc, []))
+#     end
+#     if a.val == Expr(fname)
+#         push!(ps.diagnostics, Diagnostic{Diagnostics.ArgumentFunctionNameConflict}(loc, []))
+#     end
+#     if arg isa EXPR && arg.head isa OPERATOR{0,Tokens.DDDOT} && i != nargs
+#         push!(ps.diagnostics, Diagnostic{Diagnostics.SlurpingPosition}(loc, []))
+#     end
+#     if arg isa EXPR && arg.head isa HEAD{Tokens.KW} && i < firstkw
+#         firstkw = i
+#     end
+#     if !(arg isa EXPR && arg.head isa HEAD{Tokens.KW}) && i > firstkw
+#         push!(ps.diagnostics, Diagnostic{Diagnostics.KWPosition}(loc, []))
+#     end
+#     # Check 
+# end
 
 # make this traverse EXPR that contribute scope
-function _lint_func_body(ps::ParseState, fname, body, loc)
-    for a in body.args
-        if a isa EXPR
-            for d in a.defs
-                if d.id == fname
-                    push!(ps.diagnostics, Diagnostic{Diagnostics.AssignsToFuncName}(loc + (0:a.span), []))
-                end
-            end
-        end
-        if contributes_scope(a)
-            _lint_func_body(ps::ParseState, fname, a, loc)
-        end
-        loc += a.span
-    end
-end
+# function _lint_func_body(ps::ParseState, fname, body, loc)
+#     for a in body.args
+#         if a isa EXPR
+#             for d in a.defs
+#                 if d.id == fname
+#                     push!(ps.diagnostics, Diagnostic{Diagnostics.AssignsToFuncName}(loc + (0:a.span), []))
+#                 end
+#             end
+#         end
+#         if contributes_scope(a)
+#             _lint_func_body(ps::ParseState, fname, a, loc)
+#         end
+#         loc += a.span
+#     end
+# end
 
 
 
 
 # NEEDS FIX
-_arg_id(x::INSTANCE) = x
-_arg_id(x::EXPR{Quotenode}) = x.val
+# _arg_id(x::INSTANCE) = x
+# _arg_id(x::EXPR{Quotenode}) = x.val
 
-function _arg_id(x::EXPR)
-    if x.head isa OPERATOR{DeclarationOp,Tokens.DECLARATION} || x.head == CURLY || x.head isa OPERATOR{0,Tokens.DDDOT} || x.head isa HEAD{Tokens.KW}
-        return _arg_id(x.args[1])
-    else
-        return x
-    end
-end
-
-
-function _sig_params(x, p = [])
-    if x isa EXPR
-        if x.head == CURLY
-            for a in x.args[2:end]
-                push!(p, get_id(a))
-            end
-        end
-    end
-    return p
-end
-
-function _get_fname(sig)
-    if sig isa IDENTIFIER
-        return sig
-    elseif sig isa EXPR && sig.head == TUPLE
-        return NOTHING
-    elseif sig isa EXPR && sig.head isa OPERATOR{DeclarationOp,Tokens.DECLARATION}
-        get_id(sig.args[1].args[1])
-    else
-        get_id(sig.args[1])
-    end
-end
-
-function function_name(sig::EXPR)
-    if sig isa EXPR
-        if sig.head == CALL || sig.head == CURLY
-            return function_name(sig.args[1])
-        elseif sig.head isa OPERATOR{DotOp,Tokens.DOT}
-            return function_name(sig.args[2])
-        end
-    elseif sig isa EXPR{Quotenode}
-        function_name(sig.val)
-    elseif sig isa IDENTIFIER
-        return sig.val
-    elseif sig isa OPERATOR
-        return UNICODE_OPS_REVERSE[typeof(sig).parameters[2]]
-    else
-        error("$(Expr(sig)) is not a valid function name")
-    end
-end
+# function _arg_id(x::EXPR)
+#     if x.head isa OPERATOR{DeclarationOp,Tokens.DECLARATION} || x.head == CURLY || x.head isa OPERATOR{0,Tokens.DDDOT} || x.head isa HEAD{Tokens.KW}
+#         return _arg_id(x.args[1])
+#     else
+#         return x
+#     end
+# end
 
 
-function declares_function(x::EXPR)
-    if x isa EXPR
-        if x.head isa KEYWORD{Tokens.FUNCTION}
-            return true
-        elseif x.head isa OPERATOR{AssignmentOp,Tokens.EQ} && x.args[1] isa EXPR && x.args[1].head == CALL
-            return true
-        else
-            return false
-        end
-    else
-        return false
-    end
-end
+# function _sig_params(x, p = [])
+#     if x isa EXPR
+#         if x.head == CURLY
+#             for a in x.args[2:end]
+#                 push!(p, get_id(a))
+#             end
+#         end
+#     end
+#     return p
+# end
 
-function _lint_dict(ps::ParseState, x::EXPR)
-    # paramaterised case
-    if x.args[1] isa EXPR && x.args[1].head == CURLY
-        # expect 2 parameters (+ :Dict)
-        if length(x.args[1].args) != 3
-            push!(ps.diagnostics, Diagnostic{Diagnostics.DictParaMisSpec}(ps.nt.startbyte - x.span + (0:x[1].span), []))
-        end
-    end
-    # Handle generators
-    if length(x.args) > 1 
-        if x.args[2] isa EXPR && x.args[2].head == GENERATOR
-            gen = x.args[2]
-            if gen.args[1].head isa OPERATOR{AssignmentOp} && !(gen.args[1].head isa OPERATOR{AssignmentOp,Tokens.PAIR_ARROW})
-                push!(ps.diagnostics, Diagnostic{Diagnostics.DictGenAssignment}(ps.nt.startbyte - x.span + (0:x.span), []))
-            end
-        # Lint items
-        else
-            locstart = ps.nt.startbyte - x.span + x.args[1].span + first(x.punctuation).span
-            for (i, a) in enumerate(x.args[2:end])
-                # non pair arrow assignment
-                if a isa EXPR && a.head isa OPERATOR{AssignmentOp} && !(a.head isa OPERATOR{AssignmentOp,Tokens.PAIR_ARROW})
-                    push!(ps.diagnostics, Diagnostic{Diagnostics.DictGenAssignment}(locstart + (0:a.span), []))
-                end
-                locstart += a.span + x.punctuation[i + 1].span
-            end
-        end
-    end
-end
+# function _get_fname(sig)
+#     if sig isa IDENTIFIER
+#         return sig
+#     elseif sig isa EXPR && sig.head == TUPLE
+#         return NOTHING
+#     elseif sig isa EXPR && sig.head isa OPERATOR{DeclarationOp,Tokens.DECLARATION}
+#         get_id(sig.args[1].args[1])
+#     else
+#         get_id(sig.args[1])
+#     end
+# end
+
+# function function_name(sig::EXPR)
+#     if sig isa EXPR
+#         if sig.head == CALL || sig.head == CURLY
+#             return function_name(sig.args[1])
+#         elseif sig.head isa OPERATOR{DotOp,Tokens.DOT}
+#             return function_name(sig.args[2])
+#         end
+#     elseif sig isa EXPR{Quotenode}
+#         function_name(sig.val)
+#     elseif sig isa IDENTIFIER
+#         return sig.val
+#     elseif sig isa OPERATOR
+#         return UNICODE_OPS_REVERSE[typeof(sig).parameters[2]]
+#     else
+#         error("$(Expr(sig)) is not a valid function name")
+#     end
+# end
+
+
+# function declares_function(x::EXPR)
+#     if x isa EXPR
+#         if x.head isa KEYWORD{Tokens.FUNCTION}
+#             return true
+#         elseif x.head isa OPERATOR{AssignmentOp,Tokens.EQ} && x.args[1] isa EXPR && x.args[1].head == CALL
+#             return true
+#         else
+#             return false
+#         end
+#     else
+#         return false
+#     end
+# end
+
+# function _lint_dict(ps::ParseState, x::EXPR)
+#     # paramaterised case
+#     if x.args[1] isa EXPR && x.args[1].head == CURLY
+#         # expect 2 parameters (+ :Dict)
+#         if length(x.args[1].args) != 3
+#             push!(ps.diagnostics, Diagnostic{Diagnostics.DictParaMisSpec}(ps.nt.startbyte - x.span + (0:x[1].span), []))
+#         end
+#     end
+#     # Handle generators
+#     if length(x.args) > 1 
+#         if x.args[2] isa EXPR && x.args[2].head == GENERATOR
+#             gen = x.args[2]
+#             if gen.args[1].head isa OPERATOR{AssignmentOp} && !(gen.args[1].head isa OPERATOR{AssignmentOp,Tokens.PAIR_ARROW})
+#                 push!(ps.diagnostics, Diagnostic{Diagnostics.DictGenAssignment}(ps.nt.startbyte - x.span + (0:x.span), []))
+#             end
+#         # Lint items
+#         else
+#             locstart = ps.nt.startbyte - x.span + x.args[1].span + first(x.punctuation).span
+#             for (i, a) in enumerate(x.args[2:end])
+#                 # non pair arrow assignment
+#                 if a isa EXPR && a.head isa OPERATOR{AssignmentOp} && !(a.head isa OPERATOR{AssignmentOp,Tokens.PAIR_ARROW})
+#                     push!(ps.diagnostics, Diagnostic{Diagnostics.DictGenAssignment}(locstart + (0:a.span), []))
+#                 end
+#                 locstart += a.span + x.punctuation[i + 1].span
+#             end
+#         end
+#     end
+# end

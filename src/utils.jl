@@ -433,3 +433,16 @@ function check_reformat()
     end
 end
 
+
+
+is_func_call(x) = false
+is_func_call(x::EXPR) = false
+is_func_call(x::EXPR{Call}) = true
+is_func_call(x::EXPR{UnaryOpCall}) = true
+function is_func_call(x::EXPR{BinarySyntaxOpCall}) 
+    if length(x.args) > 1 && (x.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}} || x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}})
+        return is_func_call(x.args[1])
+    else
+        return false
+    end
+end

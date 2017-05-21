@@ -18,7 +18,7 @@ function parse_module(ps::ParseState)
         @catcherror ps startbyte arg = @precedence ps 15 @closer ps block @closer ps ws parse_expression(ps)
     end
 
-    block = EXPR(Block, [], -ps.nt.startbyte)
+    block = EXPR{Block}(EXPR[], -ps.nt.startbyte, Variable[], "")
     @scope ps Scope{Tokens.MODULE} @default ps while ps.nt.kind !== Tokens.END
         @catcherror ps startbyte a = @closer ps block parse_doc(ps)
         push!(block.args, a)
@@ -27,7 +27,7 @@ function parse_module(ps::ParseState)
     # Construction
     block.span += ps.nt.startbyte
     next(ps)
-    ret = EXPR((kw isa EXPR{KEYWORD{Tokens.MODULE}} ? Module : BareModule), [kw, arg, block, INSTANCE(ps)], ps.nt.startbyte - startbyte)
+    ret = EXPR{(kw isa EXPR{KEYWORD{Tokens.MODULE}} ? Module : BareModule)}(EXPR[kw, arg, block, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
     # ret.defs = [Variable(Expr(arg), :module, ret)]
     return ret
 end
@@ -67,7 +67,7 @@ function parse_dot_mod(ps::ParseState, colon = false)
             push!(args, a)
         elseif ps.nt.kind == Tokens.LPAREN
             next(ps)
-            a = EXPR(InvisBrackets, [INSTANCE(ps)], -ps.t.startbyte)
+            a = EXPR{InvisBrackets}(EXPR[INSTANCE(ps)], -ps.t.startbyte, Variable[], "")
             @catcherror ps startbyte push!(a.args, @default ps @closer ps paren parse_expression(ps))
             next(ps)
             push!(a.args, INSTANCE(ps))
@@ -114,11 +114,11 @@ function parse_imports(ps::ParseState)
     arg = parse_dot_mod(ps)
 
     if ps.nt.kind != Tokens.COMMA && ps.nt.kind != Tokens.COLON
-        ret = EXPR(kwt, [kw; arg], ps.nt.startbyte - startbyte)
+        ret = EXPR{kwt}(EXPR[kw; arg], ps.nt.startbyte - startbyte, Variable[], "")
         # ret.defs = [Variable(Expr(ret), :IMPORTS, ret)]
     elseif ps.nt.kind == Tokens.COLON
         
-        ret = EXPR(kwt, [kw;arg], 0)
+        ret = EXPR{kwt}(EXPR[kw;arg], 0, Variable[], "")
         t = 0
 
         next(ps)
@@ -135,7 +135,7 @@ function parse_imports(ps::ParseState)
         end
         # ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
     else
-        ret = EXPR(kwt, [kw;arg], 0)
+        ret = EXPR{kwt}(EXPR[kw;arg], 0, Variable[], "")
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(ret.args, INSTANCE(ps))

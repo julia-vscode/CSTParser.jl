@@ -7,7 +7,7 @@ function parse_do(ps::ParseState, ret)
     kw = INSTANCE(ps)
     format_kw(ps)
     
-    args = EXPR(TupleH, [], - ps.nt.startbyte)
+    args = EXPR{TupleH}(EXPR[], - ps.nt.startbyte, Variable[], "")
     @default ps @closer ps comma @closer ps block while !closer(ps)
         @catcherror ps startbyte a = parse_expression(ps)
         push!(args.args, a)
@@ -22,7 +22,7 @@ function parse_do(ps::ParseState, ret)
     @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
 
     # Construction
-    ret = EXPR(Do, [ret, kw], ret.span - startbyte)
+    ret = EXPR{Do}(EXPR[ret, kw], ret.span - startbyte, Variable[], "")
     push!(ret.args, args)
     push!(ret.args, block)
     next(ps)

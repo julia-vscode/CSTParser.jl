@@ -17,8 +17,8 @@ include("lexer.jl")
 include("errors.jl")
 include("spec.jl")
 include("utils.jl")
-include("iterators.jl")
-include("scoping.jl")
+# include("iterators.jl")
+# include("scoping.jl")
 include("deprecations.jl")
 include("components/array.jl")
 include("components/curly.jl")
@@ -106,7 +106,7 @@ function parse_expression(ps::ParseState)
         @catcherror ps startbyte ret = parse_compound(ps, ret)
     end
     if ps.closer.precedence != DotOp && closer(ps) && ret isa EXPR{LITERAL{Tokens.MACRO}}
-        ret = EXPR(MacroCall, [ret], ret.span)
+        ret = EXPR{MacroCall}(EXPR[ret], ret.span, Variable[], "")
     end
 
     return ret
@@ -300,15 +300,15 @@ function parse_doc(ps::ParseState)
         end
 
         ret = parse_expression(ps)
-        ret = EXPR(MacroCall, [GlobalRefDOC, doc, ret], doc.span + ret.span)
+        ret = EXPR{MacroCall}(EXPR[GlobalRefDOC, doc, ret], doc.span + ret.span, Variable[], "")
     elseif ps.nt.kind == Tokens.IDENTIFIER && ps.nt.val == "doc" && (ps.nnt.kind == Tokens.STRING || ps.nnt.kind == Tokens.TRIPLE_STRING)
         next(ps)
         doc = INSTANCE(ps)
         next(ps)
         @catcherror ps startbyte arg = parse_string(ps, doc)
-        doc = EXPR(x_STR, [doc, arg], doc.span + arg.span)
+        doc = EXPR{x_STR}(EXPR[doc, arg], doc.span + arg.span, Variable[], "")
         ret = parse_expression(ps)
-        ret = EXPR(MacroCall, [GlobalRefDOC, doc, ret], doc.span + ret.span)
+        ret = EXPR{MacroCall}(EXPR[GlobalRefDOC, doc, ret], doc.span + ret.span, Variable[], "")
     else
         ret = parse_expression(ps)
     end
@@ -317,13 +317,13 @@ end
 
 function parse(ps::ParseState, cont = false)
     if ps.l.io.size == 0
-        return (cont ? EXPR(FileH, [], 0) : nothing), ps
+        return (cont ? EXPR{FileH}(EXPR[], 0, Variable[], "") : nothing), ps
     end
     last_line = 0
     curr_line = 0
 
     if cont
-        top = EXPR(FileH, [], 0)
+        top = EXPR{FileH}(EXPR[], 0, Variable[], "")
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
             push!(top.args, EXPR{LITERAL{nothing}}(EXPR[], ps.nt.startbyte, Variable[], "comments"))
@@ -370,8 +370,8 @@ end
 
 function parse_file(path::String)
     x = parse(readstring(path), true)
-    
-    File([], (f -> (joinpath(dirname(path), f[1]), f[2])).(_get_includes(x)), path, x, [])
+    File([], [], path, x, [])
+    # File([], (f -> (joinpath(dirname(path), f[1]), f[2])).(_get_includes(x)), path, x, [])
 end
 
 function parse_directory(path::String, proj = Project(path, []))
@@ -396,3 +396,4 @@ ischainable(t::Token) = t.kind == Tokens.PLUS || t.kind == Tokens.STAR || t.kind
 # include("precompile.jl")
 # _precompile_()
 end
+

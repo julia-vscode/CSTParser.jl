@@ -22,25 +22,25 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
     return ret
 end
 
-function _lint_range(ps::ParseState, x, loc)
-    if x isa EXPR{BinaryOpCall} && ((x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}}))
-        if x.args[2] isa IDENTIFIER
-            id = Expr(x.args[2])
-            t = infer_t(x.args[3])
-            push!(x.defs, Variable(id, t, x))
-        end
-        if x.args[3] isa LITERAL
-            push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, []))
-        end
+# function _lint_range(ps::ParseState, x, loc)
+#     if x isa EXPR{BinaryOpCall} && ((x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}}))
+#         if x.args[2] isa IDENTIFIER
+#             id = Expr(x.args[2])
+#             t = infer_t(x.args[3])
+#             push!(x.defs, Variable(id, t, x))
+#         end
+#         if x.args[3] isa LITERAL
+#             push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, []))
+#         end
         
-    elseif x isa EXPR{BinarySyntaxOpCall} && x.head isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
-        if x.args[2] isa LITERAL
-            push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, []))
-        end
-    else
-        push!(ps.diagnostics, Diagnostic{Diagnostics.RangeNonAssignment}(loc, []))
-    end
-end
+#     elseif x isa EXPR{BinarySyntaxOpCall} && x.head isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
+#         if x.args[2] isa LITERAL
+#             push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, []))
+#         end
+#     else
+#         push!(ps.diagnostics, Diagnostic{Diagnostics.RangeNonAssignment}(loc, []))
+#     end
+# end
 
 function parse_ranges(ps::ParseState)
     startbyte = ps.nt.startbyte
