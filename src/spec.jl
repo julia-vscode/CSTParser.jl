@@ -26,11 +26,11 @@ abstract type ERROR end
 
 function LITERAL(ps::ParseState)
     span = ps.nt.startbyte - ps.t.startbyte
-    # if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING
-    #     return parse_string(ps)
-    # else
+    if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING
+        return parse_string(ps)
+    else
         EXPR{LITERAL{ps.t.kind}}(EXPR[], span, Variable[], ps.t.val)
-    # end
+    end
 end
 
 IDENTIFIER(ps::ParseState) = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], ps.t.val)

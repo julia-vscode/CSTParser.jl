@@ -63,9 +63,7 @@ function parse_dot_mod(ps::ParseState, colon = false)
             next(ps)
             next(ps)
             a = INSTANCE(ps)
-            # a.val = Symbol('@', a.val)
-            # a.span +=1
-            a = IDENTIFIER(a.span + 1, Symbol('@', Expr(a)))
+            a = EXPR{IDENTIFIER}(EXPR[], a.span + 1, Variable[], string("a", a.val))
             push!(args, a)
         elseif ps.nt.kind == Tokens.LPAREN
             next(ps)
@@ -79,7 +77,7 @@ function parse_dot_mod(ps::ParseState, colon = false)
             push!(args, a)
         elseif !colon && isoperator(ps.nt) && ps.ndot
             next(ps)
-            push!(args, OPERATOR{precedence(ps.t),ps.t.kind,false}(ps.nt.startbyte - ps.t.startbyte - 1))
+            push!(args, EXPR{OPERATOR{precedence(ps.t),ps.t.kind,false}}(EXPR[], ps.nt.startbyte - ps.t.startbyte - 1, Variable[], ""))
         else
             next(ps)
             push!(args, INSTANCE(ps))
@@ -89,7 +87,7 @@ function parse_dot_mod(ps::ParseState, colon = false)
             next(ps)
             push!(args, INSTANCE(ps))
         elseif isoperator(ps.nt) && ps.ndot
-            push!(args, PUNCTUATION{Tokens.DOT}(1))
+            push!(args, EXPR{PUNCTUATION{Tokens.DOT}}(EXPR[], 1, Variable[], ""))
         else
             break
         end

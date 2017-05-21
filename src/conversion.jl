@@ -25,6 +25,22 @@ Expr(x::EXPR{LITERAL{Tokens.MACRO}}) = Symbol(x.val)
 Expr(x::EXPR{LITERAL{Tokens.STRING}}) = x.val
 Expr(x::EXPR{LITERAL{Tokens.TRIPLE_STRING}}) = x.val
 
+function Expr(x::EXPR{x_Str})
+    ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_str"))
+    for i = 2:length(x.args)
+        push!(ret.args, x.args[i].val)
+    end
+    return ret
+end
+
+function Expr(x::EXPR{x_Cmd})
+    ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_cmd"))
+    for i = 2:length(x.args)
+        push!(ret.args, x.args[i].val)
+    end
+    return ret
+end
+
 Expr(x::EXPR{PUNCTUATION{K}}) where {K} = string(K)
 
 Expr(x::EXPR{Quotenode}) = QuoteNode(Expr(x.args[end]))
@@ -247,7 +263,9 @@ Expr(x::EXPR{Continue}) = Expr(:continue)
 function Expr(x::EXPR{Curly})
     ret = Expr(:curly)
     for a in x.args
-        if !(a isa EXPR{PUNCTUATION{pt}} where pt)
+        if a isa EXPR{Parameters}
+            insert!(ret.args, 2, Expr(a))
+        elseif !(a isa EXPR{PUNCTUATION{pt}} where pt)
             push!(ret.args, Expr(a))
         end
     end
@@ -400,8 +418,16 @@ function Expr(x::EXPR{Import})
     ret
 end
 
-function Expr(x::EXPR{Export})
+function Expr(x::EXPR{FileH})
     ret = Expr(:file)
+    for a in x.args
+        push!(ret.args, Expr(a))
+    end
+    ret
+end
+
+function Expr(x::EXPR{StringH})
+    ret = Expr(:string)
     for a in x.args
         push!(ret.args, Expr(a))
     end

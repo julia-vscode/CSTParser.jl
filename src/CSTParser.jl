@@ -153,29 +153,29 @@ function parse_compound(ps::ParseState, ret)
         op = INSTANCE(ps)
         format_op(ps, precedence(ps.t))
         ret = parse_operator(ps, ret, op)
-    elseif (ret isa IDENTIFIER || (ret isa EXPR{BinarySyntaxOpCall} && ret.args[2] isa OPERATOR{DotOp,Tokens.DOT})) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
+    elseif (ret isa EXPR{IDENTIFIER} || (ret isa EXPR{BinarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}})) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
         next(ps)
         @catcherror ps startbyte arg = parse_string(ps, ret)
-        ret = EXPR(x_STR, [ret, arg], ret.span + arg.span)
+        ret = EXPR{x_Str}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
     # Suffix on x_str
     elseif ret isa EXPR{x_Str} && ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         arg = INSTANCE(ps)
-        push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.val))
+        push!(ret.args, EXPR{LITERAL{Tokens.STRING}}(EXPR[], arg.span, Variable[], arg.val))
         ret.span += arg.span
     elseif (ret isa EXPR{IDENTIFIER} || (ret isa EXPR{BinarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}})) && ps.nt.kind == Tokens.CMD
         next(ps)
         @catcherror ps startbyte arg = parse_string(ps, ret)
-        ret = EXPR(x_CMD, [ret, arg], ret.span + arg.span)
+        ret = EXPR{x_Cmd}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
     elseif ret isa EXPR{x_Cmd} && ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         arg = INSTANCE(ps)
-        push!(ret.args, LITERAL{Tokens.STRING}(arg.span, arg.val))
+        push!(ret.args, EXPR{LITERAL{Tokens.STRING}}(EXPR[], arg.span, Variable[], arg.val))
         ret.span += arg.span
     elseif ret isa EXPR{UnarySyntaxOpCall} && ret.args[2] isa OPERATOR{20,Tokens.PRIME} 
         # prime operator followed by an identifier has an implicit multiplication
         @catcherror ps startbyte nextarg = @precedence ps 11 parse_expression(ps)
-        ret = EXPR(Call, [ret, OPERATOR{TimesOp,Tokens.STAR,false}(0), nextarg], ret.span + nextarg.span)
+        ret = EXPR{BinaryOpCall}(EXPR[ret, EXPR{OPERATOR{TimesOp,Tokens.STAR,false}}(EXPR[], 0, Variable[], ""), nextarg], ret.span + nextarg.span, Variable[], "")
 ################################################################################
 # Everything below here is an error
 ################################################################################
