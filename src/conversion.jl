@@ -334,6 +334,8 @@ function Expr(x::EXPR{MacroCall})
     ret
 end
 
+Expr(x::EXPR{HEAD{:globalrefdoc}}) = GlobalRef(Core, Symbol("@doc"))
+
 function Expr(x::EXPR{Row})
     ret = Expr(:row)
     for a in x.args

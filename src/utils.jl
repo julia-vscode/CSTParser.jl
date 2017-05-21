@@ -324,10 +324,10 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                     io = IOBuffer(str)
                     x, ps = parse(ps, true)
                     # sp = span(x)
-                    if length(x.args) > 0 && x.args[1] isa LITERAL{nothing}
+                    if length(x.args) > 0 && x.args[1] isa EXPR{LITERAL{nothing}}
                         shift!(x.args)
                     end
-                    if length(x.args) > 0 && x.args[end] isa LITERAL{nothing}
+                    if length(x.args) > 0 && x.args[end] isa EXPR{LITERAL{nothing}}
                         pop!(x.args)
                     end
                     x0 = Expr(x)
@@ -345,11 +345,11 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                     end
                     remlineinfo!(x1)
                     print("\r                             ")
-                    if !isempty(sp)
-                        print_with_color(:blue, file)
-                        println()
-                        push!(ret, (file, :span))
-                    end
+                    # if !isempty(sp)
+                    #     print_with_color(:blue, file)
+                    #     println()
+                    #     push!(ret, (file, :span))
+                    # end
                     if ps.errored
                         err += 1
                         print_with_color(:yellow, file)

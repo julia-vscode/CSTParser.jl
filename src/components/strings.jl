@@ -61,7 +61,7 @@ function parse_string(ps::ParseState, prefixed = false)
                     skip(io, interp.span - length(ps1.ws.val))
                 end
             else
-                push!(ret.args, LITERAL{Tokens.STRING}(sizeof(str1) - 1, unescape_string(str1)))
+                push!(ret.args, EXPR{LITERAL{Tokens.STRING}}(EXPR[], sizeof(str1) - 1, Variable[], unescape_string(str1)))
             end
         end
         return ret
@@ -96,5 +96,5 @@ function unindent_triple_string(ps::ParseState)
         #     val = string(" "^indent, val)
         # end
     end
-    lit = LITERAL{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte - ps.ndot, val)
+    lit = EXPR{LITERAL{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte - ps.ndot, Variable[], val)
 end
