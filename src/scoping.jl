@@ -207,4 +207,3 @@ contributes_scope(x::EXPR{Global}) = true
 contributes_scope(x::EXPR{Local}) = true
 contributes_scope(x::EXPR{If}) = true
 contributes_scope(x::EXPR{MacroCall}) = true
-contributes_scope(x::EXPR{Begin}) = true
