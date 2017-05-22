@@ -57,7 +57,12 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     
     next(ps)
     
-    ret = EXPR{FunctionDef}(EXPR[kw; args; INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
+    ret = EXPR{FunctionDef}(EXPR[kw], ps.nt.startbyte - startbyte, Variable[], "")
+    for a in args
+        push!(ret.args, a)
+    end
+    push!(ret.args, INSTANCE(ps))
+
     ret.defs = [Variable(function_name(sig), :Function, ret)]
     return ret
 end
