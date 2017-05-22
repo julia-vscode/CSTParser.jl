@@ -107,21 +107,33 @@ end
 function parse_call(ps::ParseState, ret::EXPR{OPERATOR{20,Tokens.NOT,d}}) where d
     startbyte = ps.t.startbyte
     arg = @precedence ps 13 parse_expression(ps)
-    ret = EXPR{arg isa EXPR{TupleH} ? Call : UnaryOpCall}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
+    if arg isa EXPR{TupleH}
+        ret = EXPR{Call}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
+    else
+        ret = EXPR{UnaryOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
+    end
     return ret
 end
 
 function parse_call(ps::ParseState, ret::EXPR{OPERATOR{PlusOp,Tokens.PLUS,d}}) where d
     startbyte = ps.t.startbyte
     arg = @precedence ps 13 parse_expression(ps)
-    ret = EXPR{arg isa EXPR{TupleH} ? Call : UnaryOpCall}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
+    if arg isa EXPR{TupleH}
+        ret = EXPR{Call}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
+    else
+        ret = EXPR{UnaryOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
+    end
     return ret
 end
 
 function parse_call(ps::ParseState, ret::EXPR{OPERATOR{PlusOp,Tokens.MINUS,d}}) where d
     startbyte = ps.t.startbyte
     arg = @precedence ps 13 parse_expression(ps)
-    ret = EXPR{arg isa EXPR{TupleH} ? Call : UnaryOpCall}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
+    if arg isa EXPR{TupleH}
+        ret = EXPR{Call}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
+    else
+        ret = EXPR{UnaryOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
+    end
     return ret
 end
 
