@@ -72,33 +72,71 @@ end
 
 Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
 """
+function parse_call(ps::ParseState, ret::EXPR{OPERATOR{PlusOp,Tokens.EX_OR,false}})
+    startbyte = ps.t.startbyte
+    arg = @precedence ps 20 parse_expression(ps)
+    ret = EXPR{UnarySyntaxOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
+    return ret
+end
+function parse_call(ps::ParseState, ret::EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}})
+    startbyte = ps.t.startbyte
+    arg = @precedence ps 20 parse_expression(ps)
+    ret = EXPR{UnarySyntaxOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
+    return ret
+end
+function parse_call(ps::ParseState, ret::EXPR{OPERATOR{TimesOp,Tokens.AND,d1}}) where d1
+    startbyte = ps.t.startbyte
+    arg = @precedence ps 20 parse_expression(ps)
+    ret = EXPR{UnarySyntaxOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
+    return ret
+end
+function parse_call(ps::ParseState, ret::EXPR{OPERATOR{ComparisonOp,Tokens.ISSUBTYPE,false}})
+    startbyte = ps.t.startbyte
+    arg = @precedence ps 13 parse_expression(ps)
+    ret = EXPR{Call}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
+    return ret
+end
+
+function parse_call(ps::ParseState, ret::EXPR{OPERATOR{ComparisonOp,Tokens.ISSUPERTYPE,false}})
+    startbyte = ps.t.startbyte
+    arg = @precedence ps 13 parse_expression(ps)
+    ret = EXPR{Call}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
+    return ret
+end
+
+function parse_call(ps::ParseState, ret::EXPR{OPERATOR{20,Tokens.NOT,d}}) where d
+    startbyte = ps.t.startbyte
+    arg = @precedence ps 13 parse_expression(ps)
+    ret = EXPR{arg isa EXPR{TupleH} ? Call : UnaryOpCall}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
+    return ret
+end
+
+function parse_call(ps::ParseState, ret::EXPR{OPERATOR{PlusOp,Tokens.PLUS,d}}) where d
+    startbyte = ps.t.startbyte
+    arg = @precedence ps 13 parse_expression(ps)
+    ret = EXPR{arg isa EXPR{TupleH} ? Call : UnaryOpCall}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
+    return ret
+end
+
+function parse_call(ps::ParseState, ret::EXPR{OPERATOR{PlusOp,Tokens.MINUS,d}}) where d
+    startbyte = ps.t.startbyte
+    arg = @precedence ps 13 parse_expression(ps)
+    ret = EXPR{arg isa EXPR{TupleH} ? Call : UnaryOpCall}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
+    return ret
+end
+
 function parse_call(ps::ParseState, ret)
     startbyte = ps.t.startbyte
-    # Parsing
-    if ret isa EXPR{OPERATOR{PlusOp,Tokens.EX_OR,false}} || ret isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} || ret isa EXPR{OPERATOR{TimesOp,Tokens.AND,d1}} where d1
-        arg = @precedence ps 20 parse_expression(ps)
-        ret = EXPR{UnarySyntaxOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
-    elseif ret isa EXPR{OPERATOR{20,Tokens.NOT,d1}} where d1 || ret isa EXPR{OPERATOR{PlusOp,Tokens.MINUS,d2}} where d2 || ret isa EXPR{OPERATOR{PlusOp,Tokens.PLUS,d3}} where d3
-        arg = @precedence ps 13 parse_expression(ps)
-        if arg isa EXPR{TupleH}
-            ret = EXPR{Call}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
-        else
-            ret = EXPR{UnaryOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
-        end
-    elseif ret isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUBTYPE,false}} || ret isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUPERTYPE,false}} || ret isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUPERTYPE,false}}
-        arg = @precedence ps 13 parse_expression(ps)
-        ret = EXPR{Call}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
-    else
-        next(ps)
-        ret = EXPR{Call}(EXPR[ret, INSTANCE(ps)], ret.span - ps.t.startbyte, Variable[], "")
-        format_lbracket(ps)
-        @default ps @closer ps paren parse_comma_sep(ps, ret)
-        next(ps)
-        push!(ret.args, INSTANCE(ps))
-        format_rbracket(ps)
-        ret.span += ps.nt.startbyte
-    end
-
+    
+    next(ps)
+    ret = EXPR{Call}(EXPR[ret, INSTANCE(ps)], ret.span - ps.t.startbyte, Variable[], "")
+    format_lbracket(ps)
+    @default ps @closer ps paren parse_comma_sep(ps, ret)
+    next(ps)
+    push!(ret.args, INSTANCE(ps))
+    format_rbracket(ps)
+    ret.span += ps.nt.startbyte
+    
     # if length(ret.args) > 0 && ismacro(ret.args[1])
     #     ret.head = MACROCALL
     # end
