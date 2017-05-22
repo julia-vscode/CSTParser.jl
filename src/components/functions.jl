@@ -84,7 +84,7 @@ function parse_call(ps::ParseState, ret::EXPR{OPERATOR{DeclarationOp,Tokens.DECL
     ret = EXPR{UnarySyntaxOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
     return ret
 end
-function parse_call(ps::ParseState, ret::EXPR{OPERATOR{TimesOp,Tokens.AND,d1}}) where d1
+function parse_call(ps::ParseState, ret::EXPR{OP}) where OP <: OPERATOR{TimesOp,Tokens.AND}
     startbyte = ps.t.startbyte
     arg = @precedence ps 20 parse_expression(ps)
     ret = EXPR{UnarySyntaxOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
@@ -104,7 +104,7 @@ function parse_call(ps::ParseState, ret::EXPR{OPERATOR{ComparisonOp,Tokens.ISSUP
     return ret
 end
 
-function parse_call(ps::ParseState, ret::EXPR{OPERATOR{20,Tokens.NOT,d}}) where d
+function parse_call(ps::ParseState, ret::EXPR{OP}) where OP <: OPERATOR{20,Tokens.NOT}
     startbyte = ps.t.startbyte
     arg = @precedence ps 13 parse_expression(ps)
     if arg isa EXPR{TupleH}
@@ -115,7 +115,7 @@ function parse_call(ps::ParseState, ret::EXPR{OPERATOR{20,Tokens.NOT,d}}) where 
     return ret
 end
 
-function parse_call(ps::ParseState, ret::EXPR{OPERATOR{PlusOp,Tokens.PLUS,d}}) where d
+function parse_call(ps::ParseState, ret::EXPR{OP}) where OP <: OPERATOR{PlusOp,Tokens.PLUS}
     startbyte = ps.t.startbyte
     arg = @precedence ps 13 parse_expression(ps)
     if arg isa EXPR{TupleH}
@@ -126,7 +126,7 @@ function parse_call(ps::ParseState, ret::EXPR{OPERATOR{PlusOp,Tokens.PLUS,d}}) w
     return ret
 end
 
-function parse_call(ps::ParseState, ret::EXPR{OPERATOR{PlusOp,Tokens.MINUS,d}}) where d
+function parse_call(ps::ParseState, ret::EXPR{OP}) where OP <: OPERATOR{PlusOp,Tokens.MINUS}
     startbyte = ps.t.startbyte
     arg = @precedence ps 13 parse_expression(ps)
     if arg isa EXPR{TupleH}
@@ -265,7 +265,7 @@ function _lint_func_sig(ps::ParseState, sig::EXPR, loc)
     firstkw  = nargs + 1
     i = 1
     for arg in sig.args[2:end]
-        if !(arg isa EXPR{PUNCTUATION{k}} where k)
+        if !(arg isa EXPR{P} where P <: PUNCTUATION)
             if arg isa EXPR{BinarySyntaxOpCall} && arg.args[1] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}
                 #unhandled ::Type argument
                 i += 1
@@ -273,7 +273,7 @@ function _lint_func_sig(ps::ParseState, sig::EXPR, loc)
             elseif arg isa EXPR{Parameters}
                 i1 = 1
                 for arg1 in arg.args
-                    if !(arg1 isa EXPR{PUNCTUATION{k1}} where k1)
+                    if !(arg1 isa EXPR{P} where P <: PUNCTUATION)
                         _lint_arg(ps, arg1, args, i + i1 - 1, fname, nargs, i - 1, loc)
                         i1 += 1
                     end
@@ -361,7 +361,7 @@ end
 function _sig_params(x, p = [])
     if x isa EXPR{Curly}
         for a in x.args[2:end]
-            if !(a isa EXPR{PUNCTUATION{k}} where k)
+            if !(a isa EXPR{P} where P <: PUNCTUATION)
                 push!(p, get_id(a))
             end
         end
