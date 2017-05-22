@@ -369,10 +369,16 @@ function _sig_params(x, p = [])
     return p
 end
 
-
+_get_fname(sig::EXPR{FunctionDef}) = _get_fname(sig.args[2])
 _get_fname(sig::EXPR{IDENTIFIER}) = sig
 _get_fname(sig::EXPR{Tuple}) = NOTHING
-_get_fname(sig::EXPR{BinarySyntaxOpCall}) = sig.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} || sig.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}} ? get_id(sig.args[1].args[1]) : get_id(sig.args[1])
+function _get_fname(sig::EXPR{BinarySyntaxOpCall}) 
+    if sig.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} || sig.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}}
+        return get_id(sig.args[1].args[1])
+    else
+        return get_id(sig.args[1])
+    end
+end
 _get_fname(sig) = get_id(sig.args[1])
 
 # function declares_function(x::EXPR)
@@ -402,7 +408,7 @@ function_name(sig) = :unknown
 
 declares_function(x) = false
 declares_function(x::EXPR{FunctionDef}) = true
-declares_function(x::EXPR{BinarySyntaxOpCall}) = x.args[2] isa OPERATOR{AssignmentOp,Tokens.EQ,false} && x.args[1] isa EXPR{Call}
+declares_function(x::EXPR{BinarySyntaxOpCall}) = x.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}} && x.args[1] isa EXPR{Call}
 
 
 

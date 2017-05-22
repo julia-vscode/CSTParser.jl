@@ -51,18 +51,18 @@ function parse_if(ps::ParseState, nested = false)
     !nested && push!(ret.args, INSTANCE(ps))
 
     # Linting
-    # if cond isa EXPR && cond.head isa OPERATOR{AssignmentOp}
-    #     push!(ps.diagnostics, Diagnostic{Diagnostics.CondAssignment}(startbyte + kw.span + (0:cond.span), []))
-    # end
-    # if cond isa LITERAL{Tokens.TRUE}
-    #     if length(ret.args) == 3
-    #         push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(startbyte + kw.span + cond.span + ret.args[2].span + (0:ret.args[3].span), []))
-    #     end
-    # elseif cond isa LITERAL{Tokens.FALSE}
-    #     if length(ret.args) == 2
-    #         push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(startbyte + kw.span + cond.span + (0:ret.args[2].span), []))
-    #     end
-    # end
+    if cond isa EXPR{BinarySyntaxOpCall} && cond.args[2] isa EXPR{OP} where OP <: OPERATOR{AssignmentOp}
+        push!(ps.diagnostics, Diagnostic{Diagnostics.CondAssignment}(startbyte + kw.span + (0:cond.span), []))
+    end
+    if cond isa EXPR{LITERAL{Tokens.TRUE}}
+        if length(ret.args) == 6
+            push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(startbyte + kw.span + cond.span + ret.args[2].span + (0:ret.args[3].span), []))
+        end
+    elseif cond isa EXPR{LITERAL{Tokens.FALSE}}
+        if length(ret.args) == 4
+            push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(startbyte + kw.span + cond.span + (0:ret.args[2].span), []))
+        end
+    end
     ret.span = sum(a.span for a in ret.args)
     return ret
 end

@@ -13,9 +13,6 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
         @catcherror ps startbyte sig = @default ps @closer ps block parse_expression(ps)
 
         # Construction
-        # if ps.nt.kind != Tokens.END
-        #     return ERROR{MissingEnd}(ps.nt.startbyte - startbyte, EXPR(kw2, [sig], ps.nt.startbyte - startbyte, [kw1]))
-        # end
         next(ps)
         ret = EXPR{Abstract}(EXPR[kw1, kw2, sig, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
     else
@@ -30,7 +27,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
         # Construction
         ret = EXPR{Abstract}(EXPR[kw, sig], ps.nt.startbyte - startbyte, Variable[], "")
     end
-    # ret.defs = [Variable(Expr(get_id(sig)), :abstract, ret)]
+    ret.defs = [Variable(Expr(get_id(sig)), :abstract, ret)]
     return ret
 end
 
@@ -46,11 +43,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
 
     # Linting
     # format_typename(ps, arg2)
-    # push!(ps.diagnostics, Diagnostic{Diagnostics.bitstypeDeprecation}(startbyte + (0:(kw.span + arg1.span + arg2.span)), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("primitive type ", Expr(arg2)," ", Expr(arg1), " end"))]))
+    push!(ps.diagnostics, Diagnostic{Diagnostics.bitstypeDeprecation}(startbyte + (0:(kw.span + arg1.span + arg2.span)), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("primitive type ", Expr(arg2)," ", Expr(arg1), " end"))]))
 
     # Construction
     ret = EXPR{Bitstype}(EXPR[kw, arg1, arg2], ps.nt.startbyte - startbyte, Variable[], "")
-    # ret.defs = [Variable(Expr(get_id(arg2)), :bitstype, ret)]
+    ret.defs = [Variable(Expr(get_id(arg2)), :bitstype, ret)]
 
     return ret
 end
@@ -69,14 +66,10 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.PRIMITIVE}})
         @catcherror ps startbyte arg = @default ps @closer ps block parse_expression(ps)
 
         # Construction
-        # if ps.nt.kind != Tokens.END
-            # return ERROR{MissingEnd}(ps.nt.startbyte - startbyte, EXPR(kw2, [sig, arg], ps.nt.startbyte - startbyte, [kw1]))
-        # else
         next(ps)
         ret = EXPR{Primitive}(EXPR[kw1, kw2, sig, arg, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
-            # ret.defs = [Variable(get_id(sig), :bitstype, ret)]
-        # end
-        # ret.defs = [Variable(Expr(get_id(sig)), :bitstype, ret)]
+
+        ret.defs = [Variable(Expr(get_id(sig)), :bitstype, ret)]
     else
         ret = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - startbyte, Variable[], "primitive")
     end
@@ -135,13 +128,13 @@ function parse_struct(ps::ParseState, mutable)
     @catcherror ps startbyte @default ps parse_block(ps, block, start_col)
 
     # Linting
-    # _lint_struct(ps, startbyte, kw, sig, block)
+    _lint_struct(ps, startbyte, kw, sig, block)
 
     # Construction
     T = mutable == TRUE ? Tokens.TYPE : Tokens.IMMUTABLE
     next(ps)
     ret = EXPR{mutable == TRUE ? Mutable : Struct}(EXPR[kw, sig, block, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
-    # ret.defs = [Variable(Expr(get_id(sig)), Expr(mutable) ? :mutable : :immutable, ret)]
+    ret.defs = [Variable(Expr(get_id(sig)), Expr(mutable) ? :mutable : :immutable, ret)]
 
     return ret
 end
@@ -151,8 +144,8 @@ function _lint_struct(ps::ParseState, startbyte::Int, kw, sig, block)
     format_typename(ps, sig)
     hloc = ps.nt.startbyte - block.span
     for a in block.args
-        if a isa EXPR && declares_function(a)
-            fname = _get_fname(a.args[1])
+        if declares_function(a)
+            fname = _get_fname(a)
             if Expr(fname) != Expr(get_id(sig))
                 push!(ps.diagnostics, Diagnostic{Diagnostics.MisnamedConstructor}(hloc + (0:a.span), []))
             end
@@ -162,9 +155,9 @@ function _lint_struct(ps::ParseState, startbyte::Int, kw, sig, block)
         end
         hloc += a.span
     end
-    if kw isa KEYWORD{Tokens.TYPE}
+    if kw isa EXPR{KEYWORD{Tokens.TYPE}}
         push!(ps.diagnostics, Diagnostic{Diagnostics.typeDeprecation}(startbyte + (0:kw.span), [Diagnostics.TextEdit(startbyte + (0:kw.span), "mutable struct ")]))
-    elseif kw isa KEYWORD{Tokens.IMMUTABLE}
+    elseif kw isa EXPR{KEYWORD{Tokens.IMMUTABLE}}
         push!(ps.diagnostics, Diagnostic{Diagnostics.immutableDeprecation}(startbyte + (0:kw.span), [Diagnostics.TextEdit(startbyte + (0:kw.span), "struct ")]))
     end
 end

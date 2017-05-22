@@ -139,38 +139,43 @@ Handles cases where an expression - `ret` - is followed by
 """
 function parse_ref(ps::ParseState, ret)
     startbyte = ps.nt.startbyte
-    
     next(ps)
     @catcherror ps startbyte ref = parse_array(ps)
-    # if ref isa EXPR{Vect}
-    #     ret = EXPR(Ref, [ret, ref.args...], ret.span + ref.span)
-    # elseif ref isa EXPR{Hcat}
-    #     ret = EXPR(TypedHcat, [ret, ref.args...], ret.span + ref.span)
-    #     # _lint_hcat(ps, ret)
-    # elseif ref isa EXPR{Vcat}
-    #     ret = EXPR(TypedVcat, [ret, ref.args...], ret.span + ref.span)
-    # else
-    #     ret = EXPR(TypedComprehension, [ret, ref.args...], ret.span + ref.span)
-    # end
-    # return ret
     return _parse_ref(ret, ref)
 end
 
 function _parse_ref(ret, ref::EXPR{Vect})
-    ret = EXPR{Ref}(EXPR[ret, ref.args...], ret.span + ref.span, Variable[], "")
+    ret = EXPR{Ref}(EXPR[ret], ret.span + ref.span, Variable[], "")
+    for a in ref.args
+        push!(ret.args, a)
+    end
     # _lint_hcat(ps, ret)
     return ret
 end
 
 function _parse_ref(ret, ref::EXPR{Hcat})
-    EXPR{TypedHcat}(EXPR[ret, ref.args...], ret.span + ref.span, Variable[], "")
+    ret = EXPR{TypedHcat}(EXPR[ret], ret.span + ref.span, Variable[], "")
+    for a in ref.args
+        push!(ret.args, a)
+    end
+    return ret
 end
 
 function _parse_ref(ret, ref::EXPR{Vcat})
-    EXPR{TypedVcat}(EXPR[ret, ref.args...], ret.span + ref.span, Variable[], "")
+    ret = EXPR{TypedVcat}(EXPR[ret], ret.span + ref.span, Variable[], "")
+    for a in ref.args
+        push!(ret.args, a)
+    end
+    return ret
 end
 
-_parse_ref(ret, ref) = EXPR{TypedComprehension}(EXPR[ret, ref.args...], ret.span + ref.span, Variable[], "")
+function _parse_ref(ret, ref)
+    ret = EXPR{TypedComprehension}(EXPR[ret], ret.span + ref.span, Variable[], "")
+    for a in ref.args
+        push!(ret.args, a)
+    end
+    return ret
+end
 
 function _lint_hcat(ps::ParseState, ret)
     if length(ret.args) == 3 && ret.args[3] isa EXPR{Quotenode} && ret.args[3].val isa KEYWORD{Tokens.END}

@@ -5,8 +5,15 @@
 Get the IDENTIFIER name of a variable, possibly in the presence of 
 type declaration operators.
 """
-get_id(x::EXPR{OPERATOR{ComparisonOp,Tokens.ISSUBTYPE,false}}) = get_id(x.args[1])
-get_id(x::EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}) = get_id(x.args[1])
+
+function get_id(x::EXPR{BinarySyntaxOpCall})
+    if x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUBTYPE,false}} || x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} || x.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}}
+        return get_id(x.args[1])
+    else
+        return x
+    end
+end
+
 get_id(x::EXPR{Curly}) = get_id(x.args[1])
 get_id(x) = x
 
@@ -70,9 +77,9 @@ infer_t(x::EXPR{LITERAL{Tokens.CMD}}) = :Cmd
 
 infer_t(x::EXPR{Vect}) = :(Array{Any,1})
 infer_t(x::EXPR{Vcat}) = :(Array{Any,N})
-infer_t(x::EXPR{TypedVcat}) = :(Array{$(Expr(val.args[1])),N})
+infer_t(x::EXPR{TypedVcat}) = :(Array{$(Expr(x.args[1])),N})
 infer_t(x::EXPR{Hcat}) = :(Array{Any,2})
-infer_t(x::EXPR{TypedHcat}) = :(Array{$(Expr(val.args[1])),2})
+infer_t(x::EXPR{TypedHcat}) = :(Array{$(Expr(x.args[1])),2})
 infer_t(x::EXPR{Quote}) = :Expr
 infer_t(x::EXPR{StringH}) = :String
 infer_t(x::EXPR{Quotenode}) = :QuoteNode

@@ -18,7 +18,7 @@ function parse_do(ps::ParseState, ret)
         end
     end
     args.span += ps.nt.startbyte
-    # _lint_do(ps, args, ps.nt.startbyte - args.span)
+    _lint_do(ps, args, ps.nt.startbyte - args.span)
     block = EXPR{Block}(EXPR[], 0, Variable[], "")
     @catcherror ps startbyte @default ps parse_block(ps, block, start_col)
 
@@ -36,8 +36,12 @@ end
 
 function _lint_do(ps::ParseState, sig, loc)
     args = []
-    for (i, arg) in enumerate(sig.args)
-        _lint_arg(ps, arg, args, i, NOTHING, length(sig.args), length(sig.args) + 1, loc)
+    i = 1
+    for arg in sig.args
+        if !(arg isa EXPR{P} where P <: PUNCTUATION)
+            _lint_arg(ps, arg, args, i, NOTHING, length(sig.args), length(sig.args) + 1, loc)
+            i += 1
+        end
     end
     sig.defs = (a -> Variable(a[1], a[2], sig)).(args)
 end

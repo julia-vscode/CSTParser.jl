@@ -6,9 +6,9 @@ Comprehensions are parsed as SQUAREs containing a generator.
 """
 function parse_generator(ps::ParseState, ret)
     startbyte = ps.nt.startbyte
-    ret = EXPR{Generator}(EXPR[ret], ret.span - startbyte, Variable[], "")
     next(ps)
-    push!(ret.args, INSTANCE(ps))
+    kw = INSTANCE(ps)
+    ret = EXPR{Generator}(EXPR[ret, kw], ret.span - startbyte, Variable[], "")
     @catcherror ps startbyte ranges = @closer ps paren @closer ps square parse_ranges(ps)
     
     if ps.nt.kind == Tokens.IF
@@ -33,13 +33,13 @@ function parse_generator(ps::ParseState, ret)
     ret.span += ps.nt.startbyte
 
     # Linting
-    # if ranges isa EXPR && ranges.head == BLOCK
-    #     for r in ranges.args
-    #         _lint_range(ps, r, startbyte + first(ret.punctuation).span + (0:ranges.span))
-    #     end
-    # else
-    #     _lint_range(ps, ranges, startbyte + first(ret.punctuation).span + (0:ranges.span))
-    # end
+    if ranges isa EXPR{Block}
+        for r in ranges.args
+            _lint_range(ps, r, startbyte + kw.span + (0:ranges.span))
+        end
+    else
+        _lint_range(ps, ranges, startbyte + kw.span + (0:ranges.span))
+    end
     # This should reverse order of iterators
     if ret.args[1] isa EXPR{Generator} || ret.args[1] isa EXPR{Flatten}
         ret = EXPR{Flatten}([ret], ret.span, Variable[], "")
