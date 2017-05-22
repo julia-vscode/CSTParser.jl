@@ -9,8 +9,6 @@ mutable struct EXPR{T}
     defs::Vector{Variable}
     val::String
 end
-EXPR(T, args) = EXPR{T}(args, 0, [], "")
-EXPR(T, args, span::Int) = EXPR{T}(args, span, [], "")
 
 abstract type IDENTIFIER end
 abstract type LITERAL{K} end

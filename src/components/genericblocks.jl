@@ -37,10 +37,10 @@ function parse_block(ps::ParseState, start_col = 0; ret::EXPR = EXPR{Block}(EXPR
     end
 
     # Linting
-    # ps.nt.startpos[1] != start_line && format_indent(ps, start_col - 4)
-    # if deadcode > -1
-    #     push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(deadcode:ps.nt.startbyte, []))
-    # end
+    ps.nt.startpos[1] != start_line && format_indent(ps, start_col - 4)
+    if deadcode > -1
+        push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(deadcode:ps.nt.startbyte, []))
+    end
 
     ret.span = ps.nt.startbyte - startbyte
     return ret
