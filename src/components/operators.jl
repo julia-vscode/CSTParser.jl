@@ -425,7 +425,10 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{DotOp,Token
         ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, Quotenode(nextarg)], op.span + ret.span + nextarg.span, Variable[], "")
     elseif nextarg isa EXPR{MacroCall}
         mname = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, Quotenode(nextarg.args[1])], ret.span + op.span + nextarg.args[1].span, Variable[], "")
-        ret = EXPR{MacroCall}(EXPR[mname, nextarg.args[2:end]...], ret.span + op.span + nextarg.span, Variable[], "")
+        ret = EXPR{MacroCall}(EXPR[mname], ret.span + op.span + nextarg.span, Variable[], "")
+        for i = 2:length(nextarg.args)
+            push!(ret.args, nextarg.args[i])
+        end
     else
         ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, nextarg], op.span + ret.span + nextarg.span, Variable[], "")
     end
