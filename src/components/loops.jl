@@ -30,7 +30,7 @@ function _lint_range(ps::ParseState, x::EXPR{BinaryOpCall}, loc)
             t = infer_t(x.args[3])
             push!(x.defs, Variable(id, t, x))
         end
-        if x.args[3] isa EXPR{LITERAL{k}} where k
+        if x.args[3] isa EXPR{L} where L <: LITERAL
             push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, []))
         end
     end
@@ -46,7 +46,7 @@ end
 function _lint_range(ps::ParseState, x, loc)
     push!(ps.diagnostics, Diagnostic{Diagnostics.RangeNonAssignment}(loc, []))
 end
-function _lint_range(ps::ParseState, x::EXPR{PUNCTUATION{k}}, loc) where k
+function _lint_range(ps::ParseState, x::EXPR{P}, loc) where P <: PUNCTUATION
 end
 
 
@@ -85,7 +85,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
     ret = EXPR{While}(EXPR[kw, cond, block, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
 
     # Linting
-    if cond isa EXPR{BinarySyntaxOpCall} && cond.args[2] isa EXPR{OPERATOR{AssignmentOp,k1,d1}} where {k1, d1}
+    if cond isa EXPR{BinarySyntaxOpCall} && cond.args[2] isa EXPR{OP} where OP <: OPERATOR{AssignmentOp}
         push!(ps.diagnostics, Diagnostic{Diagnostics.CondAssignment}(startbyte + kw.span + (0:cond.span), []))
     end
     if cond isa EXPR{LITERAL{Tokens.FALSE}}
