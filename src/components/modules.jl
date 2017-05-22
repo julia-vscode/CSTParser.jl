@@ -28,7 +28,7 @@ function parse_module(ps::ParseState)
     block.span += ps.nt.startbyte
     next(ps)
     ret = EXPR{(kw isa EXPR{KEYWORD{Tokens.MODULE}} ? ModuleH : BareModule)}(EXPR[kw, arg, block, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
-    # ret.defs = [Variable(Expr(arg), :module, ret)]
+    ret.defs = [Variable(Expr(arg), :module, ret)]
     return ret
 end
 
@@ -116,7 +116,7 @@ function parse_imports(ps::ParseState)
 
     if ps.nt.kind != Tokens.COMMA && ps.nt.kind != Tokens.COLON
         ret = EXPR{kwt}(EXPR[kw; arg], ps.nt.startbyte - startbyte, Variable[], "")
-        # ret.defs = [Variable(Expr(ret), :IMPORTS, ret)]
+        ret.defs = [Variable(Expr(ret), :IMPORTS, ret)]
     elseif ps.nt.kind == Tokens.COLON
         
         ret = EXPR{kwt}(EXPR[kw;arg], 0, Variable[], "")
@@ -134,7 +134,7 @@ function parse_imports(ps::ParseState)
             @catcherror ps startbyte arg = parse_dot_mod(ps, true)
             append!(ret.args, arg)
         end
-        # ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
+        ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
     else
         ret = EXPR{kwt}(EXPR[kw;arg], 0, Variable[], "")
         while ps.nt.kind == Tokens.COMMA
@@ -143,7 +143,7 @@ function parse_imports(ps::ParseState)
             @catcherror ps startbyte arg = parse_dot_mod(ps)
             append!(ret.args, arg)
         end
-        # ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
+        ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
     end
     
     # Linting

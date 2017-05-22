@@ -145,7 +145,7 @@ function _lint_struct(ps::ParseState, startbyte::Int, kw, sig, block)
     hloc = ps.nt.startbyte - block.span
     for a in block.args
         if declares_function(a)
-            fname = _get_fname(a)
+            fname = _get_fname(_get_fsig(a))
             if Expr(fname) != Expr(get_id(sig))
                 push!(ps.diagnostics, Diagnostic{Diagnostics.MisnamedConstructor}(hloc + (0:a.span), []))
             end

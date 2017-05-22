@@ -70,7 +70,7 @@ mutable struct File
     ast::EXPR
     errors
 end
-File(path::String) = File([], [], path, EXPR(FILE, []), [])
+File(path::String) = File([], [], path, EXPR{FileH}(EXPR[], 0, Variable[], ""), [])
 
 mutable struct Project
     path::String

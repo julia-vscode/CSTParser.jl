@@ -36,7 +36,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
         sig = EXPR{TupleH}(sig.args, sig.span, Variable[], "")
     end
 
-    # _lint_func_sig(ps, sig, ps.nt.startbyte + (-sig.span:0))
+    _lint_func_sig(ps, sig, ps.nt.startbyte + (-sig.span:0))
     block = EXPR{Block}(EXPR[], 0, Variable[], "")
     @catcherror ps startbyte @default ps @scope ps Scope{Tokens.FUNCTION} parse_block(ps, block, start_col)
     
@@ -380,6 +380,10 @@ function _get_fname(sig::EXPR{BinarySyntaxOpCall})
     end
 end
 _get_fname(sig) = get_id(sig.args[1])
+
+_get_fsig(fdecl::EXPR{FunctionDef}) = fdecl.args[2]
+_get_fsig(fdecl::EXPR{BinarySyntaxOpCall}) = fdecl.args[1]
+
 
 # function declares_function(x::EXPR)
 #     if x isa EXPR
