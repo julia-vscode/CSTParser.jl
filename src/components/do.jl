@@ -19,7 +19,8 @@ function parse_do(ps::ParseState, ret)
     end
     args.span += ps.nt.startbyte
     # _lint_do(ps, args, ps.nt.startbyte - args.span)
-    @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
+    block = EXPR{Block}(EXPR[], 0, Variable[], "")
+    @catcherror ps startbyte @default ps parse_block(ps, block, start_col)
 
     # Construction
     ret = EXPR{Do}(EXPR[ret, kw], ret.span - startbyte, Variable[], "")

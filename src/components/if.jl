@@ -14,8 +14,9 @@ function parse_if(ps::ParseState, nested = false)
     format_kw(ps)
     @catcherror ps startbyte cond = @default ps @closer ps block @closer ps ws parse_expression(ps)
 
-    @catcherror ps startbyte ifblock = @default ps @closer ps ifelse parse_block(ps, start_col, closers = [Tokens.END, Tokens.ELSE, Tokens.ELSEIF])
-    # ret = EXPR{If}(EXPR[kw, cond, ifblock], 0, Variable[], "")
+    ifblock = EXPR{Block}(EXPR[], 0, Variable[], "")
+    @catcherror ps startbyte @default ps @closer ps ifelse parse_block(ps, ifblock, start_col, Tokens.Kind[Tokens.END, Tokens.ELSE, Tokens.ELSEIF])
+    
     if nested
         ret = EXPR{If}(EXPR[cond, ifblock], 0, Variable[], "")
     else
@@ -36,7 +37,7 @@ function parse_if(ps::ParseState, nested = false)
         next(ps)
         start_col = ps.t.startpos[2]
         push!(ret.args, INSTANCE(ps))
-        @catcherror ps startbyte @default ps parse_block(ps, start_col, ret = elseblock)
+        @catcherror ps startbyte @default ps parse_block(ps, elseblock, start_col)
     end
 
     # Construction

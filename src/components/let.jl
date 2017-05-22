@@ -16,7 +16,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
             format_comma(ps)
         end
     end
-    @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
+    block = EXPR{Block}(EXPR[], 0, Variable[], "")
+    @catcherror ps startbyte @default ps parse_block(ps, block, start_col)
 
     # Construction
     push!(ret.args, block)

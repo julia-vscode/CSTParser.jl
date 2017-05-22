@@ -131,7 +131,8 @@ function parse_struct(ps::ParseState, mutable)
     kw = INSTANCE(ps)
     format_kw(ps)
     @catcherror ps startbyte sig = @default ps @closer ps block @closer ps ws parse_expression(ps)
-    @catcherror ps startbyte block = @default ps parse_block(ps, start_col)
+    block = EXPR{Block}(EXPR[], 0, Variable[], "")
+    @catcherror ps startbyte @default ps parse_block(ps, block, start_col)
 
     # Linting
     # _lint_struct(ps, startbyte, kw, sig, block)

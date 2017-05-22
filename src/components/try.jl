@@ -7,7 +7,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
     format_kw(ps)
     ret = EXPR{Try}(EXPR[kw], -ps.t.startbyte, Variable[], "")
 
-    @catcherror ps startbyte tryblock = @default ps @closer ps trycatch parse_block(ps, start_col)
+    tryblock = EXPR{Block}(EXPR[], 0, Variable[], "")
+    @catcherror ps startbyte @default ps @closer ps trycatch parse_block(ps, tryblock, start_col)
     push!(ret.args, tryblock)
     
     # try closing early
@@ -37,7 +38,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
             else
                 @catcherror ps startbyte caught = @default ps @closer ps ws @closer ps trycatch parse_expression(ps)
             end
-            @catcherror ps startbyte catchblock = @default ps @closer ps trycatch parse_block(ps, start_col)
+            catchblock = EXPR{Block}(EXPR[], 0, Variable[], "")
+            @catcherror ps startbyte @default ps @closer ps trycatch parse_block(ps, catchblock, start_col)
             if !(caught isa EXPR{IDENTIFIER} || caught == FALSE)
                 unshift!(catchblock.args, caught)
                 catchblock.span += caught.span
@@ -59,7 +61,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
         next(ps)
         start_col = ps.t.startpos[2] + 4
         push!(ret.args, INSTANCE(ps))
-        @catcherror ps startbyte finallyblock = parse_block(ps, start_col)
+        finallyblock = EXPR{Block}(EXPR[], 0, Variable[], "")
+        @catcherror ps startbyte parse_block(ps, finallyblock, start_col)
         push!(ret.args, finallyblock)
     end
 

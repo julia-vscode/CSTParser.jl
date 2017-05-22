@@ -5,7 +5,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BEGIN}})
     # Parsing
     kw = INSTANCE(ps)
     format_kw(ps)
-    @catcherror ps startbyte arg = @default ps parse_block(ps, start_col)
+    arg = EXPR{Block}(EXPR[], 0, Variable[], "")
+    @catcherror ps startbyte arg = @default ps parse_block(ps, arg, start_col)
 
     next(ps)
     return EXPR{Begin}(EXPR[kw; arg; INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
@@ -19,7 +20,7 @@ Parses an array of expressions (stored in ret) until 'end' is the next token.
 Returns `ps` the token before the closing `end`, the calling function is 
 assumed to handle the closer.
 """
-function parse_block(ps::ParseState, start_col = 0; ret::EXPR = EXPR{Block}(EXPR[], 0, Variable[], ""), closers = [Tokens.END, Tokens.CATCH, Tokens.FINALLY])
+function parse_block(ps::ParseState, ret::EXPR{Block}, start_col = 0, closers = Tokens.Kind[Tokens.END, Tokens.CATCH, Tokens.FINALLY])
     startbyte = ps.nt.startbyte
     start_line = ps.nt.startpos[1]
     start_col = ps.nt.startpos[2]
