@@ -75,30 +75,61 @@ isrbracket(t::Token) = t.kind == Tokens.RPAREN ||
                         t.kind == Tokens.RBRACE ||
                         t.kind == Tokens.RSQUARE
 
+
+
+# function format_op(ps, prec)
+#     !ps.formatcheck && return
+#     loc = ps.t.startbyte:ps.t.endbyte + 1
+#     actions = Diagnostics.Action[]
+#     if (prec == ColonOp || prec == PowerOp || prec == DeclarationOp || prec == DotOp) && ps.t.kind != Tokens.ANON_FUNC
+#         ht = Diagnostics.ExtraWS
+#         if ps.lws.kind != EmptyWS
+#             push!(actions, Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte))
+#         end
+#         if ps.ws.kind != EmptyWS
+#             push!(actions, Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte))
+#         end
+#     elseif ps.t.kind == Tokens.ISSUBTYPE || ps.t.kind == Tokens.DDDOT
+#     else
+#         ht = Diagnostics.MissingWS
+#         if ps.lws.kind == EmptyWS
+#             push!(actions, Diagnostics.AddWS(ps.t.startbyte:ps.t.startbyte, 1))
+#         end
+#         if ps.ws.kind == EmptyWS
+#             push!(actions, Diagnostics.AddWS(ps.nt.startbyte:ps.nt.startbyte, 1))
+#         end
+#     end
+#     if !isempty(actions)
+#         push!(ps.diagnostics, Diagnostic{ht}(loc, actions))
+#     end
+# end
+
 function format_op(ps, prec)
     !ps.formatcheck && return
     loc = ps.t.startbyte:ps.t.endbyte + 1
-    actions = Diagnostics.Action[]
     if (prec == ColonOp || prec == PowerOp || prec == DeclarationOp || prec == DotOp) && ps.t.kind != Tokens.ANON_FUNC
-        ht = Diagnostics.ExtraWS
-        if ps.lws.kind != EmptyWS
-            push!(actions, Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte))
-        end
-        if ps.ws.kind != EmptyWS
-            push!(actions, Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte))
+        if ps.lws.kind != EmptyWS && ps.ws.kind != EmptyWS
+            diag = Diagnostic{Diagnostics.ExtraWS}(loc, Diagnostics.Action[Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte),Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte)])
+            push!(ps.diagnostics, diag)
+        elseif ps.lws.kind != EmptyWS
+            diag = Diagnostic{Diagnostics.ExtraWS}(loc, Diagnostics.Action[Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte)])
+            push!(ps.diagnostics, diag)
+        elseif ps.ws.kind != EmptyWS
+            diag = Diagnostic{Diagnostics.ExtraWS}(loc, Diagnostics.Action[Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte)])
+            push!(ps.diagnostics, diag)
         end
     elseif ps.t.kind == Tokens.ISSUBTYPE || ps.t.kind == Tokens.DDDOT
     else
-        ht = Diagnostics.MissingWS
-        if ps.lws.kind == EmptyWS
-            push!(actions, Diagnostics.AddWS(ps.t.startbyte:ps.t.startbyte, 1))
+        if ps.lws.kind == EmptyWS && ps.ws.kind == EmptyWS
+            diag = Diagnostic{Diagnostics.MissingWS}(loc, Diagnostics.Action[Diagnostics.AddWS(ps.nt.startbyte:ps.nt.startbyte, 1),Diagnostics.AddWS(ps.t.startbyte:ps.t.startbyte, 1)])
+            push!(ps.diagnostics, diag)
+        elseif ps.lws.kind == EmptyWS
+            diag = Diagnostic{Diagnostics.MissingWS}(loc, Diagnostics.Action[Diagnostics.AddWS(ps.t.startbyte:ps.t.startbyte, 1)])
+            push!(ps.diagnostics, diag)
+        elseif ps.ws.kind == EmptyWS
+            diag = Diagnostic{Diagnostics.MissingWS}(loc, Diagnostics.Action[Diagnostics.AddWS(ps.nt.startbyte:ps.nt.startbyte, 1)])
+            push!(ps.diagnostics, diag)
         end
-        if ps.ws.kind == EmptyWS
-            push!(actions, Diagnostics.AddWS(ps.nt.startbyte:ps.nt.startbyte, 1))
-        end
-    end
-    if !isempty(actions)
-        push!(ps.diagnostics, Diagnostic{ht}(loc, actions))
     end
 end
 
