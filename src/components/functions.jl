@@ -385,23 +385,15 @@ _get_fsig(fdecl::EXPR{FunctionDef}) = fdecl.args[2]
 _get_fsig(fdecl::EXPR{BinarySyntaxOpCall}) = fdecl.args[1]
 
 
-# function declares_function(x::EXPR)
-#     if x isa EXPR
-#         if x.head isa KEYWORD{Tokens.FUNCTION}
-#             return true
-#         elseif x.head isa OPERATOR{AssignmentOp,Tokens.EQ} && x.args[1] isa EXPR && x.args[1].head == CALL
-#             return true
-#         else
-#             return false
-#         end
-#     else
-#         return false
-#     end
-# end
-
 function_name(sig::EXPR{Call}) = function_name(sig.args[1])
 function_name(sig::EXPR{Curly}) = function_name(sig.args[1])
-function_name(sig::EXPR{BinarySyntaxOpCall}) = function_name(sig.args[2])
+function function_name(sig::EXPR{BinarySyntaxOpCall}) 
+    if sig.args[2] isa EXPR{OP} where OP <: OPERATOR{DotOp}
+        function_name(sig.args[3])
+    else
+        function_name(sig.args[2])
+    end
+end
 function_name(sig::EXPR{Quotenode}) = function_name(sig.args[1])
 function_name(sig::EXPR{IDENTIFIER}) = Symbol(sig.val)
 function_name(sig::EXPR{OPERATOR{P,K,dot}}) where {P,K,dot} = UNICODE_OPS_REVERSE[K]
