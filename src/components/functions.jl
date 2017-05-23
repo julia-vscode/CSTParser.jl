@@ -242,15 +242,15 @@ end
 Runs linting on function argument, assumes `sig` has just been parsed such that 
 the byte offset is `ps.nt.startbyte - sig.span`.
 """
-function _lint_func_sig(ps::ParseState, sig::EXPR{IDENTIFIER}, loc) end
+function _lint_func_sig(ps::ParseState, sig::EXPR{IDENTIFIER}, loc, haswhere = false) end
     
-function _lint_func_sig(ps::ParseState, sig::EXPR, loc)
+function _lint_func_sig(ps::ParseState, sig::EXPR, loc, haswhere = false)
     if sig isa EXPR{BinarySyntaxOpCall} && (sig.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} || sig.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}})
-        return _lint_func_sig(ps, sig.args[1], loc)
+        return _lint_func_sig(ps, sig.args[1], loc, sig.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}})
     end
     fname = _get_fname(sig)
     # use where syntax
-    if sig isa EXPR{Call} && sig.args[1] isa EXPR{Curly} 
+    if sig isa EXPR{Call} && sig.args[1] isa EXPR{Curly} && !haswhere
         push!(ps.diagnostics, Diagnostic{Diagnostics.parameterisedDeprecation}((first(loc) + sig.args[1].args[1].span):(first(loc) + sig.args[1].span), []))
         
         trailingws = last(sig.args) isa EXPR{PUNCTUATION{Tokens.RPAREN}} ? last(sig.args).span - 1 : 0
@@ -374,7 +374,7 @@ _get_fname(sig::EXPR{IDENTIFIER}) = sig
 _get_fname(sig::EXPR{Tuple}) = NOTHING
 function _get_fname(sig::EXPR{BinarySyntaxOpCall}) 
     if sig.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} || sig.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}}
-        return get_id(sig.args[1].args[1])
+        return _get_fname(sig.args[1])
     else
         return get_id(sig.args[1])
     end

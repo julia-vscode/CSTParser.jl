@@ -37,6 +37,10 @@ function parse_generator(ps::ParseState, ret)
         for r in ranges.args
             _lint_range(ps, r, startbyte + kw.span + (0:ranges.span))
         end
+    elseif ranges isa EXPR{Filter}
+        for i = 3:length(ranges.args)
+            _lint_range(ps, ranges.args[i], startbyte + kw.span + (0:ranges.span))
+        end
     else
         _lint_range(ps, ranges, startbyte + kw.span + (0:ranges.span))
     end

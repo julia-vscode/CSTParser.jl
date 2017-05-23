@@ -15,7 +15,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
 
     next(ps)
     ret = EXPR{Macro}(EXPR[kw, sig, block, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
-    # ret.defs =  [Variable(function_name(sig), :Macro, ret)]
+    ret.defs =  [Variable(function_name(sig), :Macro, ret)]
     return ret
 end
 
