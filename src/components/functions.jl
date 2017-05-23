@@ -255,7 +255,7 @@ function _lint_func_sig(ps::ParseState, sig::EXPR, loc)
         
         trailingws = last(sig.args) isa EXPR{PUNCTUATION{Tokens.RPAREN}} ? last(sig.args).span - 1 : 0
         loc1 = first(loc) + sig.span - trailingws
-        push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((loc1):(loc1), string(" where {", join((Expr(t) for t in sig.args[1].args[2:end]), ","), "}")))
+        push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((loc1):(loc1), string(" where {", join((Expr(t) for t in sig.args[1].args[2:end] if !(t isa EXPR{P} where P <: PUNCTUATION) ), ","), "}")))
         push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((first(loc) + sig.args[1].args[1].span):(first(loc) + sig.args[1].span), ""))
     end
     
