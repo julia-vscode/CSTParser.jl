@@ -25,11 +25,7 @@ end
 
 function _lint_range(ps::ParseState, x::EXPR{BinaryOpCall}, loc)
     if ((x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}}))
-        if x.args[2] isa EXPR{IDENTIFIER}
-            id = Expr(x.args[2])
-            t = infer_t(x.args[3])
-            push!(x.defs, Variable(id, t, x))
-        end
+        x.defs = _track_assignment(ps::ParseState, x.args[1], x.args[3])
         if x.args[3] isa EXPR{L} where L <: LITERAL
             push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, []))
         end
@@ -37,6 +33,7 @@ function _lint_range(ps::ParseState, x::EXPR{BinaryOpCall}, loc)
 end
 
 function _lint_range(ps::ParseState, x::EXPR{BinarySyntaxOpCall}, loc)
+    # assignment tracking occurs in parse_operator(..)
     if x.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
         if x.args[3] isa EXPR{LITERAL}
             push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, []))

@@ -52,18 +52,21 @@ When applied to the lhs of an assignment returns a vector of the
 newly defined variables.
 """
 function _track_assignment(ps::ParseState, x, val, defs = [])
-    if x isa EXPR{IDENTIFIER}
-        t = infer_t(val)
-        push!(defs, Variable(Expr(x), t, val))
-    elseif x isa EXPR{TupleH}
-        for a in x.args
-            if a isa EXPR{IDENTIFIER}
-                _track_assignment(ps, a, val, defs)
-            end
-        end
+    return defs
+end
+function _track_assignment(ps::ParseState, x::EXPR{IDENTIFIER}, val, defs = [])
+    t = infer_t(val)
+    push!(defs, Variable(Expr(x), t, val))
+    return defs
+end
+
+function _track_assignment(ps::ParseState, x::EXPR{TupleH}, val, defs = [])
+    for a in x.args
+        _track_assignment(ps, a, val, defs)
     end
     return defs
 end
+
 
 infer_t(x) = :Any
 infer_t(x::EXPR{LITERAL{Tokens.INTEGER}}) = :Int
