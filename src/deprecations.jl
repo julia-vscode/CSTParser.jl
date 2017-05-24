@@ -19,7 +19,7 @@ function _check_dep_call(ps::ParseState, x::EXPR)
             fname == :produce ||
             fname == :consume ||
             fname == :FloatRange
-            push!(ps.diagnostics, Diagnostic{Diagnostics.Deprecation}(ps.nt.startbyte + (-x.span:0), []))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.Deprecation}(ps.nt.startbyte + (-x.span:0), [], ""))
         end
     end
 end

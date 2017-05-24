@@ -134,7 +134,11 @@ function parse_imports(ps::ParseState)
             @catcherror ps startbyte arg = parse_dot_mod(ps, true)
             append!(ret.args, arg)
         end
-        ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
+        if Expr(ret).head == :toplevel
+            ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
+        else
+            ret.defs = [Variable(Expr(ret), :IMPORTS, ret)]
+        end
     else
         ret = EXPR{kwt}(EXPR[kw;arg], 0, Variable[], "")
         while ps.nt.kind == Tokens.COMMA
@@ -148,7 +152,7 @@ function parse_imports(ps::ParseState)
     
     # Linting
     if ps.current_scope == Scope{Tokens.FUNCTION}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.ImportInFunction}(startbyte:ps.nt.startbyte, []))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ImportInFunction}(startbyte:ps.nt.startbyte, [], ""))
     end
 
     ret.span = ps.nt.startbyte - startbyte
@@ -177,11 +181,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
     # check for duplicates
     let idargs = filter(a -> a isa EXPR{IDENTIFIER}, ret.args)
         if length(idargs) != length(unique((a -> a.val).(idargs)))
-            push!(ps.diagnostics, Diagnostic{Diagnostics.DuplicateArgument}(startbyte:ps.nt.startbyte, []))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.DuplicateArgument}(startbyte:ps.nt.startbyte, [], ""))
         end
     end
     if ps.current_scope == Scope{Tokens.FUNCTION}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.ImportInFunction}(startbyte:ps.nt.startbyte, []))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ImportInFunction}(startbyte:ps.nt.startbyte, [], ""))
     end
     return ret
 end

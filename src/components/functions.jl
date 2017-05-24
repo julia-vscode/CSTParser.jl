@@ -251,7 +251,7 @@ function _lint_func_sig(ps::ParseState, sig::EXPR, loc, haswhere = false)
     fname = _get_fname(sig)
     # use where syntax
     if sig isa EXPR{Call} && sig.args[1] isa EXPR{Curly} && !haswhere
-        push!(ps.diagnostics, Diagnostic{Diagnostics.parameterisedDeprecation}((first(loc) + sig.args[1].args[1].span):(first(loc) + sig.args[1].span), []))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.parameterisedDeprecation}((first(loc) + sig.args[1].args[1].span):(first(loc) + sig.args[1].span), [], ""))
         
         trailingws = last(sig.args) isa EXPR{PUNCTUATION{Tokens.RPAREN}} ? last(sig.args).span - 1 : 0
         loc1 = first(loc) + sig.span - trailingws
@@ -295,19 +295,19 @@ function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
     if !any(a.val == aa[1] for aa in args)
         push!(args, (a.val, t))
     else 
-        push!(ps.diagnostics, Diagnostic{Diagnostics.DuplicateArgumentName}(loc, []))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.DuplicateArgumentName}(loc, [], ""))
     end
     if a.val == Expr(fname)
-        push!(ps.diagnostics, Diagnostic{Diagnostics.ArgumentFunctionNameConflict}(loc, []))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ArgumentFunctionNameConflict}(loc, [], ""))
     end
     if arg isa EXPR{UnarySyntaxOpCall} && arg.args[2] isa EXPR{OPERATOR{0,Tokens.DDDOT,false}} && i != nargs
-        push!(ps.diagnostics, Diagnostic{Diagnostics.SlurpingPosition}(loc, []))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.SlurpingPosition}(loc, [], ""))
     end
     if arg isa EXPR{Kw} && i < firstkw
         firstkw = i
     end
     if !(arg isa EXPR{Kw}) && i > firstkw
-        push!(ps.diagnostics, Diagnostic{Diagnostics.KWPosition}(loc, []))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.KWPosition}(loc, [], ""))
     end
     # Check 
 end
