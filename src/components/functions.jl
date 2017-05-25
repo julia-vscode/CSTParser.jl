@@ -390,6 +390,8 @@ function_name(sig::EXPR{Curly}) = function_name(sig.args[1])
 function function_name(sig::EXPR{BinarySyntaxOpCall}) 
     if sig.args[2] isa EXPR{OP} where OP <: OPERATOR{DotOp}
         function_name(sig.args[3])
+    elseif sig.args[2] isa EXPR{OP} where OP <: OPERATOR{WhereOp}
+        function_name(sig.args[1])
     else
         function_name(sig.args[2])
     end
