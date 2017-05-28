@@ -450,6 +450,15 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{P,Tokens.AN
     @catcherror ps startbyte arg = @closer ps comma @precedence ps 0 parse_expression(ps)
 
     # Construction
+    if ret isa EXPR{TupleH}
+        for a in ret.args
+            if !(a isa EXPR{P} where P <: PUNCTUATION)
+                push!(ret.defs, Variable(Expr(a), get_t(a), a))
+            end
+        end
+    else
+        push!(ret.defs, Variable(Expr(ret), get_t(ret), ret))
+    end
     ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, EXPR{Block}(EXPR[arg], arg.span, Variable[], "")], ps.nt.startbyte - startbyte, Variable[], "")
     
     return ret

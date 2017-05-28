@@ -44,6 +44,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
                 unshift!(catchblock.args, caught)
                 catchblock.span += caught.span
                 caught = FALSE
+            elseif caught isa EXPR{IDENTIFIER}
+                push!(caught.defs, Variable(Expr(caught), :Any, caught))
             end
         end
     else

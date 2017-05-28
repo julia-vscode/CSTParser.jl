@@ -244,9 +244,18 @@ the byte offset is `ps.nt.startbyte - sig.span`.
 """
 function _lint_func_sig(ps::ParseState, sig::EXPR{IDENTIFIER}, loc, haswhere = false) end
     
-function _lint_func_sig(ps::ParseState, sig::EXPR, loc, haswhere = false)
-    if sig isa EXPR{BinarySyntaxOpCall} && (sig.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} || sig.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}})
-        return _lint_func_sig(ps, sig.args[1], loc, sig.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}})
+function _lint_func_sig(ps::ParseState, sig1::EXPR, loc)
+    haswhere = false
+    params = _get_fparams(sig1)
+    args = Tuple{Symbol,Any}[(p, :DataType) for p in params]
+
+    # sig = deepcopy(sig1)
+    sig = sig1
+    while sig isa EXPR{BinarySyntaxOpCall} && (sig.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} || sig.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}})
+        if sig.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}}
+            haswhere = true
+        end
+        sig = sig.args[1]
     end
     fname = _get_fname(sig)
     # use where syntax
@@ -260,11 +269,12 @@ function _lint_func_sig(ps::ParseState, sig::EXPR, loc, haswhere = false)
     end
     
     # format_funcname(ps, function_name(sig), sig.span)
-    args = Tuple{Symbol,Any}[]
+    
     nargs = sum(typeof(a).parameters[1].name.name==:PUNCTUATION for a in sig.args) - 1
     firstkw  = nargs + 1
     i = 1
-    for arg in sig.args[2:end]
+    for ia = 2:length(sig.args)
+        arg = sig.args[ia]
         if !(arg isa EXPR{P} where P <: PUNCTUATION)
             if arg isa EXPR{BinarySyntaxOpCall} && arg.args[1] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}
                 #unhandled ::Type argument
@@ -284,7 +294,10 @@ function _lint_func_sig(ps::ParseState, sig::EXPR, loc, haswhere = false)
             i += 1
         end
     end
-    sig.defs = (a -> Variable(a[1], a[2], sig)).(args)
+    for a in args
+        push!(sig1.defs, Variable(a[1], a[2], sig1))
+    end
+    # sig1.defs = (a -> Variable(a[1], a[2], sig1)).(args)
 end
     
 function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
@@ -358,16 +371,51 @@ end
 
 
 
-function _sig_params(x, p = [])
-    if x isa EXPR{Curly}
-        for a in x.args[2:end]
+_get_fparams(x::EXPR, args = Symbol[]) = args
+
+function _get_fparams(x::EXPR{Call}, args = Symbol[])
+    if x.args[1] isa EXPR{Curly}
+       _get_fparams(x.args[1], args)
+    end
+    unique(args)
+end
+
+function _get_fparams(x::EXPR{Curly}, args = Symbol[])
+    for i = 3:length(x.args)
+        a = x.args[i]
+        if !(a isa EXPR{P} where P <: PUNCTUATION)
+            if a isa EXPR{IDENTIFIER}
+                push!(args, Expr(a))
+            elseif a isa EXPR{BinarySyntaxOpCall} && a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUBTYPE,false}}
+                push!(args, Expr(a).args[1])
+            end
+        end
+    end 
+    
+    unique(args)
+end
+
+
+
+function _get_fparams(x::EXPR{BinarySyntaxOpCall}, args = Symbol[])
+    if x.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}}
+        if x.args[1] isa EXPR{BinarySyntaxOpCall} && x.args[1].args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}}
+            _get_fparams(x.args[1], args)
+        end
+        for i = 3:length(x.args)
+            a = x.args[i]
             if !(a isa EXPR{P} where P <: PUNCTUATION)
-                push!(p, get_id(a))
+                if a isa EXPR{IDENTIFIER}
+                    push!(args, Expr(a))
+                elseif a isa EXPR{BinarySyntaxOpCall} && a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUBTYPE,false}}
+                    push!(args, Expr(a).args[1])
+                end
             end
         end
     end
-    return p
+    return unique(args)
 end
+
 
 _get_fname(sig::EXPR{FunctionDef}) = _get_fname(sig.args[2])
 _get_fname(sig::EXPR{IDENTIFIER}) = sig

@@ -25,8 +25,13 @@ get_id(x) = x
 Basic inference in the presence of type declarations.
 """
 get_t(x) = :Any
-get_t(x::EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}) = Expr(x.args[3])
-
+function get_t(x::EXPR{BinarySyntaxOpCall}) 
+    if x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}
+        return Expr(x.args[3])
+    else
+        return :Any
+    end
+end
 
 # NEEDS FIX
 # function func_sig(x::EXPR)
