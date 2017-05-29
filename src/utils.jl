@@ -440,3 +440,24 @@ function is_func_call(x::EXPR{BinarySyntaxOpCall})
         return false
     end
 end
+
+
+function get_last_token(x::CSTParser.EXPR)
+    if isempty(x.args)
+        return x
+    else
+        return get_last_token(last(x.args))
+    end
+end
+
+function trailing_ws_length(x::CSTParser.EXPR{CSTParser.IDENTIFIER})
+    x.span - sizeof(x.val)
+end
+
+function trailing_ws_length(x::CSTParser.EXPR{P}) where P <: CSTParser.PUNCTUATION
+    x.span - 1
+end
+
+function trailing_ws_length(x::CSTParser.EXPR{K}) where K <: CSTParser.KEYWORD{T} where T
+    x.span - sizeof(string(T))
+end
