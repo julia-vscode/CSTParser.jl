@@ -456,7 +456,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{P,Tokens.AN
     # Construction
     if ret isa EXPR{TupleH}
         for a in ret.args
-            if !(a isa EXPR{P} where P <: PUNCTUATION)
+            if !(a isa EXPR{P1} where P1 <: PUNCTUATION)
                 push!(ret.defs, Variable(Expr(a), get_t(a), a))
             end
         end
