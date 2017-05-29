@@ -229,6 +229,10 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{AssignmentO
         return ret1
     else
         defs = ps.trackscope ? _track_assignment(ps, ret, nextarg) : Variable[]
+        if nextarg isa EXPR{BinarySyntaxOpCall} && nextarg.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
+            append!(defs, nextarg.defs)
+            empty!(nextarg.defs)
+        end
         ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, nextarg], op.span + ret.span + nextarg.span, Variable[], "")
         ret.defs = defs
         return ret
