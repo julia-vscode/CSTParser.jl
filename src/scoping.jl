@@ -119,6 +119,7 @@ end
 Checks whether the body of `x` is included in the toplevel namespace.
 """
 contributes_scope(x) = false
+contributes_scope(x::EXPR{FileH}) = true
 contributes_scope(x::EXPR{Begin}) = true
 contributes_scope(x::EXPR{Block}) = true
 contributes_scope(x::EXPR{Const}) = true

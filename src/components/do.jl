@@ -35,7 +35,7 @@ end
 
 
 function _lint_do(ps::ParseState, sig, loc)
-    args = []
+    args = Tuple{Symbol,Any}[]
     i = 1
     for arg in sig.args
         if !(arg isa EXPR{P} where P <: PUNCTUATION)
