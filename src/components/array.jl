@@ -125,6 +125,9 @@ function parse_array(ps::ParseState)
                 ret.span = ps.nt.startbyte - startbyte
                 return ret
             end
+        else
+            ps.errored = true
+            ret = EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unknown error")
         end
     end
     return ret
