@@ -27,7 +27,7 @@ function _lint_range(ps::ParseState, x::EXPR{BinaryOpCall}, loc)
     if ((x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}}))
         x.defs = _track_assignment(ps::ParseState, x.args[1], x.args[3])
         if x.args[3] isa EXPR{L} where L <: LITERAL
-            push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, [], ""))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, [], "You are trying to loop over a single instance"))
         end
     end
 end
@@ -36,12 +36,12 @@ function _lint_range(ps::ParseState, x::EXPR{BinarySyntaxOpCall}, loc)
     # assignment tracking occurs in parse_operator(..)
     if x.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
         if x.args[3] isa EXPR{LITERAL}
-            push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, [], ""))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.LoopOverSingle}(loc, [], "You are trying to loop over a single instance"))
         end
     end
 end
 function _lint_range(ps::ParseState, x, loc)
-    push!(ps.diagnostics, Diagnostic{Diagnostics.RangeNonAssignment}(loc, [], ""))
+    push!(ps.diagnostics, Diagnostic{Diagnostics.RangeNonAssignment}(loc, [], "You must assign (using =, in or ∈) in a range")) 
 end
 function _lint_range(ps::ParseState, x::EXPR{P}, loc) where P <: PUNCTUATION
 end
@@ -83,10 +83,10 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
 
     # Linting
     if cond isa EXPR{BinarySyntaxOpCall} && cond.args[2] isa EXPR{OP} where OP <: OPERATOR{AssignmentOp}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.CondAssignment}(startbyte + kw.span + (0:cond.span), [], ""))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.CondAssignment}(startbyte + kw.span + (0:cond.span), [], "An assignment rather than comparison operator has been used"))
     end
     if cond isa EXPR{LITERAL{Tokens.FALSE}}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(startbyte:ps.nt.startbyte, [], ""))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(startbyte:ps.nt.startbyte, [], "This code is never reached"))
     end
 
     return ret

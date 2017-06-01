@@ -86,25 +86,25 @@ function format_op(ps, prec)
     loc = ps.t.startbyte:ps.t.endbyte + 1
     if (prec == ColonOp || prec == PowerOp || prec == DeclarationOp || prec == DotOp) && ps.t.kind != Tokens.ANON_FUNC
         if ps.lws.kind != EmptyWS && ps.ws.kind != EmptyWS
-            diag = Diagnostic{Diagnostics.ExtraWS}(loc, Diagnostics.Action[Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte),Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte)], "")
+            diag = Diagnostic{Diagnostics.ExtraWS}(loc, Diagnostics.Action[Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte),Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte)], "Unexpected white space around operator")
             push!(ps.diagnostics, diag)
         elseif ps.lws.kind != EmptyWS
-            diag = Diagnostic{Diagnostics.ExtraWS}(loc, Diagnostics.Action[Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte)], "")
+            diag = Diagnostic{Diagnostics.ExtraWS}(loc, Diagnostics.Action[Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte)], "Unexpected white space around operator")
             push!(ps.diagnostics, diag)
         elseif ps.ws.kind != EmptyWS
-            diag = Diagnostic{Diagnostics.ExtraWS}(loc, Diagnostics.Action[Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte)], "")
+            diag = Diagnostic{Diagnostics.ExtraWS}(loc, Diagnostics.Action[Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte)], "Unexpected white space around operator")
             push!(ps.diagnostics, diag)
         end
     elseif ps.t.kind == Tokens.ISSUBTYPE || ps.t.kind == Tokens.DDDOT
     else
         if ps.lws.kind == EmptyWS && ps.ws.kind == EmptyWS
-            diag = Diagnostic{Diagnostics.MissingWS}(loc, Diagnostics.Action[Diagnostics.AddWS(ps.nt.startbyte:ps.nt.startbyte, 1),Diagnostics.AddWS(ps.t.startbyte:ps.t.startbyte, 1)], "")
+            diag = Diagnostic{Diagnostics.MissingWS}(loc, Diagnostics.Action[Diagnostics.AddWS(ps.nt.startbyte:ps.nt.startbyte, 1),Diagnostics.AddWS(ps.t.startbyte:ps.t.startbyte, 1)], "Missing white space around operator")
             push!(ps.diagnostics, diag)
         elseif ps.lws.kind == EmptyWS
-            diag = Diagnostic{Diagnostics.MissingWS}(loc, Diagnostics.Action[Diagnostics.AddWS(ps.t.startbyte:ps.t.startbyte, 1)], "")
+            diag = Diagnostic{Diagnostics.MissingWS}(loc, Diagnostics.Action[Diagnostics.AddWS(ps.t.startbyte:ps.t.startbyte, 1)], "Missing white space around operator")
             push!(ps.diagnostics, diag)
         elseif ps.ws.kind == EmptyWS
-            diag = Diagnostic{Diagnostics.MissingWS}(loc, Diagnostics.Action[Diagnostics.AddWS(ps.nt.startbyte:ps.nt.startbyte, 1)], "")
+            diag = Diagnostic{Diagnostics.MissingWS}(loc, Diagnostics.Action[Diagnostics.AddWS(ps.nt.startbyte:ps.nt.startbyte, 1)], "Missing white space around operator")
             push!(ps.diagnostics, diag)
         end
     end
@@ -113,24 +113,24 @@ end
 function format_comma(ps)
     !ps.formatcheck && return
     if ps.lws.kind != EmptyWS && !(islbracket(ps.lt))
-        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + (0:1), [Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte)], ""))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + (0:1), [Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte)], "Unexpected white space preceding comma"))
     end
     if ps.ws.kind == EmptyWS && !(isrbracket(ps.nt))
-        push!(ps.diagnostics, Diagnostic{Diagnostics.MissingWS}(ps.t.startbyte + (0:1), [Diagnostics.AddWS(ps.nt.startbyte:ps.nt.startbyte, 1)], ""))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.MissingWS}(ps.t.startbyte + (0:1), [Diagnostics.AddWS(ps.nt.startbyte:ps.nt.startbyte, 1)], "Missing white space following comma"))
     end
 end
 
 function format_lbracket(ps)
     !ps.formatcheck && return
     if ps.ws.kind == WS
-        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + (0:1), [Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte)], ""))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + (0:1), [Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte)], "Unexpected white space following $(ps.t.val)"))
     end
 end
 
 function format_rbracket(ps)
     !ps.formatcheck && return
     if ps.lws.kind == WS
-        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + (0:1), [Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte)], ""))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte + (0:1), [Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte)], "Unexpected white space preceding $(ps.t.val)"))
     end
 end
 

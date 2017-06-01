@@ -181,7 +181,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
     # check for duplicates
     let idargs = filter(a -> a isa EXPR{IDENTIFIER}, ret.args)
         if length(idargs) != length(unique((a -> a.val).(idargs)))
-            push!(ps.diagnostics, Diagnostic{Diagnostics.DuplicateArgument}(startbyte:ps.nt.startbyte, [], ""))
+            push!(ps.diagnostics, Diagnostic{Diagnostics.DuplicateArgument}(startbyte:ps.nt.startbyte, [], "A symbol is exported multiple times"))
         end
     end
     if ps.current_scope == Scope{Tokens.FUNCTION}

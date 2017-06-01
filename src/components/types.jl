@@ -22,7 +22,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
 
         # Linting
         # format_typename(ps, sig)
-        push!(ps.diagnostics, Diagnostic{Diagnostics.abstractDeprecation}(startbyte + (0:8), [Diagnostics.TextEdit(ps.t.endbyte + 1:ps.t.endbyte + 1, " end"), Diagnostics.TextEdit(startbyte + (0:kw.span), "abstract type ")], ""))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.abstractDeprecation}(startbyte + (0:8), [Diagnostics.TextEdit(ps.t.endbyte + 1:ps.t.endbyte + 1, " end"), Diagnostics.TextEdit(startbyte + (0:kw.span), "abstract type ")], "This specification for abstract types is deprecated"))
 
         # Construction
         ret = EXPR{Abstract}(EXPR[kw, sig], ps.nt.startbyte - startbyte, Variable[], "")
@@ -43,7 +43,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
 
     # Linting
     # format_typename(ps, arg2)
-    push!(ps.diagnostics, Diagnostic{Diagnostics.bitstypeDeprecation}(startbyte + (0:(kw.span + arg1.span + arg2.span)), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("primitive type ", Expr(arg2)," ", Expr(arg1), " end"))], ""))
+    push!(ps.diagnostics, Diagnostic{Diagnostics.bitstypeDeprecation}(startbyte + (0:(kw.span + arg1.span + arg2.span)), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("primitive type ", Expr(arg2)," ", Expr(arg1), " end"))], "This specification for primitive types is deprecated"))
 
     # Construction
     ret = EXPR{Bitstype}(EXPR[kw, arg1, arg2], ps.nt.startbyte - startbyte, Variable[], "")
@@ -88,7 +88,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
 
     # Linting
     format_typename(ps, arg1)
-    push!(ps.diagnostics, Diagnostic{Diagnostics.typealiasDeprecation}(startbyte + (0:(kw.span + arg1.span + arg2.span)), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("const ", Expr(arg1), " = ", Expr(arg2)))], ""))
+    push!(ps.diagnostics, Diagnostic{Diagnostics.typealiasDeprecation}(startbyte + (0:(kw.span + arg1.span + arg2.span)), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("const ", Expr(arg1), " = ", Expr(arg2)))], "This specification for type aliases is deprecated"))
 
     return EXPR{TypeAlias}(EXPR[kw, arg1, arg2], ps.nt.startbyte - startbyte, Variable[], "")
 end
@@ -147,7 +147,7 @@ function _lint_struct(ps::ParseState, startbyte::Int, kw, sig, block)
         if declares_function(a)
             fname = _get_fname(_get_fsig(a))
             if Expr(fname) != Expr(get_id(sig))
-                push!(ps.diagnostics, Diagnostic{Diagnostics.MisnamedConstructor}(hloc + (0:a.span), [], ""))
+                push!(ps.diagnostics, Diagnostic{Diagnostics.MisnamedConstructor}(hloc + (0:a.span), [], "Constructor name does not match type name"))
             end
         else
             id = get_id(a)
@@ -156,8 +156,8 @@ function _lint_struct(ps::ParseState, startbyte::Int, kw, sig, block)
         hloc += a.span
     end
     if kw isa EXPR{KEYWORD{Tokens.TYPE}}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.typeDeprecation}(startbyte + (0:kw.span), [Diagnostics.TextEdit(startbyte + (0:kw.span), "mutable struct ")], ""))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.typeDeprecation}(startbyte + (0:kw.span), [Diagnostics.TextEdit(startbyte + (0:kw.span), "mutable struct ")], "Use of deprecated `type` syntax"))
     elseif kw isa EXPR{KEYWORD{Tokens.IMMUTABLE}}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.immutableDeprecation}(startbyte + (0:kw.span), [Diagnostics.TextEdit(startbyte + (0:kw.span), "struct ")], ""))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.immutableDeprecation}(startbyte + (0:kw.span), [Diagnostics.TextEdit(startbyte + (0:kw.span), "struct ")], "Use of deprecated `immutable` syntax"))
     end
 end
