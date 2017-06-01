@@ -65,6 +65,14 @@ function _track_assignment(ps::ParseState, x::EXPR{IDENTIFIER}, val, defs = [])
     return defs
 end
 
+function _track_assignment(ps::ParseState, x::EXPR{BinarySyntaxOpCall}, val, defs = [])
+    if x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}
+        t = Expr(x.args[3])
+        push!(defs, Variable(Expr(get_id(x.args[1])), t, val))
+    end
+    return defs
+end
+
 function _track_assignment(ps::ParseState, x::EXPR{Curly}, val, defs = [])
     t = infer_t(val)
     push!(defs, Variable(Expr(get_id(x)), t, val))
