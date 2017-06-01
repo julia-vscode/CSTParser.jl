@@ -145,7 +145,7 @@ end
 """
     @scope ps scope body 
 
-Continues parsing closing on `rule`.
+Continues parsing tracking declared variables.
 """
 macro scope(ps, new_scope, body)
     quote

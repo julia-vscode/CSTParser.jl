@@ -174,7 +174,9 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, fo
     startbyte = ps.nt.startbyte
 
     @catcherror ps startbyte @nocloser ps inwhere @noscope ps @nocloser ps newline @closer ps comma while !closer(ps)
+        block && (ps.trackscope = true)
         a = parse_expression(ps)
+
         if kw && !ps.closer.brace && a isa EXPR{BinarySyntaxOpCall} && a.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
             a = EXPR{Kw}(a.args, a.span, Variable[], "")
         end
@@ -193,13 +195,14 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, fo
         end
     end
 
+
     if ps.ws.kind == SemiColonWS
         if block
             body = EXPR{Block}(EXPR[pop!(ret.args)], 0, Variable[], "")
             body.span = body.args[1].span
-            if last(body.args) isa EXPR{BinarySyntaxOpCall} && last(body.args).args[2] isa EXPR{OP} where OP <: OPERATOR{AssignmentOp,Tokens.EQ}
-                _track_assignment(ps, last(body.args).args[1], last(body.args).args[3], last(body.args).defs)
-            end
+            # if last(body.args) isa EXPR{BinarySyntaxOpCall} && last(body.args).args[2] isa EXPR{OP} where OP <: OPERATOR{AssignmentOp,Tokens.EQ}
+            #     _track_assignment(ps, last(body.args).args[1], last(body.args).args[3], last(body.args).defs)
+            # end
             @nocloser ps newline @closer ps comma while @nocloser ps semicolon !closer(ps)
                 @catcherror ps startbyte a = parse_expression(ps)
                 push!(body.args, a)
