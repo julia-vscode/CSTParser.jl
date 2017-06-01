@@ -65,6 +65,12 @@ function _track_assignment(ps::ParseState, x::EXPR{IDENTIFIER}, val, defs = [])
     return defs
 end
 
+function _track_assignment(ps::ParseState, x::EXPR{Curly}, val, defs = [])
+    t = infer_t(val)
+    push!(defs, Variable(Expr(get_id(x)), t, val))
+    return defs
+end
+
 function _track_assignment(ps::ParseState, x::EXPR{TupleH}, val, defs = [])
     for a in x.args
         _track_assignment(ps, a, val, defs)
