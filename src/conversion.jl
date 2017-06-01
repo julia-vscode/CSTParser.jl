@@ -47,7 +47,7 @@ Expr(x::EXPR{LITERAL{Tokens.TRIPLE_STRING}}) = x.val
 
 
 # cross compatability for line number insertion in macrocalls
-@static if VERSION <= v"0.7.0-DEV.357"
+@static if VERSION < v"0.7.0-DEV.357"
     Expr(x::EXPR{LITERAL{Tokens.CMD}}) = Expr(:macrocall, Symbol("@cmd"), x.val[2:end-1])
 
     function Expr(x::EXPR{x_Str})
