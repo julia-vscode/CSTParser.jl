@@ -4,7 +4,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONST}})
     # Parsing
     kw = INSTANCE(ps)
     format_kw(ps)
-    @catcherror ps startbyte arg = parse_expression(ps)
+    @catcherror ps startbyte arg = @default ps parse_expression(ps)
 
     # Construction 
     ret = EXPR{Const}(EXPR[kw, arg], ps.nt.startbyte - startbyte, Variable[], "")

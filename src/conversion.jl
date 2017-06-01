@@ -44,27 +44,118 @@ Expr(x::EXPR{LITERAL{Tokens.MACRO}}) = Symbol(x.val)
 Expr(x::EXPR{LITERAL{Tokens.STRING}}) = x.val
 Expr(x::EXPR{LITERAL{Tokens.TRIPLE_STRING}}) = x.val
 
-function Expr(x::EXPR{x_Str})
-    if x.args[1] isa EXPR{BinarySyntaxOpCall}
-        mname = Expr(x.args[1])
-        mname.args[2] = QuoteNode(Symbol("@", mname.args[2].value, "_str"))
-        ret = Expr(:macrocall, mname)
-    else
-        ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_str"))
+
+
+# cross compatability for line number insertion in macrocalls
+@static if VERSION <= v"0.7.0-DEV.357"
+    Expr(x::EXPR{LITERAL{Tokens.CMD}}) = Expr(:macrocall, Symbol("@cmd"), x.val[2:end-1])
+
+    function Expr(x::EXPR{x_Str})
+        if x.args[1] isa EXPR{BinarySyntaxOpCall}
+            mname = Expr(x.args[1])
+            mname.args[2] = QuoteNode(Symbol("@", mname.args[2].value, "_str"))
+            ret = Expr(:macrocall, mname)
+        else
+            ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_str"))
+        end
+        for i = 2:length(x.args)
+            push!(ret.args, x.args[i].val)
+        end
+        return ret
     end
-    for i = 2:length(x.args)
-        push!(ret.args, x.args[i].val)
+
+    function Expr(x::EXPR{x_Cmd})
+        ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_cmd"))
+        for i = 2:length(x.args)
+            push!(ret.args, x.args[i].val)
+        end
+        return ret
     end
-    return ret
+
+    function Expr(x::EXPR{MacroCall})
+        ret = Expr(:macrocall)
+        for a in x.args
+            if !(a isa EXPR{P} where P <: PUNCTUATION)
+                push!(ret.args, Expr(a))
+            end
+        end
+        ret
+    end
+
+    """
+        remlineinfo!(x)
+    Removes line info expressions. (i.e. Expr(:line, 1))
+    """
+    function remlineinfo!(x)
+        if isa(x, Expr)
+            id = find(map(x -> (isa(x, Expr) && x.head == :line) || (isdefined(:LineNumberNode) && x isa LineNumberNode), x.args))
+            deleteat!(x.args, id)
+            for j in x.args
+                remlineinfo!(j)
+            end
+        end
+        x
+    end
+else
+    Expr(x::EXPR{LITERAL{Tokens.CMD}}) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val[2:end-1])
+
+    function Expr(x::EXPR{x_Str})
+        if x.args[1] isa EXPR{BinarySyntaxOpCall}
+            mname = Expr(x.args[1])
+            mname.args[2] = QuoteNode(Symbol("@", mname.args[2].value, "_str"))
+            ret = Expr(:macrocall, mname, nothing)
+        else
+            ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_str"), nothing)
+        end
+        for i = 2:length(x.args)
+            push!(ret.args, x.args[i].val)
+        end
+        return ret
+    end
+
+    function Expr(x::EXPR{x_Cmd})
+        ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_cmd"), nothing)
+        for i = 2:length(x.args)
+            push!(ret.args, x.args[i].val)
+        end
+        return ret
+    end
+
+    function Expr(x::EXPR{MacroCall})
+        ret = Expr(:macrocall)
+        for a in x.args
+            if !(a isa EXPR{P} where P <: PUNCTUATION)
+                push!(ret.args, Expr(a))
+            end
+        end
+        insert!(ret.args, 2, nothing)
+        ret
+    end
+    """
+        remlineinfo!(x)
+    Removes line info expressions. (i.e. Expr(:line, 1))
+    """
+    function remlineinfo!(x)
+        if isa(x, Expr)
+            if x.head == :macrocall && x.args[2] != nothing
+                id = find(map(x -> (isa(x, Expr) && x.head == :line) || (isdefined(:LineNumberNode) && x isa LineNumberNode), x.args))
+                deleteat!(x.args, id)
+                for j in x.args
+                    remlineinfo!(j)
+                end
+                insert!(x.args, 2, nothing)
+            else
+                id = find(map(x -> (isa(x, Expr) && x.head == :line) || (isdefined(:LineNumberNode) && x isa LineNumberNode), x.args))
+                deleteat!(x.args, id)
+                for j in x.args
+                    remlineinfo!(j)
+                end
+            end
+        end
+        x
+    end
 end
 
-function Expr(x::EXPR{x_Cmd})
-    ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_cmd"))
-    for i = 2:length(x.args)
-        push!(ret.args, x.args[i].val)
-    end
-    return ret
-end
 
 Expr(x::EXPR{PUNCTUATION{K}}) where {K} = string(K)
 
@@ -360,16 +451,6 @@ end
 
 function Expr(x::EXPR{Macro})
     Expr(:macro, Expr(x.args[2]), Expr(x.args[3]))
-end
-
-function Expr(x::EXPR{MacroCall})
-    ret = Expr(:macrocall)
-    for a in x.args
-        if !(a isa EXPR{P} where P <: PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
 end
 
 Expr(x::EXPR{HEAD{:globalrefdoc}}) = GlobalRef(Core, Symbol("@doc"))

@@ -214,21 +214,6 @@ isajuxtaposition(ps::ParseState, ret) = ((ret isa EXPR{LITERAL{Tokens.INTEGER}} 
 
 # Testing functions
 
-"""
-    remlineinfo!(x)
-Removes line info expressions. (i.e. Expr(:line, 1))
-"""
-function remlineinfo!(x)
-    if isa(x, Expr)
-        id = find(map(x -> isa(x, Expr) && x.head == :line, x.args))
-        deleteat!(x.args, id)
-        for j in x.args
-            remlineinfo!(j)
-        end
-    end
-    x
-end
-
 
 
 function test_order(x, out = [])
