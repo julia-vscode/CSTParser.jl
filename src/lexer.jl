@@ -189,7 +189,8 @@ function read_comment(l::Lexer)
         n_start, n_end = 1, 0
         while true
             if eof(c)
-                return emit_error(l, Tokens.EOF_MULTICOMMENT)
+                emit_error(l, Tokens.EOF_MULTICOMMENT)
+                return false
             end
             nc = readchar(l)
             if c == '#' && nc == '='
