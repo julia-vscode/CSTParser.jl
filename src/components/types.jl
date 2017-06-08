@@ -43,7 +43,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
 
     # Linting
     # format_typename(ps, arg2)
-    push!(ps.diagnostics, Diagnostic{Diagnostics.bitstypeDeprecation}(startbyte + (0:(kw.span + arg1.span + arg2.span)), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("primitive type ", Expr(arg2)," ", Expr(arg1), " end"))], "This specification for primitive types is deprecated"))
+    push!(ps.diagnostics, Diagnostic{Diagnostics.bitstypeDeprecation}(startbyte + (0:8), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("primitive type ", Expr(arg2)," ", Expr(arg1), " end"))], "This specification for primitive types is deprecated"))
 
     # Construction
     ret = EXPR{Bitstype}(EXPR[kw, arg1, arg2], ps.nt.startbyte - startbyte, Variable[], "")
@@ -88,7 +88,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
 
     # Linting
     format_typename(ps, arg1)
-    push!(ps.diagnostics, Diagnostic{Diagnostics.typealiasDeprecation}(startbyte + (0:(kw.span + arg1.span + arg2.span)), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("const ", Expr(arg1), " = ", Expr(arg2)))], "This specification for type aliases is deprecated"))
+    push!(ps.diagnostics, Diagnostic{Diagnostics.typealiasDeprecation}(startbyte + (0:9), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("const ", Expr(arg1), " = ", Expr(arg2)))], "This specification for type aliases is deprecated"))
 
     return EXPR{TypeAlias}(EXPR[kw, arg1, arg2], ps.nt.startbyte - startbyte, Variable[], "")
 end
@@ -156,8 +156,8 @@ function _lint_struct(ps::ParseState, startbyte::Int, kw, sig, block)
         hloc += a.span
     end
     if kw isa EXPR{KEYWORD{Tokens.TYPE}}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.typeDeprecation}(startbyte + (0:kw.span), [Diagnostics.TextEdit(startbyte + (0:kw.span), "mutable struct ")], "Use of deprecated `type` syntax"))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.typeDeprecation}(startbyte + (0:4), [Diagnostics.TextEdit(startbyte + (0:kw.span), "mutable struct ")], "Use of deprecated `type` syntax"))
     elseif kw isa EXPR{KEYWORD{Tokens.IMMUTABLE}}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.immutableDeprecation}(startbyte + (0:kw.span), [Diagnostics.TextEdit(startbyte + (0:kw.span), "struct ")], "Use of deprecated `immutable` syntax"))
+        push!(ps.diagnostics, Diagnostic{Diagnostics.immutableDeprecation}(startbyte + (0:9), [Diagnostics.TextEdit(startbyte + (0:kw.span), "struct ")], "Use of deprecated `immutable` syntax"))
     end
 end
