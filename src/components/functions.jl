@@ -179,6 +179,10 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, fo
 
         if kw && !ps.closer.brace && a isa EXPR{BinarySyntaxOpCall} && a.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
             a = EXPR{Kw}(a.args, a.span, Variable[], "")
+            # remove format message for kw args
+            if !isempty(ps.diagnostics) && ps.nt.startbyte - a.args[3].span - a.args[2].span <= last(last(ps.diagnostics).loc) <= ps.nt.startbyte - a.args[3].span
+                pop!(ps.diagnostics)
+            end
         end
         push!(ret.args, a)
         if ps.nt.kind == Tokens.COMMA
@@ -217,6 +221,10 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, fo
                 @catcherror ps startbyte a = parse_expression(ps)
                 if kw && !ps.closer.brace && a isa EXPR{BinarySyntaxOpCall} && a.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
                     a = EXPR{Kw}(a.args, a.span, Variable[], "")
+                    # remove format message for kw args
+                    if !isempty(ps.diagnostics) && ps.nt.startbyte - a.args[3].span - a.args[2].span <= last(last(ps.diagnostics).loc) <= ps.nt.startbyte - a.args[3].span
+                        pop!(ps.diagnostics)
+                    end
                 end
                 push!(paras.args, a)
                 if ps.nt.kind == Tokens.COMMA
