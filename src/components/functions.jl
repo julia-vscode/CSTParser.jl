@@ -311,14 +311,12 @@ function _lint_func_sig(ps::ParseState, sig1::EXPR, loc)
     for a in args
         push!(sig1.defs, Variable(a[1], a[2], sig1))
     end
-    # sig1.defs = (a -> Variable(a[1], a[2], sig1)).(args)
 end
     
 function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
     a = _arg_id(arg)
     t = get_t(arg)
     !(a isa EXPR{IDENTIFIER}) && return
-    # if !(a.val in args)
     if !any(a.val == aa[1] for aa in args)
         push!(args, (a.val, t))
     else 
@@ -327,13 +325,15 @@ function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
     if a.val == Expr(fname)
         push!(ps.diagnostics, Diagnostic{Diagnostics.ArgumentFunctionNameConflict}(loc, [], "An argument name conflicts with the function name"))
     end
+    # Check slurping occurs as last argument
     if arg isa EXPR{UnarySyntaxOpCall} && arg.args[2] isa EXPR{OPERATOR{0,Tokens.DDDOT,false}} && i != nargs
         push!(ps.diagnostics, Diagnostic{Diagnostics.SlurpingPosition}(loc, [], ""))
     end
     if arg isa EXPR{Kw} && i < firstkw
         firstkw = i
     end
-    if !(arg isa EXPR{Kw}) && i > firstkw
+    # Check for kw args
+    if i > firstkw && !(arg isa EXPR{Kw} || !(arg isa EXPR{UnarySyntaxOpCall} && arg.args[2] isa OPERATOR{PipeOp,Tokens.DDDOT,false}))
         push!(ps.diagnostics, Diagnostic{Diagnostics.KWPosition}(loc, [], "Incorrect keyword argument position"))
     end
     # Check 
