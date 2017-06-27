@@ -9,6 +9,11 @@ function parse_string(ps::ParseState, prefixed = false)
     
     span = ps.nt.startbyte - ps.t.startbyte
     istrip = ps.t.kind == Tokens.TRIPLE_STRING
+    
+    if ps.errored
+        return EXPR{ERROR}([], 0, [], ps.t.val)
+    end
+
     if istrip
         lit = unindent_triple_string(ps)
     else
