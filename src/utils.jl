@@ -205,11 +205,15 @@ isinstance(t::Token) = isidentifier(t) ||
 ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
                           t.kind == Tokens.END ||
                           Tokens.LSQUARE ≤ t.kind ≤ Tokens.RPAREN
+                          
+isstring(x) = false
+isstring(x::EXPR{T}) where T <: Union{StringH, LITERAL{Tokens.STRING},LITERAL{Tokens.TRIPLE_STRING}} = true
 
-isajuxtaposition(ps::ParseState, ret) = ((ret isa EXPR{LITERAL{Tokens.INTEGER}} || ret isa EXPR{LITERAL{Tokens.FLOAT}}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || 
+isajuxtaposition(ps::ParseState, ret) = ((ret isa EXPR{LITERAL{Tokens.INTEGER}} || ret isa EXPR{LITERAL{Tokens.FLOAT}}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || (
         (ret isa EXPR{UnarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{16,Tokens.PRIME,false}} && ps.nt.kind == Tokens.IDENTIFIER) || 
         ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
-        ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING))
+        ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING))) ||
+        (isstring(ret) && ps.nt.kind == Tokens.IDENTIFIER && ps.ws.kind == EmptyWS)
 
 
 # Testing functions
