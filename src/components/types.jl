@@ -20,10 +20,6 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
         kw = INSTANCE(ps)
         @catcherror ps startbyte sig = @default ps parse_expression(ps)
 
-        # Linting
-        # format_typename(ps, sig)
-        push!(ps.diagnostics, Diagnostic{Diagnostics.abstractDeprecation}(startbyte + (0:8), [Diagnostics.TextEdit(ps.t.endbyte + 1:ps.t.endbyte + 1, " end"), Diagnostics.TextEdit(startbyte + (0:kw.span), "abstract type ")], "This specification for abstract types is deprecated"))
-
         # Construction
         ret = EXPR{Abstract}(EXPR[kw, sig], ps.nt.startbyte - startbyte, Variable[], "")
     end
