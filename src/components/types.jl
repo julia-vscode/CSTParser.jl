@@ -37,10 +37,6 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
     @catcherror ps startbyte arg1 = @default ps @closer ps ws @closer ps wsop parse_expression(ps) 
     @catcherror ps startbyte arg2 = @default ps parse_expression(ps)
 
-    # Linting
-    # format_typename(ps, arg2)
-    push!(ps.diagnostics, Diagnostic{Diagnostics.bitstypeDeprecation}(startbyte + (0:8), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("primitive type ", Expr(arg2)," ", Expr(arg1), " end"))], "This specification for primitive types is deprecated"))
-
     # Construction
     ret = EXPR{Bitstype}(EXPR[kw, arg1, arg2], ps.nt.startbyte - startbyte, Variable[], "")
     ret.defs = [Variable(Expr(get_id(arg2)), :bitstype, ret)]
