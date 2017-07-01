@@ -78,10 +78,6 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
     @catcherror ps startbyte arg1 = @closer ps ws @closer ps wsop parse_expression(ps) 
     @catcherror ps startbyte arg2 = parse_expression(ps)
 
-    # Linting
-    format_typename(ps, arg1)
-    push!(ps.diagnostics, Diagnostic{Diagnostics.typealiasDeprecation}(startbyte + (0:9), [Diagnostics.TextEdit(startbyte + (0:(kw.span + arg1.span + arg2.span)), string("const ", Expr(arg1), " = ", Expr(arg2)))], "This specification for type aliases is deprecated"))
-
     return EXPR{TypeAlias}(EXPR[kw, arg1, arg2], ps.nt.startbyte - startbyte, Variable[], "")
 end
 
@@ -119,9 +115,6 @@ function parse_struct(ps::ParseState, mutable)
     block = EXPR{Block}(EXPR[], 0, Variable[], "")
     @catcherror ps startbyte @default ps parse_block(ps, block, start_col)
 
-    # Linting
-    _lint_struct(ps, startbyte, kw, sig, block)
-
     # Construction
     T = mutable == TRUE ? Tokens.TYPE : Tokens.IMMUTABLE
     next(ps)
@@ -129,27 +122,4 @@ function parse_struct(ps::ParseState, mutable)
     ret.defs = [Variable(Expr(get_id(sig)), Expr(mutable) ? :mutable : :immutable, ret)]
 
     return ret
-end
-
-
-function _lint_struct(ps::ParseState, startbyte::Int, kw, sig, block)
-    format_typename(ps, sig)
-    hloc = ps.nt.startbyte - block.span
-    for a in block.args
-        if declares_function(a)
-            fname = _get_fname(_get_fsig(a))
-            if Expr(fname) != Expr(get_id(sig))
-                push!(ps.diagnostics, Diagnostic{Diagnostics.MisnamedConstructor}(hloc + (0:a.span), [], "Constructor name does not match type name"))
-            end
-        else
-            id = get_id(a)
-            t = get_t(a)
-        end
-        hloc += a.span
-    end
-    if kw isa EXPR{KEYWORD{Tokens.TYPE}}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.typeDeprecation}(startbyte + (0:4), [Diagnostics.TextEdit(startbyte + (0:kw.span), "mutable struct ")], "Use of deprecated `type` syntax"))
-    elseif kw isa EXPR{KEYWORD{Tokens.IMMUTABLE}}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.immutableDeprecation}(startbyte + (0:9), [Diagnostics.TextEdit(startbyte + (0:kw.span), "struct ")], "Use of deprecated `immutable` syntax"))
-    end
 end
