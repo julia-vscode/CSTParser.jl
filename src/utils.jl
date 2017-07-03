@@ -450,3 +450,7 @@ end
 function trailing_ws_length(x::CSTParser.EXPR{K}) where K <: CSTParser.KEYWORD{T} where T
     x.span - sizeof(string(T))
 end
+
+function trailing_ws_length(x::CSTParser.EXPR{K}) where K <: CSTParser.LITERAL{T} where T
+    x.span - sizeof(x.val)
+end

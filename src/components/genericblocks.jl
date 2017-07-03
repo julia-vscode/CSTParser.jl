@@ -25,24 +25,12 @@ function parse_block(ps::ParseState, ret::EXPR{Block}, start_col = 0, closers = 
     start_line = ps.nt.startpos[1]
     start_col = ps.nt.startpos[2]
 
-    deadcode = -1
     # Parsing
     while !(ps.nt.kind in closers) && !ps.errored
         ps.nt.startpos[1] != start_line && ps.ws.kind == NewLineWS && format_indent(ps, start_col)
         @catcherror ps startbyte a = @closer ps block parse_expression(ps)
         push!(ret.args, a)
-
-        if a isa EXPR{Return} && !(ps.nt.kind in closers)
-            deadcode = ps.nt.startbyte
-        end
     end
-
-    # Linting
-    ps.nt.startpos[1] != start_line && format_indent(ps, start_col - 4)
-    if deadcode > -1
-        push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(deadcode:ps.nt.startbyte, [], "This code is never reached"))
-    end
-
     ret.span = ps.nt.startbyte - startbyte
     return ret
 end
