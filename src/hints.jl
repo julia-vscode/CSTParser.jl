@@ -84,7 +84,7 @@ isrbracket(t::Token) = t.kind == Tokens.RPAREN ||
 function format_op(ps, prec)
     !ps.formatcheck && return
     loc = ps.t.startbyte:ps.t.endbyte + 1
-    if (prec == ColonOp || prec == PowerOp || prec == DeclarationOp || prec == DotOp) && ps.t.kind != Tokens.ANON_FUNC
+    if (prec == ColonOp || prec == PowerOp || prec == DeclarationOp || prec == DotOp) && ps.t.kind != Tokens.ANON_FUNC && ps.t.kind != Tokens.PRIME
         if ps.lws.kind != EmptyWS && ps.ws.kind != EmptyWS
             diag = Diagnostic{Diagnostics.ExtraWS}(loc, Diagnostics.Action[Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte),Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte)], "Unexpected white space around operator")
             push!(ps.diagnostics, diag)
@@ -93,6 +93,11 @@ function format_op(ps, prec)
             push!(ps.diagnostics, diag)
         elseif ps.ws.kind != EmptyWS
             diag = Diagnostic{Diagnostics.ExtraWS}(loc, Diagnostics.Action[Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte)], "Unexpected white space around operator")
+            push!(ps.diagnostics, diag)
+        end
+    elseif ps.t.kind == Tokens.PRIME 
+        if ps.lws.kind != EmptyWS
+            diag = Diagnostic{Diagnostics.ExtraWS}(loc, Diagnostics.Action[Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte),Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte)], "Unexpected white space around operator")
             push!(ps.diagnostics, diag)
         end
     elseif ps.t.kind == Tokens.ISSUBTYPE || ps.t.kind == Tokens.DDDOT
