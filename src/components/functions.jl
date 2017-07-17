@@ -63,7 +63,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     end
     push!(ret.args, INSTANCE(ps))
 
-    ret.defs = [Variable(function_name(sig), :Function, ret)]
+    ret.defs = [Variable(Expr(_get_fname(sig)), :Function, ret)]
     return ret
 end
 
@@ -281,9 +281,7 @@ function _lint_func_sig(ps::ParseState, sig1::EXPR, loc)
         push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((loc1):(loc1), string(" where {", join((Expr(t) for t in sig.args[1].args[2:end] if !(t isa EXPR{P} where P <: PUNCTUATION) ), ","), "}")))
         push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((first(loc) + sig.args[1].args[1].span):(first(loc) + sig.args[1].span), ""))
     end
-    
-    # format_funcname(ps, function_name(sig), sig.span)
-    
+
     nargs = sum(typeof(a).parameters[1].name.name==:PUNCTUATION for a in sig.args) - 1
     firstkw  = nargs + 1
     i = 1
@@ -447,21 +445,6 @@ _get_fsig(fdecl::EXPR{FunctionDef}) = fdecl.args[2]
 _get_fsig(fdecl::EXPR{BinarySyntaxOpCall}) = fdecl.args[1]
 
 
-function_name(sig::EXPR{Call}) = function_name(sig.args[1])
-function_name(sig::EXPR{Curly}) = function_name(sig.args[1])
-function function_name(sig::EXPR{BinarySyntaxOpCall}) 
-    if sig.args[2] isa EXPR{OP} where OP <: OPERATOR{DotOp}
-        function_name(sig.args[3])
-    elseif sig.args[2] isa EXPR{OP} where OP <: OPERATOR{WhereOp}
-        function_name(sig.args[1])
-    else
-        function_name(sig.args[2])
-    end
-end
-function_name(sig::EXPR{Quotenode}) = function_name(sig.args[1])
-function_name(sig::EXPR{IDENTIFIER}) = Symbol(sig.val)
-function_name(sig::EXPR{OPERATOR{P,K,dot}}) where {P,K,dot} = UNICODE_OPS_REVERSE[K]
-function_name(sig) = :unknown
 
 
 

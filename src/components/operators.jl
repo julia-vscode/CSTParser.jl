@@ -225,7 +225,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{AssignmentO
         @scope ps Scope{Tokens.FUNCTION} _lint_func_sig(ps, ret, startbyte + (0:ret.span))
 
         ret1 = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, nextarg], op.span + ret.span + nextarg.span, Variable[], "")
-        ret1.defs = [Variable(function_name(ret), :Function, ret1)]
+        ret1.defs = [Variable(Expr(_get_fname(ret)), :Function, ret1)]
         return ret1
     else
         defs = ps.trackscope ? _track_assignment(ps, ret, nextarg) : Variable[]
