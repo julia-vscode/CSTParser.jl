@@ -212,6 +212,8 @@ end
 # Parse assignments
 function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}})
     startbyte = ps.nt.startbyte - op.span - ret.span
+
+    is_func_call(ret) && _get_sig_defs!(ret)
     # Parsing
     @catcherror ps startbyte nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
     
@@ -221,8 +223,6 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{AssignmentO
         if length(ret.args) > 1 && !(ret.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}) && ps.closer.precedence != 0
             nextarg = EXPR{Block}(EXPR[nextarg], nextarg.span, Variable[], "")
         end
-        # Linting
-        @scope ps Scope{Tokens.FUNCTION} _lint_func_sig(ps, ret, startbyte + (0:ret.span))
 
         ret1 = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, nextarg], op.span + ret.span + nextarg.span, Variable[], "")
         ret1.defs = [Variable(Expr(_get_fname(ret)), :Function, ret1)]
