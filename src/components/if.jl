@@ -50,19 +50,6 @@ function parse_if(ps::ParseState, nested = false)
     end
     !nested && push!(ret.args, INSTANCE(ps))
 
-    # Linting
-    if cond isa EXPR{BinarySyntaxOpCall} && cond.args[2] isa EXPR{OP} where OP <: OPERATOR{AssignmentOp}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.CondAssignment}(startbyte + kw.span + (0:cond.span), [], "An assignment rather than comparison operator has been used"))
-    end
-    if cond isa EXPR{LITERAL{Tokens.TRUE}}
-        if length(ret.args) == 6
-            push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(startbyte + kw.span + cond.span + ret.args[2].span + (0:ret.args[3].span), [], "This code is never reached"))
-        end
-    elseif cond isa EXPR{LITERAL{Tokens.FALSE}}
-        if length(ret.args) == 4
-            push!(ps.diagnostics, Diagnostic{Diagnostics.DeadCode}(startbyte + kw.span + cond.span + (0:ret.args[2].span), [], "This code is never reached"))
-        end
-    end
     ret.span = sum(a.span for a in ret.args)
     return ret
 end

@@ -149,11 +149,6 @@ function parse_imports(ps::ParseState)
         end
         ret.defs = [Variable(d, :IMPORTS, ret) for d in Expr(ret).args]
     end
-    
-    # Linting
-    if ps.current_scope == Scope{Tokens.FUNCTION}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.ImportInFunction}(startbyte:ps.nt.startbyte, [], ""))
-    end
 
     ret.span = ps.nt.startbyte - startbyte
 
@@ -176,12 +171,6 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
     end
     ret.span = ps.nt.startbyte - startbyte
 
-    # Linting
-
-    # check for duplicates
-    if ps.current_scope == Scope{Tokens.FUNCTION}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.ImportInFunction}(startbyte:ps.nt.startbyte, [], ""))
-    end
     return ret
 end
 

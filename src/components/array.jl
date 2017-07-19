@@ -152,7 +152,6 @@ function _parse_ref(ret, ref::EXPR{Vect})
     for a in ref.args
         push!(ret.args, a)
     end
-    # _lint_hcat(ps, ret)
     return ret
 end
 
@@ -178,10 +177,4 @@ function _parse_ref(ret, ref)
         push!(ret.args, a)
     end
     return ret
-end
-
-function _lint_hcat(ps::ParseState, ret)
-    if length(ret.args) == 3 && ret.args[3] isa EXPR{Quotenode} && ret.args[3].val isa KEYWORD{Tokens.END}
-        push!(ps.diagnostics, Diagnostic{Diagnostics.PossibleTypo}(ps.nt.startbyte + (-ret.span:0), [], ""))
-    end
 end

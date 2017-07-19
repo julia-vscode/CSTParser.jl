@@ -36,13 +36,11 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
         sig = EXPR{TupleH}(sig.args, sig.span, Variable[], "")
     end
 
-    _lint_func_sig(ps, sig, ps.nt.startbyte + (-sig.span:0))
+    _get_sig_defs!(sig)
+
     block = EXPR{Block}(EXPR[], 0, Variable[], "")
     @catcherror ps startbyte @default ps @scope ps Scope{Tokens.FUNCTION} parse_block(ps, block, start_col)
     
-    # fname0 = _get_fname(sig)
-    # fname = fname0 isa IDENTIFIER ? fname0.val : :noname
-    # _lint_func_body(ps, fname, block, ps.nt.startbyte - block.span)
 
     # Construction
     if isempty(block.args)
@@ -157,15 +155,6 @@ function parse_call(ps::ParseState, ret)
     #     push!(ret.args, EXPR(arg, [], arg.span))
     # end
 
-    # Linting
-    # if (ret.args[1] isa IDENTIFIER && ret.args[1].val == :Dict) || (ret.args[1] isa EXPR && ret.args[1].head == CURLY && ret.args[1].args[1] isa IDENTIFIER && ret.args[1].args[1].val == :Dict)
-    #     _lint_dict(ps, ret)
-    # end
-    # _check_dep_call(ps, ret)
-
-    # if fname isa IDENTIFIER && fname.val in keys(deprecated_symbols)
-    #     push!(ps.diagnostics, Diagnostic{Diagnostics.Deprecation}(ps.nt.startbyte - ret.span + (0:(fname.span))))
-    # end
     return ret
 end
 
@@ -240,30 +229,10 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, fo
 end
 
 
-# Iterators
-
-
-# Linting
-# Signature
-# [+] repeated argument names
-# [+] argument/function name conflict
-# [+] check slurping in last position only
-# [+] check kw arguments order
-# [] check all parameters are used specified
-"""
-    _lint_func_sig(ps, sig)
-
-Runs linting on function argument, assumes `sig` has just been parsed such that 
-the byte offset is `ps.nt.startbyte - sig.span`.
-"""
-function _lint_func_sig(ps::ParseState, sig::EXPR{IDENTIFIER}, loc, haswhere = false) end
-    
-function _lint_func_sig(ps::ParseState, sig1::EXPR, loc)
-    haswhere = false
+function _get_sig_defs!(sig1)
     params = _get_fparams(sig1)
-    args = Tuple{Symbol,Any}[(p, :DataType) for p in params]
-
-    # sig = deepcopy(sig1)
+    sig1.defs = Variable[Variable(p, :DataType, sig1) for p in params]
+    
     sig = sig1
     while sig isa EXPR{BinarySyntaxOpCall} && (sig.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} || sig.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}})
         if sig.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}}
@@ -271,91 +240,16 @@ function _lint_func_sig(ps::ParseState, sig1::EXPR, loc)
         end
         sig = sig.args[1]
     end
-    fname = _get_fname(sig)
-    # use where syntax
-    if sig isa EXPR{Call} && sig.args[1] isa EXPR{Curly} && !haswhere
-        push!(ps.diagnostics, Diagnostic{Diagnostics.parameterisedDeprecation}((first(loc) + sig.args[1].args[1].span):(first(loc) + sig.args[1].span), [], "Use of deprecated parameter syntax"))
-        
-        trailingws = last(sig.args) isa EXPR{PUNCTUATION{Tokens.RPAREN}} ? last(sig.args).span - 1 : 0
-        loc1 = first(loc) + sig.span - trailingws
-        push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((loc1):(loc1), string(" where {", join((Expr(t) for t in sig.args[1].args[2:end] if !(t isa EXPR{P} where P <: PUNCTUATION) ), ","), "}")))
-        push!(last(ps.diagnostics).actions, Diagnostics.TextEdit((first(loc) + sig.args[1].args[1].span):(first(loc) + sig.args[1].span), ""))
-    end
-
-    nargs = sum(typeof(a).parameters[1].name.name==:PUNCTUATION for a in sig.args) - 1
-    firstkw  = nargs + 1
-    i = 1
-    for ia = 2:length(sig.args)
-        arg = sig.args[ia]
+    for i = 2:length(sig.args)
+        arg = sig.args[i]
         if !(arg isa EXPR{P} where P <: PUNCTUATION)
-            if arg isa EXPR{BinarySyntaxOpCall} && arg.args[1] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}
-                #unhandled ::Type argument
-                i += 1
-                continue
-            elseif arg isa EXPR{Parameters}
-                i1 = 1
-                for arg1 in arg.args
-                    if !(arg1 isa EXPR{P} where P <: PUNCTUATION)
-                        _lint_arg(ps, arg1, args, i + i1 - 1, fname, nargs, i - 1, loc)
-                        i1 += 1
-                    end
-                end
-            else
-                _lint_arg(ps, arg, args, i, fname, nargs, firstkw, loc)
-            end
-            i += 1
+            a = _arg_id(arg)
+            !(a isa EXPR{IDENTIFIER}) && continue
+            t = get_t(arg)
+            push!(sig1.defs, Variable(Symbol(a.val), t, sig1))
         end
     end
-    for a in args
-        push!(sig1.defs, Variable(a[1], a[2], sig1))
-    end
 end
-    
-function _lint_arg(ps::ParseState, arg, args, i, fname, nargs, firstkw, loc)
-    a = _arg_id(arg)
-    t = get_t(arg)
-    !(a isa EXPR{IDENTIFIER}) && return
-    if !any(a.val == aa[1] for aa in args)
-        push!(args, (a.val, t))
-    else 
-        push!(ps.diagnostics, Diagnostic{Diagnostics.DuplicateArgumentName}(loc, [], "Use of duplicate argument names ($(a.val))"))
-    end
-    if a.val == Expr(fname)
-        push!(ps.diagnostics, Diagnostic{Diagnostics.ArgumentFunctionNameConflict}(loc, [], "An argument name conflicts with the function name"))
-    end
-    # Check slurping occurs as last argument
-    if arg isa EXPR{UnarySyntaxOpCall} && arg.args[2] isa EXPR{OPERATOR{0,Tokens.DDDOT,false}} && i != nargs
-        push!(ps.diagnostics, Diagnostic{Diagnostics.SlurpingPosition}(loc, [], ""))
-    end
-    if arg isa EXPR{Kw} && i < firstkw
-        firstkw = i
-    end
-    # Check for kw args
-    if i > firstkw && !(arg isa EXPR{Kw} || !(arg isa EXPR{UnarySyntaxOpCall} && arg.args[2] isa OPERATOR{PipeOp,Tokens.DDDOT,false}))
-        push!(ps.diagnostics, Diagnostic{Diagnostics.KWPosition}(loc, [], "Incorrect keyword argument position"))
-    end
-    # Check 
-end
-
-# make this traverse EXPR that contribute scope
-# function _lint_func_body(ps::ParseState, fname, body, loc)
-#     for a in body.args
-#         if a isa EXPR
-#             for d in a.defs
-#                 if d.id == fname
-#                     push!(ps.diagnostics, Diagnostic{Diagnostics.AssignsToFuncName}(loc + (0:a.span), []))
-#                 end
-#             end
-#         end
-#         if contributes_scope(a)
-#             _lint_func_body(ps::ParseState, fname, a, loc)
-#         end
-#         loc += a.span
-#     end
-# end
-
-
-
 
 # NEEDS FIX
 _arg_id(x) = x
@@ -382,7 +276,6 @@ function _arg_id(x::EXPR{BinarySyntaxOpCall})
 end
 
 
-
 _get_fparams(x::EXPR, args = Symbol[]) = args
 
 function _get_fparams(x::EXPR{Call}, args = Symbol[])
@@ -403,11 +296,8 @@ function _get_fparams(x::EXPR{Curly}, args = Symbol[])
             end
         end
     end 
-    
     unique(args)
 end
-
-
 
 function _get_fparams(x::EXPR{BinarySyntaxOpCall}, args = Symbol[])
     if x.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}}
@@ -445,41 +335,6 @@ _get_fsig(fdecl::EXPR{FunctionDef}) = fdecl.args[2]
 _get_fsig(fdecl::EXPR{BinarySyntaxOpCall}) = fdecl.args[1]
 
 
-
-
-
-
 declares_function(x) = false
 declares_function(x::EXPR{FunctionDef}) = true
 declares_function(x::EXPR{BinarySyntaxOpCall}) = x.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}} && x.args[1] isa EXPR{Call}
-
-
-
-# function _lint_dict(ps::ParseState, x::EXPR)
-#     # paramaterised case
-#     if x.args[1] isa EXPR && x.args[1].head == CURLY
-#         # expect 2 parameters (+ :Dict)
-#         if length(x.args[1].args) != 3
-#             push!(ps.diagnostics, Diagnostic{Diagnostics.DictParaMisSpec}(ps.nt.startbyte - x.span + (0:x[1].span), []))
-#         end
-#     end
-#     # Handle generators
-#     if length(x.args) > 1 
-#         if x.args[2] isa EXPR && x.args[2].head == GENERATOR
-#             gen = x.args[2]
-#             if gen.args[1].head isa OPERATOR{AssignmentOp} && !(gen.args[1].head isa OPERATOR{AssignmentOp,Tokens.PAIR_ARROW})
-#                 push!(ps.diagnostics, Diagnostic{Diagnostics.DictGenAssignment}(ps.nt.startbyte - x.span + (0:x.span), []))
-#             end
-#         # Lint items
-#         else
-#             locstart = ps.nt.startbyte - x.span + x.args[1].span + first(x.punctuation).span
-#             for (i, a) in enumerate(x.args[2:end])
-#                 # non pair arrow assignment
-#                 if a isa EXPR && a.head isa OPERATOR{AssignmentOp} && !(a.head isa OPERATOR{AssignmentOp,Tokens.PAIR_ARROW})
-#                     push!(ps.diagnostics, Diagnostic{Diagnostics.DictGenAssignment}(locstart + (0:a.span), []))
-#                 end
-#                 locstart += a.span + x.punctuation[i + 1].span
-#             end
-#         end
-#     end
-# end

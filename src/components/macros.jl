@@ -10,7 +10,8 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
     else
         @catcherror ps startbyte sig = @closer ps block @closer ps ws parse_expression(ps)
     end
-    _lint_func_sig(ps, sig, ps.nt.startbyte + (-sig.span:0))
+    
+    _get_sig_defs!(sig)
     block = EXPR{Block}(EXPR[], 0, Variable[], "")
     @catcherror ps startbyte @default ps parse_block(ps, block, start_col)
 
