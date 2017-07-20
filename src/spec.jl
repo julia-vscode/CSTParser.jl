@@ -39,13 +39,19 @@ PUNCTUATION(ps::ParseState) = EXPR{PUNCTUATION{ps.t.kind}}(EXPR[], ps.nt.startby
 
 function INSTANCE(ps::ParseState)
     span = ps.nt.startbyte - ps.t.startbyte
+    ps.errored && return EXPR{ERROR}(EXPR[], span, Variable[], "")
+    if ps.t.kind == Tokens.ENDMARKER
+        ps.errored = true
+        push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedInputEnd}(ps.t.startbyte + (0:0), [], "Unexpected end of input"))
+        return EXPR{ERROR}(EXPR[], span, Variable[], "Unexpected end of input")
+    end
     return isidentifier(ps.t) ? IDENTIFIER(ps) : 
         isliteral(ps.t) ? LITERAL(ps) :
         iskw(ps.t) ? KEYWORD(ps) :
         isoperator(ps.t) ? OPERATOR(ps) :
         ispunctuation(ps.t) ? PUNCTUATION(ps) :
-        ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION(ps) : 
-        EXPR{ERROR}(EXPR[], span, Variable[], "")
+        ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION(ps) :
+        (ps.errored = true; EXPR{ERROR}(EXPR[], span, Variable[], ""))
 end
 
 

@@ -31,7 +31,7 @@ precedence(op::Int) = op < Tokens.end_assignments ?  1 :
                        op < Tokens.end_plus ?        9 :
                        op < Tokens.end_bitshifts ?   10 :
                        op < Tokens.end_times ?       11 :
-                       op < Tfokens.end_rational ?   12 :
+                       op < Tokens.end_rational ?    12 :
                        op < Tokens.end_power ?       13 :
                        op < Tokens.end_decl ?        14 : 
                        op < Tokens.end_where ?       15 : 16
