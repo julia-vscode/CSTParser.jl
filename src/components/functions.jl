@@ -242,7 +242,14 @@ function _get_sig_defs!(sig1)
     end
     for i = 2:length(sig.args)
         arg = sig.args[i]
-        if !(arg isa EXPR{P} where P <: PUNCTUATION)
+        if arg isa EXPR{Parameters}
+            for arg1 in arg.args
+                a = _arg_id(arg1)
+                !(a isa EXPR{IDENTIFIER}) && continue
+                t = get_t(arg1)
+                push!(sig1.defs, Variable(Symbol(a.val), t, sig1))
+            end
+        elseif !(arg isa EXPR{P} where P <: PUNCTUATION)
             a = _arg_id(arg)
             !(a isa EXPR{IDENTIFIER}) && continue
             t = get_t(arg)
