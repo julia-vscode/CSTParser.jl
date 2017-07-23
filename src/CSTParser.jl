@@ -79,21 +79,9 @@ function parse_expression(ps::ParseState)
 ################################################################################
 # Everything below here is an error
 ################################################################################
-    elseif ps.t.kind == Tokens.ENDMARKER
-        ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected end of file")
-    elseif ps.t.kind == Tokens.COMMA
-        ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected comma")
-    elseif ps.t.kind == Tokens.RPAREN
-        ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected )")
-    elseif ps.t.kind == Tokens.RBRACE
-        ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected }")
-    elseif ps.t.kind == Tokens.RSQUARE
-        ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected ]")
+    elseif ps.t.kind in (Tokens.ENDMARKER, Tokens.COMMA, Tokens.RPAREN,
+                         Tokens.RBRACE,Tokens.RSQUARE)
+        return error_unexpected(ps, startbyte, ps.t)
     else
         ps.errored = true
         return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unknown error")
@@ -176,30 +164,22 @@ function parse_compound(ps::ParseState, ret)
 ################################################################################
 # Everything below here is an error
 ################################################################################
-    elseif ps.nt.kind == Tokens.ENDMARKER
+    elseif ps.nt.kind in (Tokens.ENDMARKER, Tokens.LPAREN, Tokens.RPAREN, Tokens.LBRACE,
+                          Tokens.LSQUARE, Tokens.RSQUARE)
+        return error_unexpected(ps, startbyte, ps.nt)
+    elseif ret isa EXPR{<:OPERATOR}
         ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected end of file")
-    elseif ps.nt.kind == Tokens.LPAREN
-        ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected (")
-    elseif ps.nt.kind == Tokens.RPAREN
-        ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected )")
-    elseif ps.nt.kind == Tokens.LBRACE
-        ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected {")
-    elseif ps.nt.kind == Tokens.RBRACE
-        ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected }")
-    elseif ps.nt.kind == Tokens.LSQUARE
-        ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected [")
-    elseif ps.nt.kind == Tokens.RSQUARE
-        ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected ]")
-    elseif ret isa OPERATOR
-        ps.errored = true
+        push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedOperator}(
+            # TODO: Which operator? How do we get at the spelling
+            startbyte + (0:ret.span-1), [], "Unexpected operator"
+        ))
         return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected operator")
+    elseif ps.nt.kind == Tokens.IDENTIFIER
+        ps.errored = true
+        push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedIdentifier}(
+            ps.nt.startbyte:ps.nt.endbyte, [], "Unexpected identifier"
+        ))
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected identifier")
     else
         ps.errored = true
         return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unknown error")

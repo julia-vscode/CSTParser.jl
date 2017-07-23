@@ -69,7 +69,7 @@ mutable struct ParseState
     errored::Bool
     current_scope
 end
-function ParseState(str::String)
+function ParseState(str::Union{IO,String})
     ps = ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), Token(), Token(), true, true, true, true, [], Closer(), false, Scope{Tokens.TOPLEVEL})
     return next(next(ps))
 end
