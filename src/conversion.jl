@@ -38,8 +38,64 @@ Expr(x::EXPR{LITERAL{Tokens.TRUE}}) = true
 Expr(x::EXPR{LITERAL{Tokens.FALSE}}) = false
 function Expr(x::EXPR{HEAD{:nothing}}) end
 
-Expr(x::EXPR{LITERAL{T}}) where {T} = Base.parse(x.val)
-Expr(x::EXPR{LITERAL{Tokens.FLOAT}}) = Base.parse(x.val)
+function sized_uint_literal(s::AbstractString, b::Integer)
+    # We know integers are all ASCII, so we can use sizeof to compute
+    # the length of ths string more quickly
+    l = (sizeof(s) - 2) * b
+    l <= 8   && return Base.parse(UInt8,   s)
+    l <= 16  && return Base.parse(UInt16,  s)
+    l <= 32  && return Base.parse(UInt32,  s)
+    l <= 64  && return Base.parse(UInt64,  s)
+    l <= 128 && return Base.parse(UInt128, s)
+    return Base.parse(BigInt,s)
+end
+
+function sized_uint_oct_literal(s::AbstractString)
+    s[3] == 0 && return sized_uint_literal(s, 3)
+    len = sizeof(s)
+    (len < 5  || (len == 5  && s <= "0o377")) && return Base.parse(UInt8,s)
+    (len < 8  || (len == 8  && s <= "0o177777")) && return Base.parse(UInt16, s)
+    (len < 13 || (len == 13 && s <= "0o37777777777")) && return Base.parse(UInt32,s)
+    (len < 24 || (len == 24 && s <= "0o1777777777777777777777")) && return Base.parse(UInt64,s)
+    (len < 45 || (len == 45 && s <= "0o3777777777777777777777777777777777777777777")) && return Base.parse(UInt128,s)
+    return Base.parse(BigInt,s)
+end
+
+const TYPEMAX_INT64_STR = string(typemax(Int))
+const TYPEMAX_INT128_STR = string(typemax(Int128))
+function Expr(x::EXPR{LITERAL{Tokens.INTEGER}})
+    is_hex = is_oct = is_bin = false
+    val = replace(x.val, "_", "")
+    if sizeof(val) > 2 && val[1] == '0'
+        c = val[2]
+        c == 'x' && (is_hex = true)
+        c == 'o' && (is_oct = true)
+        c == 'b' && (is_bin = true)
+    end
+    is_hex && return sized_uint_literal(val, 4)
+    is_oct && return sized_uint_oct_literal(val)
+    is_bin && return sized_uint_literal(val, 1)
+    sizeof(val) < sizeof(TYPEMAX_INT64_STR) && return Base.parse(Int64, val)
+    val < TYPEMAX_INT64_STR && return Base.parse(Int64, val)
+    sizeof(val) < sizeof(TYPEMAX_INT128_STR) && return Base.parse(Int128, val)
+    val < TYPEMAX_INT128_STR && return Base.parse(Int128, val)
+    Base.parse(BigInt, val)
+end
+
+function Expr(x::EXPR{LITERAL{Tokens.FLOAT}})
+    if 'f' in x.val
+        return Base.parse(Float32, replace(x.val, 'f', 'e'))
+    end
+    Base.parse(Float64, x.val)
+end
+function Expr(x::EXPR{LITERAL{Tokens.CHAR}})
+    val = Base.unescape_string(x.val[2:end-1])
+    # one byte e.g. '\xff' maybe not valid UTF-8
+    # but we want to use the raw value as a codepoint in this case
+    sizeof(val) == 1 && return Char(Vector{UInt8}(val)[1])
+    length(val) == 1 || error("Invalid character literal")
+    val[1]
+end
 Expr(x::EXPR{LITERAL{Tokens.MACRO}}) = Symbol(x.val)
 Expr(x::EXPR{LITERAL{Tokens.STRING}}) = x.val
 Expr(x::EXPR{LITERAL{Tokens.TRIPLE_STRING}}) = x.val
@@ -49,6 +105,7 @@ Expr(x::EXPR{LITERAL{Tokens.TRIPLE_STRING}}) = x.val
 # cross compatability for line number insertion in macrocalls
 @static if VERSION < v"0.7.0-DEV.357"
     Expr(x::EXPR{LITERAL{Tokens.CMD}}) = Expr(:macrocall, Symbol("@cmd"), x.val[2:end-1])
+    Expr(x::EXPR{LITERAL{Tokens.TRIPLE_CMD}}) = Expr(:macrocall, Symbol("@cmd"), x.val[2:end-1])    
 
     function Expr(x::EXPR{x_Str})
         if x.args[1] isa EXPR{BinarySyntaxOpCall}
@@ -98,6 +155,7 @@ Expr(x::EXPR{LITERAL{Tokens.TRIPLE_STRING}}) = x.val
     end
 else
     Expr(x::EXPR{LITERAL{Tokens.CMD}}) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val[2:end-1])
+    Expr(x::EXPR{LITERAL{Tokens.TRIPLE_CMD}}) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val[2:end-1])
 
     function Expr(x::EXPR{x_Str})
         if x.args[1] isa EXPR{BinarySyntaxOpCall}

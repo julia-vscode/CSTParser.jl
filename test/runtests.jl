@@ -1,8 +1,8 @@
 using CSTParser
 using Base.Test
 
-import CSTParser: parse, remlineinfo!, check_base, span
+import CSTParser: parse, remlineinfo!, span, flisp_parse
 
 include("diagnostics.jl")
 include("parser.jl")
-check_base()
+CSTParser.check_base()

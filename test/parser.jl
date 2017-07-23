@@ -14,12 +14,11 @@ randop() = rand(["-->", "→",
                  "::",
                  ".", "->"])
 
-
 function test_expr(str)
     x, ps = CSTParser.parse(ParseState(str))
 
     x0 = Expr(x)
-    x1 = remlineinfo!(Base.parse(str))
+    x1 = remlineinfo!(flisp_parse(str))
     !ps.errored && x0 == x1# && isempty(span(x))
 end
 

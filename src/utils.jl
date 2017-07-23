@@ -238,6 +238,188 @@ function test_find(str)
     end
 end
 
+# When using the FancyDiagnostics package, Base.parse, is the
+# same as CSTParser.parse. Manually call the flisp parser here
+# to make sure we test what we want, even when people load the
+# FancyDiagnostics package.
+function flisp_parse(str::AbstractString, pos::Int; greedy::Bool=true, raise::Bool=true)
+    # pos is one based byte offset.
+    # returns (expr, end_pos). expr is () in case of parse error.
+    bstr = String(str)
+    ex, pos = ccall(:jl_parse_string, Any,
+                    (Ptr{UInt8}, Csize_t, Int32, Int32),
+                    bstr, sizeof(bstr), pos-1, greedy ? 1:0)
+    if raise && isa(ex,Expr) && ex.head === :error
+        throw(Base.ParseError(ex.args[1]))
+    end
+    if ex === ()
+        raise && throw(Base.ParseError("end of input"))
+        ex = Expr(:error, "end of input")
+    end
+    return ex, pos+1 # C is zero-based, Julia is 1-based
+end
+
+function flisp_parse(str::AbstractString; raise::Bool=true)
+    ex, pos = flisp_parse(str, 1, greedy=true, raise=raise)
+    if isa(ex,Expr) && ex.head === :error
+        return ex
+    end
+    if !done(str, pos)
+        raise && throw(Base.ParseError("extra token after end of expression"))
+        return Expr(:error, "extra token after end of expression")
+    end
+    return ex
+end
+
+function flisp_parse(stream::IO; greedy::Bool = true, raise::Bool = true)
+    pos = position(stream)
+    ex, Δ = flisp_parse(readstring(stream), 1, greedy = greedy, raise = raise)
+    seek(stream, pos + Δ - 1)
+    return ex
+end
+
+using Base.Meta
+norm_ast(a::Any) = begin
+    if isa(a, Expr)
+        for (i, arg) in enumerate(a.args)
+            a.args[i] = norm_ast(arg)
+        end
+        if a.head === :line
+            return Expr(:line, a.args[1], :none)
+        end
+        if a.head === :macrocall
+            fa = a.args[1]
+            if fa === Symbol("@int128_str")
+                return Base.parse(Int128,a.args[2])
+            elseif fa === Symbol("@uint128_str")
+                return Base.parse(UInt128,a.args[2])
+            elseif fa === Symbol("@bigint_str")
+                return  Base.parse(BigInt,a.args[2])
+            elseif fa == Symbol("@big_str")
+                s = a.args[2]
+                n = tryparse(BigInt,s)
+                if !isnull(n)
+                    return get(n)
+                end
+                n = tryparse(BigFloat,s)
+                if !isnull(n)
+                    return isnan(get(n)) ? :NaN : get(n)
+                end
+                return s
+            end
+        elseif length(a.args) >= 2 && isexpr(a, :call) && a.args[1] == :- && isa(a.args[2], Number)
+            return -a.args[2]
+        end
+        return a
+    elseif isa(a, QuoteNode)
+        return Expr(:quote, norm_ast(a.value))
+    elseif isa(a, AbstractFloat) && isnan(a)
+        return :NaN
+    end
+    return a
+end
+
+function check_base(dir = dirname(Base.find_source_file("base.jl")), display = false)
+    N = 0
+    neq = 0
+    err = 0
+    aerr = 0
+    fail = 0
+    bfail = 0
+    ret = []
+    oldstderr = STDERR
+    redirect_stderr()
+    for (rp, d, files) in walkdir(dir)
+        for f in files
+            file = joinpath(rp, f)
+            if endswith(file, ".jl")
+                N += 1
+                try
+                    # print(N)
+                    print("\r", rpad(string(N), 5), rpad(string(signif(fail / N * 100, 3)), 8), rpad(string(signif(err / N * 100, 3)), 8), rpad(string(signif(neq / N * 100, 3)), 8))
+                    str = readstring(file)
+                    ps = ParseState(str)
+                    io = IOBuffer(str)
+                    x, ps = parse(ps, true)
+                    sp = span(x)
+                    if length(x.args) > 0 && x.args[1] isa EXPR{LITERAL{nothing}}
+                        shift!(x.args)
+                    end
+                    if length(x.args) > 0 && x.args[end] isa EXPR{LITERAL{nothing}}
+                        pop!(x.args)
+                    end
+                    x0 = Expr(x)
+                    x1 = Expr(:file)
+                    try
+                        while !eof(io)
+                            push!(x1.args, flisp_parse(io))
+                        end
+                    catch er
+                        if display
+                            Base.showerror(STDOUT, er, catch_backtrace())
+                            println()
+                        end
+                        bfail += 1
+                        continue
+                    end
+                    if length(x1.args) > 0  && x1.args[end] == nothing
+                        pop!(x1.args)
+                    end
+                    x0, x1 = norm_ast(x0), norm_ast(x1)
+                    remlineinfo!(x1)
+                    print("\r                             ")
+                    if !isempty(sp)
+                        print_with_color(:blue, file)
+                        println()
+                        push!(ret, (file, :span))
+                    end
+                    if ps.errored
+                        err += 1
+                        print_with_color(:yellow, file)
+                        println()
+                        push!(ret, (file, :errored))
+                    elseif !(x0 == x1)
+                        cumfail = 0
+                        neq += 1
+                        print_with_color(:green, file)
+                        println()
+                        if display
+                            c0, c1 = CSTParser.compare(x0, x1)
+                            aerr += 1
+                            print_with_color(:light_red, string("    ", c0), bold = true)
+                            println()
+                            print_with_color(:light_green, string("    ", c1), bold = true)
+                            println()                            
+                        end
+                        push!(ret, (file, :noteq))
+                    end
+                catch er
+                    if display
+                        Base.showerror(STDOUT, er, catch_backtrace())
+                        println()
+                    end
+                    fail += 1
+                    print_with_color(:red, file)
+                    println()
+                    push!(ret, (file, :failed))
+                end
+            end
+        end
+    end
+    redirect_stderr(oldstderr)
+    if bfail + fail + err + neq > 0
+        println("\r$N files")
+        print_with_color(:red, "failed")
+        println(" : $fail    $(100*fail/N)%")
+        print_with_color(:yellow, "errored")
+        println(" : $err     $(100*err/N)%")
+        print_with_color(:green, "not eq.")
+        println(" : $neq    $(100*neq/N)%", "  -  $aerr     $(100*aerr/N)%")
+        print_with_color(:magenta, "base failed")
+        println(" : $bfail    $(100*bfail/N)%")
+    end
+    ret
+end
 
 """
     compare(x,y)
@@ -283,104 +465,6 @@ function span(x, neq = [])
         push!(neq, x)
     end
     neq
-end
-
-
-function check_base(dir = dirname(Base.find_source_file("base.jl")), display = false)
-    N = 0
-    neq = 0
-    err = 0
-    aerr = 0
-    fail = 0
-    bfail = 0
-    ret = []
-    oldstderr = STDERR
-    redirect_stderr()
-    for (rp, d, files) in walkdir(dir)
-        for f in files
-            file = joinpath(rp, f)
-            if endswith(file, ".jl")
-                N += 1
-                try
-                    # print(N)
-                    print("\r", rpad(string(N), 5), rpad(string(signif(fail / N * 100, 3)), 8), rpad(string(signif(err / N * 100, 3)), 8), rpad(string(signif(neq / N * 100, 3)), 8))
-                    str = readstring(file)
-                    ps = ParseState(str)
-                    io = IOBuffer(str)
-                    x, ps = parse(ps, true)
-                    sp = span(x)
-                    if length(x.args) > 0 && x.args[1] isa EXPR{LITERAL{nothing}}
-                        shift!(x.args)
-                    end
-                    if length(x.args) > 0 && x.args[end] isa EXPR{LITERAL{nothing}}
-                        pop!(x.args)
-                    end
-                    x0 = Expr(x)
-                    x1 = Expr(:file)
-                    try
-                        while !eof(io)
-                            push!(x1.args, Base.parse(io))
-                        end
-                    catch er
-                        bfail += 1
-                        continue
-                    end
-                    if length(x1.args) > 0  && x1.args[end] == nothing
-                        pop!(x1.args)
-                    end
-                    remlineinfo!(x1)
-                    print("\r                             ")
-                    if !isempty(sp)
-                        print_with_color(:blue, file)
-                        println()
-                        push!(ret, (file, :span))
-                    end
-                    if ps.errored
-                        err += 1
-                        print_with_color(:yellow, file)
-                        println()
-                        push!(ret, (file, :errored))
-                    elseif !(x0 == x1)
-                        cumfail = 0
-                        neq += 1
-                        print_with_color(:green, file)
-                        println()
-                        if display
-                            c0, c1 = compare(x0, x1)
-                            if !(c0 isa String && c1 isa String)
-                                aerr += 1
-                                print_with_color(:light_red, string("    ", c0), bold = true)
-                                println()
-                                print_with_color(:light_green, string("    ", c1), bold = true)
-                                println()
-                            end
-                            
-                        end
-                        push!(ret, (file, :noteq))
-                    end
-                    
-                catch er
-                    fail += 1
-                    print_with_color(:red, file)
-                    println()
-                    push!(ret, (file, :failed))
-                end
-            end
-        end
-    end
-    redirect_stderr(oldstderr)
-    if fail + err + neq > 0
-        println("\r$N files")
-        print_with_color(:red, "failed")
-        println(" : $fail    $(100*fail/N)%")
-        print_with_color(:yellow, "errored")
-        println(" : $err     $(100*err/N)%")
-        print_with_color(:green, "not eq.")
-        println(" : $neq    $(100*neq/N)%", "  -  $aerr     $(100*aerr/N)%")
-        print_with_color(:magenta, "base failed")
-        println(" : $bfail    $(100*bfail/N)%")
-    end
-    ret
 end
 
 function speed_test()
