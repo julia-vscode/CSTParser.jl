@@ -3,7 +3,7 @@ function closer(ps::ParseState)
     (ps.closer.semicolon && ps.ws.kind == SemiColonWS) ||
     (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence) ||
     (ps.nt.kind == Tokens.WHERE && ps.closer.precedence == 5) ||
-    (ps.closer.inwhere && ps.nt.kind == Tokens.WHERE) || 
+    (ps.closer.inwhere && ps.nt.kind == Tokens.WHERE) ||
     (ps.nt.kind == Tokens.LPAREN && ps.closer.precedence > 15) ||
     (ps.nt.kind == Tokens.LBRACE && ps.closer.precedence > 15) ||
     (ps.nt.kind == Tokens.LSQUARE && ps.closer.precedence > 15) ||
@@ -12,7 +12,7 @@ function closer(ps::ParseState)
     (ps.closer.precedence > 15 && ps.t.kind == Tokens.RSQUARE && ps.nt.kind == Tokens.IDENTIFIER) ||
     (ps.nt.kind == Tokens.COMMA && ps.closer.precedence > 0) ||
     ps.nt.kind == Tokens.ENDMARKER ||
-    (ps.closer.comma && iscomma(ps.nt)) || 
+    (ps.closer.comma && iscomma(ps.nt)) ||
     (ps.closer.tuple && (iscomma(ps.nt) || isassignment(ps.nt))) ||
     (ps.nt.kind == Tokens.FOR && ps.closer.precedence > -1) ||
     (ps.closer.paren && ps.nt.kind == Tokens.RPAREN) ||
@@ -24,10 +24,10 @@ function closer(ps::ParseState)
     (ps.closer.trycatch && (ps.nt.kind == Tokens.CATCH || ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END)) ||
     (ps.closer.range && ps.nt.kind == Tokens.FOR) ||
     (ps.closer.ws && !isemptyws(ps.ws) &&
-        !(ps.nt.kind == Tokens.COMMA) && 
-        !(ps.t.kind == Tokens.COMMA) && 
+        !(ps.nt.kind == Tokens.COMMA) &&
+        !(ps.t.kind == Tokens.COMMA) &&
         !(!ps.closer.inmacro && ps.nt.kind == Tokens.FOR) &&
-        !(ps.nt.kind == Tokens.DO) && 
+        !(ps.nt.kind == Tokens.DO) &&
         # !((isbinaryop(ps.nt.kind) && (!isemptyws(ps.nws) || !isunaryop(ps.nt))) || (!ps.closer.wsop && isbinaryop(ps.nt.kind)))) ||
         !((isbinaryop(ps.nt) && !isemptyws(ps.nws)) ||
         (isbinaryop(ps.nt) && !isunaryop(ps.nt)) ||
@@ -38,7 +38,7 @@ function closer(ps::ParseState)
 end
 
 """
-    @closer ps rule body 
+    @closer ps rule body
 
 Continues parsing closing on `rule`.
 """
@@ -53,7 +53,7 @@ macro closer(ps, opt, body)
 end
 
 """
-    @nocloser ps rule body 
+    @nocloser ps rule body
 
 Continues parsing not closing on `rule`.
 """
@@ -68,7 +68,7 @@ macro nocloser(ps, opt, body)
 end
 
 """
-    @precedence ps prec body 
+    @precedence ps prec body
 
 Continues parsing binary operators until it hits a more loosely binding
 operator (with precdence lower than `prec`).
@@ -122,7 +122,7 @@ macro default(ps, body)
         $(esc(ps)).closer.precedence = -1
 
         out = $(esc(body))
-        
+
         $(esc(ps)).closer.newline = tmp1
         $(esc(ps)).closer.semicolon = tmp2
         $(esc(ps)).closer.inmacro = tmp3
@@ -143,7 +143,7 @@ macro default(ps, body)
 end
 
 """
-    @scope ps scope body 
+    @scope ps scope body
 
 Continues parsing tracking declared variables.
 """
@@ -173,7 +173,7 @@ macro noscope(ps, body)
 end
 
 """
-    @catcherror ps body 
+    @catcherror ps body
 
 Checks for `ps.errored`.
 """
@@ -198,19 +198,19 @@ iskw(t::Token) = Tokens.iskeyword(t.kind)
 
 isinstance(t::Token) = isidentifier(t) ||
                        isliteral(t) ||
-                       isbool(t) || 
+                       isbool(t) ||
                        iskw(t)
 
 
 ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
                           t.kind == Tokens.END ||
                           Tokens.LSQUARE ≤ t.kind ≤ Tokens.RPAREN
-                          
+
 isstring(x) = false
 isstring(x::EXPR{T}) where T <: Union{StringH, LITERAL{Tokens.STRING},LITERAL{Tokens.TRIPLE_STRING}} = true
 
 isajuxtaposition(ps::ParseState, ret) = ((ret isa EXPR{LITERAL{Tokens.INTEGER}} || ret isa EXPR{LITERAL{Tokens.FLOAT}}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || (
-        (ret isa EXPR{UnarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{16,Tokens.PRIME,false}} && ps.nt.kind == Tokens.IDENTIFIER) || 
+        (ret isa EXPR{UnarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{16,Tokens.PRIME,false}} && ps.nt.kind == Tokens.IDENTIFIER) ||
         ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
         ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING))) ||
         (isstring(ret) && ps.nt.kind == Tokens.IDENTIFIER && ps.ws.kind == EmptyWS)
@@ -355,6 +355,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                             push!(x1.args, flisp_parse(io))
                         end
                     catch er
+                        isa(er, InterruptException) && rethrow(er)
                         if display
                             Base.showerror(STDOUT, er, catch_backtrace())
                             println()
@@ -389,11 +390,12 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                             print_with_color(:light_red, string("    ", c0), bold = true)
                             println()
                             print_with_color(:light_green, string("    ", c1), bold = true)
-                            println()                            
+                            println()
                         end
                         push!(ret, (file, :noteq))
                     end
                 catch er
+                    isa(er, InterruptException) && rethrow(er)
                     if display
                         Base.showerror(STDOUT, er, catch_backtrace())
                         println()
@@ -492,7 +494,7 @@ function check_reformat()
         for i = 1:length(x) - 1
             y = x[i]
             sstr = str[cnt + (1:y.span)]
-            
+
             y1 = parse(sstr)
             @assert Expr(y) == Expr(y1)
             cnt += y.span
@@ -506,7 +508,7 @@ is_func_call(x) = false
 is_func_call(x::EXPR) = false
 is_func_call(x::EXPR{Call}) = true
 is_func_call(x::EXPR{UnaryOpCall}) = true
-function is_func_call(x::EXPR{BinarySyntaxOpCall}) 
+function is_func_call(x::EXPR{BinarySyntaxOpCall})
     if length(x.args) > 1 && (x.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}} || x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}})
         return is_func_call(x.args[1])
     else

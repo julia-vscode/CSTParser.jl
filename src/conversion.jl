@@ -100,12 +100,10 @@ Expr(x::EXPR{LITERAL{Tokens.MACRO}}) = Symbol(x.val)
 Expr(x::EXPR{LITERAL{Tokens.STRING}}) = x.val
 Expr(x::EXPR{LITERAL{Tokens.TRIPLE_STRING}}) = x.val
 
-
-
 # cross compatability for line number insertion in macrocalls
 @static if VERSION < v"0.7.0-DEV.357"
-    Expr(x::EXPR{LITERAL{Tokens.CMD}}) = Expr(:macrocall, Symbol("@cmd"), x.val[2:end-1])
-    Expr(x::EXPR{LITERAL{Tokens.TRIPLE_CMD}}) = Expr(:macrocall, Symbol("@cmd"), x.val[2:end-1])    
+    Expr(x::EXPR{LITERAL{Tokens.CMD}}) = Expr(:macrocall, Symbol("@cmd"), x.val)
+    Expr(x::EXPR{LITERAL{Tokens.TRIPLE_CMD}}) = Expr(:macrocall, Symbol("@cmd"), x.val)
 
     function Expr(x::EXPR{x_Str})
         if x.args[1] isa EXPR{BinarySyntaxOpCall}
@@ -154,8 +152,8 @@ Expr(x::EXPR{LITERAL{Tokens.TRIPLE_STRING}}) = x.val
         x
     end
 else
-    Expr(x::EXPR{LITERAL{Tokens.CMD}}) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val[2:end-1])
-    Expr(x::EXPR{LITERAL{Tokens.TRIPLE_CMD}}) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val[2:end-1])
+    Expr(x::EXPR{LITERAL{Tokens.CMD}}) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
+    Expr(x::EXPR{LITERAL{Tokens.TRIPLE_CMD}}) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
 
     function Expr(x::EXPR{x_Str})
         if x.args[1] isa EXPR{BinarySyntaxOpCall}

@@ -1,14 +1,14 @@
 using Base.Test
 
 randop() = rand(["-->", "→",
-                 "||", 
+                 "||",
                  "&&",
                  "<", "==", "<:", ">:",
-                 "<|", "|>", 
+                 "<|", "|>",
                  ":",
-                 "+", "-", 
-                 ">>", "<<", 
-                 "*", "/", 
+                 "+", "-",
+                 ">>", "<<",
+                 "*", "/",
                  "//",
                  "^", "↑",
                  "::",
@@ -27,7 +27,7 @@ end
     @testset "Binary Operators" begin
         for iter = 1:250
             str = join([["x$(randop())" for i = 1:19];"x"])
-            
+
             @test test_expr(str)
         end
     end
@@ -40,7 +40,7 @@ end
         end
     end
 
-    
+
     @testset "Dot Operator" begin
         @test "a.b"  |> test_expr
         @test "a.b.c"  |> test_expr
@@ -102,7 +102,7 @@ end
         @test "a = b where c = d" |> test_expr
         @test "a = b where c" |> test_expr
         @test "b where c = d" |> test_expr
-        
+
         @test "a ? b where c : d" |> test_expr
 
         @test "a --> b where c --> d" |> test_expr
@@ -172,7 +172,7 @@ end
         @test "a{b}{T}" |> test_expr
         @test "a{b}(c){T}" |> test_expr
         @test "a{b}.c{T}" |> test_expr
-        @test """x{T, 
+        @test """x{T,
         S}""" |> test_expr
     end
 end
@@ -226,7 +226,7 @@ end
         @test "function f(x) x; end" |> test_expr
         @test "function f(x); x end" |> test_expr
         @test "function f(x) x;y end" |> test_expr
-        @test """function f(x) 
+        @test """function f(x)
             x
         end""" |> test_expr
         @test """function f(x,y =1)
@@ -240,7 +240,7 @@ end
         @test "x->y" |> test_expr
         @test "(x,y)->x*y" |> test_expr
         @test """function ()
-            return 
+            return
         end""" |> test_expr
     end
 end
@@ -447,11 +447,11 @@ end
         @test "try; f(1); catch e e; end" |> test_expr
         @test """try
             f(1)
-        catch 
+        catch
         end""" |> test_expr
         @test """try
             f(1)
-        catch 
+        catch
             error(err)
         end""" |> test_expr
         @test """try
@@ -461,7 +461,7 @@ end
         end""" |> test_expr
         @test """try
             f(1)
-        catch 
+        catch
             error(err)
         finally
             stop(f)
@@ -505,6 +505,23 @@ end
             return x,y
         end""" |> test_expr
     end
+end
+
+@testset "Triple-quoted string" begin
+    @test CSTParser.parse("\"\"\" \" \"\"\"").val == " \" "
+    @test CSTParser.parse("\"\"\"a\"\"\"").val == "a"
+    @test CSTParser.parse("\"\"\"\n\t \ta\n\n\t \tb\"\"\"").val == "a\n\nb"
+    @test Expr(CSTParser.parse("\"\"\"\ta\n\tb \$c\n\td\n\"\"\"")) == Expr(:string, "\ta\n\tb ", :c, "\n\td\n")
+    @test Expr(CSTParser.parse("\"\"\"\n\ta\n\tb \$c\n\td\n\"\"\"")) == Expr(:string, "\ta\n\tb ", :c, "\n\td\n")
+    @test Expr(CSTParser.parse("\"\"\"\n\ta\n\tb \$c\n\td\n\t\"\"\"")) == Expr(:string, "a\nb ", :c, "\nd\n")
+    @test Expr(CSTParser.parse("\"\"\"\n\t \ta\$(1+\n1)\n\t \tb\"\"\"")) == Expr(:string, "a", :(1+1), "\nb")
+    ws = "                         "
+    "\"\"\"\n$ws%rv = atomicrmw \$rmw \$lt* %0, \$lt %1 acq_rel\n$(ws)ret \$lt %rv\n$ws\"\"\"" |> test_expr
+    ws1 = "        "
+    ws2 = "    "
+    "\"\"\"\n$(ws1)a\n$(ws1)b\n$(ws2)c\n$(ws2)d\n$(ws2)\"\"\"" |> text_expr
+    "\"\"\"\n$(ws1)a\n\n$(ws1)b\n\n$(ws2)c\n\n$(ws2)d\n\n$(ws2)\"\"\"" |> text_expr
+    "\"\"\"\n$(ws1)α\n$(ws1)β\n$(ws2)γ\n$(ws2)δ\n$(ws2)\"\"\"" |> text_expr
 end
 
 @testset "No longer broken things" begin
@@ -629,14 +646,14 @@ end
     @test "f(a for a in A if cond)" |> test_expr
     @test "\"dimension \$d is not 1 ≤ \$d ≤ \$nd\" " |> test_expr
     @test "-(-x)^1" |> test_expr
+    @test """
+        "\\\\\$ch"
+        """ |> test_expr
 end
 
 @testset "Broken things" begin
     @test_broken "\$(a) * -\$(b)" |> test_expr
     @test_broken "function(f, args...; kw...) end" |> test_expr
-    @test_broken """
-        "\\\\\$ch"
-        """ |> test_expr
     @test_broken "µs" |> test_expr # normalize unicode
     @test_broken """let f = ((; a = 1, b = 2) -> ()),
                 m = first(methods(f))
@@ -648,12 +665,12 @@ end
 test_fsig_decl(str) = (x->x.id).(CSTParser._get_fsig(CSTParser.parse(str)).defs)
 @testset "func-sig variable declarations" begin
     @test test_fsig_decl("f(x) = x") == [:x]
-    @test test_fsig_decl("""function f(x) 
+    @test test_fsig_decl("""function f(x)
         x
     end""") == [:x]
 
     @test test_fsig_decl("f{T}(x::T) = x") == [:T, :x]
-    @test test_fsig_decl("""function f{T}(x::T) 
+    @test test_fsig_decl("""function f{T}(x::T)
         x
     end""") == [:T, :x]
 
