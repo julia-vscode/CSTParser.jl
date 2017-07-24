@@ -650,12 +650,12 @@ end
         "\\\\\$ch"
         """ |> test_expr
     @test "begin\n\"\"\"Float\$(bit)\"\"\"\n\$(Symbol(\"Float\",bit))\nend" |> test_expr
+    @test "µs" |> test_expr # normalize unicode
 end
 
 @testset "Broken things" begin
     @test_broken "\$(a) * -\$(b)" |> test_expr
     @test_broken "function(f, args...; kw...) end" |> test_expr
-    @test_broken "µs" |> test_expr # normalize unicode
     @test_broken """let f = ((; a = 1, b = 2) -> ()),
                 m = first(methods(f))
                 @test DSE.keywords(f, m) == [:a, :b]

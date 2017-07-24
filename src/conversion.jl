@@ -23,10 +23,35 @@ end
 Expr(x::HEAD{T}) where {T} = Symbol(lowercase(string(T)))
 Expr(x::KEYWORD{T}) where {T} = Symbol(lowercase(string(T)))
 
+function julia_normalization_map(c::Int32, x::Ptr{Void})::Int32
+    return c == 0x00B5 ? 0x03BC : # micro sign -> greek small letter mu
+           c == 0x025B ? 0x03B5 : # latin small letter open e -> greek small letter
+           c
+end
 
-Expr(x::EXPR{IDENTIFIER}) = Symbol(x.val)
+# Note: This code should be in julia base
+function utf8proc_map_custom(str::String, options, func)
+    norm_func = cfunction(func, Int32, (Int32, Ptr{Void}))
+    nwords = ccall(:utf8proc_decompose_custom, Int, (Ptr{UInt8}, Int, Ptr{UInt8}, Int, Cint, Ptr{Void}, Ptr{Void}),
+                   str, sizeof(str), C_NULL, 0, options, norm_func, C_NULL)
+    nwords < 0 && Base.UTF8proc.utf8proc_error(nwords)
+    buffer = Base.StringVector(nwords*4)
+    nwords = ccall(:utf8proc_decompose_custom, Int, (Ptr{UInt8}, Int, Ptr{UInt8}, Int, Cint, Ptr{Void}, Ptr{Void}),
+                   str, sizeof(str), buffer, nwords, options, norm_func, C_NULL)
+    nwords < 0 && Base.UTF8proc.utf8proc_error(nwords)
+    nbytes = ccall(:utf8proc_reencode, Int, (Ptr{UInt8}, Int, Cint), buffer, nwords, options)
+    nbytes < 0 && Base.UTF8proc.utf8proc_error(nbytes)
+    return String(resize!(buffer, nbytes))
+end
 
-function Expr(x::EXPR{OPERATOR{O,K,dot}}) where {O, K, dot} 
+function normalize_julia_identifier(str::AbstractString)
+    options = Base.UTF8proc.UTF8PROC_STABLE | Base.UTF8proc.UTF8PROC_COMPOSE
+    utf8proc_map_custom(String(str), options, julia_normalization_map)
+end
+
+Expr(x::EXPR{IDENTIFIER}) = Symbol(normalize_julia_identifier(x.val))
+
+function Expr(x::EXPR{OPERATOR{O,K,dot}}) where {O, K, dot}
     if dot
         Symbol(:., UNICODE_OPS_REVERSE[K])
     else
@@ -272,7 +297,7 @@ Expr(x::EXPR{ConditionalOpCall}) = Expr(:if, Expr(x.args[1]), Expr(x.args[3]), E
 
 Expr(x::EXPR{ColonOpCall}) = Expr(:(:), Expr(x.args[1]), Expr(x.args[3]), Expr(x.args[5]))
 
-function Expr(x::EXPR{UnarySyntaxOpCall}) 
+function Expr(x::EXPR{UnarySyntaxOpCall})
     if x.args[1] isa EXPR{OP} where OP <: OPERATOR
         return Expr(Expr(x.args[1]), Expr(x.args[2]))
     else
@@ -280,7 +305,7 @@ function Expr(x::EXPR{UnarySyntaxOpCall})
     end
 end
 
-function Expr(x::EXPR{UnaryOpCall}) 
+function Expr(x::EXPR{UnaryOpCall})
     return Expr(:call, Expr(x.args[1]), Expr(x.args[2]))
 end
 
@@ -330,7 +355,7 @@ end
 Expr(x::EXPR{InvisBrackets}) = Expr(x.args[2])
 Expr(x::EXPR{Begin}) = Expr(x.args[2])
 
-function Expr(x::EXPR{Quote}) 
+function Expr(x::EXPR{Quote})
     if x.args[2] isa EXPR{InvisBrackets} && (x.args[2].args[2] isa EXPR{OP} where OP <: OPERATOR|| x.args[2].args[2] isa EXPR{L} where L <: LITERAL || x.args[2].args[2] isa EXPR{IDENTIFIER})
         return QuoteNode(Expr(x.args[2]))
     else
@@ -408,7 +433,7 @@ function Expr(x::EXPR{For})
     else
         push!(ret.args, fix_range(x.args[2]))
     end
-    push!(ret.args, Expr(x.args[3]))    
+    push!(ret.args, Expr(x.args[3]))
     ret
 end
 
@@ -566,7 +591,7 @@ end
 
 function Expr(x::EXPR{TypedVcat})
     ret = Expr(:typed_vcat)
-    
+
     for a in x.args
         if a isa EXPR{Parameters}
             insert!(ret.args, 2, Expr(a))
@@ -653,7 +678,7 @@ end
 
 Expr(x::EXPR{ModuleH}) = Expr(:module, true, Expr(x.args[2]), Expr(x.args[3]))
 Expr(x::EXPR{BareModule}) = Expr(:module, false, Expr(x.args[2]), Expr(x.args[3]))
-    
+
 
 
 
@@ -665,11 +690,11 @@ function _get_import_block(x, i, ret)
     while i < length(x.args) && !(x.args[i + 1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
         i += 1
         a = x.args[i]
-        if !(a isa EXPR{P} where P <: PUNCTUATION) && !(a isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}} || a isa EXPR{OPERATOR{ColonOp,Tokens.COLON,false}}) 
+        if !(a isa EXPR{P} where P <: PUNCTUATION) && !(a isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}} || a isa EXPR{OPERATOR{ColonOp,Tokens.COLON,false}})
             push!(ret.args, Expr(a))
         end
     end
-    
+
     return i
 end
 
@@ -688,7 +713,7 @@ function expr_import(x, kw)
     elseif isempty(col)
         ret = Expr(:toplevel)
         i = 1
-        while i < length(x.args) 
+        while i < length(x.args)
             nextarg = Expr(kw)
             i = _get_import_block(x, i, nextarg)
             if i < length(x.args) && (x.args[i + 1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
@@ -707,11 +732,11 @@ function expr_import(x, kw)
         while i < length(x.args) && !(x.args[i + 1] isa EXPR{o} where o <: OPERATOR{ColonOp})
             i += 1
             a = x.args[i]
-            if !(a isa EXPR{P} where P <: PUNCTUATION) && !(a isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}} || a isa EXPR{OPERATOR{ColonOp,Tokens.COLON,false}}) 
+            if !(a isa EXPR{P} where P <: PUNCTUATION) && !(a isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}} || a isa EXPR{OPERATOR{ColonOp,Tokens.COLON,false}})
                 push!(top.args, Expr(a))
             end
         end
-        while i < length(x.args) 
+        while i < length(x.args)
             nextarg = Expr(kw, top.args...)
             i = _get_import_block(x, i, nextarg)
             if i < length(x.args) && (x.args[i + 1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
