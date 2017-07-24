@@ -519,9 +519,9 @@ end
     "\"\"\"\n$ws%rv = atomicrmw \$rmw \$lt* %0, \$lt %1 acq_rel\n$(ws)ret \$lt %rv\n$ws\"\"\"" |> test_expr
     ws1 = "        "
     ws2 = "    "
-    "\"\"\"\n$(ws1)a\n$(ws1)b\n$(ws2)c\n$(ws2)d\n$(ws2)\"\"\"" |> text_expr
-    "\"\"\"\n$(ws1)a\n\n$(ws1)b\n\n$(ws2)c\n\n$(ws2)d\n\n$(ws2)\"\"\"" |> text_expr
-    "\"\"\"\n$(ws1)α\n$(ws1)β\n$(ws2)γ\n$(ws2)δ\n$(ws2)\"\"\"" |> text_expr
+    "\"\"\"\n$(ws1)a\n$(ws1)b\n$(ws2)c\n$(ws2)d\n$(ws2)\"\"\"" |> test_expr
+    "\"\"\"\n$(ws1)a\n\n$(ws1)b\n\n$(ws2)c\n\n$(ws2)d\n\n$(ws2)\"\"\"" |> test_expr
+    "\"\"\"\n$(ws1)α\n$(ws1)β\n$(ws2)γ\n$(ws2)δ\n$(ws2)\"\"\"" |> test_expr
 end
 
 @testset "No longer broken things" begin
@@ -649,6 +649,7 @@ end
     @test """
         "\\\\\$ch"
         """ |> test_expr
+    @test "begin\n\"\"\"Float\$(bit)\"\"\"\n\$(Symbol(\"Float\",bit))\nend" |> test_expr
 end
 
 @testset "Broken things" begin
