@@ -240,6 +240,13 @@ function _get_sig_defs!(sig1)
         end
         sig = sig.args[1]
     end
+    
+    # Add variable def for struct call overloads
+    fname = _get_fname(sig)
+    if fname isa EXPR{InvisBrackets} && fname.args[2] isa EXPR{BinarySyntaxOpCall} && fname.args[2].args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}
+        push!(sig1.defs, Variable(get_id(fname.args[2]).val, get_t(fname.args[2]), sig1))
+    end
+
     for i = 2:length(sig.args)
         arg = sig.args[i]
         if arg isa EXPR{Parameters}
