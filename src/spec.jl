@@ -22,8 +22,9 @@ abstract type ERROR end
 
 function LITERAL(ps::ParseState)
     span = ps.nt.startbyte - ps.t.startbyte
-    if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING
-        return parse_string(ps)
+    if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING ||
+       ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
+        return parse_string_or_cmd(ps)
     else
         EXPR{LITERAL{ps.t.kind}}(EXPR[], span, Variable[], ps.t.val)
     end

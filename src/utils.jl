@@ -3,7 +3,7 @@ function closer(ps::ParseState)
     (ps.closer.semicolon && ps.ws.kind == SemiColonWS) ||
     (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence) ||
     (ps.nt.kind == Tokens.WHERE && ps.closer.precedence == 5) ||
-    (ps.closer.inwhere && ps.nt.kind == Tokens.WHERE) || 
+    (ps.closer.inwhere && ps.nt.kind == Tokens.WHERE) ||
     (ps.nt.kind == Tokens.LPAREN && ps.closer.precedence > 15) ||
     (ps.nt.kind == Tokens.LBRACE && ps.closer.precedence > 15) ||
     (ps.nt.kind == Tokens.LSQUARE && ps.closer.precedence > 15) ||
@@ -12,7 +12,7 @@ function closer(ps::ParseState)
     (ps.closer.precedence > 15 && ps.t.kind == Tokens.RSQUARE && ps.nt.kind == Tokens.IDENTIFIER) ||
     (ps.nt.kind == Tokens.COMMA && ps.closer.precedence > 0) ||
     ps.nt.kind == Tokens.ENDMARKER ||
-    (ps.closer.comma && iscomma(ps.nt)) || 
+    (ps.closer.comma && iscomma(ps.nt)) ||
     (ps.closer.tuple && (iscomma(ps.nt) || isassignment(ps.nt))) ||
     (ps.nt.kind == Tokens.FOR && ps.closer.precedence > -1) ||
     (ps.closer.paren && ps.nt.kind == Tokens.RPAREN) ||
@@ -24,10 +24,10 @@ function closer(ps::ParseState)
     (ps.closer.trycatch && (ps.nt.kind == Tokens.CATCH || ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END)) ||
     (ps.closer.range && ps.nt.kind == Tokens.FOR) ||
     (ps.closer.ws && !isemptyws(ps.ws) &&
-        !(ps.nt.kind == Tokens.COMMA) && 
-        !(ps.t.kind == Tokens.COMMA) && 
+        !(ps.nt.kind == Tokens.COMMA) &&
+        !(ps.t.kind == Tokens.COMMA) &&
         !(!ps.closer.inmacro && ps.nt.kind == Tokens.FOR) &&
-        !(ps.nt.kind == Tokens.DO) && 
+        !(ps.nt.kind == Tokens.DO) &&
         # !((isbinaryop(ps.nt.kind) && (!isemptyws(ps.nws) || !isunaryop(ps.nt))) || (!ps.closer.wsop && isbinaryop(ps.nt.kind)))) ||
         !((isbinaryop(ps.nt) && !isemptyws(ps.nws)) ||
         (isbinaryop(ps.nt) && !isunaryop(ps.nt)) ||
@@ -38,7 +38,7 @@ function closer(ps::ParseState)
 end
 
 """
-    @closer ps rule body 
+    @closer ps rule body
 
 Continues parsing closing on `rule`.
 """
@@ -53,7 +53,7 @@ macro closer(ps, opt, body)
 end
 
 """
-    @nocloser ps rule body 
+    @nocloser ps rule body
 
 Continues parsing not closing on `rule`.
 """
@@ -68,7 +68,7 @@ macro nocloser(ps, opt, body)
 end
 
 """
-    @precedence ps prec body 
+    @precedence ps prec body
 
 Continues parsing binary operators until it hits a more loosely binding
 operator (with precdence lower than `prec`).
@@ -122,7 +122,7 @@ macro default(ps, body)
         $(esc(ps)).closer.precedence = -1
 
         out = $(esc(body))
-        
+
         $(esc(ps)).closer.newline = tmp1
         $(esc(ps)).closer.semicolon = tmp2
         $(esc(ps)).closer.inmacro = tmp3
@@ -143,7 +143,7 @@ macro default(ps, body)
 end
 
 """
-    @scope ps scope body 
+    @scope ps scope body
 
 Continues parsing tracking declared variables.
 """
@@ -173,7 +173,7 @@ macro noscope(ps, body)
 end
 
 """
-    @catcherror ps body 
+    @catcherror ps body
 
 Checks for `ps.errored`.
 """
@@ -198,19 +198,19 @@ iskw(t::Token) = Tokens.iskeyword(t.kind)
 
 isinstance(t::Token) = isidentifier(t) ||
                        isliteral(t) ||
-                       isbool(t) || 
+                       isbool(t) ||
                        iskw(t)
 
 
 ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
                           t.kind == Tokens.END ||
                           Tokens.LSQUARE ≤ t.kind ≤ Tokens.RPAREN
-                          
+
 isstring(x) = false
 isstring(x::EXPR{T}) where T <: Union{StringH, LITERAL{Tokens.STRING},LITERAL{Tokens.TRIPLE_STRING}} = true
 
 isajuxtaposition(ps::ParseState, ret) = ((ret isa EXPR{LITERAL{Tokens.INTEGER}} || ret isa EXPR{LITERAL{Tokens.FLOAT}}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || (
-        (ret isa EXPR{UnarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{16,Tokens.PRIME,false}} && ps.nt.kind == Tokens.IDENTIFIER) || 
+        (ret isa EXPR{UnarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{16,Tokens.PRIME,false}} && ps.nt.kind == Tokens.IDENTIFIER) ||
         ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
         ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING))) ||
         (isstring(ret) && ps.nt.kind == Tokens.IDENTIFIER && ps.ws.kind == EmptyWS)
@@ -238,6 +238,190 @@ function test_find(str)
     end
 end
 
+# When using the FancyDiagnostics package, Base.parse, is the
+# same as CSTParser.parse. Manually call the flisp parser here
+# to make sure we test what we want, even when people load the
+# FancyDiagnostics package.
+function flisp_parse(str::AbstractString, pos::Int; greedy::Bool=true, raise::Bool=true)
+    # pos is one based byte offset.
+    # returns (expr, end_pos). expr is () in case of parse error.
+    bstr = String(str)
+    ex, pos = ccall(:jl_parse_string, Any,
+                    (Ptr{UInt8}, Csize_t, Int32, Int32),
+                    bstr, sizeof(bstr), pos-1, greedy ? 1:0)
+    if raise && isa(ex,Expr) && ex.head === :error
+        throw(Base.ParseError(ex.args[1]))
+    end
+    if ex === ()
+        raise && throw(Base.ParseError("end of input"))
+        ex = Expr(:error, "end of input")
+    end
+    return ex, pos+1 # C is zero-based, Julia is 1-based
+end
+
+function flisp_parse(str::AbstractString; raise::Bool=true)
+    ex, pos = flisp_parse(str, 1, greedy=true, raise=raise)
+    if isa(ex,Expr) && ex.head === :error
+        return ex
+    end
+    if !done(str, pos)
+        raise && throw(Base.ParseError("extra token after end of expression"))
+        return Expr(:error, "extra token after end of expression")
+    end
+    return ex
+end
+
+function flisp_parse(stream::IO; greedy::Bool = true, raise::Bool = true)
+    pos = position(stream)
+    ex, Δ = flisp_parse(readstring(stream), 1, greedy = greedy, raise = raise)
+    seek(stream, pos + Δ - 1)
+    return ex
+end
+
+using Base.Meta
+norm_ast(a::Any) = begin
+    if isa(a, Expr)
+        for (i, arg) in enumerate(a.args)
+            a.args[i] = norm_ast(arg)
+        end
+        if a.head === :line
+            return Expr(:line, a.args[1], :none)
+        end
+        if a.head === :macrocall
+            fa = a.args[1]
+            if fa === Symbol("@int128_str")
+                return Base.parse(Int128,a.args[2])
+            elseif fa === Symbol("@uint128_str")
+                return Base.parse(UInt128,a.args[2])
+            elseif fa === Symbol("@bigint_str")
+                return  Base.parse(BigInt,a.args[2])
+            elseif fa == Symbol("@big_str")
+                s = a.args[2]
+                n = tryparse(BigInt,s)
+                if !isnull(n)
+                    return get(n)
+                end
+                n = tryparse(BigFloat,s)
+                if !isnull(n)
+                    return isnan(get(n)) ? :NaN : get(n)
+                end
+                return s
+            end
+        elseif length(a.args) >= 2 && isexpr(a, :call) && a.args[1] == :- && isa(a.args[2], Number)
+            return -a.args[2]
+        end
+        return a
+    elseif isa(a, QuoteNode)
+        return Expr(:quote, norm_ast(a.value))
+    elseif isa(a, AbstractFloat) && isnan(a)
+        return :NaN
+    end
+    return a
+end
+
+function check_base(dir = dirname(Base.find_source_file("base.jl")), display = false)
+    N = 0
+    neq = 0
+    err = 0
+    aerr = 0
+    fail = 0
+    bfail = 0
+    ret = []
+    oldstderr = STDERR
+    redirect_stderr()
+    for (rp, d, files) in walkdir(dir)
+        for f in files
+            file = joinpath(rp, f)
+            if endswith(file, ".jl")
+                N += 1
+                try
+                    # print(N)
+                    print("\r", rpad(string(N), 5), rpad(string(signif(fail / N * 100, 3)), 8), rpad(string(signif(err / N * 100, 3)), 8), rpad(string(signif(neq / N * 100, 3)), 8))
+                    str = readstring(file)
+                    ps = ParseState(str)
+                    io = IOBuffer(str)
+                    x, ps = parse(ps, true)
+                    sp = span(x)
+                    if length(x.args) > 0 && x.args[1] isa EXPR{LITERAL{nothing}}
+                        shift!(x.args)
+                    end
+                    if length(x.args) > 0 && x.args[end] isa EXPR{LITERAL{nothing}}
+                        pop!(x.args)
+                    end
+                    x0 = Expr(x)
+                    x1 = Expr(:file)
+                    try
+                        while !eof(io)
+                            push!(x1.args, flisp_parse(io))
+                        end
+                    catch er
+                        isa(er, InterruptException) && rethrow(er)
+                        if display
+                            Base.showerror(STDOUT, er, catch_backtrace())
+                            println()
+                        end
+                        bfail += 1
+                        continue
+                    end
+                    if length(x1.args) > 0  && x1.args[end] == nothing
+                        pop!(x1.args)
+                    end
+                    x0, x1 = norm_ast(x0), norm_ast(x1)
+                    remlineinfo!(x1)
+                    print("\r                             ")
+                    if !isempty(sp)
+                        print_with_color(:blue, file)
+                        println()
+                        push!(ret, (file, :span))
+                    end
+                    if ps.errored
+                        err += 1
+                        print_with_color(:yellow, file)
+                        println()
+                        push!(ret, (file, :errored))
+                    elseif !(x0 == x1)
+                        cumfail = 0
+                        neq += 1
+                        print_with_color(:green, file)
+                        println()
+                        if display
+                            c0, c1 = CSTParser.compare(x0, x1)
+                            aerr += 1
+                            print_with_color(:light_red, string("    ", c0), bold = true)
+                            println()
+                            print_with_color(:light_green, string("    ", c1), bold = true)
+                            println()
+                        end
+                        push!(ret, (file, :noteq))
+                    end
+                catch er
+                    isa(er, InterruptException) && rethrow(er)
+                    if display
+                        Base.showerror(STDOUT, er, catch_backtrace())
+                        println()
+                    end
+                    fail += 1
+                    print_with_color(:red, file)
+                    println()
+                    push!(ret, (file, :failed))
+                end
+            end
+        end
+    end
+    redirect_stderr(oldstderr)
+    if bfail + fail + err + neq > 0
+        println("\r$N files")
+        print_with_color(:red, "failed")
+        println(" : $fail    $(100*fail/N)%")
+        print_with_color(:yellow, "errored")
+        println(" : $err     $(100*err/N)%")
+        print_with_color(:green, "not eq.")
+        println(" : $neq    $(100*neq/N)%", "  -  $aerr     $(100*aerr/N)%")
+        print_with_color(:magenta, "base failed")
+        println(" : $bfail    $(100*bfail/N)%")
+    end
+    ret
+end
 
 """
     compare(x,y)
@@ -285,104 +469,6 @@ function span(x, neq = [])
     neq
 end
 
-
-function check_base(dir = dirname(Base.find_source_file("base.jl")), display = false)
-    N = 0
-    neq = 0
-    err = 0
-    aerr = 0
-    fail = 0
-    bfail = 0
-    ret = []
-    oldstderr = STDERR
-    redirect_stderr()
-    for (rp, d, files) in walkdir(dir)
-        for f in files
-            file = joinpath(rp, f)
-            if endswith(file, ".jl")
-                N += 1
-                try
-                    # print(N)
-                    print("\r", rpad(string(N), 5), rpad(string(signif(fail / N * 100, 3)), 8), rpad(string(signif(err / N * 100, 3)), 8), rpad(string(signif(neq / N * 100, 3)), 8))
-                    str = readstring(file)
-                    ps = ParseState(str)
-                    io = IOBuffer(str)
-                    x, ps = parse(ps, true)
-                    sp = span(x)
-                    if length(x.args) > 0 && x.args[1] isa EXPR{LITERAL{nothing}}
-                        shift!(x.args)
-                    end
-                    if length(x.args) > 0 && x.args[end] isa EXPR{LITERAL{nothing}}
-                        pop!(x.args)
-                    end
-                    x0 = Expr(x)
-                    x1 = Expr(:file)
-                    try
-                        while !eof(io)
-                            push!(x1.args, Base.parse(io))
-                        end
-                    catch er
-                        bfail += 1
-                        continue
-                    end
-                    if length(x1.args) > 0  && x1.args[end] == nothing
-                        pop!(x1.args)
-                    end
-                    remlineinfo!(x1)
-                    print("\r                             ")
-                    if !isempty(sp)
-                        print_with_color(:blue, file)
-                        println()
-                        push!(ret, (file, :span))
-                    end
-                    if ps.errored
-                        err += 1
-                        print_with_color(:yellow, file)
-                        println()
-                        push!(ret, (file, :errored))
-                    elseif !(x0 == x1)
-                        cumfail = 0
-                        neq += 1
-                        print_with_color(:green, file)
-                        println()
-                        if display
-                            c0, c1 = compare(x0, x1)
-                            if !(c0 isa String && c1 isa String)
-                                aerr += 1
-                                print_with_color(:light_red, string("    ", c0), bold = true)
-                                println()
-                                print_with_color(:light_green, string("    ", c1), bold = true)
-                                println()
-                            end
-                            
-                        end
-                        push!(ret, (file, :noteq))
-                    end
-                    
-                catch er
-                    fail += 1
-                    print_with_color(:red, file)
-                    println()
-                    push!(ret, (file, :failed))
-                end
-            end
-        end
-    end
-    redirect_stderr(oldstderr)
-    if fail + err + neq > 0
-        println("\r$N files")
-        print_with_color(:red, "failed")
-        println(" : $fail    $(100*fail/N)%")
-        print_with_color(:yellow, "errored")
-        println(" : $err     $(100*err/N)%")
-        print_with_color(:green, "not eq.")
-        println(" : $neq    $(100*neq/N)%", "  -  $aerr     $(100*aerr/N)%")
-        print_with_color(:magenta, "base failed")
-        println(" : $bfail    $(100*bfail/N)%")
-    end
-    ret
-end
-
 function speed_test()
     dir = dirname(Base.find_source_file("base.jl"))
     println("speed test : ", @timed(for i = 1:5
@@ -408,7 +494,7 @@ function check_reformat()
         for i = 1:length(x) - 1
             y = x[i]
             sstr = str[cnt + (1:y.span)]
-            
+
             y1 = parse(sstr)
             @assert Expr(y) == Expr(y1)
             cnt += y.span
@@ -422,7 +508,7 @@ is_func_call(x) = false
 is_func_call(x::EXPR) = false
 is_func_call(x::EXPR{Call}) = true
 is_func_call(x::EXPR{UnaryOpCall}) = true
-function is_func_call(x::EXPR{BinarySyntaxOpCall}) 
+function is_func_call(x::EXPR{BinarySyntaxOpCall})
     if length(x.args) > 1 && (x.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}} || x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}})
         return is_func_call(x.args[1])
     else

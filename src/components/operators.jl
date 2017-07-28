@@ -33,7 +33,7 @@ precedence(op::Int) = op < Tokens.end_assignments ?  1 :
                        op < Tokens.end_times ?       11 :
                        op < Tokens.end_rational ?    12 :
                        op < Tokens.end_power ?       13 :
-                       op < Tokens.end_decl ?        14 : 
+                       op < Tokens.end_decl ?        14 :
                        op < Tokens.end_where ?       15 : 16
 
 precedence(op::Token) = op.kind == Tokens.DDDOT ? DddotOp :
@@ -51,10 +51,10 @@ precedence(op::Token) = op.kind == Tokens.DDDOT ? DddotOp :
                        op.kind < Tokens.end_times ?          11 :
                        op.kind < Tokens.end_rational ?       12 :
                        op.kind < Tokens.end_power ?          13 :
-                       op.kind < Tokens.end_decl ?           14 : 
-                       op.kind < Tokens.end_where ?          15 : 
-                       op.kind < Tokens.end_dot ?            16 : 
-                       op.kind == Tokens.ANON_FUNC ? AnonFuncOp : 
+                       op.kind < Tokens.end_decl ?           14 :
+                       op.kind < Tokens.end_where ?          15 :
+                       op.kind < Tokens.end_dot ?            16 :
+                       op.kind == Tokens.ANON_FUNC ? AnonFuncOp :
                        op.kind == Tokens.PRIME ?             16 : 20
 
 precedence(x) = 0
@@ -97,18 +97,18 @@ isunaryandbinaryop(kind) = kind == Tokens.PLUS ||
 
 isbinaryop(op::EXPR{OPERATOR{P,K,D}}) where {P, K, D} = isbinaryop(K)
 isbinaryop(t::Token) = isbinaryop(t.kind)
-isbinaryop(kind) = isoperator(kind) && 
-                    !(kind == Tokens.SQUARE_ROOT || 
-                    kind == Tokens.CUBE_ROOT || 
-                    kind == Tokens.QUAD_ROOT || 
-                    kind == Tokens.NOT || 
+isbinaryop(kind) = isoperator(kind) &&
+                    !(kind == Tokens.SQUARE_ROOT ||
+                    kind == Tokens.CUBE_ROOT ||
+                    kind == Tokens.QUAD_ROOT ||
+                    kind == Tokens.NOT ||
                     kind == Tokens.NOT_SIGN)
 
 isassignment(t::Token) = Tokens.begin_assignments < t.kind < Tokens.end_assignments
 
 function non_dotted_op(t::Token)
     k = t.kind
-    return (k == Tokens.COLON_EQ || 
+    return (k == Tokens.COLON_EQ ||
             k == Tokens.PAIR_ARROW ||
             k == Tokens.EX_OR_EQ ||
             k == Tokens.CONDITIONAL ||
@@ -131,7 +131,7 @@ end
 issyntaxcall(op) = false
 function issyntaxcall(op::EXPR{OPERATOR{P,K,dot}}) where {P, K, dot}
     P == 1 && !(K == Tokens.APPROX || K == Tokens.PAIR_ARROW) ||
-    K == Tokens.RIGHT_ARROW || 
+    K == Tokens.RIGHT_ARROW ||
     P == 4 ||
     P == 5 ||
     K == Tokens.ISSUBTYPE ||
@@ -141,15 +141,15 @@ function issyntaxcall(op::EXPR{OPERATOR{P,K,dot}}) where {P, K, dot}
     K == Tokens.DOT ||
     K == Tokens.DDDOT ||
     K == Tokens.PRIME ||
-    K == Tokens.WHERE 
+    K == Tokens.WHERE
 end
 
 
 issyntaxunarycall(op) = false
 function issyntaxunarycall(op::EXPR{OPERATOR{P,K,false}}) where {P, K}
-    K == Tokens.EX_OR || 
+    K == Tokens.EX_OR ||
     K == Tokens.AND ||
-    K == Tokens.DECLARATION || 
+    K == Tokens.DECLARATION ||
     K == Tokens.ISSUBTYPE ||
     K == Tokens.ISSUPERTYPE
 end
@@ -177,11 +177,11 @@ function parse_unary(ps::ParseState, op::EXPR{OPERATOR{P,K,dot}}) where {P, K, d
     end
 
     # Parsing
-    prec = P == DeclarationOp ? DeclarationOp : 
-                K == Tokens.AND ? 14 : 
+    prec = P == DeclarationOp ? DeclarationOp :
+                K == Tokens.AND ? 14 :
                 K == Tokens.EX_OR ? 20 : 13
     @catcherror ps startbyte arg = @precedence ps prec parse_expression(ps)
-    
+
     if issyntaxunarycall(op)
         ret = EXPR{UnarySyntaxOpCall}(EXPR[op, arg], op.span + arg.span, Variable[], "")
     else
@@ -192,8 +192,8 @@ end
 
 function parse_unary(ps::ParseState, op::EXPR{OPERATOR{ColonOp,Tokens.COLON,false}})
     startbyte = ps.nt.startbyte - op.span
-    if Tokens.begin_keywords < ps.nt.kind < Tokens.end_keywords || 
-        Tokens.begin_literal < ps.nt.kind < Tokens.end_literal || 
+    if Tokens.begin_keywords < ps.nt.kind < Tokens.end_keywords ||
+        Tokens.begin_literal < ps.nt.kind < Tokens.end_literal ||
         isoperator(ps.nt.kind) ||
         ps.nt.kind == Tokens.IDENTIFIER
         # Parsing
@@ -216,11 +216,11 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{AssignmentO
     is_func_call(ret) && _get_sig_defs!(ret)
     # Parsing
     @catcherror ps startbyte nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
-    
+
     if is_func_call(ret)
         # Construction
-        # NOTE : issue w/ scheme parser
-        if length(ret.args) > 1 && !(ret.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}) && ps.closer.precedence != 0
+        # NOTE: prior to v"0.6.0-dev.2360" (PR #20076), there was an issue w/ scheme parser
+        if VERSION > v"0.6.0-dev.2360" || (length(ret.args) > 1 && !(ret.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}) && ps.closer.precedence != 0)
             nextarg = EXPR{Block}(EXPR[nextarg], nextarg.span, Variable[], "")
         end
 
@@ -305,7 +305,7 @@ parse_operator(ps::ParseState, ret::EXPR{ChainOpCall}, op::EXPR{OPERATOR{TimesOp
 
 function parse_chain_operator(ps::ParseState, ret::EXPR{ChainOpCall}, op::EXPR{OPERATOR{P,K,false}}) where {P, K}
     startbyte = ps.nt.startbyte - op.span - ret.span
-    
+
     if ret.args[2] isa EXPR{OPERATOR{P,K,false}}
         # Parsing
         @catcherror ps startbyte nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
@@ -322,7 +322,7 @@ end
 
 function parse_chain_operator(ps::ParseState, ret::EXPR{BinaryOpCall}, op::EXPR{OPERATOR{P,K,false}}) where {P, K}
     startbyte = ps.nt.startbyte - op.span - ret.span
-    
+
     if ret.args[2] isa EXPR{OPERATOR{P,K,false}} && ret.args[2].span > 0
         @catcherror ps startbyte nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
         ret = EXPR{ChainOpCall}(ret.args, ret.span, Variable[], "")
@@ -345,10 +345,10 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{PowerOp,K,d
 
     # Construction
     # NEEDS FIX
-    if ret isa EXPR{UnaryOpCall} 
+    if ret isa EXPR{UnaryOpCall}
         if false
             xx = EXPR{InvisBrackets}([ret], ret.span, Variable[], "")
-            nextarg = EXPR{BinaryOpCall}(EXPR[op, xx, nextarg], op.span + xx.span + nextarg.span, Variable[], "") 
+            nextarg = EXPR{BinaryOpCall}(EXPR[op, xx, nextarg], op.span + xx.span + nextarg.span, Variable[], "")
         else
             nextarg = EXPR{BinaryOpCall}(EXPR[ret.args[2], op, nextarg], op.span + ret.args[2].span + nextarg.span, Variable[], "")
         end
@@ -363,7 +363,7 @@ end
 # parse where
 function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}})
     startbyte = ps.nt.startbyte - op.span - ret.span
-    
+
     # Parsing
     ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op], 0, Variable[], "")
     # Parsing
@@ -385,7 +385,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{WhereOp,Tok
         @catcherror ps startbyte nextarg = @precedence ps 5 @closer ps inwhere parse_expression(ps)
         push!(ret.args, nextarg)
     end
-    
+
     # Construction
     ret.span = ps.nt.startbyte - startbyte
     return ret
@@ -464,16 +464,16 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{P,Tokens.AN
         push!(ret.defs, Variable(Expr(get_id(ret)), get_t(ret), ret))
     end
     ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, EXPR{Block}(EXPR[arg], arg.span, Variable[], "")], ps.nt.startbyte - startbyte, Variable[], "")
-    
+
     return ret
 end
 
 function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{P,K,dot}}) where {P, K, dot}
     startbyte = ps.nt.startbyte - op.span - ret.span
-    
+
     # Parsing
     @catcherror ps startbyte nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
-    
+
     # Construction
     if issyntaxcall(op)
         ret = EXPR{BinarySyntaxOpCall}([ret, op, nextarg], op.span + ret.span + nextarg.span, Variable[], "")

@@ -23,10 +23,35 @@ end
 Expr(x::HEAD{T}) where {T} = Symbol(lowercase(string(T)))
 Expr(x::KEYWORD{T}) where {T} = Symbol(lowercase(string(T)))
 
+function julia_normalization_map(c::Int32, x::Ptr{Void})::Int32
+    return c == 0x00B5 ? 0x03BC : # micro sign -> greek small letter mu
+           c == 0x025B ? 0x03B5 : # latin small letter open e -> greek small letter
+           c
+end
 
-Expr(x::EXPR{IDENTIFIER}) = Symbol(x.val)
+# Note: This code should be in julia base
+function utf8proc_map_custom(str::String, options, func)
+    norm_func = cfunction(func, Int32, (Int32, Ptr{Void}))
+    nwords = ccall(:utf8proc_decompose_custom, Int, (Ptr{UInt8}, Int, Ptr{UInt8}, Int, Cint, Ptr{Void}, Ptr{Void}),
+                   str, sizeof(str), C_NULL, 0, options, norm_func, C_NULL)
+    nwords < 0 && Base.UTF8proc.utf8proc_error(nwords)
+    buffer = Base.StringVector(nwords*4)
+    nwords = ccall(:utf8proc_decompose_custom, Int, (Ptr{UInt8}, Int, Ptr{UInt8}, Int, Cint, Ptr{Void}, Ptr{Void}),
+                   str, sizeof(str), buffer, nwords, options, norm_func, C_NULL)
+    nwords < 0 && Base.UTF8proc.utf8proc_error(nwords)
+    nbytes = ccall(:utf8proc_reencode, Int, (Ptr{UInt8}, Int, Cint), buffer, nwords, options)
+    nbytes < 0 && Base.UTF8proc.utf8proc_error(nbytes)
+    return String(resize!(buffer, nbytes))
+end
 
-function Expr(x::EXPR{OPERATOR{O,K,dot}}) where {O, K, dot} 
+function normalize_julia_identifier(str::AbstractString)
+    options = Base.UTF8proc.UTF8PROC_STABLE | Base.UTF8proc.UTF8PROC_COMPOSE
+    utf8proc_map_custom(String(str), options, julia_normalization_map)
+end
+
+Expr(x::EXPR{IDENTIFIER}) = Symbol(normalize_julia_identifier(x.val))
+
+function Expr(x::EXPR{OPERATOR{O,K,dot}}) where {O, K, dot}
     if dot
         Symbol(:., UNICODE_OPS_REVERSE[K])
     else
@@ -38,17 +63,72 @@ Expr(x::EXPR{LITERAL{Tokens.TRUE}}) = true
 Expr(x::EXPR{LITERAL{Tokens.FALSE}}) = false
 function Expr(x::EXPR{HEAD{:nothing}}) end
 
-Expr(x::EXPR{LITERAL{T}}) where {T} = Base.parse(x.val)
-Expr(x::EXPR{LITERAL{Tokens.FLOAT}}) = Base.parse(x.val)
+function sized_uint_literal(s::AbstractString, b::Integer)
+    # We know integers are all ASCII, so we can use sizeof to compute
+    # the length of ths string more quickly
+    l = (sizeof(s) - 2) * b
+    l <= 8   && return Base.parse(UInt8,   s)
+    l <= 16  && return Base.parse(UInt16,  s)
+    l <= 32  && return Base.parse(UInt32,  s)
+    l <= 64  && return Base.parse(UInt64,  s)
+    l <= 128 && return Base.parse(UInt128, s)
+    return Base.parse(BigInt,s)
+end
+
+function sized_uint_oct_literal(s::AbstractString)
+    s[3] == 0 && return sized_uint_literal(s, 3)
+    len = sizeof(s)
+    (len < 5  || (len == 5  && s <= "0o377")) && return Base.parse(UInt8,s)
+    (len < 8  || (len == 8  && s <= "0o177777")) && return Base.parse(UInt16, s)
+    (len < 13 || (len == 13 && s <= "0o37777777777")) && return Base.parse(UInt32,s)
+    (len < 24 || (len == 24 && s <= "0o1777777777777777777777")) && return Base.parse(UInt64,s)
+    (len < 45 || (len == 45 && s <= "0o3777777777777777777777777777777777777777777")) && return Base.parse(UInt128,s)
+    return Base.parse(BigInt,s)
+end
+
+const TYPEMAX_INT64_STR = string(typemax(Int))
+const TYPEMAX_INT128_STR = string(typemax(Int128))
+function Expr(x::EXPR{LITERAL{Tokens.INTEGER}})
+    is_hex = is_oct = is_bin = false
+    val = replace(x.val, "_", "")
+    if sizeof(val) > 2 && val[1] == '0'
+        c = val[2]
+        c == 'x' && (is_hex = true)
+        c == 'o' && (is_oct = true)
+        c == 'b' && (is_bin = true)
+    end
+    is_hex && return sized_uint_literal(val, 4)
+    is_oct && return sized_uint_oct_literal(val)
+    is_bin && return sized_uint_literal(val, 1)
+    sizeof(val) < sizeof(TYPEMAX_INT64_STR) && return Base.parse(Int64, val)
+    val < TYPEMAX_INT64_STR && return Base.parse(Int64, val)
+    sizeof(val) < sizeof(TYPEMAX_INT128_STR) && return Base.parse(Int128, val)
+    val < TYPEMAX_INT128_STR && return Base.parse(Int128, val)
+    Base.parse(BigInt, val)
+end
+
+function Expr(x::EXPR{LITERAL{Tokens.FLOAT}})
+    if 'f' in x.val
+        return Base.parse(Float32, replace(x.val, 'f', 'e'))
+    end
+    Base.parse(Float64, x.val)
+end
+function Expr(x::EXPR{LITERAL{Tokens.CHAR}})
+    val = Base.unescape_string(x.val[2:end-1])
+    # one byte e.g. '\xff' maybe not valid UTF-8
+    # but we want to use the raw value as a codepoint in this case
+    sizeof(val) == 1 && return Char(Vector{UInt8}(val)[1])
+    length(val) == 1 || error("Invalid character literal")
+    val[1]
+end
 Expr(x::EXPR{LITERAL{Tokens.MACRO}}) = Symbol(x.val)
 Expr(x::EXPR{LITERAL{Tokens.STRING}}) = x.val
 Expr(x::EXPR{LITERAL{Tokens.TRIPLE_STRING}}) = x.val
 
-
-
 # cross compatability for line number insertion in macrocalls
 @static if VERSION < v"0.7.0-DEV.357"
-    Expr(x::EXPR{LITERAL{Tokens.CMD}}) = Expr(:macrocall, Symbol("@cmd"), x.val[2:end-1])
+    Expr(x::EXPR{LITERAL{Tokens.CMD}}) = Expr(:macrocall, Symbol("@cmd"), x.val)
+    Expr(x::EXPR{LITERAL{Tokens.TRIPLE_CMD}}) = Expr(:macrocall, Symbol("@cmd"), x.val)
 
     function Expr(x::EXPR{x_Str})
         if x.args[1] isa EXPR{BinarySyntaxOpCall}
@@ -97,7 +177,8 @@ Expr(x::EXPR{LITERAL{Tokens.TRIPLE_STRING}}) = x.val
         x
     end
 else
-    Expr(x::EXPR{LITERAL{Tokens.CMD}}) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val[2:end-1])
+    Expr(x::EXPR{LITERAL{Tokens.CMD}}) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
+    Expr(x::EXPR{LITERAL{Tokens.TRIPLE_CMD}}) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
 
     function Expr(x::EXPR{x_Str})
         if x.args[1] isa EXPR{BinarySyntaxOpCall}
@@ -216,7 +297,7 @@ Expr(x::EXPR{ConditionalOpCall}) = Expr(:if, Expr(x.args[1]), Expr(x.args[3]), E
 
 Expr(x::EXPR{ColonOpCall}) = Expr(:(:), Expr(x.args[1]), Expr(x.args[3]), Expr(x.args[5]))
 
-function Expr(x::EXPR{UnarySyntaxOpCall}) 
+function Expr(x::EXPR{UnarySyntaxOpCall})
     if x.args[1] isa EXPR{OP} where OP <: OPERATOR
         return Expr(Expr(x.args[1]), Expr(x.args[2]))
     else
@@ -224,7 +305,7 @@ function Expr(x::EXPR{UnarySyntaxOpCall})
     end
 end
 
-function Expr(x::EXPR{UnaryOpCall}) 
+function Expr(x::EXPR{UnaryOpCall})
     return Expr(:call, Expr(x.args[1]), Expr(x.args[2]))
 end
 
@@ -274,7 +355,7 @@ end
 Expr(x::EXPR{InvisBrackets}) = Expr(x.args[2])
 Expr(x::EXPR{Begin}) = Expr(x.args[2])
 
-function Expr(x::EXPR{Quote}) 
+function Expr(x::EXPR{Quote})
     if x.args[2] isa EXPR{InvisBrackets} && (x.args[2].args[2] isa EXPR{OP} where OP <: OPERATOR|| x.args[2].args[2] isa EXPR{L} where L <: LITERAL || x.args[2].args[2] isa EXPR{IDENTIFIER})
         return QuoteNode(Expr(x.args[2]))
     else
@@ -352,7 +433,7 @@ function Expr(x::EXPR{For})
     else
         push!(ret.args, fix_range(x.args[2]))
     end
-    push!(ret.args, Expr(x.args[3]))    
+    push!(ret.args, Expr(x.args[3]))
     ret
 end
 
@@ -510,7 +591,7 @@ end
 
 function Expr(x::EXPR{TypedVcat})
     ret = Expr(:typed_vcat)
-    
+
     for a in x.args
         if a isa EXPR{Parameters}
             insert!(ret.args, 2, Expr(a))
@@ -597,7 +678,7 @@ end
 
 Expr(x::EXPR{ModuleH}) = Expr(:module, true, Expr(x.args[2]), Expr(x.args[3]))
 Expr(x::EXPR{BareModule}) = Expr(:module, false, Expr(x.args[2]), Expr(x.args[3]))
-    
+
 
 
 
@@ -609,11 +690,11 @@ function _get_import_block(x, i, ret)
     while i < length(x.args) && !(x.args[i + 1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
         i += 1
         a = x.args[i]
-        if !(a isa EXPR{P} where P <: PUNCTUATION) && !(a isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}} || a isa EXPR{OPERATOR{ColonOp,Tokens.COLON,false}}) 
+        if !(a isa EXPR{P} where P <: PUNCTUATION) && !(a isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}} || a isa EXPR{OPERATOR{ColonOp,Tokens.COLON,false}})
             push!(ret.args, Expr(a))
         end
     end
-    
+
     return i
 end
 
@@ -632,7 +713,7 @@ function expr_import(x, kw)
     elseif isempty(col)
         ret = Expr(:toplevel)
         i = 1
-        while i < length(x.args) 
+        while i < length(x.args)
             nextarg = Expr(kw)
             i = _get_import_block(x, i, nextarg)
             if i < length(x.args) && (x.args[i + 1] isa EXPR{PUNCTUATION{Tokens.COMMA}})
@@ -651,11 +732,11 @@ function expr_import(x, kw)
         while i < length(x.args) && !(x.args[i + 1] isa EXPR{o} where o <: OPERATOR{ColonOp})
             i += 1
             a = x.args[i]
-            if !(a isa EXPR{P} where P <: PUNCTUATION) && !(a isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}} || a isa EXPR{OPERATOR{ColonOp,Tokens.COLON,false}}) 
+            if !(a isa EXPR{P} where P <: PUNCTUATION) && !(a isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}} || a isa EXPR{OPERATOR{ColonOp,Tokens.COLON,false}})
                 push!(top.args, Expr(a))
             end
         end
-        while i < length(x.args) 
+        while i < length(x.args)
             nextarg = Expr(kw, top.args...)
             i = _get_import_block(x, i, nextarg)
             if i < length(x.args) && (x.args[i + 1] isa EXPR{PUNCTUATION{Tokens.COMMA}})

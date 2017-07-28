@@ -140,7 +140,7 @@ function parse_compound(ps::ParseState, ret)
         ret = parse_operator(ps, ret, op)
     elseif (ret isa EXPR{IDENTIFIER} || (ret isa EXPR{BinarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}})) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
         next(ps)
-        @catcherror ps startbyte arg = parse_string(ps, ret)
+        @catcherror ps startbyte arg = parse_string_or_cmd(ps, ret)
         ret = EXPR{x_Str}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
     # Suffix on x_str
     elseif ret isa EXPR{x_Str} && ps.nt.kind == Tokens.IDENTIFIER
@@ -150,7 +150,7 @@ function parse_compound(ps::ParseState, ret)
         ret.span += arg.span
     elseif (ret isa EXPR{IDENTIFIER} || (ret isa EXPR{BinarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}})) && ps.nt.kind == Tokens.CMD
         next(ps)
-        @catcherror ps startbyte arg = parse_string(ps, ret)
+        @catcherror ps startbyte arg = parse_string_or_cmd(ps, ret)
         ret = EXPR{x_Cmd}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
     elseif ret isa EXPR{x_Cmd} && ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
@@ -282,7 +282,7 @@ function parse_doc(ps::ParseState)
         next(ps)
         doc = INSTANCE(ps)
         next(ps)
-        @catcherror ps startbyte arg = parse_string(ps, doc)
+        @catcherror ps startbyte arg = parse_string_or_cmd(ps, doc)
         doc = EXPR{x_Str}(EXPR[doc, arg], doc.span + arg.span, Variable[], "")
         ret = parse_expression(ps)
         ret = EXPR{MacroCall}(EXPR[GlobalRefDOC, doc, ret], doc.span + ret.span, Variable[], "")
