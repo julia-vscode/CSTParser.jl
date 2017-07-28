@@ -1,5 +1,10 @@
 # CSTParser
 
+[![Project Status: Active - The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
+[![Build Status](https://travis-ci.org/ZacLN/CSTParser.jl.svg?branch=master)](https://travis-ci.org/ZacLN/CSTParser.jl)
+[![CSTParser](http://pkg.julialang.org/badges/CSTParser_0.6.svg)](http://pkg.julialang.org/?pkg=CSTParser)
+[![codecov](https://codecov.io/gh/ZacLN/CSTParser.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/ZacLN/CSTParser.jl)
+
 A parser for Julia using [Tokenize](https://github.com/KristofferC/Tokenize.jl/) that aims to extend the built-in parser by providing additional meta information along with the resultant AST. 
 
 ### Additional Output
