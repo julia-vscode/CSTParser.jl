@@ -61,10 +61,11 @@ mutable struct ParseState
     ndot::Bool
     diagnostics::Vector{Diagnostics.Diagnostic}
     closer::Closer
+    error_code::Diagnostics.ErrorCodes
     errored::Bool
 end
 function ParseState(str::Union{IO,String})
-    ps = ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), Token(), Token(), true, true, Diagnostics.Diagnostic[], Closer(), false)
+    ps = ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), Token(), Token(), true, true, Diagnostics.Diagnostic[], Closer(), Diagnostics.ParseFailure, false)
     return next(next(ps))
 end
 
@@ -88,8 +89,8 @@ function next(ps::ParseState)
     ps.ws = ps.nws
     ps.nws = ps.nnws
     ps.dot = ps.ndot
-    
-    
+
+
     ps.nnt, ps.done  = next(ps.l, ps.done)
     # Reject new kws for now
     # if ps.nnt.kind == Tokens.STRUCT || ps.nnt.kind == Tokens.STRUCT || ps.nnt.kind == Tokens.MUTABLE
@@ -149,7 +150,7 @@ function lex_ws_comment(l::Lexer, c::Char)
         end
     end
 
-    return emit(l, semicolon ? SemiColonWS : 
+    return emit(l, semicolon ? SemiColonWS :
                    newline ? NewLineWS : WS)
 end
 

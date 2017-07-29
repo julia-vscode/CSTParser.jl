@@ -2,7 +2,9 @@ using Base.Test
 using CSTParser
 using CSTParser.Diagnostics: Diagnostic, ErrorCodes
 
-using CSTParser.Diagnostics: UnexpectedInputEnd, UnexpectedOperator, UnexpectedIdentifier
+using CSTParser.Diagnostics: UnexpectedInputEnd, UnexpectedOperator, UnexpectedIdentifier, UnexpectedStringEnd,
+    UnexpectedCommentEnd, UnexpectedBlockEnd, UnexpectedCmdEnd, UnexpectedCharEnd
+
 
 function do_diag_test(text)
     ps = CSTParser.ParseState(text)
@@ -54,3 +56,17 @@ let diags = do_diag_test("a ? b c")
 #    ^
     @test diags[1] isa Diagnostic{UnexpectedIdentifier}
 end
+
+function test_eof_diag(text, code)
+    ps = CSTParser.ParseState(text)
+    CSTParser.parse(ps)
+    @test ps.errored
+    @test isa(ps.diagnostics[1], Diagnostic{code})
+    @test ps.error_code == code
+end
+
+test_eof_diag("\"", UnexpectedStringEnd)
+test_eof_diag("#=", UnexpectedCommentEnd)
+test_eof_diag("begin", UnexpectedBlockEnd)
+test_eof_diag("`", UnexpectedCmdEnd)
+test_eof_diag("'", UnexpectedCharEnd)
