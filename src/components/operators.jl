@@ -376,7 +376,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{WhereOp,Tok
             if ps.nt.kind == Tokens.COMMA
                 next(ps)
                 push!(ret.args, INSTANCE(ps))
-                format_comma(ps)
+                format_no_rws(ps)
             end
         end
         next(ps)
