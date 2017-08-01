@@ -42,11 +42,11 @@ include("scoping.jl")
 """
     parse_expression(ps)
 
-Parses an expression until `closer(ps) == true`. Expects to enter the 
-`ParseState` the token before the the beginning of the expression and ends 
-on the last token. 
+Parses an expression until `closer(ps) == true`. Expects to enter the
+`ParseState` the token before the the beginning of the expression and ends
+on the last token.
 
-Acceptable starting tokens are: 
+Acceptable starting tokens are:
 + A keyword
 + An opening parentheses or brace.
 + An operator.
@@ -101,8 +101,8 @@ end
 """
     parse_compound(ps, ret)
 
-Handles cases where an expression - `ret` - is not followed by 
-`closer(ps) == true`. Possible juxtapositions are: 
+Handles cases where an expression - `ret` - is not followed by
+`closer(ps) == true`. Possible juxtapositions are:
 + operators
 + `(`, calls
 + `[`, ref
@@ -191,37 +191,6 @@ function parse_compound(ps::ParseState, ret)
 end
 
 """
-    parse_list(ps)
-
-Parses a list of comma seperated expressions finishing when the parent state
-of `ps.closer` is met, newlines are ignored. Expects to start at the first item and ends on the last
-item so surrounding punctuation must be handled externally.
-
-**NOTE**
-Should be replaced with the approach taken in `parse_call`
-"""
-function parse_list(ps::ParseState, puncs)
-    startbyte = ps.nt.startbyte
-
-    args = EXPR[]
-
-    while !closer(ps)
-        @catcherror ps startbyte a = @nocloser ps newline @closer ps comma parse_expression(ps)
-        push!(args, a)
-        if ps.nt.kind == Tokens.COMMA
-            next(ps)
-            push!(puncs, INSTANCE(ps))
-            format_comma(ps)
-        end
-    end
-
-    if ps.t.kind == Tokens.COMMA
-        format_comma(ps)
-    end
-    return args
-end
-
-"""
     parse_paren(ps, ret)
 
 Parses an expression starting with a `(`.
@@ -231,11 +200,11 @@ function parse_paren(ps::ParseState)
 
     ret = EXPR{TupleH}(EXPR[INSTANCE(ps)], - startbyte, Variable[], "")
     format_lbracket(ps)
-    
+
     @catcherror ps startbyte @default ps @nocloser ps inwhere @closer ps paren parse_comma_sep(ps, ret, false, true)
 
     if length(ret.args) == 2 && !(ret.args[2] isa EXPR{UnarySyntaxOpCall} && ret.args[2].args[2] isa EXPR{OPERATOR{DddotOp,Tokens.DDDOT,false}})
-        
+
         if ps.ws.kind != SemiColonWS || (length(ret.args) == 2 && ret.args[2] isa EXPR{Block})
             ret = EXPR{InvisBrackets}(ret.args, ret.span, Variable[], "")
         end
@@ -245,7 +214,7 @@ function parse_paren(ps::ParseState)
     next(ps)
     push!(ret.args, INSTANCE(ps))
     format_rbracket(ps)
-    
+
     ret.span = ps.nt.startbyte - startbyte
 
     return ret
@@ -305,7 +274,7 @@ function parse(ps::ParseState, cont = false)
             next(ps)
             push!(top.args, EXPR{LITERAL{nothing}}(EXPR[], ps.nt.startbyte, Variable[], "comments"))
         end
-        
+
         while !ps.done && !ps.errored
             curr_line = ps.nt.startpos[1]
             ret = parse_doc(ps)
