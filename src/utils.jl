@@ -177,7 +177,7 @@ end
 
 Checks for `ps.errored`.
 """
-macro catcherror(ps, startbyte, body)
+macro catcherror(ps, body)
     quote
         $(esc(body))
         if $(esc(ps)).errored
@@ -371,6 +371,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                     print("\r                             ")
                     if !isempty(sp)
                         print_with_color(:blue, file)
+                        @show sp
                         println()
                         push!(ret, (file, :span))
                     end

@@ -22,8 +22,6 @@ When trying to make an `INSTANCE` from a string token we must check for
 interpolating operators.
 """
 function parse_string_or_cmd(ps::ParseState, prefixed = false)
-    startbyte = ps.t.startbyte
-
     span = ps.nt.startbyte - ps.t.startbyte
     istrip = (ps.t.kind == Tokens.TRIPLE_STRING) || (ps.t.kind == Tokens.TRIPLE_CMD)
     iscmd = ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
@@ -103,7 +101,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 if peekchar(input) == '('
                     skip(input, 1)
                     ps1 = ParseState(input)
-                    @catcherror ps startbyte interp = @closer ps1 paren parse_expression(ps1)
+                    @catcherror ps interp = @closer ps1 paren parse_expression(ps1)
                     push!(ret.args, interp)
                     # Comparse to flisp/JuliaParser, we have an extra lookahead token,
                     # so we need to back up one here

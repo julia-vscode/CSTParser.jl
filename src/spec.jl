@@ -10,6 +10,42 @@ mutable struct EXPR{T}
     val::String
 end
 
+function update_span!(x::EXPR)
+    x.span = isempty(x.args) ? 0 : sum(y->y.span, x.args)
+end
+
+function EXPR{T}(args::Vector, defs::Vector, val::String) where {T}
+    ret = EXPR{T}(args, 0, defs, val)
+    update_span!(ret)
+    ret
+end
+
+function Base.push!(e::EXPR, arg)
+    e.span += arg.span
+    push!(e.args, arg)
+end
+
+function Base.unshift!(e::EXPR, arg)
+    e.span += arg.span
+    unshift!(e.args, arg)
+end
+
+function Base.pop!(e::EXPR)
+    arg = pop!(e.args)
+    e.span -= arg.span
+    arg
+end
+
+function Base.append!(e::EXPR, args::Vector{<:EXPR})
+    append!(e.args, args)
+    update_span!(e)
+end
+
+function Base.append!(a::EXPR, b::EXPR)
+    append!(a.args, b.args)
+    a.span += b.span
+end
+
 abstract type IDENTIFIER end
 abstract type LITERAL{K} end
 abstract type KEYWORD{K} end
@@ -46,7 +82,7 @@ function INSTANCE(ps::ParseState)
         push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedInputEnd}(ps.t.startbyte + (0:0), [], "Unexpected end of input"))
         return EXPR{ERROR}(EXPR[], span, Variable[], "Unexpected end of input")
     end
-    return isidentifier(ps.t) ? IDENTIFIER(ps) : 
+    return isidentifier(ps.t) ? IDENTIFIER(ps) :
         isliteral(ps.t) ? LITERAL(ps) :
         iskw(ps.t) ? KEYWORD(ps) :
         isoperator(ps.t) ? OPERATOR(ps) :

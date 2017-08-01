@@ -1,23 +1,21 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
-    startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2] + 4
 
     # Parsing
     kw = INSTANCE(ps)
     format_kw(ps)
-    ret = EXPR{Try}(EXPR[kw], -ps.t.startbyte, Variable[], "")
+    ret = EXPR{Try}(EXPR[kw], Variable[], "")
 
     tryblock = EXPR{Block}(EXPR[], 0, Variable[], "")
-    @catcherror ps startbyte @default ps @closer ps trycatch parse_block(ps, tryblock, start_col)
-    push!(ret.args, tryblock)
-    
+    @catcherror ps @default ps @closer ps trycatch parse_block(ps, tryblock, start_col)
+    push!(ret, tryblock)
+
     # try closing early
     if ps.nt.kind == Tokens.END
         next(ps)
-        push!(ret.args, FALSE)
-        push!(ret.args, EXPR{Block}(EXPR[], 0, Variable[], ""))
-        push!(ret.args, INSTANCE(ps))
-        ret.span += ps.nt.startbyte
+        push!(ret, FALSE)
+        push!(ret, EXPR{Block}(EXPR[], 0, Variable[], ""))
+        push!(ret, INSTANCE(ps))
         return ret
     end
 
@@ -26,23 +24,21 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
         next(ps)
         # catch closing early
         if ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END
-            push!(ret.args, INSTANCE(ps))
+            push!(ret, INSTANCE(ps))
             caught = FALSE
             catchblock = EXPR{Block}(EXPR[], 0, Variable[], "")
         else
-            start1 = ps.nt.startbyte
             start_col = ps.t.startpos[2] + 4
-            push!(ret.args, INSTANCE(ps))
+            push!(ret, INSTANCE(ps))
             if ps.ws.kind == SemiColonWS || ps.ws.kind == NewLineWS
                 caught = FALSE
             else
-                @catcherror ps startbyte caught = @default ps @closer ps ws @closer ps trycatch parse_expression(ps)
+                @catcherror ps caught = @default ps @closer ps ws @closer ps trycatch parse_expression(ps)
             end
             catchblock = EXPR{Block}(EXPR[], 0, Variable[], "")
-            @catcherror ps startbyte @default ps @closer ps trycatch parse_block(ps, catchblock, start_col)
+            @catcherror ps @default ps @closer ps trycatch parse_block(ps, catchblock, start_col)
             if !(caught isa EXPR{IDENTIFIER} || caught == FALSE)
-                unshift!(catchblock.args, caught)
-                catchblock.span += caught.span
+                unshift!(catchblock, caught)
                 caught = FALSE
             elseif caught isa EXPR{IDENTIFIER}
                 push!(caught.defs, Variable(Expr(caught), :Any, caught))
@@ -52,9 +48,9 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
         caught = FALSE
         catchblock = EXPR{Block}(EXPR[], 0, Variable[], "")
     end
-    push!(ret.args, caught)
-    push!(ret.args, catchblock)
-    
+    push!(ret, caught)
+    push!(ret, catchblock)
+
     # finally block
     if ps.nt.kind == Tokens.FINALLY
         if isempty(catchblock.args)
@@ -62,14 +58,13 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
         end
         next(ps)
         start_col = ps.t.startpos[2] + 4
-        push!(ret.args, INSTANCE(ps))
+        push!(ret, INSTANCE(ps))
         finallyblock = EXPR{Block}(EXPR[], 0, Variable[], "")
-        @catcherror ps startbyte parse_block(ps, finallyblock, start_col)
-        push!(ret.args, finallyblock)
+        @catcherror ps parse_block(ps, finallyblock, start_col)
+        push!(ret, finallyblock)
     end
 
     next(ps)
-    push!(ret.args, INSTANCE(ps))
-    ret.span += ps.nt.startbyte
+    push!(ret, INSTANCE(ps))
     return ret
 end

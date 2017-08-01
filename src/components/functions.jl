@@ -1,5 +1,4 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
-    startbyte = ps.t.startbyte
     start_col = ps.t.startpos[2] + 4
 
     # Parsing
@@ -8,39 +7,37 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     # signature
 
     if isoperator(ps.nt.kind) && ps.nt.kind != Tokens.EX_OR && ps.nnt.kind == Tokens.LPAREN
-        start1 = ps.nt.startbyte
         next(ps)
         op = OPERATOR(ps)
         next(ps)
         if issyntaxunarycall(op)
-            sig = EXPR{UnarySyntaxOpCall}(EXPR[op, INSTANCE(ps)], 0, Variable[], "")
+            sig = EXPR{UnarySyntaxOpCall}(EXPR[op, INSTANCE(ps)], Variable[], "")
         else
-            sig = EXPR{Call}(EXPR[op, INSTANCE(ps)], 0, Variable[], "")
+            sig = EXPR{Call}(EXPR[op, INSTANCE(ps)], Variable[], "")
         end
-        @catcherror ps startbyte @default ps @closer ps paren parse_comma_sep(ps, sig)
+        @catcherror ps @default ps @closer ps paren parse_comma_sep(ps, sig)
         next(ps)
-        push!(sig.args, INSTANCE(ps))
-        sig.span = ps.nt.startbyte - start1
+        push!(sig, INSTANCE(ps))
         @default ps @closer ps inwhere @closer ps ws @closer ps block while !closer(ps)
-            @catcherror ps startbyte sig = parse_compound(ps, sig)
+            @catcherror ps sig = parse_compound(ps, sig)
         end
     else
-        @catcherror ps startbyte sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_expression(ps)
+        @catcherror ps sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_expression(ps)
     end
-    
+
     while ps.nt.kind == Tokens.WHERE
-        @catcherror ps startbyte sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_compound(ps, sig)
+        @catcherror ps sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_compound(ps, sig)
     end
 
     if sig isa EXPR{InvisBrackets} && !(sig.args[2] isa EXPR{TupleH})
-        sig = EXPR{TupleH}(sig.args, sig.span, Variable[], "")
+        sig = EXPR{TupleH}(sig.args, Variable[], "")
     end
 
     _get_sig_defs!(sig)
 
     block = EXPR{Block}(EXPR[], 0, Variable[], "")
-    @catcherror ps startbyte @default ps @scope ps Scope{Tokens.FUNCTION} parse_block(ps, block, start_col)
-    
+    @catcherror ps @default ps @scope ps Scope{Tokens.FUNCTION} parse_block(ps, block, start_col)
+
 
     # Construction
     if isempty(block.args)
@@ -52,14 +49,14 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     else
         args = EXPR[sig, block]
     end
-    
+
     next(ps)
-    
-    ret = EXPR{FunctionDef}(EXPR[kw], ps.nt.startbyte - startbyte, Variable[], "")
+
+    ret = EXPR{FunctionDef}(EXPR[kw], Variable[], "")
     for a in args
-        push!(ret.args, a)
+        push!(ret, a)
     end
-    push!(ret.args, INSTANCE(ps))
+    push!(ret, INSTANCE(ps))
 
     ret.defs = [Variable(Expr(_get_fname(sig)), :Function, ret)]
     return ret
@@ -71,82 +68,71 @@ end
 Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
 """
 function parse_call(ps::ParseState, ret::EXPR{OPERATOR{PlusOp,Tokens.EX_OR,false}})
-    startbyte = ps.t.startbyte
     arg = @precedence ps 20 parse_expression(ps)
-    ret = EXPR{UnarySyntaxOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
+    ret = EXPR{UnarySyntaxOpCall}(EXPR[ret, arg], Variable[], "")
     return ret
 end
 function parse_call(ps::ParseState, ret::EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}})
-    startbyte = ps.t.startbyte
     arg = @precedence ps 20 parse_expression(ps)
-    ret = EXPR{UnarySyntaxOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
+    ret = EXPR{UnarySyntaxOpCall}(EXPR[ret, arg], Variable[], "")
     return ret
 end
 function parse_call(ps::ParseState, ret::EXPR{OP}) where OP <: OPERATOR{TimesOp,Tokens.AND}
-    startbyte = ps.t.startbyte
     arg = @precedence ps 20 parse_expression(ps)
-    ret = EXPR{UnarySyntaxOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
+    ret = EXPR{UnarySyntaxOpCall}(EXPR[ret, arg], Variable[], "")
     return ret
 end
 function parse_call(ps::ParseState, ret::EXPR{OPERATOR{ComparisonOp,Tokens.ISSUBTYPE,false}})
-    startbyte = ps.t.startbyte
     arg = @precedence ps 13 parse_expression(ps)
-    ret = EXPR{Call}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
+    ret = EXPR{Call}(EXPR[ret; arg.args], Variable[], "")
     return ret
 end
 
 function parse_call(ps::ParseState, ret::EXPR{OPERATOR{ComparisonOp,Tokens.ISSUPERTYPE,false}})
-    startbyte = ps.t.startbyte
     arg = @precedence ps 13 parse_expression(ps)
-    ret = EXPR{Call}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
+    ret = EXPR{Call}(EXPR[ret; arg.args], Variable[], "")
     return ret
 end
 
 function parse_call(ps::ParseState, ret::EXPR{OP}) where OP <: OPERATOR{20,Tokens.NOT}
-    startbyte = ps.t.startbyte
     arg = @precedence ps 13 parse_expression(ps)
     if arg isa EXPR{TupleH}
-        ret = EXPR{Call}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
+        ret = EXPR{Call}(EXPR[ret; arg.args], Variable[], "")
     else
-        ret = EXPR{UnaryOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
+        ret = EXPR{UnaryOpCall}(EXPR[ret, arg], Variable[], "")
     end
     return ret
 end
 
 function parse_call(ps::ParseState, ret::EXPR{OP}) where OP <: OPERATOR{PlusOp,Tokens.PLUS}
-    startbyte = ps.t.startbyte
     arg = @precedence ps 13 parse_expression(ps)
     if arg isa EXPR{TupleH}
-        ret = EXPR{Call}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
+        ret = EXPR{Call}(EXPR[ret; arg.args], Variable[], "")
     else
-        ret = EXPR{UnaryOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
+        ret = EXPR{UnaryOpCall}(EXPR[ret, arg], Variable[], "")
     end
     return ret
 end
 
 function parse_call(ps::ParseState, ret::EXPR{OP}) where OP <: OPERATOR{PlusOp,Tokens.MINUS}
-    startbyte = ps.t.startbyte
     arg = @precedence ps 13 parse_expression(ps)
     if arg isa EXPR{TupleH}
-        ret = EXPR{Call}(EXPR[ret; arg.args], ret.span + arg.span, Variable[], "")
+        ret = EXPR{Call}(EXPR[ret; arg.args], Variable[], "")
     else
-        ret = EXPR{UnaryOpCall}(EXPR[ret, arg], ret.span + arg.span, Variable[], "")
+        ret = EXPR{UnaryOpCall}(EXPR[ret, arg], Variable[], "")
     end
     return ret
 end
 
 function parse_call(ps::ParseState, ret)
-    startbyte = ps.t.startbyte
-    
     next(ps)
-    ret = EXPR{Call}(EXPR[ret, INSTANCE(ps)], ret.span - ps.t.startbyte, Variable[], "")
+    ret = EXPR{Call}(EXPR[ret, INSTANCE(ps)], Variable[], "")
     format_lbracket(ps)
     @default ps @closer ps paren parse_comma_sep(ps, ret)
     next(ps)
-    push!(ret.args, INSTANCE(ps))
+    push!(ret, INSTANCE(ps))
     format_rbracket(ps)
-    ret.span += ps.nt.startbyte
-    
+
     # if length(ret.args) > 0 && ismacro(ret.args[1])
     #     ret.head = MACROCALL
     # end
@@ -160,23 +146,21 @@ end
 
 
 function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, formatcomma = true)
-    startbyte = ps.nt.startbyte
-
-    @catcherror ps startbyte @nocloser ps inwhere @noscope ps @nocloser ps newline @closer ps comma while !closer(ps)
+    @catcherror ps @nocloser ps inwhere @noscope ps @nocloser ps newline @closer ps comma while !closer(ps)
         block && (ps.trackscope = true)
         a = parse_expression(ps)
 
         if kw && !ps.closer.brace && a isa EXPR{BinarySyntaxOpCall} && a.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
-            a = EXPR{Kw}(a.args, a.span, Variable[], "")
+            a = EXPR{Kw}(a.args, Variable[], "")
             # remove format message for kw args
             if !isempty(ps.diagnostics) && ps.nt.startbyte - a.args[3].span - a.args[2].span <= last(last(ps.diagnostics).loc) <= ps.nt.startbyte - a.args[3].span
                 pop!(ps.diagnostics)
             end
         end
-        push!(ret.args, a)
+        push!(ret, a)
         if ps.nt.kind == Tokens.COMMA
             next(ps)
-            push!(ret.args, INSTANCE(ps))
+            push!(ret, INSTANCE(ps))
             if formatcomma
                 format_comma(ps)
             else
@@ -196,34 +180,32 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, fo
             #     _track_assignment(ps, last(body.args).args[1], last(body.args).args[3], last(body.args).defs)
             # end
             @nocloser ps newline @closer ps comma while @nocloser ps semicolon !closer(ps)
-                @catcherror ps startbyte a = parse_expression(ps)
-                push!(body.args, a)
-                body.span += a.span
+                @catcherror ps a = parse_expression(ps)
+                push!(body, a)
             end
-            push!(ret.args, body)
+            push!(ret, body)
             return body
         else
             kw = true
-            ps.nt.kind == Tokens.RPAREN && return 
-            paras = EXPR{Parameters}(EXPR[], -ps.nt.startbyte, Variable[], "")
+            ps.nt.kind == Tokens.RPAREN && return
+            paras = EXPR{Parameters}(EXPR[], Variable[], "")
             @nocloser ps inwhere @nocloser ps newline @nocloser ps semicolon @closer ps comma while !closer(ps)
-                @catcherror ps startbyte a = parse_expression(ps)
+                @catcherror ps a = parse_expression(ps)
                 if kw && !ps.closer.brace && a isa EXPR{BinarySyntaxOpCall} && a.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
-                    a = EXPR{Kw}(a.args, a.span, Variable[], "")
+                    a = EXPR{Kw}(a.args, Variable[], "")
                     # remove format message for kw args
                     if !isempty(ps.diagnostics) && ps.nt.startbyte - a.args[3].span - a.args[2].span <= last(last(ps.diagnostics).loc) <= ps.nt.startbyte - a.args[3].span
                         pop!(ps.diagnostics)
                     end
                 end
-                push!(paras.args, a)
+                push!(paras, a)
                 if ps.nt.kind == Tokens.COMMA
                     next(ps)
-                    push!(paras.args, INSTANCE(ps))
+                    push!(paras, INSTANCE(ps))
                     format_comma(ps)
                 end
             end
-            paras.span += ps.nt.startbyte
-            push!(ret.args, paras)
+            push!(ret, paras)
         end
     end
 end
@@ -232,7 +214,7 @@ end
 function _get_sig_defs!(sig1)
     params = _get_fparams(sig1)
     sig1.defs = Variable[Variable(p, :DataType, sig1) for p in params]
-    
+
     sig = sig1
     while sig isa EXPR{BinarySyntaxOpCall} && (sig.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} || sig.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}})
         if sig.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}}
@@ -240,7 +222,7 @@ function _get_sig_defs!(sig1)
         end
         sig = sig.args[1]
     end
-    
+
     # Add variable def for struct call overloads
     fname = _get_fname(sig)
     if fname isa EXPR{InvisBrackets} && fname.args[2] isa EXPR{BinarySyntaxOpCall} && fname.args[2].args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}
@@ -309,7 +291,7 @@ function _get_fparams(x::EXPR{Curly}, args = Symbol[])
                 push!(args, Expr(a).args[1])
             end
         end
-    end 
+    end
     unique(args)
 end
 
@@ -336,7 +318,7 @@ end
 _get_fname(sig::EXPR{FunctionDef}) = _get_fname(sig.args[2])
 _get_fname(sig::EXPR{IDENTIFIER}) = sig
 _get_fname(sig::EXPR{Tuple}) = NOTHING
-function _get_fname(sig::EXPR{BinarySyntaxOpCall}) 
+function _get_fname(sig::EXPR{BinarySyntaxOpCall})
     if sig.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} || sig.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}}
         return _get_fname(sig.args[1])
     else
