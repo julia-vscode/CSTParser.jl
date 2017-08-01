@@ -29,21 +29,21 @@ function parse_module(ps::ParseState)
     return ret
 end
 
-function parse_dot_mod(ps::ParseState, colon = false)
+function parse_dot_mod(ps::ParseState, is_colon = false)
     args = EXPR[]
 
     while ps.nt.kind == Tokens.DOT || ps.nt.kind == Tokens.DDOT || ps.nt.kind == Tokens.DDDOT
         next(ps)
         d = INSTANCE(ps)
         if d isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}}
-            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, 1:1, Variable[], ""))
         elseif d isa EXPR{OPERATOR{ColonOp,Tokens.DDOT,false}}
-            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
-            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, 1:1, Variable[], ""))
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, 1:1, Variable[], ""))
         elseif d isa EXPR{OPERATOR{DddotOp,Tokens.DDDOT,false}}
-            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
-            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
-            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, Variable[], ""))
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, 1:1, Variable[], ""))
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, 1:1, Variable[], ""))
+            push!(args, EXPR{OPERATOR{DotOp,Tokens.DOT,false}}(EXPR[], 1, 1:1, Variable[], ""))
         end
     end
 
@@ -59,8 +59,7 @@ function parse_dot_mod(ps::ParseState, colon = false)
             next(ps)
             next(ps)
             a = INSTANCE(ps)
-            a = EXPR{IDENTIFIER}(EXPR[], span(a) + 1, Variable[], string("@", a.val))
-            push!(args, a)
+            push!(args, EXPR{IDENTIFIER}(EXPR[], span(a) + 1, 1:(span(a) + 1), Variable[], string("@", a.val)))
         elseif ps.nt.kind == Tokens.LPAREN
             next(ps)
             a = EXPR{InvisBrackets}(EXPR[INSTANCE(ps)], Variable[], "")
@@ -71,9 +70,9 @@ function parse_dot_mod(ps::ParseState, colon = false)
         elseif ps.nt.kind == Tokens.EX_OR
             @catcherror ps a = @closer ps comma parse_expression(ps)
             push!(args, a)
-        elseif !colon && isoperator(ps.nt) && ps.ndot
+        elseif !is_colon && isoperator(ps.nt) && ps.ndot
             next(ps)
-            push!(args, EXPR{OPERATOR{precedence(ps.t),ps.t.kind,false}}(EXPR[], ps.nt.startbyte - ps.t.startbyte - 1, Variable[], ""))
+            push!(args, EXPR{OPERATOR{precedence(ps.t),ps.t.kind,false}}(EXPR[], ps.nt.startbyte - ps.t.startbyte - 1, 1 + (0:ps.t.endbyte - ps.t.startbyte), Variable[], ""))
         else
             next(ps)
             push!(args, INSTANCE(ps))
@@ -83,7 +82,7 @@ function parse_dot_mod(ps::ParseState, colon = false)
             next(ps)
             push!(args, INSTANCE(ps))
         elseif isoperator(ps.nt) && ps.ndot
-            push!(args, EXPR{PUNCTUATION{Tokens.DOT}}(EXPR[], 1, Variable[], ""))
+            push!(args, EXPR{PUNCTUATION{Tokens.DOT}}(EXPR[], 1, 1:1, Variable[], ""))
         else
             break
         end
@@ -113,7 +112,7 @@ function parse_imports(ps::ParseState)
         ret.defs = [Variable(Expr(ret), :IMPORTS, ret)]
     elseif ps.nt.kind == Tokens.COLON
 
-        ret = EXPR{kwt}(EXPR[kw;arg], 0, Variable[], "")
+        ret = EXPR{kwt}(EXPR[kw;arg], Variable[], "")
         t = 0
 
         next(ps)
@@ -134,7 +133,7 @@ function parse_imports(ps::ParseState)
             ret.defs = [Variable(Expr(ret), :IMPORTS, ret)]
         end
     else
-        ret = EXPR{kwt}(EXPR[kw;arg], 0, Variable[], "")
+        ret = EXPR{kwt}(EXPR[kw;arg], Variable[], "")
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(ret, INSTANCE(ps))

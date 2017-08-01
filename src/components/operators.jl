@@ -168,7 +168,8 @@ function parse_unary(ps::ParseState, op::EXPR{OPERATOR{P,K,dot}}) where {P, K, d
     if (op isa EXPR{OPERATOR{PlusOp,Tokens.PLUS,false}} || op isa EXPR{OPERATOR{PlusOp,Tokens.MINUS,false}}) && (ps.nt.kind ==  Tokens.INTEGER || ps.nt.kind == Tokens.FLOAT) && isemptyws(ps.ws)
         next(ps)
         arg = INSTANCE(ps)
-        arg.span += op.span
+        arg.fullspan += op.fullspan
+        arg.span = first(arg.span):(last(arg.span)+length(op.span))
         if op isa EXPR{OPERATOR{PlusOp,Tokens.MINUS,false}}
             arg.val = string("-", arg.val)
         end
@@ -306,7 +307,7 @@ function parse_chain_operator(ps::ParseState, ret::EXPR{ChainOpCall}, op::EXPR{O
 end
 
 function parse_chain_operator(ps::ParseState, ret::EXPR{BinaryOpCall}, op::EXPR{OPERATOR{P,K,false}}) where {P, K}
-    if ret.args[2] isa EXPR{OPERATOR{P,K,false}} && ret.args[2].span > 0
+    if ret.args[2] isa EXPR{OPERATOR{P,K,false}} && span(ret.args[2]) > 0
         @catcherror ps nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
         ret = EXPR{ChainOpCall}(ret.args, Variable[], "")
         push!(ret, op)
@@ -379,7 +380,8 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{DotOp,Token
     elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA || ps.nt.kind == Tokens.WHERE
         next(ps)
         # nextarg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, Symbol(lowercase(string(ps.t.kind))))
-        nextarg = EXPR{IDENTIFIER}(EXPR[], ps.t.endbyte-ps.t.startbyte+1, Variable[], lowercase(string(ps.t.kind)))
+        ispan = ps.t.endbyte-ps.t.startbyte+1
+        nextarg = EXPR{IDENTIFIER}(EXPR[], ispan, 1:ispan, Variable[], lowercase(string(ps.t.kind)))
     elseif ps.nt.kind == Tokens.COLON
         next(ps)
         op2 = INSTANCE(ps)

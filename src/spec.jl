@@ -3,38 +3,54 @@ mutable struct Variable
     t
     val
 end
+
+# Invariants:
+# if !isempty(e.args)
+#   e.fullspan == sum(x->x.fullspan, e.args)
+#   first(e.span) == first(first(e.args).span)
+#   last(e.span) == sum(x->x.fullspan, e.args[1:end-1]) + last(last(e.args).span)
+# end
 mutable struct EXPR{T}
     args::Vector
-    span::Int
+    # The full width of this expression including any whitespace
+    fullspan::Int
+    # The range of bytes within the fullspan that constitute the actual expression,
+    # excluding any leading/trailing whitespace or other trivia. 1-indexed
+    span::UnitRange{Int}
     defs::Vector{Variable}
     val::String
 end
 
-span(x::EXPR) = x.span
+span(x::EXPR) = length(x.span)
 
 function update_span!(x::EXPR)
-    x.span = isempty(x.args) ? 0 : sum(y->y.span, x.args)
+    isempty(x.args) && return
+    x.fullspan = isempty(x.args) ? 0 : sum(y->y.fullspan, x.args)
+    x.span = first(first(x.args).span):(x.fullspan - last(x.args).fullspan + last(last(x.args).span))
 end
 
 function EXPR{T}(args::Vector, defs::Vector, val::String) where {T}
-    ret = EXPR{T}(args, 0, defs, val)
+    ret = EXPR{T}(args, 0, 1:0, defs, val)
     update_span!(ret)
     ret
 end
 
 function Base.push!(e::EXPR, arg)
-    e.span += arg.span
+    e.span = first(e.span):(e.fullspan + last(arg.span))
+    e.fullspan += arg.fullspan
     push!(e.args, arg)
 end
 
 function Base.unshift!(e::EXPR, arg)
-    e.span += arg.span
+    e.fullspan += arg.fullspan
+    e.span = first(arg.span):last(e.span)
     unshift!(e.args, arg)
 end
 
 function Base.pop!(e::EXPR)
     arg = pop!(e.args)
-    e.span -= arg.span
+    e.fullspan -= arg.fullspan
+    e.span = first(e.span):(e.fullspan - last(e.args).fullspan + last(last(e.args).span))
     arg
 end
 
@@ -45,7 +61,8 @@ end
 
 function Base.append!(a::EXPR, b::EXPR)
     append!(a.args, b.args)
-    a.span += b.span
+    a.fullspan += b.fullspan
+    a.span = first(a.span):last(b.span)
 end
 
 abstract type IDENTIFIER end
@@ -59,30 +76,29 @@ abstract type ERROR end
 
 
 function LITERAL(ps::ParseState)
-    span = ps.nt.startbyte - ps.t.startbyte
     if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING ||
        ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
         return parse_string_or_cmd(ps)
     else
-        EXPR{LITERAL{ps.t.kind}}(EXPR[], span, Variable[], ps.t.val)
+        EXPR{LITERAL{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), Variable[], ps.t.val)
     end
 end
 
-IDENTIFIER(ps::ParseState) = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], ps.t.val)
+IDENTIFIER(ps::ParseState) = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), Variable[], ps.t.val)
 
-OPERATOR(ps::ParseState) = EXPR{OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], "")
+OPERATOR(ps::ParseState) = EXPR{OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), Variable[], "")
 
-KEYWORD(ps::ParseState) = EXPR{KEYWORD{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], "")
+KEYWORD(ps::ParseState) = EXPR{KEYWORD{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), Variable[], "")
 
-PUNCTUATION(ps::ParseState) = EXPR{PUNCTUATION{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, Variable[], "")
+PUNCTUATION(ps::ParseState) = EXPR{PUNCTUATION{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), Variable[], "")
 
 function INSTANCE(ps::ParseState)
     span = ps.nt.startbyte - ps.t.startbyte
-    ps.errored && return EXPR{ERROR}(EXPR[], span, Variable[], "")
+    ps.errored && return EXPR{ERROR}(EXPR[], span, 1:(ps.t.endbyte-ps.t.startbyte+1), Variable[], "")
     if ps.t.kind == Tokens.ENDMARKER
         ps.errored = true
         push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedInputEnd}(ps.t.startbyte + (0:0), [], "Unexpected end of input"))
-        return EXPR{ERROR}(EXPR[], span, Variable[], "Unexpected end of input")
+        return EXPR{ERROR}(EXPR[], span, 1:(ps.t.endbyte-ps.t.startbyte+1), Variable[], "Unexpected end of input")
     end
     return isidentifier(ps.t) ? IDENTIFIER(ps) :
         isliteral(ps.t) ? LITERAL(ps) :
@@ -99,10 +115,10 @@ end
 # heads
 
 
-const TRUE = EXPR{LITERAL{Tokens.TRUE}}(EXPR[], 0, Variable[], "")
-const FALSE = EXPR{LITERAL{Tokens.FALSE}}(EXPR[], 0, Variable[], "")
-const NOTHING = EXPR{HEAD{:nothing}}(EXPR[], 0, Variable[], "nothing")
-const GlobalRefDOC = EXPR{HEAD{:globalrefdoc}}(EXPR[], 0, Variable[], "globalrefdoc")
+const TRUE = EXPR{LITERAL{Tokens.TRUE}}(EXPR[], 0, 0:-1, Variable[], "")
+const FALSE = EXPR{LITERAL{Tokens.FALSE}}(EXPR[], 0, 0:-1, Variable[], "")
+const NOTHING = EXPR{HEAD{:nothing}}(EXPR[], 0, 0:-1, Variable[], "nothing")
+const GlobalRefDOC = EXPR{HEAD{:globalrefdoc}}(EXPR[], 0, 0:-1, Variable[], "globalrefdoc")
 
 
 

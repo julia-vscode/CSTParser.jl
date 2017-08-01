@@ -10,7 +10,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
     end
 
     _get_sig_defs!(sig)
-    block = EXPR{Block}(EXPR[], 0, Variable[], "")
+    block = EXPR{Block}(EXPR[], 0, 1:0, Variable[], "")
     @catcherror ps @default ps parse_block(ps, block)
 
     next(ps)
@@ -33,14 +33,14 @@ function parse_macrocall(ps::ParseState)
             next(ps)
             op = INSTANCE(ps)
             if ps.nt.kind != Tokens.IDENTIFIER
-                return EXPR{ERROR}(EXPR[], 0, Variable[], "Invalid macro name")
+                return EXPR{ERROR}(EXPR[], 0, 1:0, Variable[], "Invalid macro name")
             end
             next(ps)
             nextarg = INSTANCE(ps)
             mname = EXPR{BinarySyntaxOpCall}(EXPR[mname, op, Quotenode(nextarg)], Variable[], "")
         end
     end
-    ret = EXPR{MacroCall}(EXPR[mname], 0, Variable[], "")
+    ret = EXPR{MacroCall}(EXPR[mname], Variable[], "")
 
     if ps.nt.kind == Tokens.COMMA
         return ret

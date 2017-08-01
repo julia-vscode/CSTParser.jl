@@ -83,7 +83,7 @@ function parse_expression(ps::ParseState)
         return error_unexpected(ps, ps.t.startbyte, ps.t)
     else
         ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unknown error")
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], Variable[], "Unknown error")
     end
 
     while !closer(ps) && !(ps.closer.precedence == DotOp && ismacro(ret))
@@ -119,7 +119,7 @@ function parse_compound(ps::ParseState, ret)
     elseif ps.nt.kind == Tokens.DO
         ret = parse_do(ps, ret)
     elseif isajuxtaposition(ps, ret)
-        op = EXPR{OPERATOR{TimesOp,Tokens.STAR,false}}(EXPR[], 0, Variable[], "")
+        op = EXPR{OPERATOR{TimesOp,Tokens.STAR,false}}(EXPR[], 0, 1:0, Variable[], "")
         ret = parse_operator(ps, ret, op)
     elseif ps.nt.kind == Tokens.LPAREN && isemptyws(ps.ws)
         ret = @closer ps paren parse_call(ps, ret)
@@ -144,7 +144,7 @@ function parse_compound(ps::ParseState, ret)
     elseif ret isa EXPR{x_Str} && ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         arg = INSTANCE(ps)
-        push!(ret, EXPR{LITERAL{Tokens.STRING}}(EXPR[], arg.span, Variable[], arg.val))
+        push!(ret, EXPR{LITERAL{Tokens.STRING}}(EXPR[], arg.fullspan, arg.span, Variable[], arg.val))
     elseif (ret isa EXPR{IDENTIFIER} || (ret isa EXPR{BinarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}})) && ps.nt.kind == Tokens.CMD
         next(ps)
         @catcherror ps arg = parse_string_or_cmd(ps, ret)
@@ -152,11 +152,11 @@ function parse_compound(ps::ParseState, ret)
     elseif ret isa EXPR{x_Cmd} && ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         arg = INSTANCE(ps)
-        push!(ret, EXPR{LITERAL{Tokens.STRING}}(EXPR[], arg.span, Variable[], arg.val))
+        push!(ret, EXPR{LITERAL{Tokens.STRING}}(EXPR[], arg.fullspan, 1:span(arg), Variable[], arg.val))
     elseif ret isa EXPR{UnarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{16,Tokens.PRIME,d1}} where d1
         # prime operator followed by an identifier has an implicit multiplication
         @catcherror ps nextarg = @precedence ps 11 parse_expression(ps)
-        ret = EXPR{BinaryOpCall}(EXPR[ret, EXPR{OPERATOR{TimesOp,Tokens.STAR,false}}(EXPR[], 0, Variable[], ""), nextarg], Variable[], "")
+        ret = EXPR{BinaryOpCall}(EXPR[ret, EXPR{OPERATOR{TimesOp,Tokens.STAR,false}}(EXPR[], 0, 1:0, Variable[], ""), nextarg], Variable[], "")
 ################################################################################
 # Everything below here is an error
 ################################################################################
@@ -169,19 +169,19 @@ function parse_compound(ps::ParseState, ret)
             # TODO: Which operator? How do we get at the spelling
             0:0, [], "Unexpected operator"
         ))
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected operator")
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, 0:-1, Variable[], "Unexpected operator")
     elseif ps.nt.kind == Tokens.IDENTIFIER
         ps.errored = true
         push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedIdentifier}(
             ps.nt.startbyte:ps.nt.endbyte, [], "Unexpected identifier"
         ))
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unexpected identifier")
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, 0:-1, Variable[], "Unexpected identifier")
     else
         ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unknown error")
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, 0:-1, Variable[], "Unknown error")
     end
     if ps.errored
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, Variable[], "Unknown error")
+        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, 0:-1, Variable[], "Unknown error")
     end
     return ret
 end
@@ -261,10 +261,10 @@ function parse(ps::ParseState, cont = false)
     curr_line = 0
 
     if cont
-        top = EXPR{FileH}(EXPR[], 0, Variable[], "")
+        top = EXPR{FileH}(EXPR[], 0, 1:0, Variable[], "")
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
-            push!(top, EXPR{LITERAL{nothing}}(EXPR[], ps.nt.startbyte, Variable[], "comments"))
+            push!(top, EXPR{LITERAL{nothing}}(EXPR[], ps.nt.startbyte, 1:ps.nt.startbyte, Variable[], "comments"))
         end
 
         while !ps.done && !ps.errored
@@ -284,7 +284,7 @@ function parse(ps::ParseState, cont = false)
     else
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
-            top = EXPR{LITERAL{nothing}}(EXPR[], ps.nt.startbyte, Variable[], "comments")
+            top = EXPR{LITERAL{nothing}}(EXPR[], ps.nt.startbyte, 1:ps.nt.startbyte, Variable[], "comments")
         else
             top = parse_doc(ps)
             last_line = ps.nt.startpos[1]

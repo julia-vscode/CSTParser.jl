@@ -2,7 +2,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BEGIN}})
     # Parsing
     kw = INSTANCE(ps)
     format_kw(ps)
-    arg = EXPR{Block}(EXPR[], 0, Variable[], "")
+    arg = EXPR{Block}(EXPR[], 0, 1:0, Variable[], "")
     @catcherror ps arg = @default ps parse_block(ps, arg, Tokens.Kind[Tokens.END], true)
 
     next(ps)

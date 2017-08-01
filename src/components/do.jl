@@ -16,7 +16,7 @@ function parse_do(ps::ParseState, ret)
             push!(args, INSTANCE(ps))
         end
     end
-    block = EXPR{Block}(EXPR[], 0, Variable[], "")
+    block = EXPR{Block}(EXPR[], 0, 1:0, Variable[], "")
     @catcherror ps @default ps parse_block(ps, block)
 
     # Construction

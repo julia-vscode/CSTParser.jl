@@ -98,7 +98,7 @@ function parse_struct(ps::ParseState, mutable)
     kw = INSTANCE(ps)
     format_kw(ps)
     @catcherror ps sig = @default ps @closer ps block @closer ps ws parse_expression(ps)
-    block = EXPR{Block}(EXPR[], 0, Variable[], "")
+    block = EXPR{Block}(EXPR[], 0, 1:0, Variable[], "")
     @catcherror ps @default ps parse_block(ps, block)
 
     # Construction

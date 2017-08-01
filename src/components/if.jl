@@ -11,7 +11,7 @@ function parse_if(ps::ParseState, nested = false)
     format_kw(ps)
     @catcherror ps cond = @default ps @closer ps block @closer ps ws parse_expression(ps)
 
-    ifblock = EXPR{Block}(EXPR[], 0, Variable[], "")
+    ifblock = EXPR{Block}(EXPR[], 0, 1:0, Variable[], "")
     @catcherror ps @default ps @closer ps ifelse parse_block(ps, ifblock, Tokens.Kind[Tokens.END, Tokens.ELSE, Tokens.ELSEIF])
 
     if nested
@@ -20,7 +20,7 @@ function parse_if(ps::ParseState, nested = false)
         ret = EXPR{If}(EXPR[kw, cond, ifblock], Variable[], "")
     end
 
-    elseblock = EXPR{Block}(EXPR[], 0, Variable[], "")
+    elseblock = EXPR{Block}(EXPR[], 0, 1:0, Variable[], "")
     if ps.nt.kind == Tokens.ELSEIF
         next(ps)
         push!(ret, INSTANCE(ps))

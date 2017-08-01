@@ -33,7 +33,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
 
     _get_sig_defs!(sig)
 
-    block = EXPR{Block}(EXPR[], 0, Variable[], "")
+    block = EXPR{Block}(EXPR[], 0, 1:0, Variable[], "")
     @catcherror ps @default ps @scope ps Scope{Tokens.FUNCTION} parse_block(ps, block)
 
 

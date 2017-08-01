@@ -22,7 +22,9 @@ When trying to make an `INSTANCE` from a string token we must check for
 interpolating operators.
 """
 function parse_string_or_cmd(ps::ParseState, prefixed = false)
-    sspan = ps.nt.startbyte - ps.t.startbyte
+    sfullspan = ps.nt.startbyte - ps.t.startbyte
+    sspan = 1 + (0:(ps.t.endbyte-ps.t.startbyte))
+
     istrip = (ps.t.kind == Tokens.TRIPLE_STRING) || (ps.t.kind == Tokens.TRIPLE_CMD)
     iscmd = ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
 
@@ -65,17 +67,17 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     # there are interpolations in the string
     if prefixed != false || iscmd
         val = istrip ? ps.t.val[4:end-3] : ps.t.val[2:end-1]
-        expr = EXPR{LITERAL{ps.t.kind}}(Expr[], sspan, Variable[],
+        expr = EXPR{LITERAL{ps.t.kind}}(Expr[], sfullspan, sspan, Variable[],
             iscmd ? replace(val, "\\`", "`") :
                     replace(val, "\\\"", "\""))
         if istrip
             adjust_lcp(expr)
-            ret = EXPR{StringH}(EXPR[expr], sspan, Variable[], "")
+            ret = EXPR{StringH}(EXPR[expr], sfullspan, sspan, Variable[], "")
         else
             return expr
         end
     else
-        ret = EXPR{StringH}(EXPR[], sspan, Variable[], "")
+        ret = EXPR{StringH}(EXPR[], sfullspan, sspan, Variable[], "")
         input = IOBuffer(ps.t.val)
         seek(input, istrip ? 3 : 1)
         b = IOBuffer()
@@ -83,7 +85,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             if eof(input)
                 lspan = position(b)
                 str = tostr(b)[1:end-(istrip?3:1)]
-                ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan, Variable[], str)
+                ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan, 1:lspan, Variable[], str)
                 (isempty(ret.args) || !isempty(str)) && (push!(ret.args, ex); istrip && adjust_lcp(ex, true))
                 break
             end
@@ -95,7 +97,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 lspan = position(b)
                 str = tostr(b)
                 if !isempty(str)
-                    ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan, Variable[], str)
+                    ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan, 1:lspan, Variable[], str)
                     push!(ret.args, ex); istrip && adjust_lcp(ex)
                 end
                 if peekchar(input) == '('
@@ -112,7 +114,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     next(ps1)
                     t = INSTANCE(ps1)
                     push!(ret.args, t)
-                    seek(input, pos+span(t)-length(ps1.ws.val))
+                    seek(input, pos+t.fullspan-length(ps1.ws.val))
                 end
             else
                 write(b, c)

@@ -181,7 +181,7 @@ macro catcherror(ps, body)
     quote
         $(esc(body))
         if $(esc(ps)).errored
-            return EXPR{ERROR}(EXPR[INSTANCE($(esc(ps)))], 0, Variable[], "Unknown error")
+            return EXPR{ERROR}(EXPR[INSTANCE($(esc(ps)))], 0, 0:-1, Variable[], "Unknown error")
         end
     end
 end
@@ -462,9 +462,9 @@ function check_span(x, neq = [])
     s = 0
     for a in x.args
         check_span(a, neq)
-        s += a.span
+        s += a.fullspan
     end
-    if length(x.args) > 0 && s != x.span
+    if length(x.args) > 0 && s != x.fullspan
         push!(neq, x)
     end
     neq

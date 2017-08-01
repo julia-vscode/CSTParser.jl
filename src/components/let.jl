@@ -12,7 +12,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
             format_comma(ps)
         end
     end
-    block = EXPR{Block}(EXPR[], 0, Variable[], "")
+    block = EXPR{Block}(EXPR[], 0, 1:0, Variable[], "")
     @catcherror ps @default ps parse_block(ps, block)
 
     # Construction
