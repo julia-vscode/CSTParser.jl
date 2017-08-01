@@ -1,6 +1,4 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
-    start_col = ps.t.startpos[2] + 4
-
     # Parsing
     ret = EXPR{Let}(EXPR[INSTANCE(ps)], Variable[], "")
     format_kw(ps)
@@ -15,7 +13,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
         end
     end
     block = EXPR{Block}(EXPR[], 0, Variable[], "")
-    @catcherror ps @default ps parse_block(ps, block, start_col)
+    @catcherror ps @default ps parse_block(ps, block)
 
     # Construction
     push!(ret, block)

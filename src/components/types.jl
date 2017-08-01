@@ -94,14 +94,12 @@ end
 
 
 function parse_struct(ps::ParseState, mutable)
-    start_col = ps.t.startpos[2] + 4
-
     # Parsing
     kw = INSTANCE(ps)
     format_kw(ps)
     @catcherror ps sig = @default ps @closer ps block @closer ps ws parse_expression(ps)
     block = EXPR{Block}(EXPR[], 0, Variable[], "")
-    @catcherror ps @default ps parse_block(ps, block, start_col)
+    @catcherror ps @default ps parse_block(ps, block)
 
     # Construction
     T = mutable == TRUE ? Tokens.TYPE : Tokens.IMMUTABLE

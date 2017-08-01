@@ -341,7 +341,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                     ps = ParseState(str)
                     io = IOBuffer(str)
                     x, ps = parse(ps, true)
-                    sp = span(x)
+                    sp = check_span(x)
                     if length(x.args) > 0 && x.args[1] isa EXPR{LITERAL{nothing}}
                         shift!(x.args)
                     end
@@ -452,16 +452,16 @@ function compare(x::Expr, y::Expr)
 end
 
 """
-    span(x, neq = [])
+check_span(x, neq = [])
 
 Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
-function span(x::EXPR{StringH}, neq = []) end
-function span(x, neq = [])
+function check_span(x::EXPR{StringH}, neq = []) end
+function check_span(x, neq = [])
     s = 0
     for a in x.args
-        span(a, neq)
+        check_span(a, neq)
         s += a.span
     end
     if length(x.args) > 0 && s != x.span

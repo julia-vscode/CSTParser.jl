@@ -22,7 +22,7 @@ When trying to make an `INSTANCE` from a string token we must check for
 interpolating operators.
 """
 function parse_string_or_cmd(ps::ParseState, prefixed = false)
-    span = ps.nt.startbyte - ps.t.startbyte
+    sspan = ps.nt.startbyte - ps.t.startbyte
     istrip = (ps.t.kind == Tokens.TRIPLE_STRING) || (ps.t.kind == Tokens.TRIPLE_CMD)
     iscmd = ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
 
@@ -65,17 +65,17 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     # there are interpolations in the string
     if prefixed != false || iscmd
         val = istrip ? ps.t.val[4:end-3] : ps.t.val[2:end-1]
-        expr = EXPR{LITERAL{ps.t.kind}}(Expr[], span, Variable[],
+        expr = EXPR{LITERAL{ps.t.kind}}(Expr[], sspan, Variable[],
             iscmd ? replace(val, "\\`", "`") :
                     replace(val, "\\\"", "\""))
         if istrip
             adjust_lcp(expr)
-            ret = EXPR{StringH}(EXPR[expr], span, Variable[], "")
+            ret = EXPR{StringH}(EXPR[expr], sspan, Variable[], "")
         else
             return expr
         end
     else
-        ret = EXPR{StringH}(EXPR[], span, Variable[], "")
+        ret = EXPR{StringH}(EXPR[], sspan, Variable[], "")
         input = IOBuffer(ps.t.val)
         seek(input, istrip ? 3 : 1)
         b = IOBuffer()
@@ -112,7 +112,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     next(ps1)
                     t = INSTANCE(ps1)
                     push!(ret.args, t)
-                    seek(input, pos+t.span-length(ps1.ws.val))
+                    seek(input, pos+span(t)-length(ps1.ws.val))
                 end
             else
                 write(b, c)
@@ -135,7 +135,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     end
 
     ret = (length(ret.args) == 1 && ret.args[1] isa single_string_T) ? ret.args[1] : ret
-    ret.span = span
+    update_span!(ret)
 
     return ret
 end

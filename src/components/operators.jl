@@ -275,7 +275,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{ColonOp,Tok
 
     # Construction
     if ret isa EXPR{BinarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{ColonOp,Tokens.COLON,false}} && length(ret.args) == 3
-        ret = EXPR{ColonOpCall}(ret.args, ret.span, Variable[], "")
+        ret = EXPR{ColonOpCall}(ret.args, Variable[], "")
         push!(ret, op)
         push!(ret, nextarg)
     else

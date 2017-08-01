@@ -1,12 +1,10 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
-    start_col = ps.t.startpos[2] + 4
-
     # Parsing
     kw = INSTANCE(ps)
     format_kw(ps)
     @catcherror ps ranges = @default ps parse_ranges(ps)
     block = EXPR{Block}(EXPR[], 0, Variable[], "")
-    @catcherror ps @default ps parse_block(ps, block, start_col)
+    @catcherror ps @default ps parse_block(ps, block)
     next(ps)
     ret = EXPR{For}(EXPR[kw, ranges, block, INSTANCE(ps)], Variable[], "")
 
@@ -19,7 +17,7 @@ function parse_ranges(ps::ParseState)
     arg = @closer ps range @closer ps comma @closer ps ws parse_expression(ps)
     _track_range_assignment(ps, arg)
     if ps.nt.kind == Tokens.COMMA
-        arg = EXPR{Block}(EXPR[arg], arg.span, Variable[], "")
+        arg = EXPR{Block}(EXPR[arg], Variable[], "")
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(arg, INSTANCE(ps))
@@ -47,14 +45,12 @@ end
 
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
-    start_col = ps.t.startpos[2] + 4
-
     # Parsing
     kw = INSTANCE(ps)
     format_kw(ps)
     @catcherror ps cond = @default ps @closer ps ws parse_expression(ps)
     block = EXPR{Block}(EXPR[], 0, Variable[], "")
-    @catcherror ps @default ps parse_block(ps, block, start_col)
+    @catcherror ps @default ps parse_block(ps, block)
     next(ps)
 
     ret = EXPR{While}(EXPR[kw, cond, block, INSTANCE(ps)], Variable[], "")

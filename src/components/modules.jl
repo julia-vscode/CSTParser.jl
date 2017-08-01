@@ -59,7 +59,7 @@ function parse_dot_mod(ps::ParseState, colon = false)
             next(ps)
             next(ps)
             a = INSTANCE(ps)
-            a = EXPR{IDENTIFIER}(EXPR[], a.span + 1, Variable[], string("@", a.val))
+            a = EXPR{IDENTIFIER}(EXPR[], span(a) + 1, Variable[], string("@", a.val))
             push!(args, a)
         elseif ps.nt.kind == Tokens.LPAREN
             next(ps)

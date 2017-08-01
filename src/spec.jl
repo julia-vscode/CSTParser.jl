@@ -10,6 +10,8 @@ mutable struct EXPR{T}
     val::String
 end
 
+span(x::EXPR) = x.span
+
 function update_span!(x::EXPR)
     x.span = isempty(x.args) ? 0 : sum(y->y.span, x.args)
 end
@@ -196,4 +198,4 @@ abstract type Vcat <: Head end
 abstract type TypedVcat <: Head end
 abstract type Vect <: Head end
 
-Quotenode(x::EXPR) = EXPR{Quotenode}(EXPR[x], x.span, Variable[], "")
+Quotenode(x::EXPR) = EXPR{Quotenode}(EXPR[x], Variable[], "")

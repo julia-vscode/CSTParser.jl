@@ -36,7 +36,7 @@ CommaWS)
 @enum(LintCodes,
 DuplicateArgumentName,
 ArgumentFunctionNameConflict,
-SlurpingPosition, 
+SlurpingPosition,
 KWPosition,
 ImportInFunction,
 DuplicateArgument,
@@ -103,7 +103,7 @@ function format_op(ps, prec)
             diag = Diagnostic{Diagnostics.ExtraWS}(loc, Diagnostics.Action[Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte)], "Unexpected white space around operator")
             push!(ps.diagnostics, diag)
         end
-    elseif ps.t.kind == Tokens.PRIME 
+    elseif ps.t.kind == Tokens.PRIME
         if ps.lws.kind != EmptyWS
             diag = Diagnostic{Diagnostics.ExtraWS}(loc, Diagnostics.Action[Diagnostics.Deletion(ps.ws.startbyte:ps.nt.startbyte),Diagnostics.Deletion(ps.lws.startbyte:ps.t.startbyte)], "Unexpected white space around operator")
             push!(ps.diagnostics, diag)
@@ -161,7 +161,7 @@ end
 
 function format_kw(ps)
     !ps.formatcheck && return
-    if ps.ws.kind == WS 
+    if ps.ws.kind == WS
         if length(ps.ws.val) > 1
             push!(ps.diagnostics, Diagnostic{Diagnostics.ExtraWS}(ps.t.startbyte:ps.nt.startbyte, [Diagnostics.Deletion(ps.ws.startbyte + 1:ps.nt.startbyte)], ""))
         end
@@ -177,7 +177,6 @@ end
 
 function format_typename(ps, sig)
     !ps.formatcheck && return
-#     start_loc = ps.nt.startbyte - sig.span
 #     id = get_id(sig)
 #     sig isa EXPR && return
 #     val = string(id.val)

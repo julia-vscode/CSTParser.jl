@@ -102,7 +102,7 @@ function parse_array(ps::ParseState)
                 ret = EXPR{Vcat}(EXPR[args[1], first_row], Variable[], "")
                 while ps.nt.kind != Tokens.RSQUARE
                     @catcherror ps first_arg = @default ps @closer ps square @closer ps ws @closer ps wsop parse_expression(ps)
-                    push!(ret, EXPR{Row}(EXPR[first_arg], first_arg.span, Variable[], ""))
+                    push!(ret, EXPR{Row}(EXPR[first_arg], Variable[], ""))
                     while ps.nt.kind != Tokens.RSQUARE && ps.ws.kind != NewLineWS && ps.ws.kind != SemiColonWS
                         @catcherror ps a = @default ps @closer ps square @closer ps ws @closer ps wsop parse_expression(ps)
                         push!(last(ret.args), a)

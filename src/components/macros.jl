@@ -1,5 +1,4 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
-    start_col = ps.t.startpos[2] + 4
     kw = INSTANCE(ps)
     format_kw(ps)
     if ps.nt.kind == Tokens.IDENTIFIER
@@ -12,7 +11,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
 
     _get_sig_defs!(sig)
     block = EXPR{Block}(EXPR[], 0, Variable[], "")
-    @catcherror ps @default ps parse_block(ps, block, start_col)
+    @catcherror ps @default ps parse_block(ps, block)
 
     next(ps)
     ret = EXPR{Macro}(EXPR[kw, sig, block, INSTANCE(ps)], Variable[], "")
@@ -38,7 +37,7 @@ function parse_macrocall(ps::ParseState)
             end
             next(ps)
             nextarg = INSTANCE(ps)
-            mname = EXPR{BinarySyntaxOpCall}(EXPR[mname, op, Quotenode(nextarg)], mname.span + op.span + nextarg.span, Variable[], "")
+            mname = EXPR{BinarySyntaxOpCall}(EXPR[mname, op, Quotenode(nextarg)], Variable[], "")
         end
     end
     ret = EXPR{MacroCall}(EXPR[mname], 0, Variable[], "")

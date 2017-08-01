@@ -1,6 +1,4 @@
 function parse_do(ps::ParseState, ret)
-    start_col = ps.nt.startpos[2] - ret.span + 4
-
     # Parsing
     next(ps)
     kw = INSTANCE(ps)
@@ -19,7 +17,7 @@ function parse_do(ps::ParseState, ret)
         end
     end
     block = EXPR{Block}(EXPR[], 0, Variable[], "")
-    @catcherror ps @default ps parse_block(ps, block, start_col)
+    @catcherror ps @default ps parse_block(ps, block)
 
     # Construction
     ret = EXPR{Do}(EXPR[ret, kw], Variable[], "")

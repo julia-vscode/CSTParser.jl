@@ -1,6 +1,4 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
-    start_col = ps.t.startpos[2] + 4
-
     # Parsing
     kw = INSTANCE(ps)
     format_kw(ps)
@@ -36,7 +34,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     _get_sig_defs!(sig)
 
     block = EXPR{Block}(EXPR[], 0, Variable[], "")
-    @catcherror ps @default ps @scope ps Scope{Tokens.FUNCTION} parse_block(ps, block, start_col)
+    @catcherror ps @default ps @scope ps Scope{Tokens.FUNCTION} parse_block(ps, block)
 
 
     # Construction
@@ -132,15 +130,6 @@ function parse_call(ps::ParseState, ret)
     next(ps)
     push!(ret, INSTANCE(ps))
     format_rbracket(ps)
-
-    # if length(ret.args) > 0 && ismacro(ret.args[1])
-    #     ret.head = MACROCALL
-    # end
-    # if ret.head isa HEAD{Tokens.CCALL} && length(ret.args) > 1 && ret.args[2] isa IDENTIFIER && (ret.args[2].val == :stdcall || ret.args[2].val == :fastcall || ret.args[2].val == :cdecl || ret.args[2].val == :thiscall)
-    #     arg = splice!(ret.args, 2)
-    #     push!(ret.args, EXPR(arg, [], arg.span))
-    # end
-
     return ret
 end
 
@@ -152,10 +141,6 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, fo
 
         if kw && !ps.closer.brace && a isa EXPR{BinarySyntaxOpCall} && a.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
             a = EXPR{Kw}(a.args, Variable[], "")
-            # remove format message for kw args
-            if !isempty(ps.diagnostics) && ps.nt.startbyte - a.args[3].span - a.args[2].span <= last(last(ps.diagnostics).loc) <= ps.nt.startbyte - a.args[3].span
-                pop!(ps.diagnostics)
-            end
         end
         push!(ret, a)
         if ps.nt.kind == Tokens.COMMA
@@ -174,8 +159,7 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, fo
 
     if ps.ws.kind == SemiColonWS
         if block && !(ret isa EXPR{TupleH} && length(ret.args) > 2)
-            body = EXPR{Block}(EXPR[pop!(ret.args)], 0, Variable[], "")
-            body.span = body.args[1].span
+            body = EXPR{Block}(EXPR[pop!(ret)], Variable[], "")
             # if last(body.args) isa EXPR{BinarySyntaxOpCall} && last(body.args).args[2] isa EXPR{OP} where OP <: OPERATOR{AssignmentOp,Tokens.EQ}
             #     _track_assignment(ps, last(body.args).args[1], last(body.args).args[3], last(body.args).defs)
             # end
@@ -193,10 +177,6 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, fo
                 @catcherror ps a = parse_expression(ps)
                 if kw && !ps.closer.brace && a isa EXPR{BinarySyntaxOpCall} && a.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
                     a = EXPR{Kw}(a.args, Variable[], "")
-                    # remove format message for kw args
-                    if !isempty(ps.diagnostics) && ps.nt.startbyte - a.args[3].span - a.args[2].span <= last(last(ps.diagnostics).loc) <= ps.nt.startbyte - a.args[3].span
-                        pop!(ps.diagnostics)
-                    end
                 end
                 push!(paras, a)
                 if ps.nt.kind == Tokens.COMMA
