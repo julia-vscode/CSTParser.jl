@@ -760,17 +760,18 @@ end
 
 function Expr(x::EXPR{StringH})
     ret = Expr(:string)
-    for a in x.args
+    for (i,a) in enumerate(x.args)
+        if typeof(a) == EXPR{UnarySyntaxOpCall}
+            a = a.args[2]
+        elseif typeof(a) == EXPR{LITERAL{Tokens.STRING}}
+            if span(a) == 0 || ((i == 1 || i == length(x.args)) && span(a) == 1) || isempty(a.val)
+                continue
+            end
+        end
         push!(ret.args, Expr(a))
     end
     ret
 end
-
-
-
-
-
-
 
 UNICODE_OPS_REVERSE = Dict{Tokenize.Tokens.Kind,Symbol}()
 for (k, v) in Tokenize.Tokens.UNICODE_OPS

@@ -696,4 +696,10 @@ test_fsig_decl(str) = (x->x.id).(CSTParser._get_fsig(CSTParser.parse(str)).defs)
     end""") == [:T, :S, :x]
 end
 
+@testset "Spans" begin
+    CSTParser.parse(raw"""
+    "ABC$(T)"
+    """).fullspan >= 9
+end
+
 end

@@ -86,7 +86,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 lspan = position(b)
                 str = tostr(b)[1:end-(istrip?3:1)]
                 ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan, 1:lspan, Variable[], str)
-                (isempty(ret.args) || !isempty(str)) && (push!(ret.args, ex); istrip && adjust_lcp(ex, true))
+                push!(ret.args, ex); istrip && adjust_lcp(ex, true)
                 break
             end
             c = read(input, Char)
@@ -97,15 +97,21 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 lspan = position(b)
                 str = tostr(b)
                 if !isempty(str)
-                    ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan, 1:lspan, Variable[], str)
+                    ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan+1, 1:(lspan+1), Variable[], str)
                     push!(ret.args, ex); istrip && adjust_lcp(ex)
                 end
+                op = EXPR{OPERATOR{PlusOp,Tokens.EX_OR,false}}(EXPR[], 1, 1:1, Variable[], "\$")
+                call = EXPR{UnarySyntaxOpCall}(EXPR[op], Variable[], "")
                 if peekchar(input) == '('
+                    lparen = EXPR{PUNCTUATION{Tokens.LPAREN}}(EXPR[], 1, 1:1, Variable[], "(")
+                    rparen = EXPR{PUNCTUATION{Tokens.RPAREN}}(EXPR[], 1, 1:1, Variable[], "(")
                     skip(input, 1)
                     ps1 = ParseState(input)
                     @catcherror ps interp = @closer ps1 paren parse_expression(ps1)
-                    push!(ret.args, interp)
-                    # Comparse to flisp/JuliaParser, we have an extra lookahead token,
+                    push!(call,
+                        EXPR{InvisBrackets}([lparen, interp, rparen], Variable[], ""))
+                    push!(ret.args, call)
+                    # Compared to flisp/JuliaParser, we have an extra lookahead token,
                     # so we need to back up one here
                     seek(input, ps1.nt.startbyte+1)
                 else
@@ -113,7 +119,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     ps1 = ParseState(input)
                     next(ps1)
                     t = INSTANCE(ps1)
-                    push!(ret.args, t)
+                    push!(call, t)
+                    push!(ret.args, call)
                     seek(input, pos+t.fullspan-length(ps1.ws.val))
                 end
             else
