@@ -2,6 +2,7 @@ __precompile__()
 module CSTParser
 global debug = true
 
+using AbstractTrees
 using Tokenize
 import Base: next, start, done, length, first, last, endof, getindex, setindex!
 import Tokenize.Tokens

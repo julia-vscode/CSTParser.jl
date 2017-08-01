@@ -1,16 +1,12 @@
-function Base.show(io::IO, x::EXPR{T}, indent = 0) where T
-    indent == 3 && return
-    name = sprint(show, T)
-    print(io, "  "^indent, T, "  ", x.span)
+function AbstractTrees.printnode(io::IO, x::EXPR{T}) where T
+    print(io, T, "  ", x.fullspan, " (", x.span, ")")
     if isempty(x.defs)
-        println(io)
+        print(io)
     else
-        println(io, "  {", join((a.id for a in x.defs), ","), "}")
-    end
-    for (i, a) in enumerate(x.args)
-        show(io, a, indent + 1)
+        print(io, "  {", join((a.id for a in x.defs), ","), "}")
     end
 end
+Base.show(io::IO, x::EXPR) = AbstractTrees.print_tree(io, x, 3)
 
 
 function Base.show(io::IO, x::Scope{T}, indent = 0) where {T}

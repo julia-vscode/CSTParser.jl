@@ -20,6 +20,7 @@ mutable struct EXPR{T}
     defs::Vector{Variable}
     val::String
 end
+AbstractTrees.children(x::EXPR) = x.args
 
 span(x::EXPR) = length(x.span)
 
