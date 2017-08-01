@@ -39,7 +39,12 @@ end
 
 function _track_range_assignment(ps, x) end
 function _track_range_assignment(ps, x::EXPR{BinaryOpCall})
-    if ((x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}}))
+    if (x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}})
+        append!(x.defs, _track_assignment(ps::ParseState, x.args[1], x.args[3]))
+    end
+end
+function _track_range_assignment(ps, x::EXPR{BinarySyntaxOpCall})
+    if x.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
         append!(x.defs, _track_assignment(ps::ParseState, x.args[1], x.args[3]))
     end
 end
