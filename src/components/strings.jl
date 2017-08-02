@@ -37,7 +37,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     function adjust_lcp(expr, last = false)
         push!(exprs_to_adjust, expr)
         str = expr.val
-        isempty(str) || (lcp != nothing && isempty(lcp)) && return
+        (isempty(str) || (lcp != nothing && isempty(lcp))) && return
         (last && str[end] == '\n') && return (lcp = "")
         idxstart, idxend = 2, 1
         while idxend < sizeof(str) && (lcp == nothing || !isempty(lcp))
