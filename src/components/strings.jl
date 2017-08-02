@@ -79,13 +79,14 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     else
         ret = EXPR{StringH}(EXPR[], sfullspan, sspan, Variable[], "")
         input = IOBuffer(ps.t.val)
-        seek(input, istrip ? 3 : 1)
+        startbytes = istrip ? 3 : 1
+        seek(input, startbytes)
         b = IOBuffer()
         while true
             if eof(input)
                 lspan = position(b)
                 str = tostr(b)[1:end-(istrip?3:1)]
-                ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan, 1:lspan, Variable[], str)
+                ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan+ps.nt.startbyte-ps.t.endbyte-1+startbytes, 1:(lspan+startbytes), Variable[], str)
                 push!(ret.args, ex); istrip && adjust_lcp(ex, true)
                 break
             end
@@ -96,10 +97,9 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             elseif c == '$'
                 lspan = position(b)
                 str = tostr(b)
-                if !isempty(str)
-                    ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan+1, 1:(lspan+1), Variable[], str)
-                    push!(ret.args, ex); istrip && adjust_lcp(ex)
-                end
+                ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan+startbytes, 1:(lspan+startbytes), Variable[], str)
+                push!(ret.args, ex); istrip && adjust_lcp(ex)
+                startbytes = 0
                 op = EXPR{OPERATOR{PlusOp,Tokens.EX_OR,false}}(EXPR[], 1, 1:1, Variable[], "\$")
                 call = EXPR{UnarySyntaxOpCall}(EXPR[op], Variable[], "")
                 if peekchar(input) == '('
@@ -119,9 +119,11 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     ps1 = ParseState(input)
                     next(ps1)
                     t = INSTANCE(ps1)
+                    # Attribute trailing whitespace to the string
+                    t.fullspan = length(t.span)
                     push!(call, t)
                     push!(ret.args, call)
-                    seek(input, pos+t.fullspan-length(ps1.ws.val))
+                    seek(input, pos+t.fullspan)
                 end
             else
                 write(b, c)

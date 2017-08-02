@@ -700,6 +700,10 @@ end
     CSTParser.parse(raw"""
     "ABC$(T)"
     """).fullspan >= 9
+    CSTParser.parse("\"_\"").fullspan == 3
+    CSTParser.parse("T.mutable && print(\"Ok\")").fullspan == 24
+    CSTParser.parse("(\"\$T\")").fullspan == 6
+    CSTParser.parse("\"\"\"\$T is not supported\"\"\"").fullspan == 25
 end
 
 end

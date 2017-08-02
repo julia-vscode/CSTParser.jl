@@ -87,7 +87,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MUTABLE}})
         @catcherror ps ret = parse_struct(ps, TRUE)
         unshift!(ret, kw)
     else
-        ret = EXPR{IDENTIFIER}(EXPR[], Variable[], "mutable")
+        ret = IDENTIFIER(ps)
     end
     return ret
 end

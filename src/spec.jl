@@ -116,10 +116,10 @@ end
 # heads
 
 
-const TRUE = EXPR{LITERAL{Tokens.TRUE}}(EXPR[], 0, 0:-1, Variable[], "")
-const FALSE = EXPR{LITERAL{Tokens.FALSE}}(EXPR[], 0, 0:-1, Variable[], "")
-const NOTHING = EXPR{HEAD{:nothing}}(EXPR[], 0, 0:-1, Variable[], "nothing")
-const GlobalRefDOC = EXPR{HEAD{:globalrefdoc}}(EXPR[], 0, 0:-1, Variable[], "globalrefdoc")
+const TRUE = EXPR{LITERAL{Tokens.TRUE}}(EXPR[], 0, 1:0, Variable[], "")
+const FALSE = EXPR{LITERAL{Tokens.FALSE}}(EXPR[], 0, 1:0, Variable[], "")
+const NOTHING = EXPR{HEAD{:nothing}}(EXPR[], 0, 1:0, Variable[], "nothing")
+const GlobalRefDOC = EXPR{HEAD{:globalrefdoc}}(EXPR[], 0, 1:0, Variable[], "globalrefdoc")
 
 
 

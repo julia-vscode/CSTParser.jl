@@ -380,8 +380,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{DotOp,Token
     elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA || ps.nt.kind == Tokens.WHERE
         next(ps)
         # nextarg = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, Symbol(lowercase(string(ps.t.kind))))
-        ispan = ps.t.endbyte-ps.t.startbyte+1
-        nextarg = EXPR{IDENTIFIER}(EXPR[], ispan, 1:ispan, Variable[], lowercase(string(ps.t.kind)))
+        nextarg = IDENTIFIER(ps)
     elseif ps.nt.kind == Tokens.COLON
         next(ps)
         op2 = INSTANCE(ps)
@@ -451,5 +450,3 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{P,K,dot}}) 
     end
     return ret
 end
-
-
