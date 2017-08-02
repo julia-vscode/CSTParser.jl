@@ -10,7 +10,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
     else
         @catcherror ps startbyte sig = @closer ps block @closer ps ws parse_expression(ps)
     end
-    
+
     _get_sig_defs!(sig)
     block = EXPR{Block}(EXPR[], 0, Variable[], "")
     @catcherror ps startbyte @default ps parse_block(ps, block, start_col)
@@ -52,8 +52,7 @@ function parse_macrocall(ps::ParseState)
     if isemptyws(ps.ws) && ps.nt.kind == Tokens.LPAREN
         next(ps)
         push!(ret.args, INSTANCE(ps))
-        @catcherror ps startbyte args = @default ps @nocloser ps newline @closer ps paren parse_list(ps, ret.args)
-        append!(ret.args, args)
+        @catcherror ps startbyte @default ps @nocloser ps newline @closer ps paren parse_comma_sep(ps, ret, false)
         next(ps)
         push!(ret.args, INSTANCE(ps))
     else

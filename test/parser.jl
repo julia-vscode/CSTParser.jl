@@ -342,6 +342,7 @@ end
     # @test "[@mac a b]" |> test_expr
     @test "@inline get_chunks_id(i::Integer) = _div64(Int(i)-1)+1, _mod64(Int(i) -1)" |> test_expr
     @test "@inline f() = (), ()" |> test_expr
+    @test "@sprintf(\"%08d\", id)" |> test_expr
 end
 
 @testset "Square " begin
