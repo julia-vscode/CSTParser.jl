@@ -651,6 +651,12 @@ end
         """ |> test_expr
     @test "begin\n\"\"\"Float\$(bit)\"\"\"\n\$(Symbol(\"Float\",bit))\nend" |> test_expr
     @test "µs" |> test_expr # normalize unicode
+    @test """(x, o; p = 1) -> begin
+    return o, p
+    end""" |> test_expr # normalize unicode
+    @test """(x, o...; p...) -> begin
+    return o, p
+    end""" |> test_expr # normalize unicode
 end
 
 @testset "Broken things" begin

@@ -14,6 +14,14 @@ function get_id(x::EXPR{BinarySyntaxOpCall})
     end
 end
 
+function get_id(x::EXPR{UnarySyntaxOpCall})
+    if x.args[2] isa EXPR{OPERATOR{DddotOp,Tokens.DDDOT,false}}
+        return get_id(x.args[1])
+    else
+        return x
+    end
+end
+
 get_id(x::EXPR{Curly}) = get_id(x.args[1])
 get_id(x) = x
 

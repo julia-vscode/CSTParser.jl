@@ -333,7 +333,9 @@ end
 function Expr(x::EXPR{TupleH})
     ret = Expr(:tuple)
     for a in x.args
-        if !(a isa EXPR{P} where P <: PUNCTUATION)
+        if a isa EXPR{Parameters}
+            insert!(ret.args, 1, Expr(a))
+        elseif !(a isa EXPR{P} where P <: PUNCTUATION)
             push!(ret.args, Expr(a))
         end
     end
