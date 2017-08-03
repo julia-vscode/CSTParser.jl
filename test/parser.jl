@@ -704,6 +704,7 @@ end
     CSTParser.parse("T.mutable && print(\"Ok\")").fullspan == 24
     CSTParser.parse("(\"\$T\")").fullspan == 6
     CSTParser.parse("\"\"\"\$T is not supported\"\"\"").fullspan == 25
+    CSTParser.parse("using Compat: @compat\n").fullspan == 22
 end
 
 end
