@@ -659,6 +659,7 @@ end
     @test """(x, o...; p...) -> begin
     return o, p
     end""" |> test_expr # normalize unicode
+    @test "function func() where {A where T} x + 1 end" |> test_expr # nested where
 end
 
 @testset "Broken things" begin

@@ -370,7 +370,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{WhereOp,Tok
     if ps.nt.kind == Tokens.LBRACE
         next(ps)
         push!(ret.args, INSTANCE(ps))
-        while ps.nt.kind != Tokens.RBRACE
+        @nocloser ps inwhere while ps.nt.kind != Tokens.RBRACE
             @catcherror ps startbyte a = @default ps @nocloser ps newline @closer ps comma @closer ps brace parse_expression(ps)
             push!(ret.args, a)
             if ps.nt.kind == Tokens.COMMA
