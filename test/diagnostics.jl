@@ -30,7 +30,7 @@ let diags = do_diag_test("a && && b")
 #  none:1:6 ERROR: Unexpected operator
 #  a && && b
 #       ^~~
-    @test diags[1] isa Diagnostic{UnexpectedOperator}
+    @test diags[1] isa Diagnostic{CSTParser.Diagnostics.UnexpectedOperator}
 end
 
 let diags = do_diag_test("print x")

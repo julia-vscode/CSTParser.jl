@@ -1,9 +1,3 @@
-mutable struct Variable
-    id
-    t
-    val
-end
-
 # Invariants:
 # if !isempty(e.args)
 #   e.fullspan == sum(x->x.fullspan, e.args)
@@ -17,7 +11,6 @@ mutable struct EXPR{T}
     # The range of bytes within the fullspan that constitute the actual expression,
     # excluding any leading/trailing whitespace or other trivia. 1-indexed
     span::UnitRange{Int}
-    defs::Vector{Variable}
     val::String
 end
 AbstractTrees.children(x::EXPR) = x.args
@@ -30,8 +23,8 @@ function update_span!(x::EXPR)
     x.span = first(first(x.args).span):(x.fullspan - last(x.args).fullspan + last(last(x.args).span))
 end
 
-function EXPR{T}(args::Vector, defs::Vector, val::String) where {T}
-    ret = EXPR{T}(args, 0, 1:0, defs, val)
+function EXPR{T}(args::Vector, val::String) where {T}
+    ret = EXPR{T}(args, 0, 1:0, val)
     update_span!(ret)
     ret
 end
@@ -81,25 +74,25 @@ function LITERAL(ps::ParseState)
        ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
         return parse_string_or_cmd(ps)
     else
-        EXPR{LITERAL{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), Variable[], ps.t.val)
+        EXPR{LITERAL{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), ps.t.val)
     end
 end
 
-IDENTIFIER(ps::ParseState) = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), Variable[], ps.t.val)
+IDENTIFIER(ps::ParseState) = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), ps.t.val)
 
-OPERATOR(ps::ParseState) = EXPR{OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), Variable[], "")
+OPERATOR(ps::ParseState) = EXPR{OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), "")
 
-KEYWORD(ps::ParseState) = EXPR{KEYWORD{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), Variable[], "")
+KEYWORD(ps::ParseState) = EXPR{KEYWORD{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), "")
 
-PUNCTUATION(ps::ParseState) = EXPR{PUNCTUATION{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), Variable[], "")
+PUNCTUATION(ps::ParseState) = EXPR{PUNCTUATION{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), "")
 
 function INSTANCE(ps::ParseState)
     span = ps.nt.startbyte - ps.t.startbyte
-    ps.errored && return EXPR{ERROR}(EXPR[], span, 1:(ps.t.endbyte-ps.t.startbyte+1), Variable[], "")
+    ps.errored && return EXPR{ERROR}(EXPR[], span, 1:(ps.t.endbyte-ps.t.startbyte+1), "")
     if ps.t.kind == Tokens.ENDMARKER
         ps.errored = true
         push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedInputEnd}(ps.t.startbyte + (0:0), [], "Unexpected end of input"))
-        return EXPR{ERROR}(EXPR[], span, 1:(ps.t.endbyte-ps.t.startbyte+1), Variable[], "Unexpected end of input")
+        return EXPR{ERROR}(EXPR[], span, 1:(ps.t.endbyte-ps.t.startbyte+1), "Unexpected end of input")
     end
     return isidentifier(ps.t) ? IDENTIFIER(ps) :
         isliteral(ps.t) ? LITERAL(ps) :
@@ -107,7 +100,7 @@ function INSTANCE(ps::ParseState)
         isoperator(ps.t) ? OPERATOR(ps) :
         ispunctuation(ps.t) ? PUNCTUATION(ps) :
         ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION(ps) :
-        (ps.errored = true; EXPR{ERROR}(EXPR[], span, Variable[], ""))
+        (ps.errored = true; EXPR{ERROR}(EXPR[], ""))
 end
 
 
@@ -116,10 +109,10 @@ end
 # heads
 
 
-const TRUE = EXPR{LITERAL{Tokens.TRUE}}(EXPR[], 0, 1:0, Variable[], "")
-const FALSE = EXPR{LITERAL{Tokens.FALSE}}(EXPR[], 0, 1:0, Variable[], "")
-const NOTHING = EXPR{HEAD{:nothing}}(EXPR[], 0, 1:0, Variable[], "nothing")
-const GlobalRefDOC = EXPR{HEAD{:globalrefdoc}}(EXPR[], 0, 1:0, Variable[], "globalrefdoc")
+const TRUE = EXPR{LITERAL{Tokens.TRUE}}(EXPR[], 0, 1:0, "")
+const FALSE = EXPR{LITERAL{Tokens.FALSE}}(EXPR[], 0, 1:0, "")
+const NOTHING = EXPR{HEAD{:nothing}}(EXPR[], 0, 1:0, "nothing")
+const GlobalRefDOC = EXPR{HEAD{:globalrefdoc}}(EXPR[], 0, 1:0, "globalrefdoc")
 
 
 
@@ -132,7 +125,7 @@ mutable struct File
     ast::EXPR
     errors
 end
-File(path::String) = File([], [], path, EXPR{FileH}(EXPR[], 0, Variable[], ""), [])
+File(path::String) = File([], [], path, EXPR{FileH}(EXPR[], ""), [])
 
 mutable struct Project
     path::String
@@ -141,7 +134,6 @@ end
 
 
 
-const NoVariable = Variable(NOTHING, NOTHING, NOTHING)
 
 abstract type Head end
 
@@ -215,4 +207,4 @@ abstract type Vcat <: Head end
 abstract type TypedVcat <: Head end
 abstract type Vect <: Head end
 
-Quotenode(x::EXPR) = EXPR{Quotenode}(EXPR[x], Variable[], "")
+Quotenode(x::EXPR) = EXPR{Quotenode}(EXPR[x], "")

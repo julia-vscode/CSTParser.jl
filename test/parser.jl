@@ -672,29 +672,29 @@ end
     @test_broken "-1^a" |> test_expr
 end
 
-test_fsig_decl(str) = (x->x.id).(CSTParser._get_fsig(CSTParser.parse(str)).defs)
-@testset "func-sig variable declarations" begin
-    @test test_fsig_decl("f(x) = x") == [:x]
-    @test test_fsig_decl("""function f(x)
-        x
-    end""") == [:x]
+# test_fsig_decl(str) = (x->x.id).(CSTParser._get_fsig(CSTParser.parse(str)).defs)
+# @testset "func-sig variable declarations" begin
+#     @test test_fsig_decl("f(x) = x") == [:x]
+#     @test test_fsig_decl("""function f(x)
+#         x
+#     end""") == [:x]
 
-    @test test_fsig_decl("f{T}(x::T) = x") == [:T, :x]
-    @test test_fsig_decl("""function f{T}(x::T)
-        x
-    end""") == [:T, :x]
+#     @test test_fsig_decl("f{T}(x::T) = x") == [:T, :x]
+#     @test test_fsig_decl("""function f{T}(x::T)
+#         x
+#     end""") == [:T, :x]
 
-    @test test_fsig_decl("f(x::T) where T = x") == [:T, :x]
-    @test test_fsig_decl("""function f(x::T) where T
-        x
-    end""") == [:T, :x]
+#     @test test_fsig_decl("f(x::T) where T = x") == [:T, :x]
+#     @test test_fsig_decl("""function f(x::T) where T
+#         x
+#     end""") == [:T, :x]
 
 
-    @test test_fsig_decl("f(x::T{S}) where T where S = x") == [:T, :S, :x]
-    @test test_fsig_decl("""function f(x::T{S}) where T where S
-        x
-    end""") == [:T, :S, :x]
-end
+#     @test test_fsig_decl("f(x::T{S}) where T where S = x") == [:T, :S, :x]
+#     @test test_fsig_decl("""function f(x::T{S}) where T where S
+#         x
+#     end""") == [:T, :S, :x]
+# end
 
 @testset "Spans" begin
     CSTParser.parse(raw"""

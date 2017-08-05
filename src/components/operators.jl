@@ -183,9 +183,9 @@ function parse_unary(ps::ParseState, op::EXPR{OPERATOR{P,K,dot}}) where {P, K, d
     @catcherror ps arg = @precedence ps prec parse_expression(ps)
 
     if issyntaxunarycall(op)
-        ret = EXPR{UnarySyntaxOpCall}(EXPR[op, arg], Variable[], "")
+        ret = EXPR{UnarySyntaxOpCall}(EXPR[op, arg], "")
     else
-        ret = EXPR{UnaryOpCall}(EXPR[op, arg], Variable[], "")
+        ret = EXPR{UnaryOpCall}(EXPR[op, arg], "")
     end
     return ret
 end
@@ -198,19 +198,18 @@ function parse_unary(ps::ParseState, op::EXPR{OPERATOR{ColonOp,Tokens.COLON,fals
         # Parsing
         next(ps)
         arg = INSTANCE(ps)
-        return EXPR{Quotenode}(EXPR[op, arg], Variable[], "")
+        return EXPR{Quotenode}(EXPR[op, arg], "")
     elseif closer(ps)
         return op
     else
         # Parsing
         @catcherror ps arg = @precedence ps 20 parse_expression(ps)
-        return EXPR{Quote}(EXPR[op, arg], Variable[], "")
+        return EXPR{Quote}(EXPR[op, arg], "")
     end
 end
 
 # Parse assignments
 function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}})
-    is_func_call(ret) && _get_sig_defs!(ret)
     # Parsing
     @catcherror ps nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
 
@@ -218,20 +217,12 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{AssignmentO
         # Construction
         # NOTE: prior to v"0.6.0-dev.2360" (PR #20076), there was an issue w/ scheme parser
         if VERSION > v"0.6.0-dev.2360" || (length(ret.args) > 1 && !(ret.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}) && ps.closer.precedence != 0)
-            nextarg = EXPR{Block}(EXPR[nextarg],  Variable[], "")
+            nextarg = EXPR{Block}(EXPR[nextarg], "")
         end
-
-        ret1 = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, nextarg], Variable[], "")
-        ret1.defs = [Variable(Expr(_get_fname(ret)), :Function, ret1)]
+        ret1 = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, nextarg], "")
         return ret1
     else
-        defs = ps.trackscope ? _track_assignment(ps, ret, nextarg) : Variable[]
-        if nextarg isa EXPR{BinarySyntaxOpCall} && nextarg.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
-            append!(defs, nextarg.defs)
-            empty!(nextarg.defs)
-        end
-        ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, nextarg], Variable[], "")
-        ret.defs = defs
+        ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, nextarg], "")
         return ret
     end
 end
@@ -244,7 +235,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{Conditional
     @catcherror ps nextarg2 = @closer ps comma @precedence ps 0 parse_expression(ps)
 
     # Construction
-    ret = EXPR{ConditionalOpCall}(EXPR[ret, op, nextarg, op2, nextarg2], Variable[], "")
+    ret = EXPR{ConditionalOpCall}(EXPR[ret, op, nextarg, op2, nextarg2], "")
     return ret
 end
 
@@ -258,13 +249,13 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{ComparisonO
         push!(ret, op)
         push!(ret, nextarg)
     elseif ret isa EXPR{BinaryOpCall} && precedence(ret.args[2]) == ComparisonOp
-        ret = EXPR{Comparison}(EXPR[ret.args[1], ret.args[2], ret.args[3], op, nextarg], Variable[], "")
+        ret = EXPR{Comparison}(EXPR[ret.args[1], ret.args[2], ret.args[3], op, nextarg], "")
     elseif ret isa EXPR{BinarySyntaxOpCall} && (ret.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUBTYPE,false}} || ret.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUPERTYPE,false}})
-        ret = EXPR{Comparison}(EXPR[ret.args[1], ret.args[2], ret.args[3], op, nextarg], Variable[], "")
+        ret = EXPR{Comparison}(EXPR[ret.args[1], ret.args[2], ret.args[3], op, nextarg], "")
     elseif (op isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUBTYPE,false}} || op isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUPERTYPE,false}})
-        ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, nextarg], Variable[], "")
+        ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, nextarg], "")
     else
-        ret = EXPR{BinaryOpCall}(EXPR[ret, op, nextarg], Variable[], "")
+        ret = EXPR{BinaryOpCall}(EXPR[ret, op, nextarg], "")
     end
     return ret
 end
@@ -276,11 +267,11 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{ColonOp,Tok
 
     # Construction
     if ret isa EXPR{BinarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{ColonOp,Tokens.COLON,false}} && length(ret.args) == 3
-        ret = EXPR{ColonOpCall}(ret.args, Variable[], "")
+        ret = EXPR{ColonOpCall}(ret.args, "")
         push!(ret, op)
         push!(ret, nextarg)
     else
-        ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, nextarg], Variable[], "")
+        ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, nextarg], "")
     end
     return ret
 end
@@ -309,7 +300,7 @@ end
 function parse_chain_operator(ps::ParseState, ret::EXPR{BinaryOpCall}, op::EXPR{OPERATOR{P,K,false}}) where {P, K}
     if ret.args[2] isa EXPR{OPERATOR{P,K,false}} && span(ret.args[2]) > 0
         @catcherror ps nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
-        ret = EXPR{ChainOpCall}(ret.args, Variable[], "")
+        ret = EXPR{ChainOpCall}(ret.args, "")
         push!(ret, op)
         push!(ret, nextarg)
     else
@@ -328,14 +319,14 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{PowerOp,K,d
     # NEEDS FIX
     if ret isa EXPR{UnaryOpCall}
         if false
-            xx = EXPR{InvisBrackets}([ret], Variable[], "")
-            nextarg = EXPR{BinaryOpCall}(EXPR[op, xx, nextarg], Variable[], "")
+            xx = EXPR{InvisBrackets}([ret], "")
+            nextarg = EXPR{BinaryOpCall}(EXPR[op, xx, nextarg], "")
         else
-            nextarg = EXPR{BinaryOpCall}(EXPR[ret.args[2], op, nextarg], Variable[], "")
+            nextarg = EXPR{BinaryOpCall}(EXPR[ret.args[2], op, nextarg], "")
         end
-        ret = EXPR{UnaryOpCall}(EXPR[ret.args[1], nextarg], Variable[], "")
+        ret = EXPR{UnaryOpCall}(EXPR[ret.args[1], nextarg], "")
     else
-        ret = EXPR{BinaryOpCall}(EXPR[ret, op, nextarg], Variable[], "")
+        ret = EXPR{BinaryOpCall}(EXPR[ret, op, nextarg], "")
     end
     return ret
 end
@@ -344,7 +335,7 @@ end
 # parse where
 function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}})
     # Parsing
-    ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op], Variable[], "")
+    ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op], "")
     # Parsing
     if ps.nt.kind == Tokens.LBRACE
         next(ps)
@@ -355,7 +346,6 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{WhereOp,Tok
             if ps.nt.kind == Tokens.COMMA
                 next(ps)
                 push!(ret, INSTANCE(ps))
-                format_no_rws(ps)
             end
         end
         next(ps)
@@ -374,8 +364,8 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{DotOp,Token
     # Parsing
     if ps.nt.kind == Tokens.LPAREN
         @catcherror ps sig = @default ps @closer ps paren parse_call(ps, ret)
-        args = EXPR{TupleH}(sig.args[2:end], Variable[], "")
-        ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, args], Variable[], "")
+        args = EXPR{TupleH}(sig.args[2:end], "")
+        ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, args], "")
         return ret
     elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA || ps.nt.kind == Tokens.WHERE
         next(ps)
@@ -386,7 +376,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{DotOp,Token
         op2 = INSTANCE(ps)
         if ps.nt.kind == Tokens.LPAREN
             @catcherror ps nextarg = @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)
-            nextarg = EXPR{Quote}(EXPR[op2, nextarg], Variable[], "")
+            nextarg = EXPR{Quote}(EXPR[op2, nextarg], "")
         else
             @catcherror ps nextarg = @precedence ps DotOp - LtoR(DotOp) parse_unary(ps, op2)
         end
@@ -401,26 +391,26 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{DotOp,Token
     # Construction
     # NEEDS FIX
     if nextarg isa EXPR{IDENTIFIER} || nextarg isa EXPR{Vect} || nextarg isa EXPR{UnarySyntaxOpCall} && nextarg.args[1] isa EXPR{OPERATOR{PlusOp,Tokens.EX_OR,false}}
-        ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, Quotenode(nextarg)], Variable[], "")
+        ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, Quotenode(nextarg)], "")
     elseif nextarg isa EXPR{MacroCall}
-        mname = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, Quotenode(nextarg.args[1])], Variable[], "")
-        ret = EXPR{MacroCall}(EXPR[mname], Variable[], "")
+        mname = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, Quotenode(nextarg.args[1])], "")
+        ret = EXPR{MacroCall}(EXPR[mname], "")
         for i = 2:length(nextarg.args)
             push!(ret, nextarg.args[i])
         end
     else
-        ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, nextarg], Variable[], "")
+        ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, nextarg], "")
     end
     return ret
 end
 
 
 function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{DddotOp,Tokens.DDDOT,false}})
-    return EXPR{UnarySyntaxOpCall}(EXPR[ret, op], Variable[], "")
+    return EXPR{UnarySyntaxOpCall}(EXPR[ret, op], "")
 end
 
 function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{16,Tokens.PRIME,dot}}) where dot
-    return EXPR{UnarySyntaxOpCall}(EXPR[ret, op], Variable[], "")
+    return EXPR{UnarySyntaxOpCall}(EXPR[ret, op], "")
 end
 
 function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{P,Tokens.ANON_FUNC,false}}) where {P}
@@ -428,12 +418,8 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{P,Tokens.AN
     @catcherror ps arg = @closer ps comma @precedence ps 0 parse_expression(ps)
 
     # Construction
-    if ret isa EXPR{TupleH}
-        _get_sig_defs!(ret)
-    else
-        push!(ret.defs, Variable(Expr(get_id(ret)), get_t(ret), ret))
-    end
-    ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, EXPR{Block}(EXPR[arg], Variable[], "")], Variable[], "")
+
+    ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, EXPR{Block}(EXPR[arg], "")], "")
 
     return ret
 end
@@ -444,9 +430,9 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{P,K,dot}}) 
 
     # Construction
     if issyntaxcall(op)
-        ret = EXPR{BinarySyntaxOpCall}([ret, op, nextarg], Variable[], "")
+        ret = EXPR{BinarySyntaxOpCall}([ret, op, nextarg], "")
     else
-        ret = EXPR{BinaryOpCall}([ret, op, nextarg], Variable[], "")
+        ret = EXPR{BinaryOpCall}([ret, op, nextarg], "")
     end
     return ret
 end

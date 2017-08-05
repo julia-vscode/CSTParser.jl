@@ -1,10 +1,8 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
-    # Parsing
     kw = INSTANCE(ps)
-    format_kw(ps)
-    ret = EXPR{Try}(EXPR[kw], Variable[], "")
+    ret = EXPR{Try}(EXPR[kw], "")
 
-    tryblock = EXPR{Block}(EXPR[], 0, 1:0, Variable[], "")
+    tryblock = EXPR{Block}(EXPR[], 0, 1:0, "")
     @catcherror ps @default ps @closer ps trycatch parse_block(ps, tryblock,)
     push!(ret, tryblock)
 
@@ -12,7 +10,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
     if ps.nt.kind == Tokens.END
         next(ps)
         push!(ret, FALSE)
-        push!(ret, EXPR{Block}(EXPR[], 0, 1:0, Variable[], ""))
+        push!(ret, EXPR{Block}(EXPR[], 0, 1:0, ""))
         push!(ret, INSTANCE(ps))
         return ret
     end
@@ -24,7 +22,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
         if ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END
             push!(ret, INSTANCE(ps))
             caught = FALSE
-            catchblock = EXPR{Block}(EXPR[], 0, 1:0, Variable[], "")
+            catchblock = EXPR{Block}(EXPR[], 0, 1:0, "")
         else
             start_col = ps.t.startpos[2] + 4
             push!(ret, INSTANCE(ps))
@@ -33,18 +31,16 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
             else
                 @catcherror ps caught = @default ps @closer ps ws @closer ps trycatch parse_expression(ps)
             end
-            catchblock = EXPR{Block}(EXPR[], 0, 1:0, Variable[], "")
+            catchblock = EXPR{Block}(EXPR[], 0, 1:0, "")
             @catcherror ps @default ps @closer ps trycatch parse_block(ps, catchblock)
             if !(caught isa EXPR{IDENTIFIER} || caught == FALSE)
                 unshift!(catchblock, caught)
                 caught = FALSE
-            elseif caught isa EXPR{IDENTIFIER}
-                push!(caught.defs, Variable(Expr(caught), :Any, caught))
             end
         end
     else
         caught = FALSE
-        catchblock = EXPR{Block}(EXPR[], 0, 1:0, Variable[], "")
+        catchblock = EXPR{Block}(EXPR[], 0, 1:0, "")
     end
     push!(ret, caught)
     push!(ret, catchblock)
@@ -56,7 +52,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
         end
         next(ps)
         push!(ret, INSTANCE(ps))
-        finallyblock = EXPR{Block}(EXPR[], 0, 1:0, Variable[], "")
+        finallyblock = EXPR{Block}(EXPR[], 0, 1:0, "")
         @catcherror ps parse_block(ps, finallyblock)
         push!(ret, finallyblock)
     end

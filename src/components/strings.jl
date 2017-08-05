@@ -67,17 +67,17 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     # there are interpolations in the string
     if prefixed != false || iscmd
         val = istrip ? ps.t.val[4:end-3] : ps.t.val[2:end-1]
-        expr = EXPR{LITERAL{ps.t.kind}}(Expr[], sfullspan, sspan, Variable[],
+        expr = EXPR{LITERAL{ps.t.kind}}(Expr[], sfullspan, sspan,
             iscmd ? replace(val, "\\`", "`") :
                     replace(val, "\\\"", "\""))
         if istrip
             adjust_lcp(expr)
-            ret = EXPR{StringH}(EXPR[expr], sfullspan, sspan, Variable[], "")
+            ret = EXPR{StringH}(EXPR[expr], sfullspan, sspan, "")
         else
             return expr
         end
     else
-        ret = EXPR{StringH}(EXPR[], sfullspan, sspan, Variable[], "")
+        ret = EXPR{StringH}(EXPR[], sfullspan, sspan, "")
         input = IOBuffer(ps.t.val)
         startbytes = istrip ? 3 : 1
         seek(input, startbytes)
@@ -86,7 +86,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             if eof(input)
                 lspan = position(b)
                 str = tostr(b)[1:end-(istrip?3:1)]
-                ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan+ps.nt.startbyte-ps.t.endbyte-1+startbytes, 1:(lspan+startbytes), Variable[], str)
+                ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan+ps.nt.startbyte-ps.t.endbyte-1+startbytes, 1:(lspan+startbytes), str)
                 push!(ret.args, ex); istrip && adjust_lcp(ex, true)
                 break
             end
@@ -97,19 +97,19 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             elseif c == '$'
                 lspan = position(b)
                 str = tostr(b)
-                ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan+startbytes, 1:(lspan+startbytes), Variable[], str)
+                ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan+startbytes, 1:(lspan+startbytes), str)
                 push!(ret.args, ex); istrip && adjust_lcp(ex)
                 startbytes = 0
-                op = EXPR{OPERATOR{PlusOp,Tokens.EX_OR,false}}(EXPR[], 1, 1:1, Variable[], "\$")
-                call = EXPR{UnarySyntaxOpCall}(EXPR[op], Variable[], "")
+                op = EXPR{OPERATOR{PlusOp,Tokens.EX_OR,false}}(EXPR[], 1, 1:1, "\$")
+                call = EXPR{UnarySyntaxOpCall}(EXPR[op], "")
                 if peekchar(input) == '('
-                    lparen = EXPR{PUNCTUATION{Tokens.LPAREN}}(EXPR[], 1, 1:1, Variable[], "(")
-                    rparen = EXPR{PUNCTUATION{Tokens.RPAREN}}(EXPR[], 1, 1:1, Variable[], "(")
+                    lparen = EXPR{PUNCTUATION{Tokens.LPAREN}}(EXPR[], 1, 1:1, "(")
+                    rparen = EXPR{PUNCTUATION{Tokens.RPAREN}}(EXPR[], 1, 1:1, "(")
                     skip(input, 1)
                     ps1 = ParseState(input)
                     @catcherror ps interp = @closer ps1 paren parse_expression(ps1)
                     push!(call,
-                        EXPR{InvisBrackets}([lparen, interp, rparen], Variable[], ""))
+                        EXPR{InvisBrackets}([lparen, interp, rparen], ""))
                     push!(ret.args, call)
                     # Compared to flisp/JuliaParser, we have an extra lookahead token,
                     # so we need to back up one here

@@ -8,14 +8,12 @@ Having hit '[' return either:
 """
 function parse_array(ps::ParseState)
     args = EXPR[INSTANCE(ps)]
-    format_lbracket(ps)
 
     if ps.nt.kind == Tokens.RSQUARE
         next(ps)
         push!(args, INSTANCE(ps))
-        format_rbracket(ps)
 
-        return EXPR{Vect}(args, Variable[], "")
+        return EXPR{Vect}(args, "")
     else
         @catcherror ps first_arg = @default ps @nocloser ps newline @closer ps square @closer ps insquare @closer ps ws @closer ps wsop @closer ps comma parse_expression(ps)
 
@@ -23,40 +21,36 @@ function parse_array(ps::ParseState)
             if first_arg isa EXPR{Generator} || first_arg isa EXPR{Flatten}
                 next(ps)
                 push!(args, INSTANCE(ps))
-                format_rbracket(ps)
 
                 if first_arg.args[1] isa EXPR{BinaryOpCall} && first_arg.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.PAIR_ARROW,false}}
-                    return EXPR{DictComprehension}(EXPR[args[1], first_arg, INSTANCE(ps)], Variable[], "")
+                    return EXPR{DictComprehension}(EXPR[args[1], first_arg, INSTANCE(ps)], "")
                 else
-                    return EXPR{Comprehension}(EXPR[args[1], first_arg, INSTANCE(ps)], Variable[], "")
+                    return EXPR{Comprehension}(EXPR[args[1], first_arg, INSTANCE(ps)], "")
                 end
             elseif ps.ws.kind == SemiColonWS
                 next(ps)
                 push!(args, first_arg)
                 push!(args, INSTANCE(ps))
-                format_rbracket(ps)
 
-                return EXPR{Vcat}(args, Variable[], "")
+                return EXPR{Vcat}(args, "")
             else
                 next(ps)
                 push!(args, first_arg)
                 push!(args, INSTANCE(ps))
-                format_rbracket(ps)
 
-                ret = EXPR{Vect}(args, Variable[], "")
+                ret = EXPR{Vect}(args, "")
             end
         elseif ps.nt.kind == Tokens.COMMA
-            ret = EXPR{Vect}(args, Variable[], "")
+            ret = EXPR{Vect}(args, "")
             push!(ret, first_arg)
             next(ps)
             push!(ret, INSTANCE(ps))
-            format_comma(ps)
             @catcherror ps @default ps @closer ps square parse_comma_sep(ps, ret, false)
 
 
 
             if last(ret.args) isa EXPR{Parameters}
-                ret = EXPR{Vcat}(ret.args, Variable[], "")
+                ret = EXPR{Vcat}(ret.args, "")
                 unshift!(ret, pop!(ret))
                 # if isempty(last(ret.args).args)
                 #     pop!(ret.args)
@@ -64,11 +58,10 @@ function parse_array(ps::ParseState)
             end
             next(ps)
             push!(ret, INSTANCE(ps))
-            format_rbracket(ps)
 
             return ret
         elseif ps.ws.kind == NewLineWS
-            ret = EXPR{Vcat}(args, Variable[], "")
+            ret = EXPR{Vcat}(args, "")
             push!(ret, first_arg)
             while ps.nt.kind != Tokens.RSQUARE
                 @catcherror ps a = @default ps @closer ps square parse_expression(ps)
@@ -76,18 +69,17 @@ function parse_array(ps::ParseState)
             end
             next(ps)
             push!(ret, INSTANCE(ps))
-            format_rbracket(ps)
 
             return ret
         elseif ps.ws.kind == WS || ps.ws.kind == SemiColonWS
-            first_row = EXPR{Hcat}(EXPR[first_arg], Variable[], "")
+            first_row = EXPR{Hcat}(EXPR[first_arg], "")
             while ps.nt.kind != Tokens.RSQUARE && ps.ws.kind != NewLineWS && ps.ws.kind != SemiColonWS
                 @catcherror ps a = @default ps @closer ps square @closer ps ws @closer ps wsop parse_expression(ps)
                 push!(first_row, a)
             end
             if ps.nt.kind == Tokens.RSQUARE && ps.ws.kind != SemiColonWS
                 if length(first_row.args) == 1
-                    first_row = EXPR{VCAT}(first_row.args, Variable[], "")
+                    first_row = EXPR{VCAT}(first_row.args, "")
                 end
                 next(ps)
                 push!(first_row, INSTANCE(ps))
@@ -97,12 +89,12 @@ function parse_array(ps::ParseState)
                 if length(first_row.args) == 1
                     first_row = first_row.args[1]
                 else
-                    first_row = EXPR{Row}(first_row.args, Variable[], "")
+                    first_row = EXPR{Row}(first_row.args, "")
                 end
-                ret = EXPR{Vcat}(EXPR[args[1], first_row], Variable[], "")
+                ret = EXPR{Vcat}(EXPR[args[1], first_row], "")
                 while ps.nt.kind != Tokens.RSQUARE
                     @catcherror ps first_arg = @default ps @closer ps square @closer ps ws @closer ps wsop parse_expression(ps)
-                    push!(ret, EXPR{Row}(EXPR[first_arg], Variable[], ""))
+                    push!(ret, EXPR{Row}(EXPR[first_arg], ""))
                     while ps.nt.kind != Tokens.RSQUARE && ps.ws.kind != NewLineWS && ps.ws.kind != SemiColonWS
                         @catcherror ps a = @default ps @closer ps square @closer ps ws @closer ps wsop parse_expression(ps)
                         push!(last(ret.args), a)
@@ -119,7 +111,7 @@ function parse_array(ps::ParseState)
             end
         else
             ps.errored = true
-            ret = EXPR{ERROR}(EXPR[INSTANCE(ps)], Variable[], "Unknown error")
+            ret = EXPR{ERROR}(EXPR[INSTANCE(ps)], "Unknown error")
         end
     end
     return ret
@@ -139,7 +131,7 @@ function parse_ref(ps::ParseState, ret)
 end
 
 function _parse_ref(ret, ref::EXPR{Vect})
-    ret = EXPR{Ref}(EXPR[ret], Variable[], "")
+    ret = EXPR{Ref}(EXPR[ret], "")
     for a in ref.args
         push!(ret, a)
     end
@@ -147,7 +139,7 @@ function _parse_ref(ret, ref::EXPR{Vect})
 end
 
 function _parse_ref(ret, ref::EXPR{Hcat})
-    ret = EXPR{TypedHcat}(EXPR[ret], Variable[], "")
+    ret = EXPR{TypedHcat}(EXPR[ret], "")
     for a in ref.args
         push!(ret, a)
     end
@@ -155,7 +147,7 @@ function _parse_ref(ret, ref::EXPR{Hcat})
 end
 
 function _parse_ref(ret, ref::EXPR{Vcat})
-    ret = EXPR{TypedVcat}(EXPR[ret], Variable[], "")
+    ret = EXPR{TypedVcat}(EXPR[ret], "")
     for a in ref.args
         push!(ret, a)
     end
@@ -163,7 +155,7 @@ function _parse_ref(ret, ref::EXPR{Vcat})
 end
 
 function _parse_ref(ret, ref)
-    ret = EXPR{TypedComprehension}(EXPR[ret], Variable[], "")
+    ret = EXPR{TypedComprehension}(EXPR[ret], "")
     for a in ref.args
         push!(ret, a)
     end
