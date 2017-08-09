@@ -11,7 +11,7 @@ suite["operators"]["conditional"] = BenchmarkGroup()
     
 suite["operators"]["unary"]["generic"] = @benchmarkable parse("::T")
 suite["operators"]["unary"]["quote"] = @benchmarkable parse(":T")
-suite["operators"]["unary"]["dddots"] = @benchmarkable parse("a...............")
+suite["operators"]["unary"]["dddots"] = @benchmarkable parse("((((a...)...)...)...)...")
     
 suite["operators"]["binary"]["generic ltor"] = @benchmarkable parse("a - b - c - d - e")
 suite["operators"]["binary"]["assignment"] = @benchmarkable parse("a = b = c = d = e")
@@ -49,8 +49,8 @@ suite["loops"] = BenchmarkGroup()
 suite["loops"]["while"] = @benchmarkable parse("while true end")
 suite["loops"]["for"] = @benchmarkable parse("for iter in I end")
 suite["loops"]["for (x5)"] = @benchmarkable parse("for iter in I, iter in I, iter in I, iter in I, iter in I end")
-suite["loops"]["generator"] = @benchmarkable parse("iter for iter in I")
-suite["loops"]["generator (x5)"] = @benchmarkable parse("iter for iter in I, iter in I, iter in I, iter in I, iter in I")
+suite["loops"]["generator"] = @benchmarkable parse("(iter for iter in I)")
+suite["loops"]["generator (x5)"] = @benchmarkable parse("(iter for iter in I, iter in I, iter in I, iter in I, iter in I)")
 
 
 suite["if"] = BenchmarkGroup()
@@ -65,7 +65,14 @@ suite["imports"]["1"] = @benchmarkable parse("import a")
 suite["imports"]["2"] = @benchmarkable parse("import a, b, c, d, e")
 suite["imports"]["3"] = @benchmarkable parse("import a: b, c, d, e")
 
-results = run(suite, verbose = true, seconds = 3)
+run(suite, samples = 1, evals = 1)
+CST_results = run(suite, verbose = true, seconds = 3)   
+showall(CST_results)
 
-showall(results)
+parse = Base.parse
+Base_results = run(suite, verbose = true, seconds = 3)
+showall(Base_results)
+
+
+showall(ratio(median(CST_results), median(Base_results)))
 
