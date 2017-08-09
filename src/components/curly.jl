@@ -8,7 +8,7 @@ function parse_curly(ps::ParseState, ret)
     next(ps)
     ret = EXPR{Curly}(EXPR[ret, INSTANCE(ps)], "")
 
-    @catcherror ps  @default ps @nocloser ps inwhere @closer ps brace parse_comma_sep(ps, ret, true, false, false)
+    @catcherror ps  @default ps @nocloser ps inwhere @closer ps brace parse_comma_sep(ps, ret, true, false)
     next(ps)
     push!(ret, INSTANCE(ps))
     return ret
@@ -16,7 +16,7 @@ end
 
 function parse_cell1d(ps::ParseState)
     ret = EXPR{Cell1d}(EXPR[INSTANCE(ps)], "")
-    @catcherror ps @default ps @closer ps brace parse_comma_sep(ps, ret, true, false, false)
+    @catcherror ps @default ps @closer ps brace parse_comma_sep(ps, ret, true, false)
     next(ps)
     push!(ret, INSTANCE(ps))
     return ret

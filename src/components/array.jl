@@ -79,7 +79,7 @@ function parse_array(ps::ParseState)
             end
             if ps.nt.kind == Tokens.RSQUARE && ps.ws.kind != SemiColonWS
                 if length(first_row.args) == 1
-                    first_row = EXPR{VCAT}(first_row.args, "")
+                    first_row = EXPR{Vcat}(first_row.args, "")
                 end
                 next(ps)
                 push!(first_row, INSTANCE(ps))

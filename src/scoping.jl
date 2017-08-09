@@ -1,11 +1,9 @@
-
 """
     get_id(x)
 
 Get the IDENTIFIER name of a variable, possibly in the presence of 
 type declaration operators.
 """
-
 function get_id(x::EXPR{BinarySyntaxOpCall})
     if x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUBTYPE,false}} || x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} || x.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}}
         return get_id(x.args[1])
@@ -40,23 +38,6 @@ function get_t(x::EXPR{BinarySyntaxOpCall})
         return :Any
     end
 end
-
-# NEEDS FIX
-# function func_sig(x::EXPR)
-#     name = x.args[1]
-#     args = x.args[2:end]
-#     if name isa EXPR && name.head == CURLY
-#         params = name.args[2]
-#         name = name.args[1]
-#     end
-#     if name isa EXPR && name.head isa OPERATOR{DotOp,Tokens.DOT}
-#         mod = name.args[1]
-#         name = name.args[2]
-#     end
-#     if name isa EXPR{Quotenode}
-#         name = name.val
-#     end
-# end
 
 
 infer_t(x) = :Any

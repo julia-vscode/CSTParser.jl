@@ -1,7 +1,7 @@
 function longest_common_prefix(prefixa, prefixb)
     maxplength = min(sizeof(prefixa), sizeof(prefixb))
     maxplength == 0 && return ""
-    idx = findfirst(i->(prefixa[i] != prefixb[i]),1:maxplength)
+    idx = findfirst(i -> (prefixa[i] != prefixb[i]), 1:maxplength)
     idx = idx == 0 ? maxplength : idx - 1
     prefixa[1:idx]
 end
@@ -23,7 +23,7 @@ interpolating operators.
 """
 function parse_string_or_cmd(ps::ParseState, prefixed = false)
     sfullspan = ps.nt.startbyte - ps.t.startbyte
-    sspan = 1 + (0:(ps.t.endbyte-ps.t.startbyte))
+    sspan = 1 + (0:(ps.t.endbyte - ps.t.startbyte))
 
     istrip = (ps.t.kind == Tokens.TRIPLE_STRING) || (ps.t.kind == Tokens.TRIPLE_CMD)
     iscmd = ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
@@ -50,7 +50,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 elseif c == '\n'
                     # All whitespace lines in the middle are ignored
                     idxend += 1
-                    idxstart = idxend+1
+                    idxstart = idxend + 1
                 else
                     prefix = str[idxstart:idxend]
                     lcp = lcp === nothing ? prefix : longest_common_prefix(lcp, prefix)
@@ -66,7 +66,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
 
     # there are interpolations in the string
     if prefixed != false || iscmd
-        val = istrip ? ps.t.val[4:end-3] : ps.t.val[2:end-1]
+        val = istrip ? ps.t.val[4:end - 3] : ps.t.val[2:end - 1]
         expr = EXPR{LITERAL{ps.t.kind}}(Expr[], sfullspan, sspan,
             iscmd ? replace(val, "\\`", "`") :
                     replace(val, "\\\"", "\""))
@@ -85,8 +85,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         while true
             if eof(input)
                 lspan = position(b)
-                str = tostr(b)[1:end-(istrip?3:1)]
-                ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan+ps.nt.startbyte-ps.t.endbyte-1+startbytes, 1:(lspan+startbytes), str)
+                str = tostr(b)[1:end - (istrip ? 3:1)]
+                ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, 1:(lspan + startbytes), str)
                 push!(ret.args, ex); istrip && adjust_lcp(ex, true)
                 break
             end
@@ -97,7 +97,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             elseif c == '$'
                 lspan = position(b)
                 str = tostr(b)
-                ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan+startbytes, 1:(lspan+startbytes), str)
+                ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan + startbytes, 1:(lspan + startbytes), str)
                 push!(ret.args, ex); istrip && adjust_lcp(ex)
                 startbytes = 0
                 op = EXPR{OPERATOR{PlusOp,Tokens.EX_OR,false}}(EXPR[], 1, 1:1, "\$")
@@ -113,7 +113,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     push!(ret.args, call)
                     # Compared to flisp/JuliaParser, we have an extra lookahead token,
                     # so we need to back up one here
-                    seek(input, ps1.nt.startbyte+1)
+                    seek(input, ps1.nt.startbyte + 1)
                 else
                     pos = position(input)
                     ps1 = ParseState(input)
@@ -123,7 +123,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     t.fullspan = length(t.span)
                     push!(call, t)
                     push!(ret.args, call)
-                    seek(input, pos+t.fullspan)
+                    seek(input, pos + t.fullspan)
                 end
             else
                 write(b, c)

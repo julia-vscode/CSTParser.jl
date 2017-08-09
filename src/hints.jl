@@ -24,15 +24,6 @@ UnexpectedOperator,
 UnexpectedIdentifier,
 ParseFailure)
 
-@enum(FormatCodes,
-Useelseif,
-Indents,
-CamelCase,
-LowerCase,
-MissingWS,
-ExtraWS,
-CommaWS)
-
 @enum(LintCodes,
 DuplicateArgumentName,
 ArgumentFunctionNameConflict,
@@ -60,30 +51,8 @@ bitstypeDeprecation,
 typealiasDeprecation,
 parameterisedDeprecation)
 
-struct Deletion <: Action
-    range::UnitRange
-end
-
-struct AddWS <: Action
-    range::UnitRange
-    length::Int
-end
-
-struct TextEdit <: Action
-    range::UnitRange
-    text::String
-end
 
 end
-
-islbracket(t::Token) = t.kind == Tokens.LPAREN ||
-                        t.kind == Tokens.LBRACE ||
-                        t.kind == Tokens.LSQUARE
-
-isrbracket(t::Token) = t.kind == Tokens.RPAREN ||
-                        t.kind == Tokens.RBRACE ||
-                        t.kind == Tokens.RSQUARE
-
 
 
 function error_unexpected(ps, startbyte, tok)

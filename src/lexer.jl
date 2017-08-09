@@ -45,9 +45,6 @@ The parser's interface with `Tokenize.Lexers.Lexer`. This alters the output of `
 + Merging of whitespace, comments and semicolons;
 + Skips DOT tokens where they are followed by another operator and marks the trailing operator as dotted.
 + Keeps track of the previous, current and next tokens.
-
-In addition a list of formatting hints is updated as the parsing progresses 
-and copy of the current `Scope`.
 """
 mutable struct ParseState
     l::Lexer
@@ -62,15 +59,12 @@ mutable struct ParseState
     nnws::Token
     dot::Bool
     ndot::Bool
-    trackscope::Bool
-    formatcheck::Bool
     diagnostics::Vector{Diagnostics.Diagnostic}
     closer::Closer
     errored::Bool
-    current_scope
 end
 function ParseState(str::Union{IO,String})
-    ps = ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), Token(), Token(), true, true, true, true, [], Closer(), false, Scope{Tokens.TOPLEVEL})
+    ps = ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), Token(), Token(), true, true, [], Closer(), false)
     return next(next(ps))
 end
 

@@ -31,7 +31,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     end
 
     block = EXPR{Block}(EXPR[], 0, 1:0, "")
-    @catcherror ps @default ps @scope ps Scope{Tokens.FUNCTION} parse_block(ps, block)
+    @catcherror ps @default ps parse_block(ps, block)
 
 
     # Construction
@@ -127,9 +127,8 @@ function parse_call(ps::ParseState, ret)
 end
 
 
-function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false, formatcomma = true)
-    @catcherror ps @nocloser ps inwhere @noscope ps @nocloser ps newline @closer ps comma while !closer(ps)
-        block && (ps.trackscope = true)
+function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false)
+    @catcherror ps @nocloser ps inwhere @nocloser ps newline @closer ps comma while !closer(ps)
         a = parse_expression(ps)
 
         if kw && !ps.closer.brace && a isa EXPR{BinarySyntaxOpCall} && a.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}

@@ -16,7 +16,7 @@ function parse_module(ps::ParseState)
     end
 
     block = EXPR{Block}(EXPR[], "")
-    @scope ps Scope{Tokens.MODULE} @default ps while ps.nt.kind !== Tokens.END
+    @default ps while ps.nt.kind !== Tokens.END
         @catcherror ps a = @closer ps block parse_doc(ps)
         push!(block, a)
     end

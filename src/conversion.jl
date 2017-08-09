@@ -19,8 +19,7 @@ function Expr(x::EXPR{TopLevel})
     end
     ret
 end
-# Expr(x::HEAD{Tokens.LBRACE}) = :cell1d
-Expr(x::HEAD{T}) where {T} = Symbol(lowercase(string(T)))
+
 Expr(x::KEYWORD{T}) where {T} = Symbol(lowercase(string(T)))
 
 function julia_normalization_map(c::Int32, x::Ptr{Void})::Int32
@@ -61,7 +60,7 @@ end
 
 Expr(x::EXPR{LITERAL{Tokens.TRUE}}) = true
 Expr(x::EXPR{LITERAL{Tokens.FALSE}}) = false
-function Expr(x::EXPR{HEAD{:nothing}}) end
+function Expr(x::EXPR{LITERAL{:nothing}}) end
 
 function sized_uint_literal(s::AbstractString, b::Integer)
     # We know integers are all ASCII, so we can use sizeof to compute
@@ -536,7 +535,7 @@ function Expr(x::EXPR{Macro})
     Expr(:macro, Expr(x.args[2]), Expr(x.args[3]))
 end
 
-Expr(x::EXPR{HEAD{:globalrefdoc}}) = GlobalRef(Core, Symbol("@doc"))
+Expr(x::EXPR{GlobalRefDoc}) = GlobalRef(Core, Symbol("@doc"))
 
 function Expr(x::EXPR{Row})
     ret = Expr(:row)

@@ -143,36 +143,6 @@ macro default(ps, body)
 end
 
 """
-    @scope ps scope body
-
-Continues parsing tracking declared variables.
-"""
-macro scope(ps, new_scope, body)
-    quote
-        local tmp1 = $(esc(ps)).current_scope
-        $(esc(ps)).current_scope = $(esc(new_scope))
-        out = $(esc(body))
-        $(esc(ps)).current_scope = tmp1
-        out
-    end
-end
-
-"""
-    @noscope ps body
-
-Continues parsing not tracking declared variables.
-"""
-macro noscope(ps, body)
-    quote
-        local tmp1 = $(esc(ps)).trackscope
-        $(esc(ps)).trackscope = false
-        out = $(esc(body))
-        $(esc(ps)).trackscope = tmp1
-        out
-    end
-end
-
-"""
     @catcherror ps body
 
 Checks for `ps.errored`.

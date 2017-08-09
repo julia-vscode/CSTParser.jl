@@ -162,7 +162,7 @@ function parse_compound(ps::ParseState, ret)
 ################################################################################
     elseif ps.nt.kind in (Tokens.ENDMARKER, Tokens.LPAREN, Tokens.RPAREN, Tokens.LBRACE,
                           Tokens.LSQUARE, Tokens.RSQUARE)
-        return error_unexpected(ps, pt.nt.startbyte, ps.nt)
+        return error_unexpected(ps, ps.nt.startbyte, ps.nt)
     elseif ret isa EXPR{<:OPERATOR}
         ps.errored = true
         push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedOperator}(

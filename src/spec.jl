@@ -64,7 +64,6 @@ abstract type LITERAL{K} end
 abstract type KEYWORD{K} end
 abstract type OPERATOR{P,K,dot} end
 abstract type PUNCTUATION{K} end
-abstract type HEAD{K} end
 abstract type ERROR end
 
 
@@ -102,21 +101,6 @@ function INSTANCE(ps::ParseState)
         ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION(ps) :
         (ps.errored = true; EXPR{ERROR}(EXPR[], ""))
 end
-
-
-
-
-# heads
-
-
-const TRUE = EXPR{LITERAL{Tokens.TRUE}}(EXPR[], 0, 1:0, "")
-const FALSE = EXPR{LITERAL{Tokens.FALSE}}(EXPR[], 0, 1:0, "")
-const NOTHING = EXPR{HEAD{:nothing}}(EXPR[], 0, 1:0, "nothing")
-const GlobalRefDOC = EXPR{HEAD{:globalrefdoc}}(EXPR[], 0, 1:0, "globalrefdoc")
-
-
-
-abstract type Scope{t} end
 
 mutable struct File
     imports
@@ -164,6 +148,7 @@ abstract type For <: Head end
 abstract type FunctionDef <: Head end
 abstract type Generator <: Head end
 abstract type Global <: Head end
+abstract type GlobalRefDoc <: Head end
 abstract type If <: Head end
 abstract type Kw <: Head end
 abstract type Let <: Head end
@@ -208,3 +193,8 @@ abstract type TypedVcat <: Head end
 abstract type Vect <: Head end
 
 Quotenode(x::EXPR) = EXPR{Quotenode}(EXPR[x], "")
+
+const TRUE = EXPR{LITERAL{Tokens.TRUE}}(EXPR[], 0, 1:0, "")
+const FALSE = EXPR{LITERAL{Tokens.FALSE}}(EXPR[], 0, 1:0, "")
+const NOTHING = EXPR{LITERAL{:nothing}}(EXPR[], 0, 1:0, "nothing")
+const GlobalRefDOC = EXPR{GlobalRefDoc}(EXPR[], 0, 1:0, "globalrefdoc")
