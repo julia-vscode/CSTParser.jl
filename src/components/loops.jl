@@ -12,7 +12,6 @@ end
 
 
 function parse_ranges(ps::ParseState)
-    defs = []
     arg = @closer ps range @closer ps comma @closer ps ws parse_expression(ps)
     if ps.nt.kind == Tokens.COMMA
         arg = EXPR{Block}(EXPR[arg], "")
@@ -84,7 +83,7 @@ function parse_generator(ps::ParseState, ret)
 
     # This should reverse order of iterators
     if ret.args[1] isa EXPR{Generator} || ret.args[1] isa EXPR{Flatten}
-        ret = EXPR{Flatten}([ret], "")
+        ret = EXPR{Flatten}(EXPR[ret], "")
     end
 
     return ret

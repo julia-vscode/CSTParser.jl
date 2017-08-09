@@ -29,7 +29,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     iscmd = ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
 
     if ps.errored
-        return EXPR{ERROR}([], 0, [], ps.t.val)
+        return EXPR{ERROR}([], ps.t.val)
     end
 
     lcp = nothing
@@ -109,7 +109,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     ps1 = ParseState(input)
                     @catcherror ps interp = @closer ps1 paren parse_expression(ps1)
                     push!(call,
-                        EXPR{InvisBrackets}([lparen, interp, rparen], ""))
+                        EXPR{InvisBrackets}(EXPR[lparen, interp, rparen], ""))
                     push!(ret.args, call)
                     # Compared to flisp/JuliaParser, we have an extra lookahead token,
                     # so we need to back up one here

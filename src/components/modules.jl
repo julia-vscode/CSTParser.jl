@@ -105,10 +105,10 @@ function parse_imports(ps::ParseState)
     arg = parse_dot_mod(ps)
 
     if ps.nt.kind != Tokens.COMMA && ps.nt.kind != Tokens.COLON
-        ret = EXPR{kwt}(EXPR[kw; arg], "")
+        ret = EXPR{kwt}(vcat(kw, arg), "")
     elseif ps.nt.kind == Tokens.COLON
 
-        ret = EXPR{kwt}(EXPR[kw;arg], "")
+        ret = EXPR{kwt}(vcat(kw, arg), "")
         t = 0
 
         next(ps)
@@ -123,7 +123,7 @@ function parse_imports(ps::ParseState)
             append!(ret, arg)
         end
     else
-        ret = EXPR{kwt}(EXPR[kw;arg], "")
+        ret = EXPR{kwt}(vcat(kw, arg), "")
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(ret, INSTANCE(ps))
@@ -138,7 +138,7 @@ end
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
     # Parsing
     kw = INSTANCE(ps)
-    ret = EXPR{Export}(EXPR[kw; parse_dot_mod(ps)], "")
+    ret = EXPR{Export}(vcat(kw, parse_dot_mod(ps)), "")
 
     while ps.nt.kind == Tokens.COMMA
         next(ps)

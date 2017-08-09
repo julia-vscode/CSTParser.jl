@@ -319,7 +319,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{PowerOp,K,d
     # NEEDS FIX
     if ret isa EXPR{UnaryOpCall}
         if false
-            xx = EXPR{InvisBrackets}([ret], "")
+            xx = EXPR{InvisBrackets}(EXPR[ret], "")
             nextarg = EXPR{BinaryOpCall}(EXPR[op, xx, nextarg], "")
         else
             nextarg = EXPR{BinaryOpCall}(EXPR[ret.args[2], op, nextarg], "")
@@ -430,9 +430,9 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR{OPERATOR{P,K,dot}}) 
 
     # Construction
     if issyntaxcall(op)
-        ret = EXPR{BinarySyntaxOpCall}([ret, op, nextarg], "")
+        ret = EXPR{BinarySyntaxOpCall}(EXPR[ret, op, nextarg], "")
     else
-        ret = EXPR{BinaryOpCall}([ret, op, nextarg], "")
+        ret = EXPR{BinaryOpCall}(EXPR[ret, op, nextarg], "")
     end
     return ret
 end
