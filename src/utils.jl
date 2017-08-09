@@ -177,11 +177,11 @@ end
 
 Checks for `ps.errored`.
 """
-macro catcherror(ps, startbyte, body)
+macro catcherror(ps, body)
     quote
         $(esc(body))
         if $(esc(ps)).errored
-            return EXPR{ERROR}(EXPR[INSTANCE($(esc(ps)))], 0, Variable[], "Unknown error")
+            return EXPR{ERROR}(EXPR[INSTANCE($(esc(ps)))], 0, 0:-1, "Unknown error")
         end
     end
 end
@@ -341,7 +341,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                     ps = ParseState(str)
                     io = IOBuffer(str)
                     x, ps = parse(ps, true)
-                    sp = span(x)
+                    sp = check_span(x)
                     if length(x.args) > 0 && x.args[1] isa EXPR{LITERAL{nothing}}
                         shift!(x.args)
                     end
@@ -371,6 +371,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                     print("\r                             ")
                     if !isempty(sp)
                         print_with_color(:blue, file)
+                        @show sp
                         println()
                         push!(ret, (file, :span))
                     end
@@ -451,19 +452,19 @@ function compare(x::Expr, y::Expr)
 end
 
 """
-    span(x, neq = [])
+check_span(x, neq = [])
 
 Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
-function span(x::EXPR{StringH}, neq = []) end
-function span(x, neq = [])
+function check_span(x::EXPR{StringH}, neq = []) end
+function check_span(x, neq = [])
     s = 0
     for a in x.args
-        span(a, neq)
-        s += a.span
+        check_span(a, neq)
+        s += a.fullspan
     end
-    if length(x.args) > 0 && s != x.span
+    if length(x.args) > 0 && s != x.fullspan
         push!(neq, x)
     end
     neq
@@ -525,18 +526,6 @@ function get_last_token(x::CSTParser.EXPR)
     end
 end
 
-function trailing_ws_length(x::CSTParser.EXPR{CSTParser.IDENTIFIER})
-    x.span - sizeof(x.val)
-end
-
-function trailing_ws_length(x::CSTParser.EXPR{P}) where P <: CSTParser.PUNCTUATION
-    x.span - 1
-end
-
-function trailing_ws_length(x::CSTParser.EXPR{K}) where K <: CSTParser.KEYWORD{T} where T
-    x.span - sizeof(string(T))
-end
-
-function trailing_ws_length(x::CSTParser.EXPR{K}) where K <: CSTParser.LITERAL{T} where T
-    x.span - sizeof(x.val)
+function trailing_ws_length(x::CSTParser.EXPR)
+    x.fullspan - length(x.span)
 end

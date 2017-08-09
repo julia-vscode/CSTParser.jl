@@ -22,9 +22,9 @@ When trying to make an `INSTANCE` from a string token we must check for
 interpolating operators.
 """
 function parse_string_or_cmd(ps::ParseState, prefixed = false)
-    startbyte = ps.t.startbyte
+    sfullspan = ps.nt.startbyte - ps.t.startbyte
+    sspan = 1 + (0:(ps.t.endbyte-ps.t.startbyte))
 
-    span = ps.nt.startbyte - ps.t.startbyte
     istrip = (ps.t.kind == Tokens.TRIPLE_STRING) || (ps.t.kind == Tokens.TRIPLE_CMD)
     iscmd = ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
 
@@ -67,26 +67,27 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     # there are interpolations in the string
     if prefixed != false || iscmd
         val = istrip ? ps.t.val[4:end-3] : ps.t.val[2:end-1]
-        expr = EXPR{LITERAL{ps.t.kind}}(Expr[], span, Variable[],
+        expr = EXPR{LITERAL{ps.t.kind}}(Expr[], sfullspan, sspan,
             iscmd ? replace(val, "\\`", "`") :
                     replace(val, "\\\"", "\""))
         if istrip
             adjust_lcp(expr)
-            ret = EXPR{StringH}(EXPR[expr], span, Variable[], "")
+            ret = EXPR{StringH}(EXPR[expr], sfullspan, sspan, "")
         else
             return expr
         end
     else
-        ret = EXPR{StringH}(EXPR[], span, Variable[], "")
+        ret = EXPR{StringH}(EXPR[], sfullspan, sspan, "")
         input = IOBuffer(ps.t.val)
-        seek(input, istrip ? 3 : 1)
+        startbytes = istrip ? 3 : 1
+        seek(input, startbytes)
         b = IOBuffer()
         while true
             if eof(input)
                 lspan = position(b)
                 str = tostr(b)[1:end-(istrip?3:1)]
-                ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan, Variable[], str)
-                (isempty(ret.args) || !isempty(str)) && (push!(ret.args, ex); istrip && adjust_lcp(ex, true))
+                ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan+ps.nt.startbyte-ps.t.endbyte-1+startbytes, 1:(lspan+startbytes), str)
+                push!(ret.args, ex); istrip && adjust_lcp(ex, true)
                 break
             end
             c = read(input, Char)
@@ -96,16 +97,21 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             elseif c == '$'
                 lspan = position(b)
                 str = tostr(b)
-                if !isempty(str)
-                    ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan, Variable[], str)
-                    push!(ret.args, ex); istrip && adjust_lcp(ex)
-                end
+                ex = EXPR{LITERAL{Tokens.STRING}}(EXPR[], lspan+startbytes, 1:(lspan+startbytes), str)
+                push!(ret.args, ex); istrip && adjust_lcp(ex)
+                startbytes = 0
+                op = EXPR{OPERATOR{PlusOp,Tokens.EX_OR,false}}(EXPR[], 1, 1:1, "\$")
+                call = EXPR{UnarySyntaxOpCall}(EXPR[op], "")
                 if peekchar(input) == '('
+                    lparen = EXPR{PUNCTUATION{Tokens.LPAREN}}(EXPR[], 1, 1:1, "(")
+                    rparen = EXPR{PUNCTUATION{Tokens.RPAREN}}(EXPR[], 1, 1:1, "(")
                     skip(input, 1)
                     ps1 = ParseState(input)
-                    @catcherror ps startbyte interp = @closer ps1 paren parse_expression(ps1)
-                    push!(ret.args, interp)
-                    # Comparse to flisp/JuliaParser, we have an extra lookahead token,
+                    @catcherror ps interp = @closer ps1 paren parse_expression(ps1)
+                    push!(call,
+                        EXPR{InvisBrackets}([lparen, interp, rparen], ""))
+                    push!(ret.args, call)
+                    # Compared to flisp/JuliaParser, we have an extra lookahead token,
                     # so we need to back up one here
                     seek(input, ps1.nt.startbyte+1)
                 else
@@ -113,8 +119,11 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     ps1 = ParseState(input)
                     next(ps1)
                     t = INSTANCE(ps1)
-                    push!(ret.args, t)
-                    seek(input, pos+t.span-length(ps1.ws.val))
+                    # Attribute trailing whitespace to the string
+                    t.fullspan = length(t.span)
+                    push!(call, t)
+                    push!(ret.args, call)
+                    seek(input, pos+t.fullspan)
                 end
             else
                 write(b, c)
@@ -137,7 +146,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     end
 
     ret = (length(ret.args) == 1 && ret.args[1] isa single_string_T) ? ret.args[1] : ret
-    ret.span = span
+    update_span!(ret)
 
     return ret
 end

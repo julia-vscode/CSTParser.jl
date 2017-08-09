@@ -58,42 +58,6 @@ end
 #     end
 # end
 
-"""
-    _track_assignment(ps, x, val, defs = [])
-
-When applied to the lhs of an assignment returns a vector of the 
-newly defined variables.
-"""
-function _track_assignment(ps::ParseState, x, val, defs = [])
-    return defs
-end
-function _track_assignment(ps::ParseState, x::EXPR{IDENTIFIER}, val, defs = [])
-    t = infer_t(val)
-    push!(defs, Variable(Expr(x), t, val))
-    return defs
-end
-
-function _track_assignment(ps::ParseState, x::EXPR{BinarySyntaxOpCall}, val, defs = [])
-    if x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}
-        t = Expr(x.args[3])
-        push!(defs, Variable(Expr(get_id(x.args[1])), t, val))
-    end
-    return defs
-end
-
-function _track_assignment(ps::ParseState, x::EXPR{Curly}, val, defs = [])
-    t = infer_t(val)
-    push!(defs, Variable(Expr(get_id(x)), t, val))
-    return defs
-end
-
-function _track_assignment(ps::ParseState, x::EXPR{TupleH}, val, defs = [])
-    for a in x.args
-        _track_assignment(ps, a, val, defs)
-    end
-    return defs
-end
-
 
 infer_t(x) = :Any
 infer_t(x::EXPR{LITERAL{Tokens.INTEGER}}) = :Int
@@ -114,27 +78,6 @@ infer_t(x::EXPR{Quote}) = :Expr
 infer_t(x::EXPR{StringH}) = :String
 infer_t(x::EXPR{Quotenode}) = :QuoteNode
 
-function get_symbols(x, offset = 0, symbols = []) end
-
-function get_symbols(x::EXPR, offset = 0, symbols = [])
-    for a in x.args
-        for v in a.defs
-            push!(symbols, (v, offset + (1:a.span)))
-        end
-        if contributes_scope(a)
-            get_symbols(a, offset, symbols)
-        end
-        if a isa EXPR{ModuleH} || a isa EXPR{BareModule}
-            m_scope = get_symbols(a.args[3])
-            offset2 = offset + a.args[1].span + a.args[2].span
-            for mv in m_scope
-                push!(symbols, (Variable(Expr(:(.), a.defs[1].id, QuoteNode(mv[1].id)), mv[1].t, mv[1].val), mv[2] + offset2))
-            end
-        end
-        offset += a.span
-    end
-    return symbols
-end
 
 """
     contributes_scope(x)

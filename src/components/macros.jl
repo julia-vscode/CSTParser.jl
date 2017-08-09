@@ -1,23 +1,18 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
-    startbyte = ps.t.startbyte
-    start_col = ps.t.startpos[2] + 4
     kw = INSTANCE(ps)
-    format_kw(ps)
     if ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         sig = INSTANCE(ps)
-        @catcherror ps startbyte sig = parse_call(ps, sig)
+        @catcherror ps sig = parse_call(ps, sig)
     else
-        @catcherror ps startbyte sig = @closer ps block @closer ps ws parse_expression(ps)
+        @catcherror ps sig = @closer ps block @closer ps ws parse_expression(ps)
     end
 
-    _get_sig_defs!(sig)
-    block = EXPR{Block}(EXPR[], 0, Variable[], "")
-    @catcherror ps startbyte @default ps parse_block(ps, block, start_col)
+    block = EXPR{Block}(EXPR[], 0, 1:0, "")
+    @catcherror ps @default ps parse_block(ps, block)
 
     next(ps)
-    ret = EXPR{Macro}(EXPR[kw, sig, block, INSTANCE(ps)], ps.nt.startbyte - startbyte, Variable[], "")
-    ret.defs =  [Variable(Symbol("@", Expr(_get_fname(sig))), :Macro, ret)]
+    ret = EXPR{Macro}(EXPR[kw, sig, block, INSTANCE(ps)], "")
     return ret
 end
 
@@ -27,45 +22,43 @@ end
 Parses a macro call. Expects to start on the `@`.
 """
 function parse_macrocall(ps::ParseState)
-    startbyte = ps.t.startbyte
     next(ps)
-    mname = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.lt.startbyte, Variable[], string("@", ps.t.val))
+    mname = IDENTIFIER(ps)
+    mname = EXPR{IDENTIFIER}(EXPR[], 1+mname.fullspan, 1:(last(mname.span)+1), string("@", ps.t.val))
     # Handle cases with @ at start of dotted expressions
     if ps.nt.kind == Tokens.DOT && isemptyws(ps.ws)
         while ps.nt.kind == Tokens.DOT
             next(ps)
             op = INSTANCE(ps)
             if ps.nt.kind != Tokens.IDENTIFIER
-                return EXPR{ERROR}(EXPR[], 0, Variable[], "Invalid macro name")
+                return EXPR{ERROR}(EXPR[], 0, 1:0, "Invalid macro name")
             end
             next(ps)
             nextarg = INSTANCE(ps)
-            mname = EXPR{BinarySyntaxOpCall}(EXPR[mname, op, Quotenode(nextarg)], mname.span + op.span + nextarg.span, Variable[], "")
+            mname = EXPR{BinarySyntaxOpCall}(EXPR[mname, op, Quotenode(nextarg)], "")
         end
     end
-    ret = EXPR{MacroCall}(EXPR[mname], 0, Variable[], "")
+    ret = EXPR{MacroCall}(EXPR[mname], "")
 
     if ps.nt.kind == Tokens.COMMA
-        ret.span = ps.nt.startbyte - startbyte
         return ret
     end
     if isemptyws(ps.ws) && ps.nt.kind == Tokens.LPAREN
         next(ps)
-        push!(ret.args, INSTANCE(ps))
-        @catcherror ps startbyte @default ps @nocloser ps newline @closer ps paren parse_comma_sep(ps, ret, false)
+        push!(ret, INSTANCE(ps))
+        @catcherror ps @default ps @nocloser ps newline @closer ps paren parse_comma_sep(ps, ret, false)
         next(ps)
-        push!(ret.args, INSTANCE(ps))
+        push!(ret, INSTANCE(ps))
     else
         insquare = ps.closer.insquare
         @default ps while !closer(ps)
-            @catcherror ps startbyte a = @closer ps inmacro @closer ps ws @closer ps wsop parse_expression(ps)
-            push!(ret.args, a)
+            @catcherror ps a = @closer ps inmacro @closer ps ws @closer ps wsop parse_expression(ps)
+            push!(ret, a)
             if insquare && ps.nt.kind == Tokens.FOR
                 break
             end
         end
     end
-    ret.span = ps.nt.startbyte - startbyte
     return ret
 end
 
@@ -80,5 +73,3 @@ function ismacro(x::EXPR{BinarySyntaxOpCall})
         return false
     end
 end
-
-
