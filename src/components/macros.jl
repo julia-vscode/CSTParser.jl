@@ -24,7 +24,7 @@ Parses a macro call. Expects to start on the `@`.
 function parse_macrocall(ps::ParseState)
     next(ps)
     mname = IDENTIFIER(ps)
-    mname = EXPR{IDENTIFIER}(EXPR[], 1+mname.fullspan, 1:(last(mname.span)+1), string("@", ps.t.val))
+    mname = EXPR{IDENTIFIER}(EXPR[], 1 + mname.fullspan, 1:(last(mname.span) + 1), string("@", ps.t.val))
     # Handle cases with @ at start of dotted expressions
     if ps.nt.kind == Tokens.DOT && isemptyws(ps.ws)
         while ps.nt.kind == Tokens.DOT

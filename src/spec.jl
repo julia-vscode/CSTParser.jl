@@ -19,7 +19,7 @@ span(x::EXPR) = length(x.span)
 
 function update_span!(x::EXPR)
     isempty(x.args) && return
-    x.fullspan = isempty(x.args) ? 0 : sum(y->y.fullspan, x.args)
+    x.fullspan = isempty(x.args) ? 0 : sum(y -> y.fullspan, x.args)
     x.span = first(first(x.args).span):(x.fullspan - last(x.args).fullspan + last(last(x.args).span))
 end
 
@@ -73,25 +73,25 @@ function LITERAL(ps::ParseState)
        ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
         return parse_string_or_cmd(ps)
     else
-        EXPR{LITERAL{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), ps.t.val)
+        EXPR{LITERAL{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), ps.t.val)
     end
 end
 
-IDENTIFIER(ps::ParseState) = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), ps.t.val)
+IDENTIFIER(ps::ParseState) = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), ps.t.val)
 
-OPERATOR(ps::ParseState) = EXPR{OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), "")
+OPERATOR(ps::ParseState) = EXPR{OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), "")
 
-KEYWORD(ps::ParseState) = EXPR{KEYWORD{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), "")
+KEYWORD(ps::ParseState) = EXPR{KEYWORD{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), "")
 
-PUNCTUATION(ps::ParseState) = EXPR{PUNCTUATION{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte-ps.t.startbyte+1), "")
+PUNCTUATION(ps::ParseState) = EXPR{PUNCTUATION{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), "")
 
 function INSTANCE(ps::ParseState)
     span = ps.nt.startbyte - ps.t.startbyte
-    ps.errored && return EXPR{ERROR}(EXPR[], span, 1:(ps.t.endbyte-ps.t.startbyte+1), "")
+    ps.errored && return EXPR{ERROR}(EXPR[], span, 1:(ps.t.endbyte - ps.t.startbyte + 1), "")
     if ps.t.kind == Tokens.ENDMARKER
         ps.errored = true
         push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedInputEnd}(ps.t.startbyte + (0:0), [], "Unexpected end of input"))
-        return EXPR{ERROR}(EXPR[], span, 1:(ps.t.endbyte-ps.t.startbyte+1), "Unexpected end of input")
+        return EXPR{ERROR}(EXPR[], span, 1:(ps.t.endbyte - ps.t.startbyte + 1), "Unexpected end of input")
     end
     return isidentifier(ps.t) ? IDENTIFIER(ps) :
         isliteral(ps.t) ? LITERAL(ps) :
@@ -168,7 +168,6 @@ abstract type TupleH <: Head end
 abstract type TypeAlias <: Head end
 abstract type FileH <: Head end
 abstract type Return <: Head end
-abstract type Vect <: Head end
 abstract type While <: Head end
 abstract type x_Cmd <: Head end
 abstract type x_Str <: Head end

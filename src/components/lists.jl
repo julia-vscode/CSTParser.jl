@@ -1,4 +1,38 @@
 """
+parse_tuple(ps, ret)
+
+`ret` is followed by a comma so tries to parse the rest of the
+tuple.
+"""
+function parse_tuple(ps::ParseState, ret)
+next(ps)
+op = INSTANCE(ps)
+
+if isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX
+    if ret isa EXPR{TupleH}
+        push!(ret, op)
+    else
+        ret =  EXPR{TupleH}(EXPR[ret, op], "")
+    end
+elseif closer(ps)
+    if ret isa EXPR{TupleH}
+        push!(ret, op)
+    else
+        ret = EXPR{TupleH}(EXPR[ret, op], "")
+    end
+else
+    @catcherror ps nextarg = @closer ps tuple parse_expression(ps)
+    if ret isa EXPR{TupleH} && (!(first(ret.args) isa EXPR{PUNCTUATION{Tokens.LPAREN}}))
+        push!(ret, op)
+        push!(ret, nextarg)
+    else
+        ret = EXPR{TupleH}(EXPR[ret, op, nextarg], "")
+    end
+end
+return ret
+end
+
+"""
     parse_array(ps)
 Having hit '[' return either:
 + A vect
@@ -161,3 +195,29 @@ function _parse_ref(ret, ref)
     end
     return ret
 end
+
+"""
+parse_curly(ps, ret)
+
+Parses the juxtaposition of `ret` with an opening brace. Parses a comma
+seperated list.
+"""
+function parse_curly(ps::ParseState, ret)
+    next(ps)
+    ret = EXPR{Curly}(EXPR[ret, INSTANCE(ps)], "")
+
+    @catcherror ps  @default ps @nocloser ps inwhere @closer ps brace parse_comma_sep(ps, ret, true, false)
+    next(ps)
+    push!(ret, INSTANCE(ps))
+    return ret
+end
+
+function parse_cell1d(ps::ParseState)
+    ret = EXPR{Cell1d}(EXPR[INSTANCE(ps)], "")
+    @catcherror ps @default ps @closer ps brace parse_comma_sep(ps, ret, true, false)
+    next(ps)
+    push!(ret, INSTANCE(ps))
+    return ret
+end
+
+

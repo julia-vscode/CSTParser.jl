@@ -34,7 +34,7 @@ function utf8proc_map_custom(str::String, options, func)
     nwords = ccall(:utf8proc_decompose_custom, Int, (Ptr{UInt8}, Int, Ptr{UInt8}, Int, Cint, Ptr{Void}, Ptr{Void}),
                    str, sizeof(str), C_NULL, 0, options, norm_func, C_NULL)
     nwords < 0 && Base.UTF8proc.utf8proc_error(nwords)
-    buffer = Base.StringVector(nwords*4)
+    buffer = Base.StringVector(nwords * 4)
     nwords = ccall(:utf8proc_decompose_custom, Int, (Ptr{UInt8}, Int, Ptr{UInt8}, Int, Cint, Ptr{Void}, Ptr{Void}),
                    str, sizeof(str), buffer, nwords, options, norm_func, C_NULL)
     nwords < 0 && Base.UTF8proc.utf8proc_error(nwords)
@@ -50,7 +50,7 @@ end
 
 Expr(x::EXPR{IDENTIFIER}) = Symbol(normalize_julia_identifier(x.val))
 
-function Expr(x::EXPR{OPERATOR{O,K,dot}}) where {O, K, dot}
+function Expr(x::EXPR{OPERATOR{O,K,dot}}) where {O,K,dot}
     if dot
         Symbol(:., UNICODE_OPS_REVERSE[K])
     else
@@ -71,18 +71,18 @@ function sized_uint_literal(s::AbstractString, b::Integer)
     l <= 32  && return Base.parse(UInt32,  s)
     l <= 64  && return Base.parse(UInt64,  s)
     l <= 128 && return Base.parse(UInt128, s)
-    return Base.parse(BigInt,s)
+    return Base.parse(BigInt, s)
 end
 
 function sized_uint_oct_literal(s::AbstractString)
     s[3] == 0 && return sized_uint_literal(s, 3)
     len = sizeof(s)
-    (len < 5  || (len == 5  && s <= "0o377")) && return Base.parse(UInt8,s)
+    (len < 5  || (len == 5  && s <= "0o377")) && return Base.parse(UInt8, s)
     (len < 8  || (len == 8  && s <= "0o177777")) && return Base.parse(UInt16, s)
-    (len < 13 || (len == 13 && s <= "0o37777777777")) && return Base.parse(UInt32,s)
-    (len < 24 || (len == 24 && s <= "0o1777777777777777777777")) && return Base.parse(UInt64,s)
-    (len < 45 || (len == 45 && s <= "0o3777777777777777777777777777777777777777777")) && return Base.parse(UInt128,s)
-    return Base.parse(BigInt,s)
+    (len < 13 || (len == 13 && s <= "0o37777777777")) && return Base.parse(UInt32, s)
+    (len < 24 || (len == 24 && s <= "0o1777777777777777777777")) && return Base.parse(UInt64, s)
+    (len < 45 || (len == 45 && s <= "0o3777777777777777777777777777777777777777777")) && return Base.parse(UInt128, s)
+    return Base.parse(BigInt, s)
 end
 
 const TYPEMAX_INT64_STR = string(typemax(Int))
@@ -113,7 +113,7 @@ function Expr(x::EXPR{LITERAL{Tokens.FLOAT}})
     Base.parse(Float64, x.val)
 end
 function Expr(x::EXPR{LITERAL{Tokens.CHAR}})
-    val = Base.unescape_string(x.val[2:end-1])
+    val = Base.unescape_string(x.val[2:end - 1])
     # one byte e.g. '\xff' maybe not valid UTF-8
     # but we want to use the raw value as a codepoint in this case
     sizeof(val) == 1 && return Char(Vector{UInt8}(val)[1])
@@ -357,7 +357,7 @@ Expr(x::EXPR{InvisBrackets}) = Expr(x.args[2])
 Expr(x::EXPR{Begin}) = Expr(x.args[2])
 
 function Expr(x::EXPR{Quote})
-    if x.args[2] isa EXPR{InvisBrackets} && (x.args[2].args[2] isa EXPR{OP} where OP <: OPERATOR|| x.args[2].args[2] isa EXPR{L} where L <: LITERAL || x.args[2].args[2] isa EXPR{IDENTIFIER})
+    if x.args[2] isa EXPR{InvisBrackets} && (x.args[2].args[2] isa EXPR{OP} where OP <: OPERATOR || x.args[2].args[2] isa EXPR{L} where L <: LITERAL || x.args[2].args[2] isa EXPR{IDENTIFIER})
         return QuoteNode(Expr(x.args[2]))
     else
         return Expr(:quote, Expr(x.args[2]))
@@ -759,7 +759,7 @@ end
 
 function Expr(x::EXPR{StringH})
     ret = Expr(:string)
-    for (i,a) in enumerate(x.args)
+    for (i, a) in enumerate(x.args)
         if typeof(a) == EXPR{UnarySyntaxOpCall}
             a = a.args[2]
         elseif typeof(a) == EXPR{LITERAL{Tokens.STRING}}
