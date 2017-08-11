@@ -204,7 +204,7 @@ _get_fparams(x::EXPR, args = Symbol[]) = args
 
 function _get_fparams(x::EXPR{Call}, args = Symbol[])
     if x.args[1] isa EXPR{Curly}
-       _get_fparams(x.args[1], args)
+        _get_fparams(x.args[1], args)
     end
     unique(args)
 end
@@ -261,4 +261,18 @@ _get_fsig(fdecl::EXPR{BinarySyntaxOpCall}) = fdecl.args[1]
 
 declares_function(x) = false
 declares_function(x::EXPR{FunctionDef}) = true
-declares_function(x::EXPR{BinarySyntaxOpCall}) = x.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}} && x.args[1] isa EXPR{Call}
+function declares_function(x::EXPR{BinarySyntaxOpCall})
+    if x.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}} 
+        sig = x.args[1]
+        while true
+            if sig isa EXPR{Call}
+                return true
+            elseif sig isa EXPR{BinarySyntaxOpCall} && (sig.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}} || sig.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}})
+                sig = sig.args[1]
+            else
+                return false
+            end
+        end
+    end
+    return false
+end
