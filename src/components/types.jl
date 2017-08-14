@@ -39,7 +39,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.PRIMITIVE}})
         next(ps)
         ret = EXPR{Primitive}(EXPR[kw1, kw2, sig, arg, INSTANCE(ps)], "")
     else
-        ret = EXPR{IDENTIFIER}(EXPR[], "primitive")
+        ret = IDENTIFIER(ps)
     end
     return ret
 end
