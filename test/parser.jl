@@ -705,6 +705,7 @@ end
     CSTParser.parse("(\"\$T\")").fullspan == 6
     CSTParser.parse("\"\"\"\$T is not supported\"\"\"").fullspan == 25
     CSTParser.parse("using Compat: @compat\n").fullspan == 22
+    CSTParser.parse("primitive = 1").fullspan == 13
 end
 
 end
