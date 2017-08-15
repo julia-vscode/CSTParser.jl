@@ -233,7 +233,7 @@ function _get_fparams(x::EXPR{BinarySyntaxOpCall}, args = Symbol[])
             if !(a isa EXPR{P} where P <: PUNCTUATION)
                 if a isa EXPR{IDENTIFIER}
                     push!(args, Expr(a))
-                elseif a isa EXPR{BinarySyntaxOpCall} && a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUBTYPE,false}}
+                elseif a isa EXPR{BinarySyntaxOpCall} && a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUBTYPE,false}} && a isa EXPR{IDENTIFIER}
                     push!(args, Expr(a).args[1])
                 end
             end
