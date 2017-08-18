@@ -661,15 +661,15 @@ end
     end""" |> test_expr # normalize unicode
     @test "function func() where {A where T} x + 1 end" |> test_expr # nested where
     @test "(;x)" |> test_expr # issue 39
+    @test """let f = ((; a = 1, b = 2) -> ()),
+    m = first(methods(f))
+    @test DSE.keywords(f, m) == [:a, :b]
+end""" |> test_expr
 end
 
 @testset "Broken things" begin
     @test_broken "\$(a) * -\$(b)" |> test_expr
     @test_broken "function(f, args...; kw...) end" |> test_expr
-    @test_broken """let f = ((; a = 1, b = 2) -> ()),
-                m = first(methods(f))
-                @test DSE.keywords(f, m) == [:a, :b]
-            end""" |> test_expr
     @test_broken "-1^a" |> test_expr
 end
 

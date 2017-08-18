@@ -192,7 +192,7 @@ function parse_paren(ps::ParseState)
 
     if (length(ret.args) == 2 && !(ret.args[2] isa EXPR{UnarySyntaxOpCall} && ret.args[2].args[2] isa EXPR{OPERATOR{DddotOp,Tokens.DDDOT,false}})) || (length(ret.args) == 1 && ret.args[1] isa EXPR{Block})
 
-        if ps.ws.kind != SemiColonWS || (length(ret.args) == 2 && ret.args[2] isa EXPR{Block})
+        if (ps.ws.kind != SemiColonWS || (length(ret.args) == 2 && ret.args[2] isa EXPR{Block})) && !(ret.args[2] isa EXPR{Parameters})
             ret = EXPR{InvisBrackets}(ret.args, "")
         end
     end

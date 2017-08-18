@@ -145,7 +145,7 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false)
     end
 
     if ps.ws.kind == SemiColonWS
-        if block && !(ret isa EXPR{TupleH} && length(ret.args) > 2)
+        if block && !(ret isa EXPR{TupleH} && length(ret.args) > 2) && !(length(ret.args) == 1 && ret.args[1] isa EXPR{<:PUNCTUATION})
             body = EXPR{Block}(EXPR[pop!(ret)], "")
             @nocloser ps newline @closer ps comma while @nocloser ps semicolon !closer(ps)
                 @catcherror ps a = parse_expression(ps)
