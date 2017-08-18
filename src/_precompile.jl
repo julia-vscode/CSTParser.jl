@@ -1,0 +1,83 @@
+function _precompile_()
+    ccall(:jl_generating_output, Cint, ()) == 1 || return nothing
+    
+    precompile(CSTParser.ParseState, (String,))
+    precompile(CSTParser.next, (CSTParser.ParseState,))
+    precompile(CSTParser.closer, (CSTParser.ParseState,))
+    # precompile(CSTParser.lex_ws_comment, (Tokenize.Lexers.Lexer, Char))
+    # precompile(CSTParser.read_comment, (Tokenize.Lexers.Lexer,))
+    precompile(CSTParser.INSTANCE, (CSTParser.ParseState,))
+    precompile(CSTParser.LITERAL, (CSTParser.ParseState,))
+    precompile(CSTParser.parse_string_or_cmd, (CSTParser.ParseState,))
+    precompile(CSTParser.IDENTIFIER, (CSTParser.ParseState,))
+    precompile(CSTParser.OPERATOR, (CSTParser.ParseState,))
+    precompile(CSTParser.KEYWORD, (CSTParser.ParseState,))
+    precompile(CSTParser.PUNCTUATION, (CSTParser.ParseState,))
+    precompile(CSTParser.parse, (String,))
+    precompile(CSTParser.parse_expression, (CSTParser.ParseState,))
+    precompile(CSTParser.parse_paren, (CSTParser.ParseState,))
+    precompile(CSTParser.parse_doc, (CSTParser.ParseState,))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.BEGIN}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.QUOTE}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.END}}))
+
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.MODULE}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.BAREMODULE}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.IMPORT}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.IMPORTALL}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.USING}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.EXPORT}}))
+
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.FUNCTION}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.RETURN}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.MACRO}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.IF}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.ELSE}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.ELSEIF}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.LET}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.TRY}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.CATCH}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.FINALLY}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.FOR}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.WHILE}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.BREAK}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.CONTINUE}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.CONST}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.GLOBAL}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.LOCAL}}))
+
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.ABSTRACT}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.BITSTYPE}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.PRIMITIVE}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.TYPEALIAS}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.TYPE}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.IMMUTABLE}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.STRUCT}}))
+    precompile(CSTParser.parse_kw, (CSTParser.ParseState, Type{Val{Tokenize.Tokens.MUTABLE}}))
+
+
+    precompile(CSTParser.parse_compound, (CSTParser.ParseState, CSTParser.EXPR{CSTParser.IDENTIFIER}))
+    
+    precompile(CSTParser.parse_call, (CSTParser.ParseState, CSTParser.EXPR{CSTParser.IDENTIFIER}))
+    precompile(CSTParser.parse_curly, (CSTParser.ParseState, CSTParser.EXPR{CSTParser.IDENTIFIER}))
+
+    precompile(CSTParser.parse_comma_sep, (CSTParser.ParseState, CSTParser.EXPR{CSTParser.Call}, Bool, Bool))
+    precompile(CSTParser.parse_comma_sep, (CSTParser.ParseState, CSTParser.EXPR{CSTParser.Curly}, Bool, Bool))
+
+    precompile(CSTParser.parse_do, (CSTParser.ParseState, Bool))
+    precompile(CSTParser.parse_if, (CSTParser.ParseState, Bool))
+    precompile(CSTParser.parse_tuple, (CSTParser.ParseState, CSTParser.EXPR{CSTParser.TupleH}))
+    precompile(CSTParser.parse_array, (CSTParser.ParseState,))
+
+    precompile(CSTParser.parse_block, (CSTParser.ParseState, CSTParser.EXPR{CSTParser.Block}, Vector{Tokenize.Tokens.Kind}, Bool))
+    
+    for h in subtypes(CSTParser.Head)
+        precompile(CSTParser.update_span!, (CSTParser.EXPR{h},))
+        precompile(CSTParser.pop!, (CSTParser.EXPR{h},))
+        for h1 in subtypes(CSTParser.Head)
+            precompile(CSTParser.push!, (CSTParser.EXPR{h},CSTParser.EXPR{h1}))
+            precompile(CSTParser.unshift!, (CSTParser.EXPR{h},CSTParser.EXPR{h1}))
+            precompile(CSTParser.append!, (CSTParser.EXPR{h},CSTParser.EXPR{h1}))
+        end
+    end
+end
