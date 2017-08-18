@@ -44,7 +44,11 @@ end
 function Base.pop!(e::EXPR)
     arg = pop!(e.args)
     e.fullspan -= arg.fullspan
-    e.span = first(e.span):(e.fullspan - last(e.args).fullspan + last(last(e.args).span))
+    if isempty(e.args)
+        e.span = 1:0
+    else
+        e.span = first(e.span):(e.fullspan - last(e.args).fullspan + last(last(e.args).span))
+    end
     arg
 end
 
