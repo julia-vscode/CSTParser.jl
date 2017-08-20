@@ -5,7 +5,7 @@
 #   last(e.span) == sum(x->x.fullspan, e.args[1:end-1]) + last(last(e.args).span)
 # end
 mutable struct EXPR{T}
-    args::Vector
+    args::Vector{EXPR}
     # The full width of this expression including any whitespace
     fullspan::Int
     # The range of bytes within the fullspan that constitute the actual expression,
@@ -19,8 +19,12 @@ span(x::EXPR) = length(x.span)
 
 function update_span!(x::EXPR)
     isempty(x.args) && return
-    x.fullspan = isempty(x.args) ? 0 : sum(y -> y.fullspan, x.args)
+    x.fullspan = 0
+    for a in x.args
+        x.fullspan += a.fullspan
+    end
     x.span = first(first(x.args).span):(x.fullspan - last(x.args).fullspan + last(last(x.args).span))
+    return 
 end
 
 function EXPR{T}(args::Vector, val::String) where {T}
@@ -90,21 +94,23 @@ KEYWORD(ps::ParseState) = EXPR{KEYWORD{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.
 PUNCTUATION(ps::ParseState) = EXPR{PUNCTUATION{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), "")
 
 function INSTANCE(ps::ParseState)
-    span = ps.nt.startbyte - ps.t.startbyte
-    ps.errored && return EXPR{ERROR}(EXPR[], span, 1:(ps.t.endbyte - ps.t.startbyte + 1), "")
-    if ps.t.kind == Tokens.ENDMARKER
-        ps.errored = true
-        push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedInputEnd}(ps.t.startbyte + (0:0), [], "Unexpected end of input"))
-        return EXPR{ERROR}(EXPR[], span, 1:(ps.t.endbyte - ps.t.startbyte + 1), "Unexpected end of input")
+    if ps.errored
+        return EXPR{ERROR}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), "")
+    elseif isidentifier(ps.t)
+        return IDENTIFIER(ps)
+    elseif isliteral(ps.t)
+        return LITERAL(ps)
+    elseif iskw(ps.t)
+        return KEYWORD(ps)
+    elseif isoperator(ps.t)
+        return OPERATOR(ps)
+    elseif ispunctuation(ps.t) || ps.t.kind == Tokens.SEMICOLON
+        return PUNCTUATION(ps)
+    else
+        return error_unexpected(ps, ps.t.startbyte, ps.t)
     end
-    return isidentifier(ps.t) ? IDENTIFIER(ps) :
-        isliteral(ps.t) ? LITERAL(ps) :
-        iskw(ps.t) ? KEYWORD(ps) :
-        isoperator(ps.t) ? OPERATOR(ps) :
-        ispunctuation(ps.t) ? PUNCTUATION(ps) :
-        ps.t.kind == Tokens.SEMICOLON ? PUNCTUATION(ps) :
-        (ps.errored = true; EXPR{ERROR}(EXPR[], ""))
 end
+
 
 mutable struct File
     imports

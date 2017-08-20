@@ -29,7 +29,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     iscmd = ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
 
     if ps.errored
-        return EXPR{ERROR}([], ps.t.val)
+        return EXPR{ERROR}(EXPR[], ps.t.val)
     end
 
     lcp = nothing
@@ -145,7 +145,10 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         end
     end
 
-    ret = (length(ret.args) == 1 && ret.args[1] isa single_string_T) ? ret.args[1] : ret
+    if (length(ret.args) == 1 && ret.args[1] isa single_string_T)
+        ret = ret.args[1]
+    end
+    # ret = (length(ret.args) == 1 && ret.args[1] isa single_string_T) ? ret.args[1] : ret
     update_span!(ret)
 
     return ret

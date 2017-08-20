@@ -5,33 +5,35 @@ parse_tuple(ps, ret)
 tuple.
 """
 function parse_tuple(ps::ParseState, ret)
-next(ps)
-op = INSTANCE(ps)
+    next(ps)
+    op = INSTANCE(ps)
 
-if isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX
-    if ret isa EXPR{TupleH}
-        push!(ret, op)
-    else
-        ret =  EXPR{TupleH}(EXPR[ret, op], "")
-    end
-elseif closer(ps)
-    if ret isa EXPR{TupleH}
-        push!(ret, op)
-    else
+    if closer(ps) || (isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX)
         ret = EXPR{TupleH}(EXPR[ret, op], "")
-    end
-else
-    @catcherror ps nextarg = @closer ps tuple parse_expression(ps)
-    if ret isa EXPR{TupleH} && (!(first(ret.args) isa EXPR{PUNCTUATION{Tokens.LPAREN}}))
-        push!(ret, op)
-        push!(ret, nextarg)
     else
+        @catcherror ps nextarg = @closer ps tuple parse_expression(ps)
         ret = EXPR{TupleH}(EXPR[ret, op, nextarg], "")
     end
-end
-return ret
+    return ret
 end
 
+function parse_tuple(ps::ParseState, ret::EXPR{TupleH})
+    next(ps)
+    op = INSTANCE(ps)
+
+    if closer(ps) || (isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX)
+        push!(ret, op)
+    else
+        @catcherror ps nextarg = @closer ps tuple parse_expression(ps)
+        if !(first(ret.args) isa EXPR{PUNCTUATION{Tokens.LPAREN}})
+            push!(ret, op)
+            push!(ret, nextarg)
+        else
+            ret = EXPR{TupleH}(EXPR[ret, op, nextarg], "")
+        end
+    end
+    return ret
+end
 """
     parse_array(ps)
 Having hit '[' return either:
