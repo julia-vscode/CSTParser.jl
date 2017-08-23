@@ -104,7 +104,7 @@ function INSTANCE(ps::ParseState)
         return KEYWORD(ps)
     elseif isoperator(ps.t)
         return OPERATOR(ps)
-    elseif ispunctuation(ps.t) || ps.t.kind == Tokens.SEMICOLON
+    elseif ispunctuation(ps.t)
         return PUNCTUATION(ps)
     else
         return error_unexpected(ps, ps.t.startbyte, ps.t)
@@ -165,6 +165,7 @@ abstract type Let <: Head end
 abstract type Local <: Head end
 abstract type Macro <: Head end
 abstract type MacroCall <: Head end
+abstract type MacroName <: Head end
 abstract type Mutable <: Head end
 abstract type Parameters <: Head end
 abstract type Primitive <: Head end

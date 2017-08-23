@@ -81,11 +81,8 @@ function parse_expression(ps::ParseState)
         return EXPR{ERROR}(EXPR[INSTANCE(ps)], "Unknown error")
     end
 
-    while !closer(ps) && !(ps.closer.precedence == DotOp && ismacro(ret))
+    while !closer(ps)
         @catcherror ps ret = parse_compound(ps, ret)
-    end
-    if ps.closer.precedence != DotOp && closer(ps) && ret isa EXPR{LITERAL{Tokens.MACRO}}
-        ret = EXPR{MacroCall}(EXPR[ret], "")
     end
 
     return ret
