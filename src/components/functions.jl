@@ -155,7 +155,7 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false)
             return body
         else
             kw = true
-            ps.nt.kind == Tokens.RPAREN && return
+            ps.nt.kind == Tokens.RPAREN && return ret
             paras = EXPR{Parameters}(EXPR[], "")
             @nocloser ps inwhere @nocloser ps newline @nocloser ps semicolon @closer ps comma while !closer(ps)
                 @catcherror ps a = parse_expression(ps)
@@ -171,6 +171,7 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false)
             push!(ret, paras)
         end
     end
+    return ret
 end
 
 

@@ -64,7 +64,7 @@ mutable struct ParseState
     errored::Bool
 end
 function ParseState(str::Union{IO,String})
-    ps = ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), Token(), Token(), true, true, [], Closer(), false)
+    ps = ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), Token(), Token(), true, true, Diagnostics.Diagnostic[], Closer(), false)
     return next(next(ps))
 end
 
@@ -128,7 +128,7 @@ end
 Having hit an initial whitespace/comment/semicolon continues collecting similar
 `Chars` until they end. Returns a WS token with an indication of newlines/ semicolons. Indicating a semicolons takes precedence over line breaks as the former is equivalent to the former in most cases.
 """
-function lex_ws_comment(l::Lexer, c)
+function lex_ws_comment(l::Lexer, c::Char)
     newline = c == '\n'
     semicolon = c == ';'
     if c == '#'

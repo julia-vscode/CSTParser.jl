@@ -12,7 +12,7 @@ import Tokenize.Lexers: Lexer, peekchar, iswhitespace
 export ParseState, parse_expression
 
 include("hints.jl")
-import .Diagnostics: Diagnostic, LintCodes, FormatCodes
+import .Diagnostics: Diagnostic, LintCodes
 
 include("lexer.jl")
 include("errors.jl")
@@ -319,7 +319,6 @@ end
 
 ischainable(t::Token) = t.kind == Tokens.PLUS || t.kind == Tokens.STAR || t.kind == Tokens.APPROX
 
-# include("precompile.jl")
-# _precompile_()
+include("_precompile.jl")
+_precompile_()
 end
-
