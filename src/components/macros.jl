@@ -5,7 +5,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
         sig = INSTANCE(ps)
         @catcherror ps sig = parse_call(ps, sig)
     else
-        @catcherror ps sig = @closer ps block @closer ps ws parse_expression(ps)
+        @catcherror ps sig = @closer ps ws parse_expression(ps)
     end
 
     block = EXPR{Block}(EXPR[], 0, 1:0, "")

@@ -55,9 +55,10 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
     while true
         if ps.nt.kind == Tokens.AT_SIGN
             next(ps)
+            at = INSTANCE(ps)
             next(ps)
             a = INSTANCE(ps)
-            push!(args, EXPR{IDENTIFIER}(EXPR[], a.fullspan + 1, 1:(span(a) + 1), string("@", a.val)))
+            push!(args, EXPR{MacroName}(EXPR[at, a], ""))
         elseif ps.nt.kind == Tokens.LPAREN
             next(ps)
             a = EXPR{InvisBrackets}(EXPR[INSTANCE(ps)], "")
@@ -84,12 +85,6 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
         else
             break
         end
-        # if ps.nt.kind != Tokens.DOT
-        #     break
-        # else
-        #     next(ps)
-        #     push!(puncs, INSTANCE(ps))
-        # end
     end
     args
 end

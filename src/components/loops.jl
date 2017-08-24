@@ -12,7 +12,7 @@ end
 
 
 function parse_ranges(ps::ParseState)
-    arg = @closer ps range @closer ps comma @closer ps ws parse_expression(ps)
+    arg = @closer ps range @closer ps ws parse_expression(ps)
     if ps.nt.kind == Tokens.COMMA
         arg = EXPR{Block}(EXPR[arg], "")
         while ps.nt.kind == Tokens.COMMA

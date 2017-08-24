@@ -4,12 +4,13 @@ function closer(ps::ParseState)
     (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence) ||
     (ps.nt.kind == Tokens.WHERE && ps.closer.precedence == 5) ||
     (ps.closer.inwhere && ps.nt.kind == Tokens.WHERE) ||
-    (ps.nt.kind == Tokens.LPAREN && ps.closer.precedence > 15) ||
-    (ps.nt.kind == Tokens.LBRACE && ps.closer.precedence > 15) ||
-    (ps.nt.kind == Tokens.LSQUARE && ps.closer.precedence > 15) ||
-    (ps.nt.kind == Tokens.STRING && isemptyws(ps.ws) && ps.closer.precedence > 15) ||
-    (ps.closer.precedence > 15 && ps.t.kind == Tokens.RPAREN && ps.nt.kind == Tokens.IDENTIFIER) ||
-    (ps.closer.precedence > 15 && ps.t.kind == Tokens.RSQUARE && ps.nt.kind == Tokens.IDENTIFIER) ||
+    (ps.closer.precedence > 15 && (
+        ps.nt.kind == Tokens.LPAREN ||
+        ps.nt.kind == Tokens.LBRACE ||
+        ps.nt.kind == Tokens.LSQUARE ||
+        (ps.nt.kind == Tokens.STRING && isemptyws(ps.ws)) ||
+        ((ps.nt.kind == Tokens.RPAREN || ps.nt.kind == Tokens.RSQUARE) && isidentifier(ps.nt))  
+    )) || 
     (ps.nt.kind == Tokens.COMMA && ps.closer.precedence > 0) ||
     ps.nt.kind == Tokens.ENDMARKER ||
     (ps.closer.comma && iscomma(ps.nt)) ||
@@ -22,17 +23,16 @@ function closer(ps::ParseState)
     (ps.closer.ifelse && ps.nt.kind == Tokens.ELSEIF || ps.nt.kind == Tokens.ELSE) ||
     (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt) <= 0 || ps.nt.kind == Tokens.COLON)) ||
     (ps.closer.trycatch && (ps.nt.kind == Tokens.CATCH || ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END)) ||
-    (ps.closer.range && ps.nt.kind == Tokens.FOR) ||
+    (ps.closer.range && (ps.nt.kind == Tokens.FOR || iscomma(ps.nt))) ||
     (ps.closer.ws && !isemptyws(ps.ws) &&
         !(ps.nt.kind == Tokens.COMMA) &&
         !(ps.t.kind == Tokens.COMMA) &&
         !(!ps.closer.inmacro && ps.nt.kind == Tokens.FOR) &&
         !(ps.nt.kind == Tokens.DO) &&
-        # !((isbinaryop(ps.nt.kind) && (!isemptyws(ps.nws) || !isunaryop(ps.nt))) || (!ps.closer.wsop && isbinaryop(ps.nt.kind)))) ||
-        !((isbinaryop(ps.nt) && !isemptyws(ps.nws)) ||
-        (isbinaryop(ps.nt) && !isunaryop(ps.nt)) ||
-        (isunaryop(ps.t) && ps.ws.kind == WS) ||
-        (!ps.closer.wsop && isbinaryop(ps.nt.kind)))) ||
+        !(
+            (isbinaryop(ps.nt) && !(isemptyws(ps.nws) && isunaryop(ps.nt) && ps.closer.wsop)) || 
+            (isunaryop(ps.t) && ps.ws.kind == WS)
+        )) ||
     (ps.nt.startbyte ≥ ps.closer.stop) ||
     ps.errored
 end
