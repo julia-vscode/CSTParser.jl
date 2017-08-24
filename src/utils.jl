@@ -174,7 +174,8 @@ isinstance(t::Token) = isidentifier(t) ||
 
 ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
                           t.kind == Tokens.END ||
-                          Tokens.LSQUARE ≤ t.kind ≤ Tokens.RPAREN
+                          Tokens.LSQUARE ≤ t.kind ≤ Tokens.RPAREN || 
+                          t.kind == Tokens.AT_SIGN
 
 isstring(x) = false
 isstring(x::EXPR{T}) where T <: Union{StringH, LITERAL{Tokens.STRING},LITERAL{Tokens.TRIPLE_STRING}} = true

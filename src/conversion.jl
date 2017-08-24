@@ -124,6 +124,13 @@ Expr(x::EXPR{LITERAL{Tokens.MACRO}}) = Symbol(x.val)
 Expr(x::EXPR{LITERAL{Tokens.STRING}}) = x.val
 Expr(x::EXPR{LITERAL{Tokens.TRIPLE_STRING}}) = x.val
 
+
+function Expr(x::EXPR{MacroName})
+    if x.args[2] isa EXPR{IDENTIFIER}
+        return Symbol("@", x.args[2].val)
+    end
+end
+
 # cross compatability for line number insertion in macrocalls
 @static if VERSION < v"0.7.0-DEV.357"
     Expr(x::EXPR{LITERAL{Tokens.CMD}}) = Expr(:macrocall, Symbol("@cmd"), x.val)

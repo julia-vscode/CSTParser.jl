@@ -22,9 +22,9 @@ end
 Parses a macro call. Expects to start on the `@`.
 """
 function parse_macrocall(ps::ParseState)
-    next(ps)
-    mname = IDENTIFIER(ps)
-    mname = EXPR{IDENTIFIER}(EXPR[], 1 + mname.fullspan, 1:(last(mname.span) + 1), string("@", ps.t.val))
+    at = INSTANCE(ps)
+    mname = EXPR{MacroName}(EXPR[at, IDENTIFIER(next(ps))], "")
+
     # Handle cases with @ at start of dotted expressions
     if ps.nt.kind == Tokens.DOT && isemptyws(ps.ws)
         while ps.nt.kind == Tokens.DOT
@@ -60,16 +60,4 @@ function parse_macrocall(ps::ParseState)
         end
     end
     return ret
-end
-
-
-ismacro(x) = false
-ismacro(x::EXPR{LITERAL{Tokens.MACRO}}) = true
-ismacro(x::EXPR{Quotenode}) = ismacro(x.args[1])
-function ismacro(x::EXPR{BinarySyntaxOpCall})
-    if x.args[2] isa OPERATOR{DotOp,Tokens.DOT}
-        return ismacro(x.args[2])
-    else
-        return false
-    end
 end
