@@ -65,7 +65,7 @@ function parse_expression(ps::ParseState)
         else
             ret = INSTANCE(ps)
         end
-        if (ret isa EXPR{OPERATOR{ColonOp,Tokens.COLON,false}}) && ps.nt.kind != Tokens.COMMA
+        if (ret isa OPERATOR{ColonOp,Tokens.COLON,false}) && ps.nt.kind != Tokens.COMMA
             @catcherror ps ret = parse_unary(ps, ret)
         end
     elseif ps.t.kind == Tokens.AT_SIGN
@@ -78,7 +78,7 @@ function parse_expression(ps::ParseState)
         return error_unexpected(ps, ps.t.startbyte, ps.t)
     else
         ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], "Unknown error")
+        return EXPR{ERROR}(Any[INSTANCE(ps)])
     end
 
     while !closer(ps)
@@ -111,13 +111,13 @@ function parse_compound(ps::ParseState, ret)
     elseif ps.nt.kind == Tokens.DO
         ret = parse_do(ps, ret)
     elseif isajuxtaposition(ps, ret)
-        op = EXPR{OPERATOR{TimesOp,Tokens.STAR,false}}(EXPR[], 0, 1:0, "")
+        op = OPERATOR{TimesOp,Tokens.STAR,false}(0, 1:0)
         ret = parse_operator(ps, ret, op)
     elseif ps.nt.kind == Tokens.LPAREN && isemptyws(ps.ws)
         ret = @closer ps paren parse_call(ps, ret)
     elseif ps.nt.kind == Tokens.LBRACE && isemptyws(ps.ws)
         ret = parse_curly(ps, ret)
-    elseif ps.nt.kind == Tokens.LSQUARE && isemptyws(ps.ws) && !(ret isa EXPR{OPERATOR{p,k,dot}} where {p,k,dot})
+    elseif ps.nt.kind == Tokens.LSQUARE && isemptyws(ps.ws) && !(ret isa OPERATOR)
         ret = @nocloser ps block parse_ref(ps, ret)
     elseif ps.nt.kind == Tokens.COMMA
         ret = parse_tuple(ps, ret)
@@ -127,27 +127,27 @@ function parse_compound(ps::ParseState, ret)
         next(ps)
         op = INSTANCE(ps)
         ret = parse_operator(ps, ret, op)
-    elseif (ret isa EXPR{IDENTIFIER} || (ret isa EXPR{BinarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}})) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
+    elseif (ret isa IDENTIFIER || ret isa BinarySyntaxOpCall{OPERATOR{DotOp,Tokens.DOT,false}}) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
         next(ps)
         @catcherror ps arg = parse_string_or_cmd(ps, ret)
-        ret = EXPR{x_Str}(EXPR[ret, arg], "")
+        ret = EXPR{x_Str}(Any[ret, arg])
     # Suffix on x_str
     elseif ret isa EXPR{x_Str} && ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         arg = INSTANCE(ps)
-        push!(ret, EXPR{LITERAL{Tokens.STRING}}(EXPR[], arg.fullspan, arg.span, arg.val))
-    elseif (ret isa EXPR{IDENTIFIER} || (ret isa EXPR{BinarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{DotOp,Tokens.DOT,false}})) && ps.nt.kind == Tokens.CMD
+        push!(ret, LITERAL{Tokens.STRING}(arg.fullspan, arg.span, ps.t.val))
+    elseif (ret isa IDENTIFIER || ret isa BinarySyntaxOpCall{OPERATOR{DotOp,Tokens.DOT,false}}) && ps.nt.kind == Tokens.CMD
         next(ps)
         @catcherror ps arg = parse_string_or_cmd(ps, ret)
-        ret = EXPR{x_Cmd}(EXPR[ret, arg], "")
+        ret = EXPR{x_Cmd}(Any[ret, arg])
     elseif ret isa EXPR{x_Cmd} && ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         arg = INSTANCE(ps)
-        push!(ret, EXPR{LITERAL{Tokens.STRING}}(EXPR[], arg.fullspan, 1:span(arg), arg.val))
-    elseif ret isa EXPR{UnarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{16,Tokens.PRIME,d1}} where d1
+        push!(ret, LITERAL{Tokens.STRING}(arg.fullspan, 1:span(arg), ps.t.val))
+    elseif ret isa UnarySyntaxOpCall && ret.arg2 isa OPERATOR{16,Tokens.PRIME}
         # prime operator followed by an identifier has an implicit multiplication
         @catcherror ps nextarg = @precedence ps 11 parse_expression(ps)
-        ret = EXPR{BinaryOpCall}(EXPR[ret, EXPR{OPERATOR{TimesOp,Tokens.STAR,false}}(EXPR[], 0, 1:0, ""), nextarg], "")
+        ret = BinaryOpCall(ret, OPERATOR{TimesOp,Tokens.STAR,false}(0, 1:0), nextarg)
 ################################################################################
 # Everything below here is an error
 ################################################################################
@@ -160,19 +160,19 @@ function parse_compound(ps::ParseState, ret)
             # TODO: Which operator? How do we get at the spelling
             0:0, [], "Unexpected operator"
         ))
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, 0:-1, "Unexpected operator")
+        return EXPR{ERROR}(Any[INSTANCE(ps)])
     elseif ps.nt.kind == Tokens.IDENTIFIER
         ps.errored = true
         push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedIdentifier}(
             ps.nt.startbyte:ps.nt.endbyte, [], "Unexpected identifier"
         ))
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, 0:-1, "Unexpected identifier")
+        return EXPR{ERROR}(Any[INSTANCE(ps)])
     else
         ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, 0:-1, "Unknown error")
+        return EXPR{ERROR}(Any[INSTANCE(ps)])
     end
     if ps.errored
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, 0:-1, "Unknown error")
+        return EXPR{ERROR}(Any[INSTANCE(ps)])
     end
     return ret
 end
@@ -183,14 +183,14 @@ end
 Parses an expression starting with a `(`.
 """
 function parse_paren(ps::ParseState)
-    ret = EXPR{TupleH}(EXPR[INSTANCE(ps)], "")
+    ret = EXPR{TupleH}(Any[INSTANCE(ps)])
 
     @catcherror ps @default ps @nocloser ps inwhere @closer ps paren parse_comma_sep(ps, ret, false, true)
 
-    if (length(ret.args) == 2 && !(ret.args[2] isa EXPR{UnarySyntaxOpCall} && ret.args[2].args[2] isa EXPR{OPERATOR{DddotOp,Tokens.DDDOT,false}})) || (length(ret.args) == 1 && ret.args[1] isa EXPR{Block})
+    if (length(ret.args) == 2 && !(ret.args[2] isa UnarySyntaxOpCall && ret.args[2].arg2 isa OPERATOR{DddotOp,Tokens.DDDOT,false})) || (length(ret.args) == 1 && ret.args[1] isa EXPR{Block})
 
         if (ps.ws.kind != SemiColonWS || (length(ret.args) == 2 && ret.args[2] isa EXPR{Block})) && !(ret.args[2] isa EXPR{Parameters})
-            ret = EXPR{InvisBrackets}(ret.args, "")
+            ret = EXPR{InvisBrackets}(ret.args)
         end
     end
 
@@ -209,7 +209,7 @@ function parse(str::String, cont = false)
     ps = ParseState(str)
     x, ps = parse(ps, cont)
     if ps.errored
-        x = EXPR{ERROR}(EXPR[], "Unknown error")
+        x = EXPR{ERROR}(Any[])
     end
     return x
 end
@@ -226,15 +226,15 @@ function parse_doc(ps::ParseState)
         end
 
         ret = parse_expression(ps)
-        ret = EXPR{MacroCall}(EXPR[GlobalRefDOC, doc, ret], "")
+        ret = EXPR{MacroCall}(Any[GlobalRefDOC, doc, ret])
     elseif ps.nt.kind == Tokens.IDENTIFIER && ps.nt.val == "doc" && (ps.nnt.kind == Tokens.STRING || ps.nnt.kind == Tokens.TRIPLE_STRING)
         next(ps)
         doc = INSTANCE(ps)
         next(ps)
         @catcherror ps arg = parse_string_or_cmd(ps, doc)
-        doc = EXPR{x_Str}(EXPR[doc, arg], "")
+        doc = EXPR{x_Str}(Any[doc, arg])
         ret = parse_expression(ps)
-        ret = EXPR{MacroCall}(EXPR[GlobalRefDOC, doc, ret], "")
+        ret = EXPR{MacroCall}(Any[GlobalRefDOC, doc, ret])
     else
         ret = parse_expression(ps)
     end
@@ -243,16 +243,16 @@ end
 
 function parse(ps::ParseState, cont = false)
     if ps.l.io.size == 0
-        return (cont ? EXPR{FileH}(EXPR[], "") : nothing), ps
+        return (cont ? EXPR{FileH}(Any[]) : nothing), ps
     end
     last_line = 0
     curr_line = 0
 
     if cont
-        top = EXPR{FileH}(EXPR[], "")
+        top = EXPR{FileH}(Any[])
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
-            push!(top, EXPR{LITERAL{nothing}}(EXPR[], ps.nt.startbyte, 1:ps.nt.startbyte, "comments"))
+            push!(top, LITERAL{nothing}(ps.nt.startbyte, 1:ps.nt.startbyte, ""))
         end
 
         while !ps.done && !ps.errored
@@ -263,7 +263,7 @@ function parse(ps::ParseState, cont = false)
             if curr_line == last_line && last(top.args) isa EXPR{TopLevel}
                 push!(last(top.args), ret)
             elseif ps.ws.kind == SemiColonWS
-                push!(top, EXPR{TopLevel}(EXPR[ret], ""))
+                push!(top, EXPR{TopLevel}(Any[ret]))
             else
                 push!(top, ret)
             end
@@ -272,12 +272,12 @@ function parse(ps::ParseState, cont = false)
     else
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
-            top = EXPR{LITERAL{nothing}}(EXPR[], ps.nt.startbyte, 1:ps.nt.startbyte, "comments")
+            top = LITERAL{nothing}(ps.nt.startbyte, 1:ps.nt.startbyte, "")
         else
             top = parse_doc(ps)
             last_line = ps.nt.startpos[1]
             if ps.ws.kind == SemiColonWS
-                top = EXPR{TopLevel}(EXPR[top], "")
+                top = EXPR{TopLevel}(Any[top])
                 while ps.ws.kind == SemiColonWS && ps.nt.startpos[1] == last_line && ps.nt.kind != Tokens.ENDMARKER
                     ret = parse_doc(ps)
                     push!(top, ret)
@@ -316,6 +316,6 @@ end
 
 ischainable(t::Token) = t.kind == Tokens.PLUS || t.kind == Tokens.STAR || t.kind == Tokens.APPROX
 
-include("_precompile.jl")
-_precompile_()
+# include("_precompile.jl")
+# _precompile_()
 end

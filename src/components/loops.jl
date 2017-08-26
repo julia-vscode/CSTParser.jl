@@ -2,10 +2,10 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
     # Parsing
     kw = INSTANCE(ps)
     @catcherror ps ranges = @default ps parse_ranges(ps)
-    block = EXPR{Block}(EXPR[], 0, 1:0, "")
+    block = EXPR{Block}(Any[])
     @catcherror ps @default ps parse_block(ps, block)
     next(ps)
-    ret = EXPR{For}(EXPR[kw, ranges, block, INSTANCE(ps)], "")
+    ret = EXPR{For}(Any[kw, ranges, block, INSTANCE(ps)])
 
     return ret
 end
@@ -14,7 +14,7 @@ end
 function parse_ranges(ps::ParseState)
     arg = @closer ps range @closer ps ws parse_expression(ps)
     if ps.nt.kind == Tokens.COMMA
-        arg = EXPR{Block}(EXPR[arg], "")
+        arg = EXPR{Block}(Any[arg])
         while ps.nt.kind == Tokens.COMMA
             next(ps)
             push!(arg, INSTANCE(ps))
@@ -32,21 +32,21 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
     # Parsing
     kw = INSTANCE(ps)
     @catcherror ps cond = @default ps @closer ps ws parse_expression(ps)
-    block = EXPR{Block}(EXPR[], 0, 1:0, "")
+    block = EXPR{Block}(Any[])
     @catcherror ps @default ps parse_block(ps, block)
     next(ps)
 
-    ret = EXPR{While}(EXPR[kw, cond, block, INSTANCE(ps)], "")
+    ret = EXPR{While}(Any[kw, cond, block, INSTANCE(ps)])
 
     return ret
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.BREAK}})
-    return EXPR{Break}(EXPR[INSTANCE(ps)], "")
+    return INSTANCE(ps)
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONTINUE}})
-    return EXPR{Continue}(EXPR[INSTANCE(ps)], "")
+    return INSTANCE(ps)
 end
 
 
@@ -59,14 +59,14 @@ Comprehensions are parsed as SQUAREs containing a generator.
 function parse_generator(ps::ParseState, ret)
     next(ps)
     kw = INSTANCE(ps)
-    ret = EXPR{Generator}(EXPR[ret, kw], "")
+    ret = EXPR{Generator}(Any[ret, kw])
     @catcherror ps ranges = @closer ps paren @closer ps square parse_ranges(ps)
 
     if ps.nt.kind == Tokens.IF
         if ranges isa EXPR{Block}
-            ranges = EXPR{Filter}(EXPR[ranges.args...], "")
+            ranges = EXPR{Filter}(Any[ranges.args...])
         else
-            ranges = EXPR{Filter}(EXPR[ranges], "")
+            ranges = EXPR{Filter}(Any[ranges])
         end
         next(ps)
         unshift!(ranges, INSTANCE(ps))
@@ -83,7 +83,7 @@ function parse_generator(ps::ParseState, ret)
 
     # This should reverse order of iterators
     if ret.args[1] isa EXPR{Generator} || ret.args[1] isa EXPR{Flatten}
-        ret = EXPR{Flatten}(EXPR[ret], "")
+        ret = EXPR{Flatten}(Any[ret])
     end
 
     return ret

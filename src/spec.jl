@@ -1,3 +1,25 @@
+# Operator hierarchy
+const AssignmentOp  = 1
+const ConditionalOp = 2
+const ArrowOp       = 3
+const LazyOrOp      = 4
+const LazyAndOp     = 5
+const ComparisonOp  = 6
+const PipeOp        = 7
+const ColonOp       = 8
+const PlusOp        = 9
+const BitShiftOp    = 10
+const TimesOp       = 11
+const RationalOp    = 12
+const PowerOp       = 13
+const DeclarationOp = 14
+const WhereOp       = 15
+const DotOp         = 16
+const PrimeOp       = 16
+const DddotOp       = 7
+const AnonFuncOp    = 14
+
+
 # Invariants:
 # if !isempty(e.args)
 #   e.fullspan == sum(x->x.fullspan, e.args)
@@ -5,18 +27,66 @@
 #   last(e.span) == sum(x->x.fullspan, e.args[1:end-1]) + last(last(e.args).span)
 # end
 mutable struct EXPR{T}
-    args::Vector{EXPR}
+    args::Vector
     # The full width of this expression including any whitespace
     fullspan::Int
     # The range of bytes within the fullspan that constitute the actual expression,
     # excluding any leading/trailing whitespace or other trivia. 1-indexed
     span::UnitRange{Int}
+end
+
+abstract type ERROR end
+
+struct IDENTIFIER
+    fullspan::Int
+    span::UnitRange{Int}
     val::String
 end
+IDENTIFIER(ps::ParseState) = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), ps.t.val)
+
+struct PUNCTUATION{K}
+    fullspan::Int
+    span::UnitRange{Int}
+end
+PUNCTUATION(ps::ParseState) = PUNCTUATION{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
+
+struct OPERATOR{P,K,dot}
+    fullspan::Int
+    span::UnitRange{Int}
+end
+OPERATOR(ps::ParseState) = OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
+
+struct KEYWORD{K}
+    fullspan::Int
+    span::UnitRange{Int}
+end
+KEYWORD(ps::ParseState) = KEYWORD{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
+
+
+struct LITERAL{K}
+    fullspan::Int
+    span::UnitRange{Int}
+    val::String
+end
+function LITERAL(ps::ParseState)
+    if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING ||
+       ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
+        return parse_string_or_cmd(ps)
+    else
+        LITERAL{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), ps.t.val)
+    end
+end
+
 AbstractTrees.children(x::EXPR) = x.args
 
 span(x::EXPR) = length(x.span)
+span(x::OPERATOR) = length(x.span)
+span(x::IDENTIFIER) = length(x.span)
+span(x::KEYWORD) = length(x.span)
+span(x::PUNCTUATION) = length(x.span)
+span(x::LITERAL) = length(x.span)
 
+function update_span!(x) end
 function update_span!(x::EXPR)
     isempty(x.args) && return
     x.fullspan = 0
@@ -27,8 +97,8 @@ function update_span!(x::EXPR)
     return 
 end
 
-function EXPR{T}(args::Vector, val::String) where {T}
-    ret = EXPR{T}(args, 0, 1:0, val)
+function EXPR{T}(args::Vector) where {T}
+    ret = EXPR{T}(args, 0, 1:0)
     update_span!(ret)
     ret
 end
@@ -56,7 +126,7 @@ function Base.pop!(e::EXPR)
     arg
 end
 
-function Base.append!(e::EXPR, args::Vector{<:EXPR})
+function Base.append!(e::EXPR, args::Vector)
     append!(e.args, args)
     update_span!(e)
 end
@@ -67,35 +137,15 @@ function Base.append!(a::EXPR, b::EXPR)
     a.span = first(a.span):last(b.span)
 end
 
-abstract type IDENTIFIER end
-abstract type LITERAL{K} end
-abstract type KEYWORD{K} end
-abstract type OPERATOR{P,K,dot} end
-abstract type PUNCTUATION{K} end
-abstract type ERROR end
-
-
-
-function LITERAL(ps::ParseState)
-    if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING ||
-       ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
-        return parse_string_or_cmd(ps)
-    else
-        EXPR{LITERAL{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), ps.t.val)
-    end
+function Base.append!(a::EXPR, b::KEYWORD)
+    append!(a.args, b.args)
+    a.fullspan += b.fullspan
+    a.span = first(a.span):last(b.span)
 end
-
-IDENTIFIER(ps::ParseState) = EXPR{IDENTIFIER}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), ps.t.val)
-
-OPERATOR(ps::ParseState) = EXPR{OPERATOR{precedence(ps.t),ps.t.kind,ps.dot}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), "")
-
-KEYWORD(ps::ParseState) = EXPR{KEYWORD{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), "")
-
-PUNCTUATION(ps::ParseState) = EXPR{PUNCTUATION{ps.t.kind}}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), "")
 
 function INSTANCE(ps::ParseState)
     if ps.errored
-        return EXPR{ERROR}(EXPR[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), "")
+        return EXPR{ERROR}(Any[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
     elseif isidentifier(ps.t)
         return IDENTIFIER(ps)
     elseif isliteral(ps.t)
@@ -119,36 +169,107 @@ mutable struct File
     ast::EXPR
     errors
 end
-File(path::String) = File([], [], path, EXPR{FileH}(EXPR[], ""), [])
+File(path::String) = File([], [], path, EXPR{FileH}(Any[]), [])
 
 mutable struct Project
     path::String
     files::Vector{File}
 end
 
-
-
-
 abstract type Head end
-
 abstract type Call <: Head end
-abstract type UnaryOpCall <: Head end
-abstract type UnarySyntaxOpCall <: Head end
-abstract type BinaryOpCall <: Head end
-abstract type BinarySyntaxOpCall <: Head end
-abstract type ConditionalOpCall <: Head end
+
+mutable struct UnaryOpCall{OP}
+    op::OP
+    arg
+    fullspan::Int
+    span::UnitRange{Int}
+    function UnaryOpCall(op::OP, arg) where {OP}
+        fullspan = op.fullspan + arg.fullspan
+        new{OP}(op, arg, fullspan, 1:(fullspan - arg.fullspan - length(arg.span)))
+    end
+end
+AbstractTrees.children(x::UnaryOpCall) = vcat(x.op, x.arg)
+
+mutable struct UnarySyntaxOpCall
+    arg1
+    arg2
+    fullspan::Int
+    span::UnitRange{Int}
+    function UnarySyntaxOpCall(arg1, arg2)
+        fullspan = arg1.fullspan + arg2.fullspan
+        new(arg1, arg2, fullspan, 1:(fullspan - arg2.fullspan - length(arg2.span)))
+    end
+end
+AbstractTrees.children(x::UnarySyntaxOpCall) = vcat(x.arg1, x.arg2)
+
+mutable struct BinaryOpCall{OP}
+    arg1
+    op::OP
+    arg2
+    fullspan::Int
+    span::UnitRange{Int}
+    function BinaryOpCall(arg1, op::OP, arg2) where {OP}
+        fullspan = arg1.fullspan + op.fullspan + arg2.fullspan
+        new{OP}(arg1, op, arg2, fullspan, 1:(fullspan - arg2.fullspan - length(arg2.span)))
+    end
+end
+AbstractTrees.children(x::T) where T <: Union{BinaryOpCall} = vcat(x.arg1, x.op, x.arg2)
+
+mutable struct BinarySyntaxOpCall{OP}
+    arg1
+    op::OP
+    arg2
+    fullspan::Int
+    span::UnitRange{Int}
+    function BinarySyntaxOpCall(arg1, op::OP, arg2) where {OP}
+        fullspan = arg1.fullspan + op.fullspan + arg2.fullspan
+        new{OP}(arg1, op, arg2, fullspan, 1:(fullspan - arg2.fullspan - length(arg2.span)))
+    end
+end
+AbstractTrees.children(x::T) where T <: Union{BinarySyntaxOpCall} = vcat(x.arg1, x.op, x.arg2)
+
+mutable struct WhereOpCall{T1}
+    arg1::T1
+    op::OPERATOR{WhereOp,Tokens.WHERE,false}
+    args::Vector
+    fullspan::Int
+    span::UnitRange{Int}
+    function WhereOpCall(arg1::T1, op::OPERATOR{WhereOp,Tokens.WHERE,false}, args) where {T1}
+        fullspan = arg1.fullspan + op.fullspan
+        for a in args
+            fullspan += a.fullspan
+        end
+        new{T1}(arg1, op, args, fullspan, 1:(fullspan - last(args).fullspan - length(last(args).span)))
+    end
+end
+AbstractTrees.children(x::T) where T <: Union{WhereOpCall} = vcat(x.arg1, x.op, x.args)
+
+mutable struct ConditionalOpCall{T1,T2,T3}
+    cond::T1
+    op1::OPERATOR{ConditionalOp,Tokens.CONDITIONAL,false}
+    arg1::T2
+    op2::OPERATOR{ColonOp,Tokens.COLON,false}
+    arg2::T3
+    fullspan::Int
+    span::UnitRange{Int}
+    function ConditionalOpCall(cond::T1, op1, arg1::T2, op2, arg2::T3) where {T1,T2,T3}
+        fullspan = cond.fullspan + op1.fullspan + arg1.fullspan + op2.fullspan + arg2.fullspan
+        new{T1,T2,T3}(cond, op1, arg1, op2, arg2, fullspan, 1:(fullspan - arg2.fullspan - length(arg2.span)))
+    end
+end
+
+AbstractTrees.children(x::ConditionalOpCall) = vcat(x.cond, x.op1, x.arg1, x.op2, x.arg2)
+
 abstract type ComparisonOpCall <: Head end
 abstract type ChainOpCall <: Head end
 abstract type ColonOpCall <: Head end
-
 abstract type Abstract <: Head end
 abstract type Begin <: Head end
 abstract type Bitstype <: Head end
 abstract type Block <: Head end
-abstract type Break <: Head end
 abstract type Cell1d <: Head end
 abstract type Const <: Head end
-abstract type Continue <: Head end
 abstract type Comparison <: Head end
 abstract type Curly <: Head end
 abstract type Do <: Head end
@@ -202,9 +323,9 @@ abstract type Vcat <: Head end
 abstract type TypedVcat <: Head end
 abstract type Vect <: Head end
 
-Quotenode(x::EXPR) = EXPR{Quotenode}(EXPR[x], "")
+Quotenode(x) = EXPR{Quotenode}(Any[x])
 
-const TRUE = EXPR{LITERAL{Tokens.TRUE}}(EXPR[], 0, 1:0, "")
-const FALSE = EXPR{LITERAL{Tokens.FALSE}}(EXPR[], 0, 1:0, "")
-const NOTHING = EXPR{LITERAL{:nothing}}(EXPR[], 0, 1:0, "nothing")
-const GlobalRefDOC = EXPR{GlobalRefDoc}(EXPR[], 0, 1:0, "globalrefdoc")
+const TRUE = LITERAL{Tokens.TRUE}(0, 1:0, "")
+const FALSE = LITERAL{Tokens.FALSE}(0, 1:0, "")
+const NOTHING = LITERAL{nothing}(0, 1:0, "")
+const GlobalRefDOC = EXPR{GlobalRefDoc}(Any[], 0, 1:0)

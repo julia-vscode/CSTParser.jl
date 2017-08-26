@@ -91,11 +91,6 @@ function next(ps::ParseState)
     
     
     ps.nnt, ps.done  = next(ps.l, ps.done)
-    # Reject new kws for now
-    # if ps.nnt.kind == Tokens.STRUCT || ps.nnt.kind == Tokens.STRUCT || ps.nnt.kind == Tokens.MUTABLE
-    #     ps.nnt = Token(Tokens.IDENTIFIER, ps.nnt.startpos, ps.nnt.endpos, ps.nnt.startbyte, ps.nnt.endbyte, ps.nnt.val)
-    # end
-
     # Handle dotted operators
     if ps.nt.kind == Tokens.DOT && ps.nws.kind == EmptyWS && isoperator(ps.nnt) && !non_dotted_op(ps.nnt)
         # ps.nt = ps.nnt

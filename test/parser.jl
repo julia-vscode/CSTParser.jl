@@ -24,13 +24,14 @@ end
 
 @testset "All tests" begin
 @testset "Operators" begin
-    @testset "Binary Operators" begin
-        for iter = 1:250
-            str = join([["x$(randop())" for i = 1:19];"x"])
+    # @testset "Binary Operators" begin
+    #     for iter = 1:25
+    #         println(iter)
+    #         str = join([["x$(randop())" for i = 1:19];"x"])
 
-            @test test_expr(str)
-        end
-    end
+    #         @test test_expr(str)
+    #     end
+    # end
     @testset "Conditional Operator" begin
         strs = ["a ? b : c"
                 "a ? b:c : d"
@@ -534,7 +535,7 @@ end
     ws2 = "    "
     "\"\"\"\n$(ws1)a\n$(ws1)b\n$(ws2)c\n$(ws2)d\n$(ws2)\"\"\"" |> test_expr
     "\"\"\"\n$(ws1)a\n\n$(ws1)b\n\n$(ws2)c\n\n$(ws2)d\n\n$(ws2)\"\"\"" |> test_expr
-    "\"\"\"\n$(ws1)α\n$(ws1)β\n$(ws2)γ\n$(ws2)δ\n$(ws2)\"\"\"" |> test_expr
+    @test "\"\"\"\n$(ws1)α\n$(ws1)β\n$(ws2)γ\n$(ws2)δ\n$(ws2)\"\"\"" |> test_expr
 end
 
 @testset "No longer broken things" begin

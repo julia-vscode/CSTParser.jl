@@ -151,7 +151,7 @@ macro catcherror(ps, body)
     quote
         $(esc(body))
         if $(esc(ps)).errored
-            return EXPR{ERROR}(EXPR[INSTANCE($(esc(ps)))], 0, 0:-1, "Unknown error")
+            return EXPR{ERROR}(Any[INSTANCE($(esc(ps)))], 0, 0:-1)
         end
     end
 end
@@ -180,8 +180,8 @@ ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
 isstring(x) = false
 isstring(x::EXPR{T}) where T <: Union{StringH, LITERAL{Tokens.STRING},LITERAL{Tokens.TRIPLE_STRING}} = true
 
-isajuxtaposition(ps::ParseState, ret) = ((ret isa EXPR{LITERAL{Tokens.INTEGER}} || ret isa EXPR{LITERAL{Tokens.FLOAT}}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || (
-        (ret isa EXPR{UnarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{16,Tokens.PRIME,false}} && ps.nt.kind == Tokens.IDENTIFIER) ||
+isajuxtaposition(ps::ParseState, ret) = ((ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || (
+        (ret isa UnarySyntaxOpCall && ret.arg2 isa OPERATOR{16,Tokens.PRIME,false} && ps.nt.kind == Tokens.IDENTIFIER) ||
         ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
         ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING))) ||
         (isstring(ret) && ps.nt.kind == Tokens.IDENTIFIER && ps.ws.kind == EmptyWS)
@@ -313,10 +313,10 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                     io = IOBuffer(str)
                     x, ps = parse(ps, true)
                     sp = check_span(x)
-                    if length(x.args) > 0 && x.args[1] isa EXPR{LITERAL{nothing}}
+                    if length(x.args) > 0 && x.args[1] isa LITERAL{nothing}
                         shift!(x.args)
                     end
-                    if length(x.args) > 0 && x.args[end] isa EXPR{LITERAL{nothing}}
+                    if length(x.args) > 0 && x.args[end] isa LITERAL{nothing}
                         pop!(x.args)
                     end
                     x0 = Expr(x)
@@ -429,7 +429,61 @@ Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
 function check_span(x::EXPR{StringH}, neq = []) end
-function check_span(x, neq = [])
+function check_span(x::T, neq = []) where T <: Union{IDENTIFIER,LITERAL,OPERATOR,KEYWORD,PUNCTUATION} neq end
+
+function check_span(x::UnaryOpCall, neq = []) 
+    check_span(x.op)
+    check_span(x.arg)
+    if x.op.fullspan + x.arg.fullspan != x.fullspan
+        push!(neq, x)
+    end
+    neq
+end
+function check_span(x::UnarySyntaxOpCall, neq = []) 
+    check_span(x.arg1)
+    check_span(x.arg2)
+    if x.arg1.fullspan + x.arg2.fullspan != x.fullspan
+        push!(neq, x)
+    end
+    neq
+end
+
+function check_span(x::T, neq = []) where T <: Union{BinaryOpCall,BinarySyntaxOpCall}
+    check_span(x.arg1)
+    check_span(x.op)
+    check_span(x.arg2)
+    if x.arg1.fullspan + x.op.fullspan + x.arg2.fullspan != x.fullspan
+        push!(neq, x)
+    end
+    neq
+end
+
+function check_span(x::WhereOpCall, neq = [])
+    check_span(x.arg1)
+    check_span(x.op)
+    for a in x.args
+        check_span(a)
+    end
+    if x.arg1.fullspan + x.op.fullspan + sum(a.fullspan for a in x.args) != x.fullspan
+        push!(neq, x)
+    end
+    neq
+end
+
+function check_span(x::ConditionalOpCall, neq = [])
+    check_span(x.cond)
+    check_span(x.op1)
+    check_span(x.arg1)
+    check_span(x.op2)
+    check_span(x.arg2)
+    if x.cond.fullspan + x.op1.fullspan + x.arg1.fullspan + x.op2.fullspan + x.arg2.fullspan != x.fullspan
+        push!(neq, x)
+    end
+    neq
+end
+
+
+function check_span(x::EXPR, neq = [])
     s = 0
     for a in x.args
         check_span(a, neq)
@@ -479,12 +533,12 @@ end
 is_func_call(x) = false
 is_func_call(x::EXPR) = false
 is_func_call(x::EXPR{Call}) = true
-is_func_call(x::EXPR{UnaryOpCall}) = true
-function is_func_call(x::EXPR{BinarySyntaxOpCall})#::Bool
-    if length(x.args) > 1 && (x.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}} || x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}})
-        return is_func_call(x.args[1])
-    end
-    return false
+is_func_call(x::UnaryOpCall) = true
+function is_func_call(x::BinarySyntaxOpCall{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}})#::Bool
+    return is_func_call(x.arg1)
+end
+function is_func_call(x::WhereOpCall)#::Bool
+    return is_func_call(x.arg1)
 end
 
 
@@ -498,4 +552,45 @@ end
 
 function trailing_ws_length(x::CSTParser.EXPR)
     x.fullspan - length(x.span)
+end
+
+
+
+# Unrelated
+function collect_calls(M::Module, calls = [])
+    for n in names(M, true, true)
+        !isdefined(M, n) && continue
+        x = getfield(M, n)
+        if x isa Function
+            t = typeof(x)
+            if t.name.module == M
+                collect_calls(x,calls)
+            end
+        end
+    end
+    calls
+end
+
+function collect_calls(f::Function, calls = [])
+    for m in methods(f)
+        try
+        spec = m.specializations
+        spec == nothing && continue
+        if spec isa TypeMapEntry
+            while true
+                push!(calls, spec.sig)
+                spec = spec.next
+                spec == nothing && break
+            end
+        elseif spec isa TypeMapLevel
+            spec = spec.arg1[1].arg1
+            for s in spec
+                push!(calls, s.sig)
+            end
+        end
+        catch
+            println(m)
+        end
+    end
+    calls
 end
