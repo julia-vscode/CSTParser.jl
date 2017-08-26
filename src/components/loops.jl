@@ -70,7 +70,7 @@ function parse_generator(ps::ParseState, ret)
         end
         next(ps)
         unshift!(ranges, INSTANCE(ps))
-        @catcherror ps cond = @closer ps paren parse_expression(ps)
+        @catcherror ps cond = @closer ps range @closer ps paren parse_expression(ps)
         unshift!(ranges, cond)
         push!(ret, ranges)
     else

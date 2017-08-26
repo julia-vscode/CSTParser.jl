@@ -619,15 +619,40 @@ function Expr(x::EXPR{Comprehension})
     end
     ret
 end
-# NEEDS FIX (only works for 2 levels )
-function Expr(x::EXPR{Flatten})
-    ret = Expr(:flatten, Expr(x.args[1]))
 
-    gen1 = ret.args[1].args[1].args[2]
-    gen2 = ret.args[1].args[2]
-    ret.args[1].args[1].args[2] = gen2
-    ret.args[1].args[2] = gen1
-    return ret
+function Expr(x::EXPR{Flatten})
+    iters, args = get_inner_gen(x)
+    i = shift!(iters)
+    ex = Expr(:generator, Expr(args[1]), convert_iter_assign(i))
+    for i in iters
+        ex = Expr(:generator, ex, convert_iter_assign(i))
+        ex = Expr(:flatten, ex)
+    end
+    # ret = Expr(:flatten, ex)
+
+    return ex
+end
+
+
+function get_inner_gen(x, iters = [], arg = []) iters, arg end
+function get_inner_gen(x::EXPR{Flatten}, iters = [], arg = [])
+    get_inner_gen(x.args[1], iters, arg)
+    iters, arg
+end
+function get_inner_gen(x::EXPR{Generator}, iters = [], arg = [])
+    push!(iters, get_iter(x))
+    if x.args[1] isa EXPR{Generator} || x.args[1] isa EXPR{Flatten}
+        get_inner_gen(x.args[1], iters, arg)
+    else
+        push!(arg, x.args[1])
+    end
+    iters, arg
+end
+
+
+function get_iter(x) end
+function get_iter(x::EXPR{Generator})
+    return x.args[3]
 end
 
 function Expr(x::EXPR{Generator})
@@ -635,11 +660,7 @@ function Expr(x::EXPR{Generator})
     for i = 3:length(x.args)
         a = x.args[i]
         if !(a isa EXPR{P} where P <: PUNCTUATION)
-            if a isa EXPR{BinaryOpCall} && (a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}})
-                push!(ret.args, Expr(:(=), Expr(a.args[1]), Expr(a.args[3])))
-            else
-                push!(ret.args, Expr(a))
-            end
+            push!(ret.args, convert_iter_assign(a))
         end
     end
     ret
@@ -648,18 +669,20 @@ end
 function Expr(x::EXPR{Filter})
     ret = Expr(:filter)
     for a in x.args
-        if !(a isa EXPR{KEYWORD{Tokens.IF}})
-            if a isa EXPR{BinaryOpCall} && (a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}})
-                push!(ret.args, Expr(:(=), Expr(a.args[1]), Expr(a.args[3])))
-            else
-                push!(ret.args, Expr(a))
-            end
+        if !(a isa EXPR{KEYWORD{Tokens.IF}} || a isa EXPR{<:PUNCTUATION})
+            push!(ret.args, convert_iter_assign(a))
         end
     end
     ret
 end
 
-
+function convert_iter_assign(a)
+    if a isa EXPR{BinaryOpCall} && (a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}})
+        return Expr(:(=), Expr(a.args[1]), Expr(a.args[3]))
+    else
+        return Expr(a)
+    end
+end
 
 
 function Expr(x::EXPR{TypedComprehension})

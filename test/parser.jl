@@ -331,6 +331,17 @@ end
     """ |> test_expr
     @test "[ V[j][i]::T for i=1:length(V[1]), j=1:length(V) ]" |> test_expr
     @test "all(d ≥ 0 for d in B.dims)" |> test_expr
+    @test "(arg for x in X)" |> test_expr
+    @test "(arg for x in X for y in Y)" |> test_expr
+    @test "(arg for x in X for y in Y for z in Z)" |> test_expr
+    @test "(arg for x in X if A)" |> test_expr
+    @test "(arg for x in X if A for y in Y)" |> test_expr
+    @test "(arg for x in X if A for y in Y if B)" |> test_expr
+    @test "(arg for x in X if A for y in Y for z in Z)" |> test_expr
+    @test "(arg for x in X if A for y in Y if B for z in Z)" |> test_expr
+    @test "(arg for x in X if A for y in Y if B for z in Z if C)" |> test_expr
+    @test_broken "(arg for x in X, y in Y for z in Z)" |> test_expr
+    @test "(arg for x in X, y in Y if A for z in Z)" |> test_expr
 end
 
 @testset "Macros " begin
