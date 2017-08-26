@@ -65,7 +65,7 @@ function parse_expression(ps::ParseState)
         else
             ret = INSTANCE(ps)
         end
-        if (ret isa OPERATOR{ColonOp,Tokens.COLON,false}) && ps.nt.kind != Tokens.COMMA
+        if (ret isa OPERATOR{Tokens.COLON,false}) && ps.nt.kind != Tokens.COMMA
             @catcherror ps ret = parse_unary(ps, ret)
         end
     elseif ps.t.kind == Tokens.AT_SIGN
@@ -111,7 +111,7 @@ function parse_compound(ps::ParseState, ret)
     elseif ps.nt.kind == Tokens.DO
         ret = parse_do(ps, ret)
     elseif isajuxtaposition(ps, ret)
-        op = OPERATOR{TimesOp,Tokens.STAR,false}(0, 1:0)
+        op = OPERATOR{Tokens.STAR,false}(0, 1:0)
         ret = parse_operator(ps, ret, op)
     elseif ps.nt.kind == Tokens.LPAREN && isemptyws(ps.ws)
         ret = @closer ps paren parse_call(ps, ret)
@@ -127,7 +127,7 @@ function parse_compound(ps::ParseState, ret)
         next(ps)
         op = INSTANCE(ps)
         ret = parse_operator(ps, ret, op)
-    elseif (ret isa IDENTIFIER || ret isa BinarySyntaxOpCall{OPERATOR{DotOp,Tokens.DOT,false}}) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
+    elseif (ret isa IDENTIFIER || ret isa BinarySyntaxOpCall{OPERATOR{Tokens.DOT,false}}) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
         next(ps)
         @catcherror ps arg = parse_string_or_cmd(ps, ret)
         ret = EXPR{x_Str}(Any[ret, arg])
@@ -136,7 +136,7 @@ function parse_compound(ps::ParseState, ret)
         next(ps)
         arg = INSTANCE(ps)
         push!(ret, LITERAL{Tokens.STRING}(arg.fullspan, arg.span, ps.t.val))
-    elseif (ret isa IDENTIFIER || ret isa BinarySyntaxOpCall{OPERATOR{DotOp,Tokens.DOT,false}}) && ps.nt.kind == Tokens.CMD
+    elseif (ret isa IDENTIFIER || ret isa BinarySyntaxOpCall{OPERATOR{Tokens.DOT,false}}) && ps.nt.kind == Tokens.CMD
         next(ps)
         @catcherror ps arg = parse_string_or_cmd(ps, ret)
         ret = EXPR{x_Cmd}(Any[ret, arg])
@@ -144,10 +144,10 @@ function parse_compound(ps::ParseState, ret)
         next(ps)
         arg = INSTANCE(ps)
         push!(ret, LITERAL{Tokens.STRING}(arg.fullspan, 1:span(arg), ps.t.val))
-    elseif ret isa UnarySyntaxOpCall && ret.arg2 isa OPERATOR{16,Tokens.PRIME}
+    elseif ret isa UnarySyntaxOpCall && ret.arg2 isa OPERATOR{Tokens.PRIME}
         # prime operator followed by an identifier has an implicit multiplication
         @catcherror ps nextarg = @precedence ps 11 parse_expression(ps)
-        ret = BinaryOpCall(ret, OPERATOR{TimesOp,Tokens.STAR,false}(0, 1:0), nextarg)
+        ret = BinaryOpCall(ret, OPERATOR{Tokens.STAR,false}(0, 1:0), nextarg)
 ################################################################################
 # Everything below here is an error
 ################################################################################
@@ -187,7 +187,7 @@ function parse_paren(ps::ParseState)
 
     @catcherror ps @default ps @nocloser ps inwhere @closer ps paren parse_comma_sep(ps, ret, false, true)
 
-    if (length(ret.args) == 2 && !(ret.args[2] isa UnarySyntaxOpCall && ret.args[2].arg2 isa OPERATOR{DddotOp,Tokens.DDDOT,false})) || (length(ret.args) == 1 && ret.args[1] isa EXPR{Block})
+    if (length(ret.args) == 2 && !(ret.args[2] isa UnarySyntaxOpCall && ret.args[2].arg2 isa OPERATOR{Tokens.DDDOT,false})) || (length(ret.args) == 1 && ret.args[1] isa EXPR{Block})
 
         if (ps.ws.kind != SemiColonWS || (length(ret.args) == 2 && ret.args[2] isa EXPR{Block})) && !(ret.args[2] isa EXPR{Parameters})
             ret = EXPR{InvisBrackets}(ret.args)

@@ -181,7 +181,7 @@ isstring(x) = false
 isstring(x::EXPR{T}) where T <: Union{StringH, LITERAL{Tokens.STRING},LITERAL{Tokens.TRIPLE_STRING}} = true
 
 isajuxtaposition(ps::ParseState, ret) = ((ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || (
-        (ret isa UnarySyntaxOpCall && ret.arg2 isa OPERATOR{16,Tokens.PRIME,false} && ps.nt.kind == Tokens.IDENTIFIER) ||
+        (ret isa UnarySyntaxOpCall && ret.arg2 isa OPERATOR{Tokens.PRIME,false} && ps.nt.kind == Tokens.IDENTIFIER) ||
         ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
         ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING))) ||
         (isstring(ret) && ps.nt.kind == Tokens.IDENTIFIER && ps.ws.kind == EmptyWS)
@@ -534,7 +534,7 @@ is_func_call(x) = false
 is_func_call(x::EXPR) = false
 is_func_call(x::EXPR{Call}) = true
 is_func_call(x::UnaryOpCall) = true
-function is_func_call(x::BinarySyntaxOpCall{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}})#::Bool
+function is_func_call(x::BinarySyntaxOpCall{OPERATOR{Tokens.DECLARATION,false}})#::Bool
     return is_func_call(x.arg1)
 end
 function is_func_call(x::WhereOpCall)#::Bool

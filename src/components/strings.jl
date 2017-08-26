@@ -101,7 +101,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 ex = LITERAL{Tokens.STRING}(lspan + startbytes, 1:(lspan + startbytes), str)
                 push!(ret.args, ex); istrip && adjust_lcp(ex)
                 startbytes = 0
-                op = OPERATOR{PlusOp,Tokens.EX_OR,false}(1, 1:1)
+                op = OPERATOR{Tokens.EX_OR,false}(1, 1:1)
                 if peekchar(input) == '('
                     lparen = PUNCTUATION{Tokens.LPAREN}(1, 1:1)
                     rparen = PUNCTUATION{Tokens.RPAREN}(1, 1:1)

@@ -5,8 +5,8 @@ Expr(x::IDENTIFIER) = Symbol(normalize_julia_identifier(x.val))
 Expr(x::KEYWORD{T}) where {T} = Symbol(lowercase(string(T)))
 Expr(x::KEYWORD{Tokens.BREAK}) = Expr(:break)
 Expr(x::KEYWORD{Tokens.CONTINUE}) = Expr(:continue)
-Expr(x::OPERATOR{P,K,false}) where {P,K} = UNICODE_OPS_REVERSE[K]
-Expr(x::OPERATOR{P,K,true}) where {P,K} = Symbol(:., UNICODE_OPS_REVERSE[K])
+Expr(x::OPERATOR{K,false}) where {K} = UNICODE_OPS_REVERSE[K]
+Expr(x::OPERATOR{K,true}) where {K} = Symbol(:., UNICODE_OPS_REVERSE[K])
 Expr(x::PUNCTUATION{K}) where {K} = string(K)
 Expr(x::LITERAL{Tokens.TRUE}) = true
 Expr(x::LITERAL{Tokens.FALSE}) = false
@@ -389,7 +389,7 @@ end
 
 fix_range(a) = Expr(a)
 function fix_range(a::BinaryOpCall)
-    if (a.op isa OPERATOR{ComparisonOp,Tokens.IN,false} || a.op isa OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false})
+    if (a.op isa OPERATOR{Tokens.IN,false} || a.op isa OPERATOR{Tokens.ELEMENT_OF,false})
         Expr(:(=), Expr(a.arg1), Expr(a.arg2))
     else
         Expr(a)
@@ -648,7 +648,7 @@ function Expr(x::EXPR{Generator})
     ret = Expr(:generator, Expr(x.args[1]))
     for i = 3:length(x.args)
         a = x.args[i]
-        if !(a isa EXPR{P} where P <: PUNCTUATION)
+        if !(a isa PUNCTUATION)
             push!(ret.args, convert_iter_assign(a))
         end
     end
@@ -658,7 +658,7 @@ end
 function Expr(x::EXPR{Filter})
     ret = Expr(:filter)
     for a in x.args
-        if !(a isa EXPR{KEYWORD{Tokens.IF}} || a isa EXPR{<:PUNCTUATION})
+        if !(a isa KEYWORD{Tokens.IF} || a isa PUNCTUATION)
             push!(ret.args, convert_iter_assign(a))
         end
     end
@@ -666,8 +666,8 @@ function Expr(x::EXPR{Filter})
 end
 
 function convert_iter_assign(a)
-    if a isa EXPR{BinaryOpCall} && (a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || a.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}})
-        return Expr(:(=), Expr(a.args[1]), Expr(a.args[3]))
+    if a isa BinaryOpCall && (a.op isa OPERATOR{Tokens.IN,false} || a.op isa OPERATOR{Tokens.ELEMENT_OF,false})
+        return Expr(:(=), Expr(a.arg1), Expr(a.arg2))
     else
         return Expr(a)
     end
@@ -702,14 +702,14 @@ end
 
 
 function _get_import_block(x, i, ret)
-    while x.args[i + 1] isa OPERATOR{DotOp,Tokens.DOT,false}
+    while x.args[i + 1] isa OPERATOR{Tokens.DOT,false}
         i += 1
         push!(ret.args, :.)
     end
     while i < length(x.args) && !(x.args[i + 1] isa PUNCTUATION{Tokens.COMMA})
         i += 1
         a = x.args[i]
-        if !(a isa PUNCTUATION) && !(a isa OPERATOR{DotOp,Tokens.DOT,false} || a isa OPERATOR{ColonOp,Tokens.COLON,false})
+        if !(a isa PUNCTUATION) && !(a isa OPERATOR{Tokens.DOT,false} || a isa OPERATOR{Tokens.COLON,false})
             push!(ret.args, Expr(a))
         end
     end
@@ -723,7 +723,8 @@ Expr(x::EXPR{ImportAll}) = expr_import(x, :importall)
 Expr(x::EXPR{Using}) = expr_import(x, :using)
 
 function expr_import(x, kw)
-    col = find(a isa OPERATOR{ColonOp} for a in x.args)
+    col = find(a isa OPERATOR && precedence(a) == ColonOp for a in x.args)
+
     comma = find(a isa PUNCTUATION{Tokens.COMMA} for a in x.args)
     if isempty(comma)
         ret = Expr(kw)
@@ -744,14 +745,14 @@ function expr_import(x, kw)
         ret = Expr(:toplevel)
         top = Expr(kw)
         i = 1
-        while x.args[i + 1] isa OPERATOR{DotOp,Tokens.DOT,false}
+        while x.args[i + 1] isa OPERATOR{Tokens.DOT,false}
             i += 1
             push!(top.args, :.)
         end
-        while i < length(x.args) && !(x.args[i + 1] isa OPERATOR{ColonOp})
+        while i < length(x.args) && !(x.args[i + 1] isa OPERATOR && precedence(x.args[i+1]) == ColonOp)
             i += 1
             a = x.args[i]
-            if !(a isa PUNCTUATION) && !(a isa OPERATOR{DotOp,Tokens.DOT,false} || a isa OPERATOR{ColonOp,Tokens.COLON,false})
+            if !(a isa PUNCTUATION) && !(a isa OPERATOR{Tokens.DOT,false} || a isa OPERATOR{Tokens.COLON,false})
                 push!(top.args, Expr(a))
             end
         end
