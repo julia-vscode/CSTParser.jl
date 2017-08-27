@@ -534,10 +534,14 @@ is_func_call(x) = false
 is_func_call(x::EXPR) = false
 is_func_call(x::EXPR{Call}) = true
 is_func_call(x::UnaryOpCall) = true
-function is_func_call(x::BinarySyntaxOpCall{OPERATOR{Tokens.DECLARATION,false}})#::Bool
-    return is_func_call(x.arg1)
+function is_func_call(x::BinarySyntaxOpCall)
+    if x.op isa OPERATOR{Tokens.DECLARATION,false}
+        return is_func_call(x.arg1)
+    else
+        return false
+    end
 end
-function is_func_call(x::WhereOpCall)#::Bool
+function is_func_call(x::WhereOpCall)
     return is_func_call(x.arg1)
 end
 

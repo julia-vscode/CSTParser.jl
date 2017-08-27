@@ -121,7 +121,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = f
     @catcherror ps @nocloser ps inwhere @nocloser ps newline @closer ps comma while !closer(ps)
         a = parse_expression(ps)
 
-        if kw && !ps.closer.brace && a isa BinarySyntaxOpCall{OPERATOR{Tokens.EQ,false}}
+        if kw && !ps.closer.brace && a isa BinarySyntaxOpCall && a.op isa OPERATOR{Tokens.EQ,false}
             a = EXPR{Kw}(Any[a.arg1, a.op, a.arg2])
         end
         push!(args, a)
@@ -150,7 +150,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = f
             args1 = Any[]
             @nocloser ps inwhere @nocloser ps newline @nocloser ps semicolon @closer ps comma while !closer(ps)
                 @catcherror ps a = parse_expression(ps)
-                if kw && !ps.closer.brace && a isa BinarySyntaxOpCall{OPERATOR{Tokens.EQ,false}}
+                if kw && !ps.closer.brace && a isa BinarySyntaxOpCall && a.op isa OPERATOR{Tokens.EQ,false}
                     a = EXPR{Kw}(Any[a.arg1, a.op, a.arg2])
                 end
                 # push!(paras, a)
@@ -186,8 +186,12 @@ function _arg_id(x::UnarySyntaxOpCall)
     end
 end
 
-function _arg_id(x::BinarySyntaxOpCall{OPERATOR{Tokens.DECLARATION,false}})
-    return _arg_id(x.arg1)
+function _arg_id(x::BinarySyntaxOpCall)
+    if x.op isa OPERATOR{Tokens.DECLARATION,false}
+        return _arg_id(x.arg1)
+    else
+        return x
+    end
 end
 function _arg_id(x::WhereOpCall)
     return _arg_id(x.arg1)
@@ -209,7 +213,7 @@ function _get_fparams(x::EXPR{Curly}, args = Symbol[])
         if !(a isa PUNCTUATION)
             if a isa IDENTIFIER
                 push!(args, Expr(a))
-            elseif a isa BinarySyntaxOpCall{OPERATOR{Tokens.ISSUBTYPE,false}}
+            elseif a isa BinarySyntaxOpCall && a.op isa OPERATOR{Tokens.ISSUBTYPE,false}
                 push!(args, Expr(a).args[1])
             end
         end
@@ -226,7 +230,7 @@ function _get_fparams(x::WhereOpCall, args = Symbol[])
         if !(a isa PUNCTUATION)
             if a isa IDENTIFIER
                 push!(args, Expr(a))
-            elseif a isa BinarySyntaxOpCall{OPERATOR{Tokens.ISSUBTYPE,false}} && a.arg1[] isa IDENTIFIER
+            elseif a isa BinarySyntaxOpCall && a.op isa OPERATOR{Tokens.ISSUBTYPE,false} && a.arg1 isa IDENTIFIER
                 push!(args, Expr(a.args[1]))
             end
         end
@@ -262,7 +266,7 @@ function declares_function(x::BinarySyntaxOpCall)
         while true
             if sig isa EXPR{Call}
                 return true
-            elseif sig isa BinarySyntaxOpCall{OPERATOR{Tokens.DECLARATION,false}} || sig isa WhereOpCall
+            elseif sig isa BinarySyntaxOpCall && sig.op isa OPERATOR{Tokens.DECLARATION,false} || sig isa WhereOpCall
                 sig = sig.args[1]
             else
                 return false

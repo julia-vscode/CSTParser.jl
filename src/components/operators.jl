@@ -192,7 +192,7 @@ function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.EQ,false})
     if is_func_call(ret)
         # Construction
         # NOTE: prior to v"0.6.0-dev.2360" (PR #20076), there was an issue w/ scheme parser
-        if VERSION > v"0.6.0-dev.2360" || (!(ret isa BinarySyntaxOpCall{OPERATOR{Tokens.DECLARATION,false}} && (ret <: Union{UnaryOpCall,UnarySyntaxOpCall,BinaryOpCall,BinarySyntaxOpCall} || length(ret.args) > 1)) && ps.closer.precedence != 0)
+        if VERSION > v"0.6.0-dev.2360" || (!((ret isa BinarySyntaxOpCall && ret.op isa OPERATOR{Tokens.DECLARATION,false}) && (ret <: Union{UnaryOpCall,UnarySyntaxOpCall,BinaryOpCall,BinarySyntaxOpCall} || length(ret.args) > 1)) && ps.closer.precedence != 0)
             nextarg = EXPR{Block}(Any[nextarg])
         end
     end
@@ -239,7 +239,7 @@ function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.COLON,false})
     @catcherror ps nextarg = @precedence ps ColonOp - LtoR(ColonOp) parse_expression(ps)
 
     # Construction
-    if ret isa BinarySyntaxOpCall{OPERATOR{Tokens.COLON,false}} 
+    if ret isa BinarySyntaxOpCall && ret.op isa OPERATOR{Tokens.COLON,false}
         ret = EXPR{ColonOpCall}(Any[ret.arg1, ret.op, ret.arg2])
         push!(ret, op)
         push!(ret, nextarg)
