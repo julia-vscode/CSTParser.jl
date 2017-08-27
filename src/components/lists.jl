@@ -77,25 +77,18 @@ function parse_array(ps::ParseState)
                 ret = EXPR{Vect}(args)
             end
         elseif ps.nt.kind == Tokens.COMMA
-            ret = EXPR{Vect}(args)
-            push!(ret, first_arg)
+            etype = Vect
+            push!(args, first_arg)
             next(ps)
-            push!(ret, INSTANCE(ps))
-            @catcherror ps @default ps @closer ps square parse_comma_sep(ps, ret, false)
+            push!(args, INSTANCE(ps))
+            @catcherror ps @default ps @closer ps square parse_comma_sep(ps, args, false)
 
-
-
-            if last(ret.args) isa EXPR{Parameters}
-                ret = EXPR{Vcat}(ret.args)
-                unshift!(ret, pop!(ret))
-                # if isempty(last(ret.args).args)
-                #     pop!(ret.args)
-                # end
+            if last(args) isa EXPR{Parameters}
+                etype = Vcat
+                unshift!(args, pop!(args))
             end
-            next(ps)
-            push!(ret, INSTANCE(ps))
-
-            return ret
+            push!(args, INSTANCE(next(ps)))
+            return EXPR{etype}(args)
         elseif ps.ws.kind == NewLineWS
             ret = EXPR{Vcat}(args)
             push!(ret, first_arg)
@@ -205,21 +198,18 @@ Parses the juxtaposition of `ret` with an opening brace. Parses a comma
 seperated list.
 """
 function parse_curly(ps::ParseState, ret)
-    next(ps)
-    ret = EXPR{Curly}(Any[ret, INSTANCE(ps)])
-
-    @catcherror ps  @default ps @nocloser ps inwhere @closer ps brace parse_comma_sep(ps, ret, true, false)
-    next(ps)
-    push!(ret, INSTANCE(ps))
-    return ret
+    args = Any[ret, INSTANCE(next(ps))]
+    @catcherror ps  @default ps @nocloser ps inwhere @closer ps brace parse_comma_sep(ps, args, true, false)
+    push!(args, INSTANCE(next(ps)))
+    return EXPR{Curly}(args)
 end
 
 function parse_cell1d(ps::ParseState)
     ret = EXPR{Cell1d}(Any[INSTANCE(ps)])
-    @catcherror ps @default ps @closer ps brace parse_comma_sep(ps, ret, true, false)
-    next(ps)
-    push!(ret, INSTANCE(ps))
-    return ret
+    args = Any[INSTANCE(ps)]
+    @catcherror ps @default ps @closer ps brace parse_comma_sep(ps, args, true, false)
+    push!(args, INSTANCE(next(ps)))
+    return EXPR{Cell1d}(args)
 end
 
 

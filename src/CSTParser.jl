@@ -182,21 +182,18 @@ end
 
 Parses an expression starting with a `(`.
 """
-function parse_paren(ps::ParseState)
-    ret = EXPR{TupleH}(Any[INSTANCE(ps)])
+function parse_paren(ps::ParseState)  
+    args = Any[INSTANCE(ps)]
+    @catcherror ps @default ps @nocloser ps inwhere @closer ps paren parse_comma_sep(ps, args, false, true, true)
 
-    @catcherror ps @default ps @nocloser ps inwhere @closer ps paren parse_comma_sep(ps, ret, false, true)
-
-    if (length(ret.args) == 2 && !(ret.args[2] isa UnarySyntaxOpCall && ret.args[2].arg2 isa OPERATOR{Tokens.DDDOT,false})) || (length(ret.args) == 1 && ret.args[1] isa EXPR{Block})
-
-        if (ps.ws.kind != SemiColonWS || (length(ret.args) == 2 && ret.args[2] isa EXPR{Block})) && !(ret.args[2] isa EXPR{Parameters})
-            ret = EXPR{InvisBrackets}(ret.args)
-        end
+    if ((length(args) == 2 && !(args[2] isa UnarySyntaxOpCall && args[2].arg2 isa OPERATOR{Tokens.DDDOT,false})) || (length(args) == 1 && args[1] isa EXPR{Block})) && ((ps.ws.kind != SemiColonWS || (length(args) == 2 && args[2] isa EXPR{Block})) && !(args[2] isa EXPR{Parameters}))
+        push!(args, INSTANCE(next(ps)))
+        ret = EXPR{InvisBrackets}(args)
+    else
+        push!(args, INSTANCE(next(ps)))
+        ret = EXPR{TupleH}(args)
     end
 
-    # handle closing ')'
-    next(ps)
-    push!(ret, INSTANCE(ps))
     return ret
 end
 

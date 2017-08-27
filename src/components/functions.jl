@@ -1,20 +1,13 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
-    # Parsing
     kw = INSTANCE(ps)
-    # signature
-
     if isoperator(ps.nt.kind) && ps.nt.kind != Tokens.EX_OR && ps.nnt.kind == Tokens.LPAREN
         next(ps)
         op = OPERATOR(ps)
         next(ps)
-        if issyntaxunarycall(op)
-            sig = UnarySyntaxOpCall(op, INSTANCE(ps))
-        else
-            sig = EXPR{Call}(Any[op, INSTANCE(ps)])
-        end
-        @catcherror ps @default ps @closer ps paren parse_comma_sep(ps, sig)
-        next(ps)
-        push!(sig, INSTANCE(ps))
+        args = Any[op, INSTANCE(ps)]
+        @catcherror ps @default ps @closer ps paren parse_comma_sep(ps, args)
+        push!(args, INSTANCE(next(ps)))
+        sig = EXPR{Call}(args)
         @default ps @closer ps inwhere @closer ps ws @closer ps block while !closer(ps)
             @catcherror ps sig = parse_compound(ps, sig)
         end
@@ -116,26 +109,24 @@ function parse_call(ps::ParseState, ret::OPERATOR{Tokens.MINUS})
 end
 
 function parse_call(ps::ParseState, ret)
-    next(ps)
-    ret = EXPR{Call}(Any[ret, INSTANCE(ps)])
-    @default ps @closer ps paren parse_comma_sep(ps, ret)
-    next(ps)
-    push!(ret, INSTANCE(ps))
-    return ret
+    args = Any[ret, INSTANCE(next(ps))]
+    @default ps @closer ps paren parse_comma_sep(ps, args)
+    push!(args, INSTANCE(next(ps)))
+    return EXPR{Call}(args)
 end
 
 
-function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false)
+function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = false, istuple = false)
     @catcherror ps @nocloser ps inwhere @nocloser ps newline @closer ps comma while !closer(ps)
         a = parse_expression(ps)
 
         if kw && !ps.closer.brace && a isa BinarySyntaxOpCall{OPERATOR{Tokens.EQ,false}}
-            a = EXPR{Kw}([a.arg1, a.op, a.arg2])
+            a = EXPR{Kw}(Any[a.arg1, a.op, a.arg2])
         end
-        push!(ret, a)
+        push!(args, a)
         if ps.nt.kind == Tokens.COMMA
             next(ps)
-            push!(ret, INSTANCE(ps))
+            push!(args, INSTANCE(ps))
         end
         if ps.ws.kind == SemiColonWS
             break
@@ -143,33 +134,37 @@ function parse_comma_sep(ps::ParseState, ret::EXPR, kw = true, block = false)
     end
 
     if ps.ws.kind == SemiColonWS
-        if block && !(ret isa EXPR{TupleH} && length(ret.args) > 2) && !(length(ret.args) == 1 && ret.args[1] isa PUNCTUATION)
-            body = EXPR{Block}(Any[pop!(ret)])
+        if block && !(istuple && length(args) > 2) && !(length(args) == 1 && args[1] isa PUNCTUATION)
+            args1 = Any[pop!(args)]
             @nocloser ps newline @closer ps comma while @nocloser ps semicolon !closer(ps)
                 @catcherror ps a = parse_expression(ps)
-                push!(body, a)
+                push!(args1, a)
             end
-            push!(ret, body)
+            body = EXPR{Block}(args1)
+            push!(args, body)
             return body
         else
             kw = true
-            ps.nt.kind == Tokens.RPAREN && return ret
-            paras = EXPR{Parameters}(Any[])
+            ps.nt.kind == Tokens.RPAREN && return args
+            args1 = Any[]
             @nocloser ps inwhere @nocloser ps newline @nocloser ps semicolon @closer ps comma while !closer(ps)
                 @catcherror ps a = parse_expression(ps)
                 if kw && !ps.closer.brace && a isa BinarySyntaxOpCall{OPERATOR{Tokens.EQ,false}}
-                    a = EXPR{Kw}([a.arg1, a.op, a.arg2])
+                    a = EXPR{Kw}(Any[a.arg1, a.op, a.arg2])
                 end
-                push!(paras, a)
+                # push!(paras, a)
+                push!(args1, a)
                 if ps.nt.kind == Tokens.COMMA
                     next(ps)
-                    push!(paras, INSTANCE(ps))
+                    # push!(paras, INSTANCE(ps))
+                    push!(args1, INSTANCE(ps))
                 end
             end
-            push!(ret, paras)
+            paras = EXPR{Parameters}(args1)
+            push!(args, paras)
         end
     end
-    return ret
+    return args
 end
 
 

@@ -240,7 +240,7 @@ function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.COLON,false})
 
     # Construction
     if ret isa BinarySyntaxOpCall{OPERATOR{Tokens.COLON,false}} 
-        ret = EXPR{ColonOpCall}([ret.arg1, ret.op, ret.arg2])
+        ret = EXPR{ColonOpCall}(Any[ret.arg1, ret.op, ret.arg2])
         push!(ret, op)
         push!(ret, nextarg)
     else
@@ -275,7 +275,7 @@ function parse_chain_operator(ps::ParseState, ret::BinaryOpCall, op::OPERATOR{K,
     P = precedence(K)
     if ret.op isa OPERATOR{K,false} && span(ret.op) > 0
         @catcherror ps nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
-        ret = EXPR{ChainOpCall}([ret.arg1, ret.op, ret.arg2, op, nextarg])
+        ret = EXPR{ChainOpCall}(Any[ret.arg1, ret.op, ret.arg2, op, nextarg])
     else
         ret = invoke(parse_operator, Tuple{ParseState,BinaryOpCall,OPERATOR{K,dot} where {K1,dot}}, ps, ret, op)
     end
