@@ -1,20 +1,20 @@
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.BEGIN}})
     # Parsing
     kw = INSTANCE(ps)
-    arg = EXPR{Block}(Any[], 0, 1:0)
-    @catcherror ps arg = @default ps parse_block(ps, arg, Tokens.Kind[Tokens.END], true)
+    blockargs = Any[]
+    @catcherror ps arg = @default ps parse_block(ps, blockargs, (Tokens.END,), true)
 
     next(ps)
-    return EXPR{Begin}(Any[kw; arg; INSTANCE(ps)])
+    return EXPR{Begin}(Any[kw, EXPR{Block}(blockargs), INSTANCE(ps)])
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.QUOTE}})
     kw = INSTANCE(ps)
-    arg = EXPR{Block}(Any[], 0, 1:0)
-    @catcherror ps @default ps parse_block(ps, arg)
+    blockargs = Any[]
+    @catcherror ps @default ps parse_block(ps, blockargs)
     next(ps)
 
-    ret = EXPR{Quote}(Any[kw, arg, INSTANCE(ps)])
+    ret = EXPR{Quote}(Any[kw, EXPR{Block}(blockargs), INSTANCE(ps)])
     return ret
 end
 
@@ -25,7 +25,15 @@ Parses an array of expressions (stored in ret) until 'end' is the next token.
 Returns `ps` the token before the closing `end`, the calling function is
 assumed to handle the closer.
 """
-function parse_block(ps::ParseState, ret::EXPR{Block}, closers = Tokens.Kind[Tokens.END, Tokens.CATCH, Tokens.FINALLY], docable = false)
+function parse_block(ps::ParseState, ret::EXPR{Block}, closers = (Tokens.END,), docable = false)
+    # Parsing
+    parse_block(ps, ret.args, closers, docable)
+    update_span!(ret)
+    return 
+end
+
+
+function parse_block(ps::ParseState, ret::Vector{Any}, closers = (Tokens.END,), docable = false)
     # Parsing
     while !(ps.nt.kind in closers) && !ps.errored
         if docable
@@ -35,5 +43,5 @@ function parse_block(ps::ParseState, ret::EXPR{Block}, closers = Tokens.Kind[Tok
         end
         push!(ret, a)
     end
-    return ret
+    return 
 end

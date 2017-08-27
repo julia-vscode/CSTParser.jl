@@ -2,10 +2,10 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
     # Parsing
     kw = INSTANCE(ps)
     @catcherror ps ranges = @default ps parse_ranges(ps)
-    block = EXPR{Block}(Any[])
-    @catcherror ps @default ps parse_block(ps, block)
-    next(ps)
-    ret = EXPR{For}(Any[kw, ranges, block, INSTANCE(ps)])
+    
+    blockargs = Any[]
+    @catcherror ps @default ps parse_block(ps, blockargs)
+    ret = EXPR{For}(Any[kw, ranges, EXPR{Block}(blockargs), INSTANCE(next(ps))])
 
     return ret
 end
@@ -32,11 +32,9 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
     # Parsing
     kw = INSTANCE(ps)
     @catcherror ps cond = @default ps @closer ps ws parse_expression(ps)
-    block = EXPR{Block}(Any[])
-    @catcherror ps @default ps parse_block(ps, block)
-    next(ps)
-
-    ret = EXPR{While}(Any[kw, cond, block, INSTANCE(ps)])
+    blockargs = Any[]
+    @catcherror ps @default ps parse_block(ps, blockargs)
+    ret = EXPR{While}(Any[kw, cond, EXPR{Block}(blockargs), INSTANCE(next(ps))])
 
     return ret
 end

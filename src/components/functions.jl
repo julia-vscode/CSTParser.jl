@@ -23,17 +23,18 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
         sig = EXPR{TupleH}(sig.args)
     end
 
-    block = EXPR{Block}(Any[], 0, 1:0)
-    @catcherror ps @default ps parse_block(ps, block)
+    
+    blockargs = Any[]
+    @catcherror ps @default ps parse_block(ps, blockargs)
 
-    if isempty(block.args)
+    if isempty(blockargs)
         if sig isa EXPR{Call} || (sig isa WhereOpCall || (sig isa BinarySyntaxOpCall && !(sig.arg1 isa OPERATOR{Tokens.EX_OR,false})))
-            args = Any[sig, block]
+            args = Any[sig, EXPR{Block}(blockargs)]
         else
             args = Any[sig]
         end
     else
-        args = Any[sig, block]
+        args = Any[sig, EXPR{Block}(blockargs)]
     end
 
     next(ps)

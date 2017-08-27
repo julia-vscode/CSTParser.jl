@@ -76,12 +76,12 @@ end
 function parse_struct(ps::ParseState, mutable)
     kw = INSTANCE(ps)
     @catcherror ps sig = @default ps @closer ps block @closer ps ws parse_expression(ps)
-    block = EXPR{Block}(Any[])
-    @catcherror ps @default ps parse_block(ps, block)
+    blockargs = Any[]
+    @catcherror ps @default ps parse_block(ps, blockargs)
 
     # Construction
     T = mutable == TRUE ? Tokens.TYPE : Tokens.IMMUTABLE
-    next(ps)
-    ret = EXPR{mutable == TRUE ? Mutable : Struct}(Any[kw, sig, block, INSTANCE(ps)])
+    
+    ret = EXPR{mutable == TRUE ? Mutable : Struct}(Any[kw, sig, EXPR{Block}(blockargs), INSTANCE(next(ps))])
     return ret
 end

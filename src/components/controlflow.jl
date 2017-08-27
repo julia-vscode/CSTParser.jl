@@ -13,17 +13,11 @@ function parse_do(ps::ParseState, ret)
             push!(args, INSTANCE(ps))
         end
     end
-    block = EXPR{Block}(Any[], 0, 1:0)
-    @catcherror ps @default ps parse_block(ps, block)
 
-    # Construction
-    ret = EXPR{Do}(Any[ret, kw])
-    push!(ret, args)
-    push!(ret, block)
-    next(ps)
-    push!(ret, INSTANCE(ps))
+    blockargs = Any[]
+    @catcherror ps @default ps parse_block(ps, blockargs)
 
-    return ret
+    return EXPR{Do}(Any[ret, kw, args, EXPR{Block}(blockargs), INSTANCE(next(ps))])
 end
 
 parse_kw(ps::ParseState, ::Type{Val{Tokens.IF}}) = parse_if(ps)
@@ -38,13 +32,14 @@ function parse_if(ps::ParseState, nested = false)
     kw = INSTANCE(ps)
     @catcherror ps cond = @default ps @closer ps block @closer ps ws parse_expression(ps)
 
-    ifblock = EXPR{Block}(Any[], 0, 1:0)
-    @catcherror ps @default ps @closer ps ifelse parse_block(ps, ifblock, Tokens.Kind[Tokens.END, Tokens.ELSE, Tokens.ELSEIF])
+    
+    ifblockargs = Any[]
+    @catcherror ps @default ps @closer ps ifelse parse_block(ps, ifblockargs, (Tokens.END, Tokens.ELSE, Tokens.ELSEIF))
 
     if nested
-        ret = EXPR{If}(Any[cond, ifblock])
+        ret = EXPR{If}(Any[cond, EXPR{Block}(ifblockargs)])
     else
-        ret = EXPR{If}(Any[kw, cond, ifblock])
+        ret = EXPR{If}(Any[kw, cond, EXPR{Block}(ifblockargs)])
     end
 
     elseblock = EXPR{Block}(Any[], 0, 1:0)
@@ -72,35 +67,32 @@ function parse_if(ps::ParseState, nested = false)
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
-    # Parsing
-    ret = EXPR{Let}(Any[INSTANCE(ps)])
-
+    args = Any[INSTANCE(ps)]
     @default ps @closer ps comma @closer ps block while !closer(ps)
         @catcherror ps a = parse_expression(ps)
-        push!(ret, a)
+        push!(args, a)
         if ps.nt.kind == Tokens.COMMA
             next(ps)
-            push!(ret, INSTANCE(ps))
+            push!(args, INSTANCE(ps))
         end
     end
-    block = EXPR{Block}(Any[], 0, 1:0)
-    @catcherror ps @default ps parse_block(ps, block)
+    
+    blockargs = Any[]
+    @catcherror ps @default ps parse_block(ps, blockargs)
 
-    # Construction
-    push!(ret, block)
-    next(ps)
-    push!(ret, INSTANCE(ps))
+    push!(args, EXPR{Block}(blockargs))
+    push!(args, INSTANCE(next(ps)))
 
-    return ret
+    return EXPR{Let}(args)
 end
 
 function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
     kw = INSTANCE(ps)
     ret = EXPR{Try}(Any[kw])
 
-    tryblock = EXPR{Block}(Any[], 0, 1:0)
-    @catcherror ps @default ps @closer ps trycatch parse_block(ps, tryblock,)
-    push!(ret, tryblock)
+    tryblockargs = Any[]
+    @catcherror ps @default ps @closer ps trycatch parse_block(ps, tryblockargs, (Tokens.END, Tokens.CATCH, Tokens.FINALLY))
+    push!(ret, EXPR{Block}(tryblockargs))
 
     # try closing early
     if ps.nt.kind == Tokens.END
@@ -128,7 +120,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
                 @catcherror ps caught = @default ps @closer ps ws @closer ps trycatch parse_expression(ps)
             end
             catchblock = EXPR{Block}(Any[], 0, 1:0)
-            @catcherror ps @default ps @closer ps trycatch parse_block(ps, catchblock)
+            @catcherror ps @default ps @closer ps trycatch parse_block(ps, catchblock, (Tokens.END, Tokens.FINALLY))
             if !(caught isa IDENTIFIER || caught == FALSE)
                 unshift!(catchblock, caught)
                 caught = FALSE

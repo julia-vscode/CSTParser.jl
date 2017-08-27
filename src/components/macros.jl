@@ -8,11 +8,10 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
         @catcherror ps sig = @closer ps ws parse_expression(ps)
     end
 
-    block = EXPR{Block}(Any[])
-    @catcherror ps @default ps parse_block(ps, block)
+    blockargs = Any[]
+    @catcherror ps @default ps parse_block(ps, blockargs)
 
-    next(ps)
-    ret = EXPR{Macro}(Any[kw, sig, block, INSTANCE(ps)])
+    ret = EXPR{Macro}(Any[kw, sig, EXPR{Block}(blockargs), INSTANCE(next(ps))])
     return ret
 end
 
