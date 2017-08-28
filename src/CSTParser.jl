@@ -157,9 +157,10 @@ function parse_compound(ps::ParseState, ret)
         return error_unexpected(ps, ps.nt)
     elseif ret isa EXPR{<:OPERATOR}
         ps.errored = true
+        diag_range = ps.nt.startbyte - (ret.fullspan - length(ret.span) - first(ret.span) + 1) + ((-length(ret.span)):-1)
         push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedOperator}(
             # TODO: Which operator? How do we get at the spelling
-            0:0, [], "Unexpected operator"
+            diag_range, [], "Unexpected operator"
         ))
         return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, 0:-1, "Unexpected operator")
     elseif ps.nt.kind == Tokens.IDENTIFIER
