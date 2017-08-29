@@ -219,7 +219,7 @@ function flisp_parse(str::AbstractString, pos::Int; greedy::Bool=true, raise::Bo
     bstr = String(str)
     ex, pos = ccall(:jl_parse_string, Any,
                     (Ptr{UInt8}, Csize_t, Int32, Int32),
-                    bstr, sizeof(bstr), pos-1, greedy ? 1:0)
+                    bstr, sizeof(bstr), pos-1, greedy ? 1 : 0)
     if raise && isa(ex,Expr) && ex.head === :error
         throw(Base.ParseError(ex.args[1]))
     end

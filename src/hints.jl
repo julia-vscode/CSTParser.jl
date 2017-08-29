@@ -19,6 +19,11 @@ UnexpectedRBrace,
 UnexpectedLSquare,
 UnexpectedRSquare,
 UnexpectedInputEnd,
+UnexpectedStringEnd,
+UnexpectedCommentEnd,
+UnexpectedBlockEnd,
+UnexpectedCmdEnd,
+UnexpectedCharEnd,
 UnexpectedComma,
 UnexpectedOperator,
 UnexpectedIdentifier,
@@ -55,56 +60,58 @@ parameterisedDeprecation)
 end
 
 
-function error_unexpected(ps, startbyte, tok)
+function make_error(ps, range, code, text)
+    ps.errored = true
+    ps.error_code = code
+    push!(ps.diagnostics, Diagnostic{code}(range, [], text))
+    return EXPR{ERROR}(Any[INSTANCE(ps)])
+end
+
+function error_unexpected(ps, tok)
     if tok.kind == Tokens.ENDMARKER
-        ps.errored = true
-        push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedInputEnd}(
-            tok.startbyte:tok.endbyte, [], "Unexpected end of input"
-        ))
-        return EXPR{ERROR}(Any[INSTANCE(ps)])
+        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedInputEnd,
+                          "Unexpected end of input")
     elseif tok.kind == Tokens.COMMA
-        ps.errored = true
-        push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedComma}(
-            tok.startbyte:tok.endbyte, [], "Unexpected comma"
-        ))
-        return EXPR{ERROR}(Any[INSTANCE(ps)])
+        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedComma,
+                          "Unexpected comma")
     elseif tok.kind == Tokens.LPAREN
-        ps.errored = true
-        push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedLParen}(
-            tok.startbyte:tok.endbyte, [], "Unexpected ("
-        ))
-        return EXPR{ERROR}(Any[INSTANCE(ps)])
+        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedLParen,
+                          "Unexpected (")
     elseif tok.kind == Tokens.RPAREN
-        ps.errored = true
-        push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedRParen}(
-            tok.startbyte:tok.endbyte, [], "Unexpected )"
-        ))
-        return EXPR{ERROR}(Any[INSTANCE(ps)])
+        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedRParen,
+                          "Unexpected )")
     elseif tok.kind == Tokens.LBRACE
-        ps.errored = true
-        push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedLBrace}(
-            tok.startbyte:tok.endbyte, [], "Unexpected {"
-        ))
-        return EXPR{ERROR}(Any[INSTANCE(ps)])
+        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedLBrace,
+                          "Unexpected {")
     elseif tok.kind == Tokens.RBRACE
-        ps.errored = true
-        push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedRBrace}(
-            tok.startbyte:tok.endbyte, [], "Unexpected }"
-        ))
-        return EXPR{ERROR}(Any[INSTANCE(ps)])
+        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedRBrace,
+                          "Unexpected }")
     elseif tok.kind == Tokens.LSQUARE
-        ps.errored = true
-        push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedLSquare}(
-            tok.startbyte:tok.endbyte, [], "Unexpected ["
-        ))
-        return EXPR{ERROR}(Any[INSTANCE(ps)])
+        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedLSquare,
+                          "Unexpected [")
     elseif tok.kind == Tokens.RSQUARE
-        ps.errored = true
-        push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedRSquare}(
-            tok.startbyte:tok.endbyte, [], "Unexpected ]"
-        ))
-        return EXPR{ERROR}(Any[INSTANCE(ps)])
+        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedRSquare,
+                         "Unexpected [")
     else
         error("Internal error")
+    end
+end
+
+function error_eof(ps, byte, kind=Diagnostics.UnexpectedInputEnd, text="Unexpected end of input")
+    return make_error(ps, byte:byte, kind, text)
+end
+
+function error_token(ps, tok)
+    if tok.token_error == Tokens.EOF_STRING
+        return error_eof(ps, ps.t.endbyte+1, Diagnostics.UnexpectedStringEnd, "Unexpected end of string")
+    elseif tok.token_error == Tokens.EOF_MULTICOMMENT
+        return error_eof(ps, ps.t.endbyte+1, Diagnostics.UnexpectedCommentEnd, "Unexpected end of multiline comment")
+    elseif tok.token_error == Tokens.EOF_CHAR
+        return error_eof(ps, ps.t.endbyte+1, Diagnostics.UnexpectedCharEnd, "Unexpected end of character literal")
+    elseif tok.token_error == Tokens.EOF_CMD
+        return error_eof(ps, ps.t.endbyte+1, Diagnostics.UnexpectedCmdEnd, "Unexpected end of command")
+    else
+        ps.errored = true
+        return EXPR{ERROR}(Any[INSTANCE(ps)])
     end
 end

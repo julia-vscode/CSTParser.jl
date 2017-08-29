@@ -15,7 +15,6 @@ include("hints.jl")
 import .Diagnostics: Diagnostic, LintCodes
 
 include("lexer.jl")
-include("errors.jl")
 include("spec.jl")
 include("utils.jl")
 include("components/lists.jl")
@@ -74,8 +73,10 @@ function parse_expression(ps::ParseState)
 # Everything below here is an error
 ################################################################################
     elseif ps.t.kind in (Tokens.ENDMARKER, Tokens.COMMA, Tokens.RPAREN,
-                         Tokens.RBRACE, Tokens.RSQUARE)
-        return error_unexpected(ps, ps.t.startbyte, ps.t)
+                         Tokens.RBRACE,Tokens.RSQUARE)
+        return error_unexpected(ps, ps.t)
+    elseif ps.t.kind == Tokens.ERROR
+        return error_token(ps, ps.t)
     else
         ps.errored = true
         return EXPR{ERROR}(Any[INSTANCE(ps)])
@@ -153,12 +154,13 @@ function parse_compound(ps::ParseState, ret)
 ################################################################################
     elseif ps.nt.kind in (Tokens.ENDMARKER, Tokens.LPAREN, Tokens.RPAREN, Tokens.LBRACE,
                           Tokens.LSQUARE, Tokens.RSQUARE)
-        return error_unexpected(ps, ps.nt.startbyte, ps.nt)
+        return error_unexpected(ps, ps.nt)
     elseif ret isa EXPR{<:OPERATOR}
         ps.errored = true
+        diag_range = ps.nt.startbyte - (ret.fullspan - length(ret.span) - first(ret.span) + 1) + ((-length(ret.span)):-1)
         push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedOperator}(
             # TODO: Which operator? How do we get at the spelling
-            0:0, [], "Unexpected operator"
+            diag_range, [], "Unexpected operator"
         ))
         return EXPR{ERROR}(Any[INSTANCE(ps)])
     elseif ps.nt.kind == Tokens.IDENTIFIER
@@ -167,6 +169,8 @@ function parse_compound(ps::ParseState, ret)
             ps.nt.startbyte:ps.nt.endbyte, [], "Unexpected identifier"
         ))
         return EXPR{ERROR}(Any[INSTANCE(ps)])
+    elseif ps.nt.kind == Tokens.ERROR
+        return error_token(ps, ps.nt)
     else
         ps.errored = true
         return EXPR{ERROR}(Any[INSTANCE(ps)])

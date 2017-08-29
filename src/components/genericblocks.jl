@@ -36,6 +36,9 @@ end
 function parse_block(ps::ParseState, ret::Vector{Any}, closers = (Tokens.END,), docable = false)
     # Parsing
     while !(ps.nt.kind in closers) && !ps.errored
+        if ps.nt.kind == Tokens.ENDMARKER
+            return error_eof(ps, ps.nt.startbyte, Diagnostics.UnexpectedBlockEnd, "Unexpected end of block")
+        end
         if docable
             @catcherror ps a = @closer ps block parse_doc(ps)
         else
