@@ -1,4 +1,4 @@
-import Tokenize.Lexers: peekchar, prevchar, readchar, iswhitespace, emit, emit_error, backup!, accept_batch, eof
+import Tokenize.Lexers: peekchar, readchar, iswhitespace, emit, emit_error,  accept_batch, eof
 
 const EmptyWS = Tokens.begin_delimiters
 const SemiColonWS = Tokens.end_delimiters
@@ -162,24 +162,18 @@ end
 
 function read_comment(l::Lexer)
     if peekchar(l) != '='
-        c = readchar(l)
-        if c == '\n' || eof(c)
-            backup!(l)
-            return true
-        end
         while true
-            c = readchar(l)
-            if c == '\n' || eof(c)
-                backup!(l)
+            pc = peekchar(l)
+            if pc == '\n' || eof(pc)
                 return true
             end
+            readchar(l)
         end
     else
         c = readchar(l) # consume the '='
         n_start, n_end = 1, 0
         while true
             if eof(c)
-                emit_error(l, Tokens.EOF_MULTICOMMENT)
                 return false
             end
             nc = readchar(l)
@@ -189,12 +183,11 @@ function read_comment(l::Lexer)
                 n_end += 1
             end
             if n_start == n_end
-                return false
+                return true
             end
             c = nc
         end
     end
 end
-
 
 isemptyws(t::Token) = t.kind == EmptyWS

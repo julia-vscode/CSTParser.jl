@@ -6,7 +6,7 @@ using AbstractTrees
 using Tokenize
 import Base: next, start, done, length, first, last, endof, getindex, setindex!
 import Tokenize.Tokens
-import Tokenize.Tokens: Token, iskeyword, isliteral, isoperator
+import Tokenize.Tokens: Token, iskeyword, isliteral, isoperator, untokenize
 import Tokenize.Lexers: Lexer, peekchar, iswhitespace
 
 export ParseState, parse_expression

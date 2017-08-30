@@ -149,7 +149,7 @@ function parse_unary(ps::ParseState, op::OPERATOR{K,dot}) where {K,dot}
     if (op isa OPERATOR{Tokens.PLUS,false} || op isa OPERATOR{Tokens.MINUS,false}) && (ps.nt.kind ==  Tokens.INTEGER || ps.nt.kind == Tokens.FLOAT) && isemptyws(ps.ws)
         next(ps)
         arg = INSTANCE(ps)
-        return LITERAL{ps.t.kind}(op.fullspan + arg.fullspan, first(arg.span):(last(arg.span) + length(op.span)), string(ps.lt.val, ps.t.val))
+        return LITERAL{ps.t.kind}(op.fullspan + arg.fullspan, first(arg.span):(last(arg.span) + length(op.span)), string(op isa OPERATOR{Tokens.PLUS,false} ? "+" : "-" , ps.t.val))
         return arg
     end
 

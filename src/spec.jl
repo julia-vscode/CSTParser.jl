@@ -42,7 +42,7 @@ struct IDENTIFIER
     span::UnitRange{Int}
     val::String
 end
-IDENTIFIER(ps::ParseState) = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), ps.t.val)
+IDENTIFIER(ps::ParseState) = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), untokenize(ps.t))
 
 struct PUNCTUATION{K}
     fullspan::Int
