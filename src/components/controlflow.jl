@@ -30,6 +30,9 @@ Parse an `if` block.
 function parse_if(ps::ParseState, nested = false)
     # Parsing
     kw = INSTANCE(ps)
+    if ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS
+        return EXPR{ERROR}(EXPR[], 0, 0:-1, "missing conditional in `if`")
+    end
     @catcherror ps cond = @default ps @closer ps block @closer ps ws parse_expression(ps)
 
     
