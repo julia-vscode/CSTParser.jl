@@ -1,3 +1,8 @@
+if VERSION < v"0.7.0-DEV.1053"
+    read(io, ::Type{String}) = readstring(io)
+    read(io, ::Type{Char}) = Base.read(io, Char)
+end
+
 function closer(ps::ParseState)
     (ps.closer.newline && ps.ws.kind == NewLineWS && ps.t.kind != Tokens.COMMA) ||
     (ps.closer.semicolon && ps.ws.kind == SemiColonWS) ||

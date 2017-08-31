@@ -105,7 +105,9 @@ function parse_call(ps::ParseState, ret::ANY)
     end
     args = Any[ret, PUNCTUATION(next(ps))]
     @default ps @closer ps paren parse_comma_sep(ps, args)
-    push!(args, PUNCTUATION(next(ps)))
+    rparen = PUNCTUATION(next(ps))
+    rparen.kind == Tokens.RPAREN || return error_unexpected(ps, ps.t)
+    push!(args, rparen)
     return EXPR{Call}(args)
 end
 
