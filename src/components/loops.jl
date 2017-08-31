@@ -16,7 +16,7 @@ function parse_ranges(ps::ParseState)
 
     if !is_range(arg)
         ps.errored = true
-        return EXPR{ERROR}(EXPR[], 0, 0:-1, "invalid iteration specification")
+        return EXPR{ERROR}(Any[])
     end
     if ps.nt.kind == Tokens.COMMA
         arg = EXPR{Block}(Any[arg])
@@ -27,7 +27,7 @@ function parse_ranges(ps::ParseState)
             @catcherror ps nextarg = @closer ps comma @closer ps ws parse_expression(ps)
             if !is_range(nextarg)
                 ps.errored = true
-                return EXPR{ERROR}(EXPR[], 0, 0:-1, "invalid iteration specification")
+                return EXPR{ERROR}(Any[])
             end
             push!(arg, nextarg)
         end
@@ -37,16 +37,16 @@ end
 
 
 function is_range(x) false end
-function is_range(x::EXPR{BinarySyntaxOpCall})
-    if x.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
+function is_range(x::BinarySyntaxOpCall)
+    if x.op isa OPERATOR{Tokens.EQ,false}
         return true
     else
         return false
     end
 end
 
-function is_range(x::EXPR{BinaryOpCall})
-    if x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}}
+function is_range(x::BinaryOpCall)
+    if x.op isa OPERATOR{Tokens.IN,false} || x.op isa OPERATOR{Tokens.ELEMENT_OF,false}
         return true
     else
         return false
