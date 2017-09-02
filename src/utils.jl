@@ -244,7 +244,7 @@ end
 
 function flisp_parse(stream::IO; greedy::Bool = true, raise::Bool = true)
     pos = position(stream)
-    ex, Δ = flisp_parse(readstring(stream), 1, greedy = greedy, raise = raise)
+    ex, Δ = flisp_parse(read(stream, String), 1, greedy = greedy, raise = raise)
     seek(stream, pos + Δ - 1)
     return ex
 end
@@ -308,7 +308,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                 try
                     # print(N)
                     print("\r", rpad(string(N), 5), rpad(string(signif(fail / N * 100, 3)), 8), rpad(string(signif(err / N * 100, 3)), 8), rpad(string(signif(neq / N * 100, 3)), 8))
-                    str = readstring(file)
+                    str = read(file, String)
                     ps = ParseState(str)
                     io = IOBuffer(str)
                     x, ps = parse(ps, true)
@@ -498,10 +498,10 @@ end
 function speed_test()
     dir = dirname(Base.find_source_file("base.jl"))
     println("speed test : ", @timed(for i = 1:5
-    parse(readstring(joinpath(dir, "inference.jl")), true);
-    parse(readstring(joinpath(dir, "random.jl")), true);
-    parse(readstring(joinpath(dir, "show.jl")), true);
-    parse(readstring(joinpath(dir, "abstractarray.jl")), true);
+    parse(read(joinpath(dir, "inference.jl"), String), true);
+    parse(read(joinpath(dir, "random.jl"), String), true);
+    parse(read(joinpath(dir, "show.jl"), String), true);
+    parse(read(joinpath(dir, "abstractarray.jl"), String), true);
 end)[2])
 end
 
@@ -514,7 +514,7 @@ function check_reformat()
     fs = filter(f -> endswith(f, ".jl"), readdir())
     for (i, f) in enumerate(fs)
         f == "deprecated.jl" && continue
-        str = readstring(f)
+        str = read(f, String)
         x, ps = parse(ParseState(str), true);
         cnt = 0
         for i = 1:length(x) - 1

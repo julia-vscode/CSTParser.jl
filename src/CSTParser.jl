@@ -1,5 +1,6 @@
 __precompile__()
 module CSTParser
+isdefined(Base, :GenericIOBuffer) ? (import Base.GenericIOBuffer) : (GenericIOBuffer{T} = Base.AbstractIOBuffer{T})
 global debug = true
 
 using AbstractTrees
@@ -360,7 +361,7 @@ end
 
 
 function parse_file(path::String)
-    x = parse(readstring(path), true)
+    x = parse(read(path, String), true)
     File([], [], path, x, [])
     # File([], (f -> (joinpath(dirname(path), f[1]), f[2])).(_get_includes(x)), path, x, [])
 end
