@@ -59,6 +59,8 @@ OPERATOR(ps::ParseState) = OPERATOR{ps.t.kind,ps.dot}(ps.nt.startbyte - ps.t.sta
 struct KEYWORD{K}
     fullspan::Int
     span::UnitRange{Int}
+    KEYWORD{K}(fullspan::Int,span::UnitRange{Int}) where K = new{K}(fullspan, span)
+    KEYWORD{K}() where K = new{K}(0, 1:0)
 end
 KEYWORD(ps::ParseState) = KEYWORD{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
 

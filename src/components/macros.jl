@@ -1,4 +1,4 @@
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.MACRO}})
+function parse_macro(ps::ParseState)
     kw = INSTANCE(ps)
     if ps.nt.kind == Tokens.IDENTIFIER
         next(ps)

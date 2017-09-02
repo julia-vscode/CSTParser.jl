@@ -1,4 +1,4 @@
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
+function parse_abstract(ps::ParseState)
     # Switch for v0.6 compatability
     if ps.nt.kind == Tokens.TYPE
         kw1 = INSTANCE(ps)
@@ -18,7 +18,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
     return ret
 end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
+function parse_bitstype(ps::ParseState)
     kw = INSTANCE(ps)
 
     @catcherror ps arg1 = @default ps @closer ps ws @closer ps wsop parse_expression(ps)
@@ -28,7 +28,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
     return ret
 end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.PRIMITIVE}})
+function parse_primitive(ps::ParseState)
     if ps.nt.kind == Tokens.TYPE
         kw1 = INSTANCE(ps)
         next(ps)
@@ -44,7 +44,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.PRIMITIVE}})
     return ret
 end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
+function parse_typealias(ps::ParseState)
     kw = INSTANCE(ps)
 
     @catcherror ps arg1 = @closer ps ws @closer ps wsop parse_expression(ps)
@@ -53,13 +53,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
     return EXPR{TypeAlias}(Any[kw, arg1, arg2])
 end
 
-parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPE}}) = parse_struct(ps, TRUE)
-parse_kw(ps::ParseState, ::Type{Val{Tokens.IMMUTABLE}}) = parse_struct(ps, FALSE)
-
-# new 0.6 syntax
-parse_kw(ps::ParseState, ::Type{Val{Tokens.STRUCT}}) = parse_struct(ps, FALSE)
-
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.MUTABLE}})
+function parse_mutable(ps::ParseState)
     if ps.nt.kind == Tokens.STRUCT
         kw = INSTANCE(ps)
         next(ps)

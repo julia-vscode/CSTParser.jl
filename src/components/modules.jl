@@ -1,10 +1,3 @@
-parse_kw(ps::ParseState, ::Type{Val{Tokens.IMPORT}}) = parse_imports(ps)
-parse_kw(ps::ParseState, ::Type{Val{Tokens.IMPORTALL}}) = parse_imports(ps)
-parse_kw(ps::ParseState, ::Type{Val{Tokens.USING}}) = parse_imports(ps)
-
-parse_kw(ps::ParseState, ::Type{Val{Tokens.MODULE}}) = parse_module(ps)
-parse_kw(ps::ParseState, ::Type{Val{Tokens.BAREMODULE}}) = parse_module(ps)
-
 function parse_module(ps::ParseState)
     # Parsing
     kw = INSTANCE(ps)
@@ -130,7 +123,7 @@ function parse_imports(ps::ParseState)
     return ret
 end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.EXPORT}})
+function parse_export(ps::ParseState)
     # Parsing
     kw = INSTANCE(ps)
     ret = EXPR{Export}(vcat(kw, parse_dot_mod(ps)))

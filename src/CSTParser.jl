@@ -50,8 +50,9 @@ Acceptable starting tokens are:
 """
 function parse_expression(ps::ParseState)
     next(ps)
-    if Tokens.begin_keywords < ps.t.kind < Tokens.end_keywords && ps.t.kind != Tokens.DO
-        @catcherror ps ret = parse_kw(ps, Val{ps.t.kind})
+    
+    if iskeyword(ps.t.kind) && ps.t.kind != Tokens.DO
+        @catcherror ps ret = parse_kw(ps)
     elseif ps.t.kind == Tokens.LPAREN
         @catcherror ps ret = parse_paren(ps)
     elseif ps.t.kind == Tokens.LSQUARE
@@ -89,6 +90,72 @@ function parse_expression(ps::ParseState)
     return ret
 end
 
+function parse_kw(ps)
+    k = ps.t.kind
+    if k == Tokens.IF
+        return parse_if(ps)
+    elseif k == Tokens.LET
+        return parse_let(ps)
+    elseif k == Tokens.TRY
+        return parse_try(ps)
+    elseif k == Tokens.FUNCTION
+        return parse_function(ps)
+    elseif k == Tokens.BEGIN
+        return parse_begin(ps)
+    elseif k == Tokens.QUOTE
+        return parse_quote(ps)
+    elseif k == Tokens.FOR
+        return parse_for(ps)
+    elseif k == Tokens.WHILE
+        return parse_while(ps)
+    elseif k == Tokens.BREAK
+        return INSTANCE(ps)
+    elseif k == Tokens.CONTINUE
+        return INSTANCE(ps)
+    elseif k == Tokens.MACRO
+        return parse_macro(ps)
+    elseif k == Tokens.IMPORT
+        return parse_imports(ps)
+    elseif k == Tokens.IMPORTALL
+        return parse_imports(ps)
+    elseif k == Tokens.USING
+        return parse_imports(ps)
+    elseif k == Tokens.MODULE
+        return parse_module(ps)
+    elseif k == Tokens.BAREMODULE
+        return parse_module(ps)
+    elseif k == Tokens.EXPORT
+        return parse_export(ps)
+    elseif k == Tokens.CONST
+        return parse_const(ps)
+    elseif k == Tokens.GLOBAL
+        return parse_global(ps)
+    elseif k == Tokens.LOCAL
+        return parse_local(ps)
+    elseif k == Tokens.RETURN
+        return parse_return(ps)
+    elseif k == Tokens.END
+        return parse_end(ps)
+    elseif k == Tokens.ELSE || k == Tokens.ELSEIF || k == Tokens.CATCH || k == Tokens.FINALLY
+        ret = IDENTIFIER(ps)
+        ps.errored = true
+        return EXPR{ERROR}(Any[])
+    elseif k == Tokens.ABSTRACT
+        return parse_abstract(ps)
+    elseif k == Tokens.BITSTYPE
+        return parse_bitstype(ps)
+    elseif k == Tokens.PRIMITIVE
+        return parse_primitive(ps)
+    elseif k == Tokens.TYPEALIAS
+        return parse_typealias(ps)
+    elseif k == Tokens.TYPE
+        return parse_struct(ps, TRUE)
+    elseif k == Tokens.IMMUTABLE || k == Tokens.STRUCT
+        return parse_struct(ps, FALSE)
+    elseif k == Tokens.MUTABLE
+        return parse_mutable(ps)
+    end
+end
 
 """
     parse_compound(ps, ret)
@@ -317,6 +384,6 @@ end
 
 ischainable(t::Token) = t.kind == Tokens.PLUS || t.kind == Tokens.STAR || t.kind == Tokens.APPROX
 
-# include("_precompile.jl")
-# _precompile_()
+include("_precompile.jl")
+_precompile_()
 end

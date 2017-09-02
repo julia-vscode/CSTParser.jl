@@ -1,4 +1,4 @@
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
+function parse_for(ps::ParseState)
     # Parsing
     kw = INSTANCE(ps)
     @catcherror ps ranges = @default ps parse_ranges(ps)
@@ -55,7 +55,7 @@ end
 
 
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
+function parse_while(ps::ParseState)
     # Parsing
     kw = INSTANCE(ps)
     @catcherror ps cond = @default ps @closer ps ws parse_expression(ps)
@@ -66,13 +66,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
     return ret
 end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.BREAK}})
-    return INSTANCE(ps)
-end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONTINUE}})
-    return INSTANCE(ps)
-end
 
 
 """

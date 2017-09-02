@@ -20,8 +20,6 @@ function parse_do(ps::ParseState, ret)
     return EXPR{Do}(Any[ret, kw, args, EXPR{Block}(blockargs), INSTANCE(next(ps))])
 end
 
-parse_kw(ps::ParseState, ::Type{Val{Tokens.IF}}) = parse_if(ps)
-
 """
     parse_if(ps, ret, nested=false, puncs=[])
 
@@ -69,7 +67,7 @@ function parse_if(ps::ParseState, nested = false)
     return ret
 end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
+function parse_let(ps::ParseState)
     args = Any[INSTANCE(ps)]
     @default ps @closer ps comma @closer ps block while !closer(ps)
         @catcherror ps a = parse_expression(ps)
@@ -89,7 +87,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.LET}})
     return EXPR{Let}(args)
 end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.TRY}})
+function parse_try(ps::ParseState)
     kw = INSTANCE(ps)
     ret = EXPR{Try}(Any[kw])
 

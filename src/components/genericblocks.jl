@@ -1,4 +1,4 @@
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.BEGIN}})
+function parse_begin(ps::ParseState)
     # Parsing
     kw = INSTANCE(ps)
     blockargs = Any[]
@@ -8,7 +8,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.BEGIN}})
     return EXPR{Begin}(Any[kw, EXPR{Block}(blockargs), INSTANCE(ps)])
 end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.QUOTE}})
+function parse_quote(ps::ParseState)
     kw = INSTANCE(ps)
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)

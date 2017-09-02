@@ -1,5 +1,5 @@
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
-    kw = INSTANCE(ps)
+function parse_function(ps::ParseState)
+    kw = KEYWORD(ps)
     if isoperator(ps.nt.kind) && ps.nt.kind != Tokens.EX_OR && ps.nnt.kind == Tokens.LPAREN
         next(ps)
         op = OPERATOR(ps)
@@ -43,7 +43,7 @@ function parse_kw(ps::ParseState, ::Type{Val{Tokens.FUNCTION}})
     for a in args
         push!(ret, a)
     end
-    push!(ret, INSTANCE(ps))
+    push!(ret, KEYWORD(ps))
     return ret
 end
 
