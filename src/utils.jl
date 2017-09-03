@@ -178,7 +178,10 @@ ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
                           t.kind == Tokens.AT_SIGN
 
 isstring(x) = false
-isstring(x::EXPR{T}) where T <: Union{StringH, LITERAL{Tokens.STRING},LITERAL{Tokens.TRIPLE_STRING}} = true
+isstring(x::EXPR{StringH}) = true
+isstring(x::LITERAL{Tokens.STRING}) = true
+isstring(x::LITERAL{Tokens.TRIPLE_STRING}) = true
+
 
 isajuxtaposition(ps::ParseState, ret) = ((ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || (
         (ret isa UnarySyntaxOpCall && ret.arg2 isa OPERATOR{Tokens.PRIME,false} && ps.nt.kind == Tokens.IDENTIFIER) ||

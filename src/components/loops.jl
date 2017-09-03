@@ -1,12 +1,11 @@
 function parse_for(ps::ParseState)
     # Parsing
-    kw = INSTANCE(ps)
+    kw = KEYWORD(ps)
     @catcherror ps ranges = @default ps parse_ranges(ps)
     
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
-    ret = EXPR{For}(Any[kw, ranges, EXPR{Block}(blockargs), INSTANCE(next(ps))])
-
+    ret = EXPR{For}(Any[kw, ranges, EXPR{Block}(blockargs), KEYWORD(next(ps))])
     return ret
 end
 
@@ -21,8 +20,7 @@ function parse_ranges(ps::ParseState)
     if ps.nt.kind == Tokens.COMMA
         arg = EXPR{Block}(Any[arg])
         while ps.nt.kind == Tokens.COMMA
-            next(ps)
-            push!(arg, INSTANCE(ps))
+            push!(arg, PUNCTUATION(next(ps)))
 
             @catcherror ps nextarg = @closer ps comma @closer ps ws parse_expression(ps)
             if !is_range(nextarg)
@@ -56,12 +54,11 @@ end
 
 
 function parse_while(ps::ParseState)
-    # Parsing
-    kw = INSTANCE(ps)
+    kw = KEYWORD(ps)
     @catcherror ps cond = @default ps @closer ps ws parse_expression(ps)
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
-    ret = EXPR{While}(Any[kw, cond, EXPR{Block}(blockargs), INSTANCE(next(ps))])
+    ret = EXPR{While}(Any[kw, cond, EXPR{Block}(blockargs), KEYWORD(next(ps))])
 
     return ret
 end
@@ -77,7 +74,7 @@ Comprehensions are parsed as SQUAREs containing a generator.
 """
 function parse_generator(ps::ParseState, ret)
     next(ps)
-    kw = INSTANCE(ps)
+    kw = KEYWORD(ps)
     ret = EXPR{Generator}(Any[ret, kw])
     @catcherror ps ranges = @closer ps paren @closer ps square parse_ranges(ps)
 

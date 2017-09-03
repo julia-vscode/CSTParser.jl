@@ -1,20 +1,20 @@
 function parse_begin(ps::ParseState)
     # Parsing
-    kw = INSTANCE(ps)
+    kw = KEYWORD(ps)
     blockargs = Any[]
     @catcherror ps arg = @default ps parse_block(ps, blockargs, (Tokens.END,), true)
 
     next(ps)
-    return EXPR{Begin}(Any[kw, EXPR{Block}(blockargs), INSTANCE(ps)])
+    return EXPR{Begin}(Any[kw, EXPR{Block}(blockargs), KEYWORD(ps)])
 end
 
 function parse_quote(ps::ParseState)
-    kw = INSTANCE(ps)
+    kw = KEYWORD(ps)
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
     next(ps)
 
-    ret = EXPR{Quote}(Any[kw, EXPR{Block}(blockargs), INSTANCE(ps)])
+    ret = EXPR{Quote}(Any[kw, EXPR{Block}(blockargs), KEYWORD(ps)])
     return ret
 end
 

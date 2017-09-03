@@ -127,7 +127,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = f
         push!(args, a)
         if ps.nt.kind == Tokens.COMMA
             next(ps)
-            push!(args, INSTANCE(ps))
+            push!(args, PUNCTUATION(ps))
         end
         if ps.ws.kind == SemiColonWS
             break
@@ -157,8 +157,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = f
                 push!(args1, a)
                 if ps.nt.kind == Tokens.COMMA
                     next(ps)
-                    # push!(paras, INSTANCE(ps))
-                    push!(args1, INSTANCE(ps))
+                    push!(args1, PUNCTUATION(ps))
                 end
             end
             paras = EXPR{Parameters}(args1)

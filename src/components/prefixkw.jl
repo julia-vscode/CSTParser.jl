@@ -1,5 +1,5 @@
 function parse_const(ps::ParseState)
-    kw = INSTANCE(ps)
+    kw = KEYWORD(ps)
     @catcherror ps arg = @default ps parse_expression(ps)
 
     ret = EXPR{Const}(Any[kw, arg])
@@ -7,7 +7,7 @@ function parse_const(ps::ParseState)
 end
 
 function parse_global(ps::ParseState)
-    kw = INSTANCE(ps)
+    kw = KEYWORD(ps)
     @catcherror ps arg = parse_expression(ps)
 
     ret = EXPR{Global}(Any[kw, arg])
@@ -15,7 +15,7 @@ function parse_global(ps::ParseState)
 end
 
 function parse_local(ps::ParseState)
-    kw = INSTANCE(ps)
+    kw = KEYWORD(ps)
     @catcherror ps arg = @default ps parse_expression(ps)
 
     ret = EXPR{Local}(Any[kw, arg])
@@ -23,7 +23,7 @@ function parse_local(ps::ParseState)
 end
 
 function parse_return(ps::ParseState)
-    kw = INSTANCE(ps)
+    kw = KEYWORD(ps)
     @catcherror ps args = @default ps closer(ps) ? NOTHING : parse_expression(ps)
 
     ret = EXPR{Return}(Any[kw, args])

@@ -1,7 +1,7 @@
 function parse_do(ps::ParseState, ret)
     # Parsing
     next(ps)
-    kw = INSTANCE(ps)
+    kw = KEYWORD(ps)
 
     args = EXPR{TupleH}(Any[])
     @default ps @closer ps comma @closer ps block while !closer(ps)
@@ -10,7 +10,7 @@ function parse_do(ps::ParseState, ret)
         push!(args, a)
         if ps.nt.kind == Tokens.COMMA
             next(ps)
-            push!(args, INSTANCE(ps))
+            push!(args, PUNCTUATION(ps))
         end
     end
 
@@ -27,7 +27,7 @@ Parse an `if` block.
 """
 function parse_if(ps::ParseState, nested = false)
     # Parsing
-    kw = INSTANCE(ps)
+    kw = KEYWORD(ps)
     if ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS
         return EXPR{ERROR}(Any[])
     end
@@ -46,14 +46,14 @@ function parse_if(ps::ParseState, nested = false)
     elseblock = EXPR{Block}(Any[], 0, 1:0)
     if ps.nt.kind == Tokens.ELSEIF
         next(ps)
-        push!(ret, INSTANCE(ps))
+        push!(ret, KEYWORD(ps))
 
         @catcherror ps push!(elseblock, parse_if(ps, true))
     end
     elsekw = ps.nt.kind == Tokens.ELSE
     if ps.nt.kind == Tokens.ELSE
         next(ps)
-        push!(ret, INSTANCE(ps))
+        push!(ret, KEYWORD(ps))
         @catcherror ps @default ps parse_block(ps, elseblock)
     end
 
@@ -62,19 +62,19 @@ function parse_if(ps::ParseState, nested = false)
     if !(isempty(elseblock.args) && !elsekw)
         push!(ret, elseblock)
     end
-    !nested && push!(ret, INSTANCE(ps))
+    !nested && push!(ret, KEYWORD(ps))
 
     return ret
 end
 
 function parse_let(ps::ParseState)
-    args = Any[INSTANCE(ps)]
+    args = Any[KEYWORD(ps)]
     @default ps @closer ps comma @closer ps block while !closer(ps)
         @catcherror ps a = parse_expression(ps)
         push!(args, a)
         if ps.nt.kind == Tokens.COMMA
             next(ps)
-            push!(args, INSTANCE(ps))
+            push!(args, PUNCTUATION(ps))
         end
     end
     
@@ -82,13 +82,13 @@ function parse_let(ps::ParseState)
     @catcherror ps @default ps parse_block(ps, blockargs)
 
     push!(args, EXPR{Block}(blockargs))
-    push!(args, INSTANCE(next(ps)))
+    push!(args, KEYWORD(next(ps)))
 
     return EXPR{Let}(args)
 end
 
 function parse_try(ps::ParseState)
-    kw = INSTANCE(ps)
+    kw = KEYWORD(ps)
     ret = EXPR{Try}(Any[kw])
 
     tryblockargs = Any[]
@@ -100,7 +100,7 @@ function parse_try(ps::ParseState)
         next(ps)
         push!(ret, FALSE)
         push!(ret, EXPR{Block}(Any[], 0, 1:0))
-        push!(ret, INSTANCE(ps))
+        push!(ret, KEYWORD(ps))
         return ret
     end
 
@@ -109,12 +109,12 @@ function parse_try(ps::ParseState)
         next(ps)
         # catch closing early
         if ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END
-            push!(ret, INSTANCE(ps))
+            push!(ret, KEYWORD(ps))
             caught = FALSE
             catchblock = EXPR{Block}(Any[], 0, 1:0)
         else
             start_col = ps.t.startpos[2] + 4
-            push!(ret, INSTANCE(ps))
+            push!(ret, KEYWORD(ps))
             if ps.ws.kind == SemiColonWS || ps.ws.kind == NewLineWS
                 caught = FALSE
             else
@@ -140,13 +140,13 @@ function parse_try(ps::ParseState)
             ret.args[4] = FALSE
         end
         next(ps)
-        push!(ret, INSTANCE(ps))
+        push!(ret, KEYWORD(ps))
         finallyblock = EXPR{Block}(Any[], 0, 1:0)
         @catcherror ps parse_block(ps, finallyblock)
         push!(ret, finallyblock)
     end
 
     next(ps)
-    push!(ret, INSTANCE(ps))
+    push!(ret, KEYWORD(ps))
     return ret
 end

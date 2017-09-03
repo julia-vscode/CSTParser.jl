@@ -1,5 +1,5 @@
 function parse_macro(ps::ParseState)
-    kw = INSTANCE(ps)
+    kw = KEYWORD(ps)
     if ps.nt.kind == Tokens.IDENTIFIER
         next(ps)
         sig = INSTANCE(ps)
@@ -11,7 +11,7 @@ function parse_macro(ps::ParseState)
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
 
-    ret = EXPR{Macro}(Any[kw, sig, EXPR{Block}(blockargs), INSTANCE(next(ps))])
+    ret = EXPR{Macro}(Any[kw, sig, EXPR{Block}(blockargs), KEYWORD(next(ps))])
     return ret
 end
 
@@ -28,7 +28,7 @@ function parse_macrocall(ps::ParseState)
     if ps.nt.kind == Tokens.DOT && isemptyws(ps.ws)
         while ps.nt.kind == Tokens.DOT
             next(ps)
-            op = INSTANCE(ps)
+            op = OPERATOR(ps)
             if ps.nt.kind != Tokens.IDENTIFIER
                 return EXPR{ERROR}(Any[])
             end
@@ -43,10 +43,9 @@ function parse_macrocall(ps::ParseState)
         return EXPR{MacroCall}(args)
     end
     if isemptyws(ps.ws) && ps.nt.kind == Tokens.LPAREN
-        push!(args, INSTANCE(next(ps)))
+        push!(args, PUNCTUATION(next(ps)))
         @catcherror ps @default ps @nocloser ps newline @closer ps paren parse_comma_sep(ps, args, false)
-        
-        push!(args, INSTANCE(next(ps)))
+        push!(args, PUNCTUATION(next(ps)))
     else
         insquare = ps.closer.insquare
         @default ps while !closer(ps)

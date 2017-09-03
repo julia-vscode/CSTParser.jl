@@ -6,7 +6,7 @@ tuple.
 """
 function parse_tuple(ps::ParseState, ret)
     next(ps)
-    op = INSTANCE(ps)
+    op = PUNCTUATION(ps)
 
     if closer(ps) || (isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX)
         ret = EXPR{TupleH}(Any[ret, op])
@@ -19,7 +19,7 @@ end
 
 function parse_tuple(ps::ParseState, ret::EXPR{TupleH})
     next(ps)
-    op = INSTANCE(ps)
+    op = PUNCTUATION(ps)
 
     if closer(ps) || (isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX)
         push!(ret, op)
@@ -43,11 +43,11 @@ Having hit '[' return either:
 + An array (vcat of hcats)
 """
 function parse_array(ps::ParseState)
-    args = Any[INSTANCE(ps)]
+    args = Any[PUNCTUATION(ps)]
 
     if ps.nt.kind == Tokens.RSQUARE
         next(ps)
-        push!(args, INSTANCE(ps))
+        push!(args, PUNCTUATION(ps))
 
         return EXPR{Vect}(args)
     else
@@ -56,7 +56,7 @@ function parse_array(ps::ParseState)
         if ps.nt.kind == Tokens.RSQUARE
             if first_arg isa EXPR{Generator} || first_arg isa EXPR{Flatten}
                 next(ps)
-                push!(args, INSTANCE(ps))
+                push!(args, PUNCTUATION(ps))
 
                 if first_arg.args[1] isa BinaryOpCall && first_arg.args[2] isa OPERATOR{Tokens.PAIR_ARROW,false}
                     return EXPR{DictComprehension}(Any[args[1], first_arg, INSTANCE(ps)])
@@ -66,13 +66,13 @@ function parse_array(ps::ParseState)
             elseif ps.ws.kind == SemiColonWS
                 next(ps)
                 push!(args, first_arg)
-                push!(args, INSTANCE(ps))
+                push!(args, PUNCTUATION(ps))
 
                 return EXPR{Vcat}(args)
             else
                 next(ps)
                 push!(args, first_arg)
-                push!(args, INSTANCE(ps))
+                push!(args, PUNCTUATION(ps))
 
                 ret = EXPR{Vect}(args)
             end
@@ -80,14 +80,14 @@ function parse_array(ps::ParseState)
             etype = Vect
             push!(args, first_arg)
             next(ps)
-            push!(args, INSTANCE(ps))
+            push!(args, PUNCTUATION(ps))
             @catcherror ps @default ps @closer ps square parse_comma_sep(ps, args, false)
 
             if last(args) isa EXPR{Parameters}
                 etype = Vcat
                 unshift!(args, pop!(args))
             end
-            push!(args, INSTANCE(next(ps)))
+            push!(args, PUNCTUATION(next(ps)))
             return EXPR{etype}(args)
         elseif ps.ws.kind == NewLineWS
             ret = EXPR{Vcat}(args)
@@ -97,7 +97,7 @@ function parse_array(ps::ParseState)
                 push!(ret, a)
             end
             next(ps)
-            push!(ret, INSTANCE(ps))
+            push!(ret, PUNCTUATION(ps))
 
             return ret
         elseif ps.ws.kind == WS || ps.ws.kind == SemiColonWS
@@ -135,7 +135,7 @@ function parse_array(ps::ParseState)
                     update_span!(ret)
                 end
                 next(ps)
-                push!(ret, INSTANCE(ps))
+                push!(ret, PUNCTUATION(ps))
                 return ret
             end
         else
@@ -198,17 +198,17 @@ Parses the juxtaposition of `ret` with an opening brace. Parses a comma
 seperated list.
 """
 function parse_curly(ps::ParseState, ret)
-    args = Any[ret, INSTANCE(next(ps))]
+    args = Any[ret, PUNCTUATION(next(ps))]
     @catcherror ps  @default ps @nocloser ps inwhere @closer ps brace parse_comma_sep(ps, args, true, false)
-    push!(args, INSTANCE(next(ps)))
+    push!(args, PUNCTUATION(next(ps)))
     return EXPR{Curly}(args)
 end
 
 function parse_cell1d(ps::ParseState)
-    ret = EXPR{Cell1d}(Any[INSTANCE(ps)])
+    ret = EXPR{Cell1d}(Any[PUNCTUATION(ps)])
     args = Any[INSTANCE(ps)]
     @catcherror ps @default ps @closer ps brace parse_comma_sep(ps, args, true, false)
-    push!(args, INSTANCE(next(ps)))
+    push!(args, PUNCTUATION(next(ps)))
     return EXPR{Cell1d}(args)
 end
 

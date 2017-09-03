@@ -147,8 +147,7 @@ Having hit a unary operator at the start of an expression return a call.
 """
 function parse_unary(ps::ParseState, op::OPERATOR{K,dot}) where {K,dot}
     if (op isa OPERATOR{Tokens.PLUS,false} || op isa OPERATOR{Tokens.MINUS,false}) && (ps.nt.kind ==  Tokens.INTEGER || ps.nt.kind == Tokens.FLOAT) && isemptyws(ps.ws)
-        next(ps)
-        arg = INSTANCE(ps)
+        arg = LITERAL(next(ps))
         return LITERAL{ps.t.kind}(op.fullspan + arg.fullspan, first(arg.span):(last(arg.span) + length(op.span)), string(op isa OPERATOR{Tokens.PLUS,false} ? "+" : "-" , ps.t.val))
         return arg
     end
@@ -204,7 +203,7 @@ end
 function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.CONDITIONAL,false})
     # Parsing
     @catcherror ps nextarg = @closer ps ifop parse_expression(ps)
-    @catcherror ps op2 = INSTANCE(next(ps))
+    @catcherror ps op2 = OPERATOR(next(ps))
     @catcherror ps nextarg2 = @closer ps comma @precedence ps 0 parse_expression(ps)
 
     # Construction
@@ -310,17 +309,17 @@ function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.WHERE,false})
     args = Any[]
     if ps.nt.kind == Tokens.LBRACE
         next(ps)
-        push!(args, INSTANCE(ps))
+        push!(args, PUNCTUATION(ps))
         @nocloser ps inwhere while ps.nt.kind != Tokens.RBRACE
             @catcherror ps a = @default ps @nocloser ps newline @closer ps comma @closer ps brace parse_expression(ps)
             push!(args, a)
             if ps.nt.kind == Tokens.COMMA
                 next(ps)
-                push!(args, INSTANCE(ps))
+                push!(args, PUNCTUATION(ps))
             end
         end
         next(ps)
-        push!(args, INSTANCE(ps))
+        push!(args, PUNCTUATION(ps))
     else
         @catcherror ps nextarg = @precedence ps 5 @closer ps inwhere parse_expression(ps)
         push!(args, nextarg)
@@ -342,8 +341,7 @@ function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.DOT,false})
         next(ps)
         nextarg = IDENTIFIER(ps)
     elseif ps.nt.kind == Tokens.COLON
-        next(ps)
-        op2 = INSTANCE(ps)
+        op2 = OPERATOR(next(ps))
         if ps.nt.kind == Tokens.LPAREN
             @catcherror ps nextarg = @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)
             nextarg = EXPR{Quote}(Any[op2, nextarg])
