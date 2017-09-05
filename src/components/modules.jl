@@ -1,8 +1,7 @@
 function parse_module(ps::ParseState)
     kw = KEYWORD(ps)
     if ps.nt.kind == Tokens.IDENTIFIER
-        next(ps)
-        arg = INSTANCE(ps)
+        arg = IDENTIFIER(next(ps))
     else
         @catcherror ps arg = @precedence ps 15 @closer ps block @closer ps ws parse_expression(ps)
     end
@@ -20,8 +19,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
     args = Any[]
 
     while ps.nt.kind == Tokens.DOT || ps.nt.kind == Tokens.DDOT || ps.nt.kind == Tokens.DDDOT
-        next(ps)
-        d = OPERATOR(ps)
+        d = OPERATOR(next(ps))
         if d isa OPERATOR{Tokens.DOT,false}
             push!(args, OPERATOR{Tokens.DOT,false}(1, 1:1))
         elseif d isa OPERATOR{Tokens.DDOT,false}
@@ -43,10 +41,8 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
 
     while true
         if ps.nt.kind == Tokens.AT_SIGN
-            next(ps)
-            at = INSTANCE(ps)
-            next(ps)
-            a = INSTANCE(ps)
+            at = PUNCTUATION(next(ps))
+            a = INSTANCE(next(ps))
             push!(args, EXPR{MacroName}(Any[at, a]))
         elseif ps.nt.kind == Tokens.LPAREN
             a = EXPR{InvisBrackets}(Any[PUNCTUATION(next(ps))])
@@ -60,8 +56,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
             next(ps)
             push!(args, OPERATOR{ps.t.kind,false}(ps.nt.startbyte - ps.t.startbyte - 1, 1 + (0:ps.t.endbyte - ps.t.startbyte)))
         else
-            next(ps)
-            push!(args, INSTANCE(ps))
+            push!(args, INSTANCE(next(ps)))
         end
 
         if ps.nt.kind == Tokens.DOT
@@ -112,8 +107,6 @@ end
 
 function parse_export(ps::ParseState)
     args = Any[KEYWORD(ps)]
-    # kw = KEYWORD(ps)
-    # ret = EXPR{Export}(vcat(kw, parse_dot_mod(ps)))
     append!(args, parse_dot_mod(ps))
 
     while ps.nt.kind == Tokens.COMMA

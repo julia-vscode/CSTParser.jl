@@ -1,21 +1,17 @@
 function parse_begin(ps::ParseState)
-    # Parsing
     kw = KEYWORD(ps)
     blockargs = Any[]
     @catcherror ps arg = @default ps parse_block(ps, blockargs, (Tokens.END,), true)
 
-    next(ps)
-    return EXPR{Begin}(Any[kw, EXPR{Block}(blockargs), KEYWORD(ps)])
+    return EXPR{Begin}(Any[kw, EXPR{Block}(blockargs), KEYWORD(next(ps))])
 end
 
 function parse_quote(ps::ParseState)
     kw = KEYWORD(ps)
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
-    next(ps)
 
-    ret = EXPR{Quote}(Any[kw, EXPR{Block}(blockargs), KEYWORD(ps)])
-    return ret
+    return EXPR{Quote}(Any[kw, EXPR{Block}(blockargs), KEYWORD(next(ps))])
 end
 
 """
@@ -26,7 +22,6 @@ Returns `ps` the token before the closing `end`, the calling function is
 assumed to handle the closer.
 """
 function parse_block(ps::ParseState, ret::EXPR{Block}, closers = (Tokens.END,), docable = false)
-    # Parsing
     parse_block(ps, ret.args, closers, docable)
     update_span!(ret)
     return 

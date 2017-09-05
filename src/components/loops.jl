@@ -1,12 +1,10 @@
 function parse_for(ps::ParseState)
-    # Parsing
     kw = KEYWORD(ps)
     @catcherror ps ranges = @default ps parse_ranges(ps)
     
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
-    ret = EXPR{For}(Any[kw, ranges, EXPR{Block}(blockargs), KEYWORD(next(ps))])
-    return ret
+    return EXPR{For}(Any[kw, ranges, EXPR{Block}(blockargs), KEYWORD(next(ps))])
 end
 
 
@@ -58,9 +56,8 @@ function parse_while(ps::ParseState)
     @catcherror ps cond = @default ps @closer ps ws parse_expression(ps)
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
-    ret = EXPR{While}(Any[kw, cond, EXPR{Block}(blockargs), KEYWORD(next(ps))])
 
-    return ret
+    return EXPR{While}(Any[kw, cond, EXPR{Block}(blockargs), KEYWORD(next(ps))])
 end
 
 
@@ -73,19 +70,17 @@ Having hit `for` not at the beginning of an expression return a generator.
 Comprehensions are parsed as SQUAREs containing a generator.
 """
 function parse_generator(ps::ParseState, ret)
-    next(ps)
-    kw = KEYWORD(ps)
+    kw = KEYWORD(next(ps))
     ret = EXPR{Generator}(Any[ret, kw])
     @catcherror ps ranges = @closer ps paren @closer ps square parse_ranges(ps)
 
     if ps.nt.kind == Tokens.IF
         if ranges isa EXPR{Block}
-            ranges = EXPR{Filter}(Any[ranges.args...])
+            ranges = EXPR{Filter}(ranges.args)
         else
             ranges = EXPR{Filter}(Any[ranges])
         end
-        next(ps)
-        unshift!(ranges, INSTANCE(ps))
+        unshift!(ranges, KEYWORD(next(ps)))
         @catcherror ps cond = @closer ps range @closer ps paren parse_expression(ps)
         unshift!(ranges, cond)
         push!(ret, ranges)
@@ -97,7 +92,6 @@ function parse_generator(ps::ParseState, ret)
         end
     end
 
-    # This should reverse order of iterators
     if ret.args[1] isa EXPR{Generator} || ret.args[1] isa EXPR{Flatten}
         ret = EXPR{Flatten}(Any[ret])
     end

@@ -1,7 +1,5 @@
 function parse_do(ps::ParseState, ret)
-    # Parsing
-    next(ps)
-    kw = KEYWORD(ps)
+    kw = KEYWORD(next(ps))
 
     args = EXPR{TupleH}(Any[])
     @default ps @closer ps comma @closer ps block while !closer(ps)
@@ -9,15 +7,14 @@ function parse_do(ps::ParseState, ret)
 
         push!(args, a)
         if ps.nt.kind == Tokens.COMMA
-            next(ps)
-            push!(args, PUNCTUATION(ps))
+            push!(args, PUNCTUATION(next(ps)))
         end
     end
 
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
 
-    return EXPR{Do}(Any[ret, kw, args, EXPR{Block}(blockargs), INSTANCE(next(ps))])
+    return EXPR{Do}(Any[ret, kw, args, EXPR{Block}(blockargs), PUNCTUATION(next(ps))])
 end
 
 """
@@ -45,15 +42,13 @@ function parse_if(ps::ParseState, nested = false)
 
     elseblock = EXPR{Block}(Any[], 0, 1:0)
     if ps.nt.kind == Tokens.ELSEIF
-        next(ps)
-        push!(ret, KEYWORD(ps))
+        push!(ret, KEYWORD(next(ps)))
 
         @catcherror ps push!(elseblock, parse_if(ps, true))
     end
     elsekw = ps.nt.kind == Tokens.ELSE
     if ps.nt.kind == Tokens.ELSE
-        next(ps)
-        push!(ret, KEYWORD(ps))
+        push!(ret, KEYWORD(next(ps)))
         @catcherror ps @default ps parse_block(ps, elseblock)
     end
 
@@ -73,8 +68,7 @@ function parse_let(ps::ParseState)
         @catcherror ps a = parse_expression(ps)
         push!(args, a)
         if ps.nt.kind == Tokens.COMMA
-            next(ps)
-            push!(args, PUNCTUATION(ps))
+            push!(args, PUNCTUATION(next(ps)))
         end
     end
     
@@ -97,10 +91,9 @@ function parse_try(ps::ParseState)
 
     # try closing early
     if ps.nt.kind == Tokens.END
-        next(ps)
         push!(ret, FALSE)
         push!(ret, EXPR{Block}(Any[], 0, 1:0))
-        push!(ret, KEYWORD(ps))
+        push!(ret, KEYWORD(next(ps)))
         return ret
     end
 
@@ -139,14 +132,12 @@ function parse_try(ps::ParseState)
         if isempty(catchblock.args)
             ret.args[4] = FALSE
         end
-        next(ps)
-        push!(ret, KEYWORD(ps))
+        push!(ret, KEYWORD(next(ps)))
         finallyblock = EXPR{Block}(Any[], 0, 1:0)
         @catcherror ps parse_block(ps, finallyblock)
         push!(ret, finallyblock)
     end
 
-    next(ps)
-    push!(ret, KEYWORD(ps))
+    push!(ret, KEYWORD(next(ps)))
     return ret
 end

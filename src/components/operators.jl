@@ -201,22 +201,16 @@ end
 
 # Parse conditionals
 function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.CONDITIONAL,false})
-    # Parsing
     @catcherror ps nextarg = @closer ps ifop parse_expression(ps)
     @catcherror ps op2 = OPERATOR(next(ps))
     @catcherror ps nextarg2 = @closer ps comma @precedence ps 0 parse_expression(ps)
 
-    # Construction
-    ret = ConditionalOpCall(ret, op, nextarg, op2, nextarg2)
-    return ret
+    return ConditionalOpCall(ret, op, nextarg, op2, nextarg2)
 end
 
 # Parse comparisons
 function parse_comp_operator(ps::ParseState, ret, op)
-    # Parsing
     @catcherror ps nextarg = @precedence ps ComparisonOp - LtoR(ComparisonOp) parse_expression(ps)
-
-    # Construction
     if ret isa EXPR{Comparison}
         push!(ret, op)
         push!(ret, nextarg)
@@ -234,10 +228,7 @@ end
 
 # Parse ranges
 function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.COLON,false})
-    # Parsing
     @catcherror ps nextarg = @precedence ps ColonOp - LtoR(ColonOp) parse_expression(ps)
-
-    # Construction
     if ret isa BinarySyntaxOpCall && ret.op isa OPERATOR{Tokens.COLON,false}
         ret = EXPR{ColonOpCall}(Any[ret.arg1, ret.op, ret.arg2])
         push!(ret, op)
@@ -258,10 +249,7 @@ parse_operator(ps::ParseState, ret::EXPR{ChainOpCall}, op::OPERATOR{Tokens.STAR,
 function parse_chain_operator(ps::ParseState, ret::EXPR{ChainOpCall}, op::OPERATOR{K,false}) where {K}
     P = precedence(K)
     if ret.args[2] isa OPERATOR{K,false}
-        # Parsing
         @catcherror ps nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
-
-        # Construction
         push!(ret, op)
         push!(ret, nextarg)
     else
@@ -284,7 +272,6 @@ end
 
 # Parse power (special case for preceding unary ops)
 function parse_power_operator(ps::ParseState, ret, op)
-    # Parsing
     @catcherror ps nextarg = @precedence ps PowerOp - LtoR(PowerOp) @closer ps inwhere parse_expression(ps)
 
     # Construction
@@ -314,32 +301,26 @@ function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.WHERE,false})
             @catcherror ps a = @default ps @nocloser ps newline @closer ps comma @closer ps brace parse_expression(ps)
             push!(args, a)
             if ps.nt.kind == Tokens.COMMA
-                next(ps)
-                push!(args, PUNCTUATION(ps))
+                push!(args, PUNCTUATION(next(ps)))
             end
         end
-        next(ps)
-        push!(args, PUNCTUATION(ps))
+        push!(args, PUNCTUATION(next(ps)))
     else
         @catcherror ps nextarg = @precedence ps 5 @closer ps inwhere parse_expression(ps)
         push!(args, nextarg)
     end
-
-    # Construction
     return WhereOpCall(ret, op, args)
 end
 
 # parse dot access
 function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.DOT,false})
-    # Parsing
     if ps.nt.kind == Tokens.LPAREN
         @catcherror ps sig = @default ps @closer ps paren parse_call(ps, ret)
         args = EXPR{TupleH}(sig.args[2:end])
         ret = BinarySyntaxOpCall(ret, op, args)
         return ret
     elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA || ps.nt.kind == Tokens.WHERE
-        next(ps)
-        nextarg = IDENTIFIER(ps)
+        nextarg = IDENTIFIER(next(ps))
     elseif ps.nt.kind == Tokens.COLON
         op2 = OPERATOR(next(ps))
         if ps.nt.kind == Tokens.LPAREN
@@ -349,8 +330,7 @@ function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.DOT,false})
             @catcherror ps nextarg = @precedence ps DotOp - LtoR(DotOp) parse_unary(ps, op2)
         end
     elseif ps.nt.kind == Tokens.EX_OR && ps.nnt.kind == Tokens.LPAREN
-        next(ps)
-        op2 = OPERATOR(ps)
+        op2 = OPERATOR(next(ps))
         @catcherror ps nextarg = parse_call(ps, op2)
     else
         @catcherror ps nextarg = @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)

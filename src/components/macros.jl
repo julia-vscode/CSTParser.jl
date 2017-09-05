@@ -1,8 +1,7 @@
 function parse_macro(ps::ParseState)
     kw = KEYWORD(ps)
     if ps.nt.kind == Tokens.IDENTIFIER
-        next(ps)
-        sig = INSTANCE(ps)
+        sig = IDENTIFIER(next(ps))
         @catcherror ps sig = parse_call(ps, sig)
     else
         @catcherror ps sig = @closer ps ws parse_expression(ps)
@@ -11,8 +10,7 @@ function parse_macro(ps::ParseState)
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
 
-    ret = EXPR{Macro}(Any[kw, sig, EXPR{Block}(blockargs), KEYWORD(next(ps))])
-    return ret
+    return EXPR{Macro}(Any[kw, sig, EXPR{Block}(blockargs), KEYWORD(next(ps))])
 end
 
 """
@@ -21,19 +19,17 @@ end
 Parses a macro call. Expects to start on the `@`.
 """
 function parse_macrocall(ps::ParseState)
-    at = INSTANCE(ps)
+    at = PUNCTUATION(ps)
     mname = EXPR{MacroName}(Any[at, IDENTIFIER(next(ps))])
 
     # Handle cases with @ at start of dotted expressions
     if ps.nt.kind == Tokens.DOT && isemptyws(ps.ws)
         while ps.nt.kind == Tokens.DOT
-            next(ps)
-            op = OPERATOR(ps)
+            op = OPERATOR(next(ps))
             if ps.nt.kind != Tokens.IDENTIFIER
                 return EXPR{ERROR}(Any[])
             end
-            next(ps)
-            nextarg = INSTANCE(ps)
+            nextarg = IDENTIFIER(next(ps))
             mname = BinarySyntaxOpCall(mname, op, Quotenode(nextarg))
         end
     end

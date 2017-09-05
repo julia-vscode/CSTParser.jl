@@ -213,7 +213,7 @@ mutable struct BinaryOpCall
     span::UnitRange{Int}
     function BinaryOpCall(arg1, op, arg2)
         fullspan = arg1.fullspan + op.fullspan + arg2.fullspan
-        new(arg1, op, arg2, fullspan, 1:(fullspan - arg2.fullspan - length(arg2.span)))
+        new(arg1, op, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
     end
 end
 AbstractTrees.children(x::T) where T <: Union{BinaryOpCall} = vcat(x.arg1, x.op, x.arg2)
@@ -226,7 +226,7 @@ mutable struct BinarySyntaxOpCall
     span::UnitRange{Int}
     function BinarySyntaxOpCall(arg1, op, arg2)
         fullspan = arg1.fullspan + op.fullspan + arg2.fullspan
-        new(arg1, op, arg2, fullspan, 1:(fullspan - arg2.fullspan - length(arg2.span)))
+        new(arg1, op, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
     end
 end
 AbstractTrees.children(x::T) where T <: Union{BinarySyntaxOpCall} = vcat(x.arg1, x.op, x.arg2)
@@ -242,7 +242,7 @@ mutable struct WhereOpCall{T1}
         for a in args
             fullspan += a.fullspan
         end
-        new{T1}(arg1, op, args, fullspan, 1:(fullspan - last(args).fullspan - length(last(args).span)))
+        new{T1}(arg1, op, args, fullspan, 1:(fullspan - last(args).fullspan + length(last(args).span)))
     end
 end
 AbstractTrees.children(x::T) where T <: Union{WhereOpCall} = vcat(x.arg1, x.op, x.args)
@@ -257,7 +257,7 @@ mutable struct ConditionalOpCall{T1,T2,T3}
     span::UnitRange{Int}
     function ConditionalOpCall(cond::T1, op1, arg1::T2, op2, arg2::T3) where {T1,T2,T3}
         fullspan = cond.fullspan + op1.fullspan + arg1.fullspan + op2.fullspan + arg2.fullspan
-        new{T1,T2,T3}(cond, op1, arg1, op2, arg2, fullspan, 1:(fullspan - arg2.fullspan - length(arg2.span)))
+        new{T1,T2,T3}(cond, op1, arg1, op2, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
     end
 end
 

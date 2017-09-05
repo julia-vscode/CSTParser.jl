@@ -1,12 +1,10 @@
 function parse_function(ps::ParseState)
     kw = KEYWORD(ps)
     if isoperator(ps.nt.kind) && ps.nt.kind != Tokens.EX_OR && ps.nnt.kind == Tokens.LPAREN
-        next(ps)
-        op = OPERATOR(ps)
-        next(ps)
-        args = Any[op, INSTANCE(ps)]
+        op = OPERATOR(next(ps))
+        args = Any[op, PUNCTUATION(next(ps))] 
         @catcherror ps @default ps @closer ps paren parse_comma_sep(ps, args)
-        push!(args, INSTANCE(next(ps)))
+        push!(args, PUNCTUATION(next(ps)))
         sig = EXPR{Call}(args)
         @default ps @closer ps inwhere @closer ps ws @closer ps block while !closer(ps)
             @catcherror ps sig = parse_compound(ps, sig)
@@ -37,13 +35,11 @@ function parse_function(ps::ParseState)
         args = Any[sig, EXPR{Block}(blockargs)]
     end
 
-    next(ps)
-
     ret = EXPR{FunctionDef}(Any[kw])
     for a in args
         push!(ret, a)
     end
-    push!(ret, KEYWORD(ps))
+    push!(ret, KEYWORD(next(ps)))
     return ret
 end
 
@@ -110,9 +106,9 @@ function parse_call(ps::ParseState, ret::OPERATOR{Tokens.MINUS})
 end
 
 function parse_call(ps::ParseState, ret)
-    args = Any[ret, INSTANCE(next(ps))]
+    args = Any[ret, PUNCTUATION(next(ps))]
     @default ps @closer ps paren parse_comma_sep(ps, args)
-    push!(args, INSTANCE(next(ps)))
+    push!(args, PUNCTUATION(next(ps)))
     return EXPR{Call}(args)
 end
 
@@ -126,8 +122,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = f
         end
         push!(args, a)
         if ps.nt.kind == Tokens.COMMA
-            next(ps)
-            push!(args, PUNCTUATION(ps))
+            push!(args, PUNCTUATION(next(ps)))
         end
         if ps.ws.kind == SemiColonWS
             break
@@ -156,8 +151,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = f
                 # push!(paras, a)
                 push!(args1, a)
                 if ps.nt.kind == Tokens.COMMA
-                    next(ps)
-                    push!(args1, PUNCTUATION(ps))
+                    push!(args1, PUNCTUATION(next(ps)))
                 end
             end
             paras = EXPR{Parameters}(args1)
