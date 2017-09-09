@@ -548,16 +548,7 @@ function is_func_call(x::WhereOpCall)
     return is_func_call(x.arg1)
 end
 
-
-function get_last_token(x::CSTParser.EXPR)
-    if isempty(x.args)
-        return x
-    else
-        return get_last_token(last(x.args))
-    end
-end
-
-function trailing_ws_length(x::CSTParser.EXPR)
+function trailing_ws_length(x)
     x.fullspan - length(x.span)
 end
 

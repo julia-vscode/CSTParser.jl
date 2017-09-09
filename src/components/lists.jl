@@ -53,7 +53,7 @@ function parse_array(ps::ParseState)
             if first_arg isa EXPR{Generator} || first_arg isa EXPR{Flatten}
                 push!(args, PUNCTUATION(next(ps)))
 
-                if first_arg.args[1] isa BinaryOpCall && first_arg.args[2] isa OPERATOR{Tokens.PAIR_ARROW,false}
+                if first_arg.args[1] isa BinaryOpCall && first_arg.op isa OPERATOR{Tokens.PAIR_ARROW,false}
                     return EXPR{DictComprehension}(Any[args[1], first_arg, INSTANCE(ps)])
                 else
                     return EXPR{Comprehension}(Any[args[1], first_arg, INSTANCE(ps)])

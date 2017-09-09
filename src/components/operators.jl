@@ -338,7 +338,7 @@ function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.DOT,false})
 
     # Construction
     # NEEDS FIX
-    if nextarg isa IDENTIFIER || nextarg isa EXPR{Vect} || nextarg isa UnarySyntaxOpCall && nextarg.arg1 isa OPERATOR{Tokens.EX_OR,false}
+    if nextarg isa IDENTIFIER || nextarg isa EXPR{Vect} || (nextarg isa UnarySyntaxOpCall && nextarg.arg1 isa OPERATOR{Tokens.EX_OR,false})
         ret = BinarySyntaxOpCall(ret, op, Quotenode(nextarg))
     elseif nextarg isa EXPR{MacroCall}
         mname = BinarySyntaxOpCall(ret, op, Quotenode(nextarg.args[1]))

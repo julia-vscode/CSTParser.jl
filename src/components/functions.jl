@@ -172,7 +172,7 @@ _arg_id(x::EXPR{Kw}) = _arg_id(x.args[1])
 
 
 function _arg_id(x::UnarySyntaxOpCall)
-    if x.args[2] isa OPERATOR{Tokens.DDDOT,false}
+    if x.arg2 isa OPERATOR{Tokens.DDDOT,false}
         return _arg_id(x.args[1])
     else
         return x
@@ -191,7 +191,7 @@ function _arg_id(x::WhereOpCall)
 end
 
 
-_get_fparams(x::EXPR, args = Symbol[]) = args
+_get_fparams(x, args = Symbol[]) = args
 
 function _get_fparams(x::EXPR{Call}, args = Symbol[])
     if x.args[1] isa EXPR{Curly}
@@ -207,7 +207,7 @@ function _get_fparams(x::EXPR{Curly}, args = Symbol[])
             if a isa IDENTIFIER
                 push!(args, Expr(a))
             elseif a isa BinarySyntaxOpCall && a.op isa OPERATOR{Tokens.ISSUBTYPE,false}
-                push!(args, Expr(a).args[1])
+                push!(args, Expr(a).arg1)
             end
         end
     end
@@ -224,7 +224,7 @@ function _get_fparams(x::WhereOpCall, args = Symbol[])
             if a isa IDENTIFIER
                 push!(args, Expr(a))
             elseif a isa BinarySyntaxOpCall && a.op isa OPERATOR{Tokens.ISSUBTYPE,false} && a.arg1 isa IDENTIFIER
-                push!(args, Expr(a.args[1]))
+                push!(args, Expr(a.arg1))
             end
         end
     end
@@ -234,15 +234,15 @@ end
 
 _get_fname(sig::EXPR{FunctionDef}) = _get_fname(sig.args[2])
 _get_fname(sig::IDENTIFIER) = sig
-_get_fname(sig::EXPR{Tuple}) = NOTHING
+_get_fname(sig::EXPR{TupleH}) = NOTHING
 function _get_fname(sig::WhereOpCall)
     return _get_fname(sig.arg1)
 end
 function _get_fname(sig::BinarySyntaxOpCall)
     if sig.op isa OPERATOR{Tokens.DECLARATION,false}
-        return _get_fname(sig.args[1])
+        return _get_fname(sig.arg1)
     else
-        return get_id(sig.args[1])
+        return get_id(sig.arg1)
     end
 end
 _get_fname(sig) = get_id(sig.args[1])
@@ -255,12 +255,12 @@ declares_function(x) = false
 declares_function(x::EXPR{FunctionDef}) = true
 function declares_function(x::BinarySyntaxOpCall)
     if x.op isa OPERATOR{Tokens.EQ,false}
-        sig = x.args[1]
+        sig = x.arg1
         while true
             if sig isa EXPR{Call}
                 return true
             elseif sig isa BinarySyntaxOpCall && sig.op isa OPERATOR{Tokens.DECLARATION,false} || sig isa WhereOpCall
-                sig = sig.args[1]
+                sig = sig.arg1
             else
                 return false
             end

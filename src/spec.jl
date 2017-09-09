@@ -41,6 +41,7 @@ struct IDENTIFIER
     fullspan::Int
     span::UnitRange{Int}
     val::String
+    IDENTIFIER(fullspan::Int, span::UnitRange{Int}, val::String) = new(fullspan, span, val)
 end
 IDENTIFIER(ps::ParseState) = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), untokenize(ps.t))
 
@@ -231,33 +232,33 @@ mutable struct BinarySyntaxOpCall
 end
 AbstractTrees.children(x::T) where T <: Union{BinarySyntaxOpCall} = vcat(x.arg1, x.op, x.arg2)
 
-mutable struct WhereOpCall{T1}
-    arg1::T1
+mutable struct WhereOpCall
+    arg1
     op::OPERATOR{Tokens.WHERE,false}
     args::Vector
     fullspan::Int
     span::UnitRange{Int}
-    function WhereOpCall(arg1::T1, op::OPERATOR{Tokens.WHERE,false}, args) where {T1}
+    function WhereOpCall(arg1, op::OPERATOR{Tokens.WHERE,false}, args)
         fullspan = arg1.fullspan + op.fullspan
         for a in args
             fullspan += a.fullspan
         end
-        new{T1}(arg1, op, args, fullspan, 1:(fullspan - last(args).fullspan + length(last(args).span)))
+        new(arg1, op, args, fullspan, 1:(fullspan - last(args).fullspan + length(last(args).span)))
     end
 end
 AbstractTrees.children(x::T) where T <: Union{WhereOpCall} = vcat(x.arg1, x.op, x.args)
 
-mutable struct ConditionalOpCall{T1,T2,T3}
-    cond::T1
+mutable struct ConditionalOpCall
+    cond
     op1::OPERATOR{Tokens.CONDITIONAL,false}
-    arg1::T2
+    arg1
     op2::OPERATOR{Tokens.COLON,false}
-    arg2::T3
+    arg2
     fullspan::Int
     span::UnitRange{Int}
-    function ConditionalOpCall(cond::T1, op1, arg1::T2, op2, arg2::T3) where {T1,T2,T3}
+    function ConditionalOpCall(cond, op1, arg1, op2, arg2)
         fullspan = cond.fullspan + op1.fullspan + arg1.fullspan + op2.fullspan + arg2.fullspan
-        new{T1,T2,T3}(cond, op1, arg1, op2, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
+        new(cond, op1, arg1, op2, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
     end
 end
 
