@@ -159,5 +159,13 @@ end
 
 
 adjustspan(x::IDENTIFIER) = IDENTIFIER(length(x.span), x.span, x.val)
+adjustspan(x::KEYWORD{T}) where {T} = KEYWORD{T}(length(x.span), x.span)
+adjustspan(x::OPERATOR{T,D}) where {T,D} = OPERATOR{T,D}(length(x.span), x.span)
+adjustspan(x::LITERAL{T}) where {T} = LITERAL{T}(length(x.span), x.span, x.val)
+adjustspan(x::PUNCTUATION{T}) where {T} = PUNCTUATION{T}(length(x.span), x.span)
+function adjustspan(x::EXPR) 
+    x.fullspan = length(x.span)
+    return x
+end
 
 dropleadlingnewline(x::T) where T <: Union{LITERAL{Tokens.STRING},LITERAL{Tokens.TRIPLE_STRING},LITERAL{Tokens.CMD},LITERAL{Tokens.TRIPLE_CMD}} = T(x.fullspan, x.span, x.val[2:end])

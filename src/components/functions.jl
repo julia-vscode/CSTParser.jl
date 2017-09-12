@@ -173,7 +173,7 @@ _arg_id(x::EXPR{Kw}) = _arg_id(x.args[1])
 
 function _arg_id(x::UnarySyntaxOpCall)
     if x.arg2 isa OPERATOR{Tokens.DDDOT,false}
-        return _arg_id(x.args[1])
+        return _arg_id(x.arg1)
     else
         return x
     end
@@ -207,7 +207,7 @@ function _get_fparams(x::EXPR{Curly}, args = Symbol[])
             if a isa IDENTIFIER
                 push!(args, Expr(a))
             elseif a isa BinarySyntaxOpCall && a.op isa OPERATOR{Tokens.ISSUBTYPE,false}
-                push!(args, Expr(a).arg1)
+                push!(args, Expr(a).args[1])
             end
         end
     end
