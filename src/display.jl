@@ -19,8 +19,8 @@ function AbstractTrees.printnode(io::IO, x::T) where T <: LITERAL
     print(io, T.name.name,": ", x.val,"  ", x.fullspan, " (", x.span, ")")
     print(io)
 end
-function AbstractTrees.printnode(io::IO, x::T) where T <: OPERATOR
-    print(io, "OP: ", T.parameters[1]," ", x.fullspan, " (", x.span, ")")
+function AbstractTrees.printnode(io::IO, x::OPERATOR)
+    print(io, "OP: ", x.kind," ", x.fullspan, " (", x.span, ")")
     print(io)
 end
 

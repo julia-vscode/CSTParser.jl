@@ -34,7 +34,7 @@ end
 
 function is_range(x) false end
 function is_range(x::BinarySyntaxOpCall)
-    if x.op isa OPERATOR{Tokens.EQ,false}
+    if is_eq(x.op)
         return true
     else
         return false
@@ -42,7 +42,7 @@ function is_range(x::BinarySyntaxOpCall)
 end
 
 function is_range(x::BinaryOpCall)
-    if x.op isa OPERATOR{Tokens.IN,false} || x.op isa OPERATOR{Tokens.ELEMENT_OF,false}
+    if is_in(x.op) || is_elof(x.op)
         return true
     else
         return false

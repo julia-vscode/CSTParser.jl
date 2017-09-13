@@ -184,7 +184,7 @@ isstring(x::LITERAL{Tokens.TRIPLE_STRING}) = true
 
 
 isajuxtaposition(ps::ParseState, ret) = ((ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || (
-        (ret isa UnarySyntaxOpCall && ret.arg2 isa OPERATOR{Tokens.PRIME,false} && ps.nt.kind == Tokens.IDENTIFIER) ||
+        (ret isa UnarySyntaxOpCall && is_prime(ret.arg2) && ps.nt.kind == Tokens.IDENTIFIER) ||
         ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
         ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING))) ||
         (isstring(ret) && ps.nt.kind == Tokens.IDENTIFIER && ps.ws.kind == EmptyWS)
@@ -538,7 +538,7 @@ is_func_call(x::EXPR) = false
 is_func_call(x::EXPR{Call}) = true
 is_func_call(x::UnaryOpCall) = true
 function is_func_call(x::BinarySyntaxOpCall)
-    if x.op isa OPERATOR{Tokens.DECLARATION,false}
+    if is_decl(x.op)
         return is_func_call(x.arg1)
     else
         return false
@@ -592,3 +592,25 @@ function collect_calls(f::Function, calls = [])
     end
     calls
 end
+
+is_exor(x) = x isa OPERATOR && x.kind == Tokens.EX_OR && x.dot == false
+is_decl(x) = x isa OPERATOR && x.kind == Tokens.DECLARATION
+is_issubt(x) = x isa OPERATOR && x.kind == Tokens.ISSUBTYPE
+is_issupt(x) = x isa OPERATOR && x.kind == Tokens.ISSUPERTYPE
+is_and(x) = x isa OPERATOR && x.kind == Tokens.AND && x.dot == false
+is_not(x) = x isa OPERATOR && x.kind == Tokens.NOT && x.dot == false
+is_plus(x) = x isa OPERATOR && x.kind == Tokens.PLUS && x.dot == false
+is_minus(x) = x isa OPERATOR && x.kind == Tokens.MINUS && x.dot == false
+is_star(x) = x isa OPERATOR && x.kind == Tokens.STAR && x.dot == false
+is_eq(x) = x isa OPERATOR && x.kind == Tokens.EQ && x.dot == false
+is_dot(x) = x isa OPERATOR && x.kind == Tokens.DOT
+is_ddot(x) = x isa OPERATOR && x.kind == Tokens.DDOT
+is_dddot(x) = x isa OPERATOR && x.kind == Tokens.DDDOT
+is_pairarrow(x) = x isa OPERATOR && x.kind == Tokens.PAIR_ARROW && x.dot == false
+is_in(x) = x isa OPERATOR && x.kind == Tokens.IN && x.dot == false
+is_elof(x) = x isa OPERATOR && x.kind == Tokens.ELEMENT_OF && x.dot == false
+is_colon(x) = x isa OPERATOR && x.kind == Tokens.COLON
+is_prime(x) = x isa OPERATOR && x.kind == Tokens.PRIME 
+is_cond(x) = x isa OPERATOR && x.kind == Tokens.CONDITIONAL
+is_where(x) = x isa OPERATOR && x.kind == Tokens.WHERE
+is_anon_func(x) = x isa OPERATOR && x.kind == Tokens.ANON_FUNC

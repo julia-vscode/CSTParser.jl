@@ -101,7 +101,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 ex = LITERAL{Tokens.STRING}(lspan + startbytes, 1:(lspan + startbytes), str)
                 push!(ret.args, ex); istrip && adjust_lcp(ex)
                 startbytes = 0
-                op = OPERATOR{Tokens.EX_OR,false}(1, 1:1)
+                op = OPERATOR(1, 1:1, Tokens.EX_OR, false)
                 if peekchar(input) == '('
                     lparen = PUNCTUATION{Tokens.LPAREN}(1, 1:1)
                     rparen = PUNCTUATION{Tokens.RPAREN}(1, 1:1)
@@ -160,7 +160,7 @@ end
 
 adjustspan(x::IDENTIFIER) = IDENTIFIER(length(x.span), x.span, x.val)
 adjustspan(x::KEYWORD{T}) where {T} = KEYWORD{T}(length(x.span), x.span)
-adjustspan(x::OPERATOR{T,D}) where {T,D} = OPERATOR{T,D}(length(x.span), x.span)
+adjustspan(x::OPERATOR) = OPERATOR(length(x.span), x.span, x.kind, x.dot)
 adjustspan(x::LITERAL{T}) where {T} = LITERAL{T}(length(x.span), x.span, x.val)
 adjustspan(x::PUNCTUATION{T}) where {T} = PUNCTUATION{T}(length(x.span), x.span)
 function adjustspan(x::EXPR) 

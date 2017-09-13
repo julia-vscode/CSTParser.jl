@@ -66,7 +66,7 @@ function parse_expression(ps::ParseState)
         else
             ret = INSTANCE(ps)
         end
-        if (ret isa OPERATOR{Tokens.COLON,false}) && ps.nt.kind != Tokens.COMMA
+        if is_colon(ret) && ps.nt.kind != Tokens.COMMA
             @catcherror ps ret = parse_unary(ps, ret)
         end
     elseif ps.t.kind == Tokens.AT_SIGN
@@ -180,7 +180,7 @@ function parse_compound(ps::ParseState, ret)
     elseif ps.nt.kind == Tokens.DO
         ret = parse_do(ps, ret)
     elseif isajuxtaposition(ps, ret)
-        op = OPERATOR{Tokens.STAR,false}(0, 1:0)
+        op = OPERATOR(0, 1:0, Tokens.STAR, false)
         ret = parse_operator(ps, ret, op)
     elseif ps.nt.kind == Tokens.LPAREN && isemptyws(ps.ws)
         ret = @closer ps paren parse_call(ps, ret)
@@ -195,7 +195,7 @@ function parse_compound(ps::ParseState, ret)
     elseif isoperator(ps.nt)
         op = OPERATOR(next(ps))
         ret = parse_operator(ps, ret, op)
-    elseif (ret isa IDENTIFIER || (ret isa BinarySyntaxOpCall && ret.op isa OPERATOR{Tokens.DOT,false})) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
+    elseif (ret isa IDENTIFIER || (ret isa BinarySyntaxOpCall && is_dot(ret.op))) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
         next(ps)
         @catcherror ps arg = parse_string_or_cmd(ps, ret)
         ret = EXPR{x_Str}(Any[ret, arg])
@@ -203,24 +203,24 @@ function parse_compound(ps::ParseState, ret)
     elseif ret isa EXPR{x_Str} && ps.nt.kind == Tokens.IDENTIFIER
         arg = IDENTIFIER(next(ps))
         push!(ret, LITERAL{Tokens.STRING}(arg.fullspan, arg.span, ps.t.val))
-    elseif (ret isa IDENTIFIER || (ret isa BinarySyntaxOpCall && ret.op isa OPERATOR{Tokens.DOT,false})) && ps.nt.kind == Tokens.CMD
+    elseif (ret isa IDENTIFIER || (ret isa BinarySyntaxOpCall && is_dot(ret.op))) && ps.nt.kind == Tokens.CMD
         next(ps)
         @catcherror ps arg = parse_string_or_cmd(ps, ret)
         ret = EXPR{x_Cmd}(Any[ret, arg])
     elseif ret isa EXPR{x_Cmd} && ps.nt.kind == Tokens.IDENTIFIER
         arg = IDENTIFIER(next(ps))
         push!(ret, LITERAL{Tokens.STRING}(arg.fullspan, 1:span(arg), ps.t.val))
-    elseif ret isa UnarySyntaxOpCall && ret.arg2 isa OPERATOR{Tokens.PRIME}
+    elseif ret isa UnarySyntaxOpCall && is_prime(ret.arg2)
         # prime operator followed by an identifier has an implicit multiplication
         @catcherror ps nextarg = @precedence ps 11 parse_expression(ps)
-        ret = BinaryOpCall(ret, OPERATOR{Tokens.STAR,false}(0, 1:0), nextarg)
+        ret = BinaryOpCall(ret, OPERATOR(0, 1:0, Tokens.STAR,false), nextarg, Tokens.STAR, false)
 ################################################################################
 # Everything below here is an error
 ################################################################################
     elseif ps.nt.kind in (Tokens.ENDMARKER, Tokens.LPAREN, Tokens.RPAREN, Tokens.LBRACE,
                           Tokens.LSQUARE, Tokens.RSQUARE)
         return error_unexpected(ps, ps.nt)
-    elseif ret isa EXPR{<:OPERATOR}
+    elseif ret isa OPERATOR
         ps.errored = true
         diag_range = ps.nt.startbyte - (ret.fullspan - length(ret.span) - first(ret.span) + 1) + ((-length(ret.span)):-1)
         push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedOperator}(
@@ -255,7 +255,7 @@ function parse_paren(ps::ParseState)
     args = Any[PUNCTUATION(ps)]
     @catcherror ps @default ps @nocloser ps inwhere @closer ps paren parse_comma_sep(ps, args, false, true, true)
 
-    if ((length(args) == 2 && !(args[2] isa UnarySyntaxOpCall && args[2].arg2 isa OPERATOR{Tokens.DDDOT,false})) || (length(args) == 1 && args[1] isa EXPR{Block})) && ((ps.ws.kind != SemiColonWS || (length(args) == 2 && args[2] isa EXPR{Block})) && !(args[2] isa EXPR{Parameters}))
+    if ((length(args) == 2 && !(args[2] isa UnarySyntaxOpCall && is_dddot(args[2].arg2))) || (length(args) == 1 && args[1] isa EXPR{Block})) && ((ps.ws.kind != SemiColonWS || (length(args) == 2 && args[2] isa EXPR{Block})) && !(args[2] isa EXPR{Parameters}))
         push!(args, PUNCTUATION(next(ps)))
         ret = EXPR{InvisBrackets}(args)
     else

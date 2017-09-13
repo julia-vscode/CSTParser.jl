@@ -51,11 +51,13 @@ struct PUNCTUATION{K}
 end
 PUNCTUATION(ps::ParseState) = PUNCTUATION{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
 
-struct OPERATOR{K,dot}
+struct OPERATOR
     fullspan::Int
     span::UnitRange{Int}
+    kind::Tokenize.Tokens.Kind
+    dot::Bool
 end
-OPERATOR(ps::ParseState) = OPERATOR{ps.t.kind,ps.dot}(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
+OPERATOR(ps::ParseState) = OPERATOR(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), ps.t.kind, ps.dot)
 
 struct KEYWORD{K}
     fullspan::Int
@@ -234,11 +236,11 @@ AbstractTrees.children(x::T) where T <: Union{BinarySyntaxOpCall} = vcat(x.arg1,
 
 mutable struct WhereOpCall
     arg1
-    op::OPERATOR{Tokens.WHERE,false}
+    op::OPERATOR
     args::Vector
     fullspan::Int
     span::UnitRange{Int}
-    function WhereOpCall(arg1, op::OPERATOR{Tokens.WHERE,false}, args)
+    function WhereOpCall(arg1, op::OPERATOR, args)
         fullspan = arg1.fullspan + op.fullspan
         for a in args
             fullspan += a.fullspan
@@ -250,9 +252,9 @@ AbstractTrees.children(x::T) where T <: Union{WhereOpCall} = vcat(x.arg1, x.op, 
 
 mutable struct ConditionalOpCall
     cond
-    op1::OPERATOR{Tokens.CONDITIONAL,false}
+    op1::OPERATOR
     arg1
-    op2::OPERATOR{Tokens.COLON,false}
+    op2::OPERATOR
     arg2
     fullspan::Int
     span::UnitRange{Int}

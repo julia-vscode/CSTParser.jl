@@ -38,14 +38,14 @@ precedence(kind::Tokens.Kind) = kind == Tokens.DDDOT ? DddotOp :
 
 precedence(x) = 0
 precedence(x::Token) = precedence(x.kind)
-precedence(x::OPERATOR{K,d}) where {K,d} = precedence(K)
+precedence(x::OPERATOR) = precedence(x.kind)
 
 
 isoperator(kind) = Tokens.begin_ops < kind < Tokens.end_ops
 isoperator(t::Token) = isoperator(t.kind)
 
 
-isunaryop(op::OPERATOR{K,D}) where {K,D} = isunaryop(K)
+isunaryop(op::OPERATOR) = isunaryop(op.kind)
 isunaryop(t::Token) = isunaryop(t.kind)
 
 isunaryop(kind) = kind == Tokens.ISSUBTYPE ||
@@ -75,7 +75,7 @@ isunaryandbinaryop(kind) = kind == Tokens.PLUS ||
                            kind == Tokens.DECLARATION ||
                            kind == Tokens.COLON
 
-isbinaryop(op::OPERATOR{K,D}) where {K,D} = isbinaryop(K)
+isbinaryop(op::OPERATOR) = isbinaryop(op.kind)
 isbinaryop(t::Token) = isbinaryop(t.kind)
 isbinaryop(kind) = isoperator(kind) &&
                     !(kind == Tokens.SQUARE_ROOT ||
@@ -109,7 +109,8 @@ end
 
 
 issyntaxcall(op) = false
-function issyntaxcall(op::OPERATOR{K,dot}) where {K,dot}
+function issyntaxcall(op::OPERATOR)
+    K = op.kind
     P = precedence(K)
     P == 1 && !(K == Tokens.APPROX || K == Tokens.PAIR_ARROW) ||
     K == Tokens.RIGHT_ARROW ||
@@ -127,12 +128,13 @@ end
 
 
 issyntaxunarycall(op) = false
-function issyntaxunarycall(op::OPERATOR{K,false}) where {K}
-    K == Tokens.EX_OR ||
+function issyntaxunarycall(op::OPERATOR)
+    K = op.kind
+    !op.dot && (K == Tokens.EX_OR ||
     K == Tokens.AND ||
     K == Tokens.DECLARATION ||
     K == Tokens.ISSUBTYPE ||
-    K == Tokens.ISSUPERTYPE
+    K == Tokens.ISSUPERTYPE)
 end
 
 
@@ -145,10 +147,13 @@ LtoR(prec::Int) = AssignmentOp ≤ prec ≤ LazyAndOp || prec == PowerOp
 
 Having hit a unary operator at the start of an expression return a call.
 """
-function parse_unary(ps::ParseState, op::OPERATOR{K,dot}) where {K,dot}
-    if (op isa OPERATOR{Tokens.PLUS,false} || op isa OPERATOR{Tokens.MINUS,false}) && (ps.nt.kind ==  Tokens.INTEGER || ps.nt.kind == Tokens.FLOAT) && isemptyws(ps.ws)
+function parse_unary(ps::ParseState, op)
+    K,dot = op.kind, op.dot
+    if is_colon(op)
+        return parse_unary_colon(ps, op)
+    elseif (is_plus(op) || is_minus(op)) && (ps.nt.kind ==  Tokens.INTEGER || ps.nt.kind == Tokens.FLOAT) && isemptyws(ps.ws)
         arg = LITERAL(next(ps))
-        return LITERAL{ps.t.kind}(op.fullspan + arg.fullspan, first(arg.span):(last(arg.span) + length(op.span)), string(op isa OPERATOR{Tokens.PLUS,false} ? "+" : "-" , ps.t.val))
+        return LITERAL{ps.t.kind}(op.fullspan + arg.fullspan, first(arg.span):(last(arg.span) + length(op.span)), string(is_plus(op) ? "+" : "-" , ps.t.val))
         return arg
     end
 
@@ -167,7 +172,7 @@ function parse_unary(ps::ParseState, op::OPERATOR{K,dot}) where {K,dot}
     return ret
 end
 
-function parse_unary(ps::ParseState, op::OPERATOR{Tokens.COLON,false})
+function parse_unary_colon(ps::ParseState, op)
     if Tokens.begin_keywords < ps.nt.kind < Tokens.end_keywords
         return EXPR{Quotenode}(Any[op, IDENTIFIER(next(ps))])
     elseif Tokens.begin_literal < ps.nt.kind < Tokens.end_literal ||
@@ -184,14 +189,14 @@ function parse_unary(ps::ParseState, op::OPERATOR{Tokens.COLON,false})
 end
 
 # Parse assignments
-function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.EQ,false})
+function parse_operator_eq(ps::ParseState, ret, op)
     # Parsing
     @catcherror ps nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
 
     if is_func_call(ret)
         # Construction
         # NOTE: prior to v"0.6.0-dev.2360" (PR #20076), there was an issue w/ scheme parser
-        if VERSION > v"0.6.0-dev.2360" || (!((ret isa BinarySyntaxOpCall && ret.op isa OPERATOR{Tokens.DECLARATION,false}) && (ret <: Union{UnaryOpCall,UnarySyntaxOpCall,BinaryOpCall,BinarySyntaxOpCall} || length(ret.args) > 1)) && ps.closer.precedence != 0)
+        if VERSION > v"0.6.0-dev.2360" || (!((ret isa BinarySyntaxOpCall && is_decl(ret.op)) && (ret <: Union{UnaryOpCall,UnarySyntaxOpCall,BinaryOpCall,BinarySyntaxOpCall} || length(ret.args) > 1)) && ps.closer.precedence != 0)
             nextarg = EXPR{Block}(Any[nextarg])
         end
     end
@@ -200,7 +205,7 @@ function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.EQ,false})
 end
 
 # Parse conditionals
-function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.CONDITIONAL,false})
+function parse_operator_cond(ps::ParseState, ret, op)
     @catcherror ps nextarg = @closer ps ifop parse_expression(ps)
     @catcherror ps op2 = OPERATOR(next(ps))
     @catcherror ps nextarg2 = @closer ps comma @precedence ps 0 parse_expression(ps)
@@ -216,9 +221,9 @@ function parse_comp_operator(ps::ParseState, ret, op)
         push!(ret, nextarg)
     elseif ret isa BinaryOpCall && precedence(ret.op) == ComparisonOp
         ret = EXPR{Comparison}(Any[ret.arg1, ret.op, ret.arg2, op, nextarg])
-    elseif ret isa BinarySyntaxOpCall && (ret.op isa OPERATOR{Tokens.ISSUBTYPE,false} || ret.op isa OPERATOR{Tokens.ISSUPERTYPE,false})
+    elseif ret isa BinarySyntaxOpCall && (is_issubt(ret.op) || is_issupt(ret.op))
         ret = EXPR{Comparison}(Any[ret.arg1, ret.op, ret.arg2, op, nextarg])
-    elseif (op isa OPERATOR{Tokens.ISSUBTYPE,false} || op isa OPERATOR{Tokens.ISSUPERTYPE,false})
+    elseif (is_issubt(op) || is_issupt(op))
         ret = BinarySyntaxOpCall(ret, op, nextarg)
     else
         ret = BinaryOpCall(ret, op, nextarg)
@@ -227,9 +232,9 @@ function parse_comp_operator(ps::ParseState, ret, op)
 end
 
 # Parse ranges
-function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.COLON,false})
+function parse_operator_colon(ps::ParseState, ret, op)
     @catcherror ps nextarg = @precedence ps ColonOp - LtoR(ColonOp) parse_expression(ps)
-    if ret isa BinarySyntaxOpCall && ret.op isa OPERATOR{Tokens.COLON,false}
+    if ret isa BinarySyntaxOpCall && is_colon(ret.op)
         ret = EXPR{ColonOpCall}(Any[ret.arg1, ret.op, ret.arg2])
         push!(ret, op)
         push!(ret, nextarg)
@@ -239,39 +244,11 @@ function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.COLON,false})
     return ret
 end
 
-parse_operator(ps::ParseState, ret::BinaryOpCall, op::OPERATOR{Tokens.PLUS,false}) = parse_chain_operator(ps, ret, op)
-parse_operator(ps::ParseState, ret::EXPR{ChainOpCall}, op::OPERATOR{Tokens.PLUS,false}) = parse_chain_operator(ps, ret, op)
 
-parse_operator(ps::ParseState, ret::BinaryOpCall, op::OPERATOR{Tokens.STAR,false}) = parse_chain_operator(ps, ret, op)
-parse_operator(ps::ParseState, ret::EXPR{ChainOpCall}, op::OPERATOR{Tokens.STAR,false}) = parse_chain_operator(ps, ret, op)
-
-
-function parse_chain_operator(ps::ParseState, ret::EXPR{ChainOpCall}, op::OPERATOR{K,false}) where {K}
-    P = precedence(K)
-    if ret.args[2] isa OPERATOR{K,false}
-        @catcherror ps nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
-        push!(ret, op)
-        push!(ret, nextarg)
-    else
-        ret = invoke(parse_operator, Tuple{ParseState,EXPR,OPERATOR{K1,dot} where {K1,dot}}, ps, ret, op)
-    end
-    return ret
-end
-
-function parse_chain_operator(ps::ParseState, ret::BinaryOpCall, op::OPERATOR{K,false}) where {K}
-    P = precedence(K)
-    if ret.op isa OPERATOR{K,false} && span(ret.op) > 0
-        @catcherror ps nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
-        ret = EXPR{ChainOpCall}(Any[ret.arg1, ret.op, ret.arg2, op, nextarg])
-    else
-        ret = invoke(parse_operator, Tuple{ParseState,BinaryOpCall,OPERATOR{K,dot} where {K1,dot}}, ps, ret, op)
-    end
-    return ret
-end
 
 
 # Parse power (special case for preceding unary ops)
-function parse_power_operator(ps::ParseState, ret, op)
+function parse_operator_power(ps::ParseState, ret, op)
     @catcherror ps nextarg = @precedence ps PowerOp - LtoR(PowerOp) @closer ps inwhere parse_expression(ps)
 
     # Construction
@@ -292,7 +269,7 @@ end
 
 
 # parse where
-function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.WHERE,false})
+function parse_operator_where(ps::ParseState, ret, op)
     args = Any[]
     if ps.nt.kind == Tokens.LBRACE
         next(ps)
@@ -313,7 +290,7 @@ function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.WHERE,false})
 end
 
 # parse dot access
-function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.DOT,false})
+function parse_operator_dot(ps::ParseState, ret, op)
     if ps.nt.kind == Tokens.LPAREN
         @catcherror ps sig = @default ps @closer ps paren parse_call(ps, ret)
         args = EXPR{TupleH}(sig.args[2:end])
@@ -338,7 +315,7 @@ function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.DOT,false})
 
     # Construction
     # NEEDS FIX
-    if nextarg isa IDENTIFIER || nextarg isa EXPR{Vect} || (nextarg isa UnarySyntaxOpCall && nextarg.arg1 isa OPERATOR{Tokens.EX_OR,false})
+    if nextarg isa IDENTIFIER || nextarg isa EXPR{Vect} || (nextarg isa UnarySyntaxOpCall && is_exor(nextarg.arg1))
         ret = BinarySyntaxOpCall(ret, op, Quotenode(nextarg))
     elseif nextarg isa EXPR{MacroCall}
         mname = BinarySyntaxOpCall(ret, op, Quotenode(nextarg.args[1]))
@@ -353,26 +330,53 @@ function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.DOT,false})
 end
 
 
-function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.DDDOT,false})
+function parse_operator_dddot(ps::ParseState, ret, op)
     return UnarySyntaxOpCall(ret, op)
 end
 
-function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.PRIME,dot}) where dot
+function parse_operator_prime(ps::ParseState, ret, op)
     return UnarySyntaxOpCall(ret, op)
 end
 
-function parse_operator(ps::ParseState, ret, op::OPERATOR{Tokens.ANON_FUNC,false})
+function parse_operator_anon_func(ps::ParseState, ret, op)
     @catcherror ps arg = @closer ps comma @precedence ps 0 parse_expression(ps)
     return BinarySyntaxOpCall(ret, op, EXPR{Block}(Any[arg]))
 end
 
-function parse_operator(ps::ParseState, ret, op::OPERATOR{K,dot}) where {K,dot}
-    # Parsing
+function parse_operator(ps::ParseState, ret, op)
+    K,dot = op.kind, op.dot
     P = precedence(K)
-    if P == ComparisonOp
+
+    if ret isa EXPR{ChainOpCall} && (is_star(op) || is_plus(op)) && op.kind == ret.args[2].kind
+        @catcherror ps nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
+        push!(ret, op)
+        push!(ret, nextarg)
+        return ret
+    elseif ret isa BinaryOpCall && (is_star(op) || is_plus(op)) && op.kind == ret.op.kind && !ret.op.dot
+        @catcherror ps nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
+        return EXPR{ChainOpCall}(Any[ret.arg1, ret.op, ret.arg2, op, nextarg])
+    end
+
+    if is_eq(op)
+        return parse_operator_eq(ps, ret, op)
+    elseif is_cond(op)
+        return parse_operator_cond(ps, ret, op)
+    elseif is_colon(op)
+        return parse_operator_colon(ps, ret, op)
+    elseif is_where(op)
+        return parse_operator_where(ps, ret, op)
+    elseif is_anon_func(op)
+        return parse_operator_anon_func(ps, ret, op)
+    elseif is_dot(op)
+        return parse_operator_dot(ps, ret, op)
+    elseif is_dddot(op)
+        return parse_operator_dddot(ps, ret, op)
+    elseif is_prime(op)
+        return parse_operator_prime(ps, ret, op)
+    elseif P == ComparisonOp
         return parse_comp_operator(ps, ret, op)
     elseif P == PowerOp
-        return parse_power_operator(ps, ret, op)
+        return parse_operator_power(ps, ret, op)
     end
     @catcherror ps nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
 

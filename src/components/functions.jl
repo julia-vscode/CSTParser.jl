@@ -26,7 +26,7 @@ function parse_function(ps::ParseState)
     @catcherror ps @default ps parse_block(ps, blockargs)
 
     if isempty(blockargs)
-        if sig isa EXPR{Call} || (sig isa WhereOpCall || (sig isa BinarySyntaxOpCall && !(sig.arg1 isa OPERATOR{Tokens.EX_OR,false})))
+        if sig isa EXPR{Call} || (sig isa WhereOpCall || (sig isa BinarySyntaxOpCall && !(is_exor(sig.arg1))))
             args = Any[sig, EXPR{Block}(blockargs)]
         else
             args = Any[sig]
@@ -48,34 +48,34 @@ end
 
 Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
 """
-function parse_call(ps::ParseState, ret::OPERATOR{Tokens.EX_OR,false})
+function parse_call_exor(ps::ParseState, ret)
     arg = @precedence ps 20 parse_expression(ps)
     ret = UnarySyntaxOpCall(ret, arg)
     return ret
 end
-function parse_call(ps::ParseState, ret::OPERATOR{Tokens.DECLARATION,false})
+function parse_call_decl(ps::ParseState, ret)
     arg = @precedence ps 20 parse_expression(ps)
     ret = UnarySyntaxOpCall(ret, arg)
     return ret
 end
-function parse_call(ps::ParseState, ret::OPERATOR{Tokens.AND})
+function parse_call_and(ps::ParseState, ret)
     arg = @precedence ps 20 parse_expression(ps)
     ret = UnarySyntaxOpCall(ret, arg)
     return ret
 end
-function parse_call(ps::ParseState, ret::OPERATOR{Tokens.ISSUBTYPE,false})
+function parse_call_issubt(ps::ParseState, ret)
     arg = @precedence ps 13 parse_expression(ps)
     ret = EXPR{Call}(Any[ret; arg.args])
     return ret
 end
 
-function parse_call(ps::ParseState, ret::OPERATOR{Tokens.ISSUPERTYPE,false})
+function parse_call_issupt(ps::ParseState, ret)
     arg = @precedence ps 13 parse_expression(ps)
     ret = EXPR{Call}(Any[ret; arg.args])
     return ret
 end
 
-function parse_call(ps::ParseState, ret::OPERATOR{Tokens.NOT})
+function parse_call_not(ps::ParseState, ret)
     arg = @precedence ps 13 parse_expression(ps)
     if arg isa EXPR{TupleH}
         ret = EXPR{Call}(Any[ret; arg.args])
@@ -85,7 +85,7 @@ function parse_call(ps::ParseState, ret::OPERATOR{Tokens.NOT})
     return ret
 end
 
-function parse_call(ps::ParseState, ret::OPERATOR{Tokens.PLUS})
+function parse_call_plus(ps::ParseState, ret)
     arg = @precedence ps 13 parse_expression(ps)
     if arg isa EXPR{TupleH}
         ret = EXPR{Call}(Any[ret; arg.args])
@@ -95,7 +95,7 @@ function parse_call(ps::ParseState, ret::OPERATOR{Tokens.PLUS})
     return ret
 end
 
-function parse_call(ps::ParseState, ret::OPERATOR{Tokens.MINUS})
+function parse_call_minus(ps::ParseState, ret)
     arg = @precedence ps 13 parse_expression(ps)
     if arg isa EXPR{TupleH}
         ret = EXPR{Call}(Any[ret; arg.args])
@@ -106,6 +106,23 @@ function parse_call(ps::ParseState, ret::OPERATOR{Tokens.MINUS})
 end
 
 function parse_call(ps::ParseState, ret)
+    if is_plus(ret)
+        return parse_call_plus(ps, ret)
+    elseif is_minus(ret)
+        return parse_call_minus(ps, ret)
+    elseif is_and(ret)
+        return parse_call_and(ps, ret)
+    elseif is_not(ret)
+        return parse_call_not(ps, ret)
+    elseif is_exor(ret)
+        return parse_call_exor(ps, ret)
+    elseif is_decl(ret)
+        return parse_call_decl(ps, ret)
+    elseif is_issubt(ret)
+        return parse_call_issubt(ps, ret)
+    elseif is_issupt(ret)
+        return parse_call_issupt(ps, ret)
+    end
     args = Any[ret, PUNCTUATION(next(ps))]
     @default ps @closer ps paren parse_comma_sep(ps, args)
     push!(args, PUNCTUATION(next(ps)))
@@ -117,7 +134,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = f
     @catcherror ps @nocloser ps inwhere @nocloser ps newline @closer ps comma while !closer(ps)
         a = parse_expression(ps)
 
-        if kw && !ps.closer.brace && a isa BinarySyntaxOpCall && a.op isa OPERATOR{Tokens.EQ,false}
+        if kw && !ps.closer.brace && a isa BinarySyntaxOpCall && is_eq(a.op)
             a = EXPR{Kw}(Any[a.arg1, a.op, a.arg2])
         end
         push!(args, a)
@@ -145,7 +162,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = f
             args1 = Any[]
             @nocloser ps inwhere @nocloser ps newline @nocloser ps semicolon @closer ps comma while !closer(ps)
                 @catcherror ps a = parse_expression(ps)
-                if kw && !ps.closer.brace && a isa BinarySyntaxOpCall && a.op isa OPERATOR{Tokens.EQ,false}
+                if kw && !ps.closer.brace && a isa BinarySyntaxOpCall && is_eq(a.op)
                     a = EXPR{Kw}(Any[a.arg1, a.op, a.arg2])
                 end
                 # push!(paras, a)
@@ -172,7 +189,7 @@ _arg_id(x::EXPR{Kw}) = _arg_id(x.args[1])
 
 
 function _arg_id(x::UnarySyntaxOpCall)
-    if x.arg2 isa OPERATOR{Tokens.DDDOT,false}
+    if is_dddot(x.arg2)
         return _arg_id(x.arg1)
     else
         return x
@@ -180,7 +197,7 @@ function _arg_id(x::UnarySyntaxOpCall)
 end
 
 function _arg_id(x::BinarySyntaxOpCall)
-    if x.op isa OPERATOR{Tokens.DECLARATION,false}
+    if is_decl(x.op)
         return _arg_id(x.arg1)
     else
         return x
@@ -206,7 +223,7 @@ function _get_fparams(x::EXPR{Curly}, args = Symbol[])
         if !(a isa PUNCTUATION)
             if a isa IDENTIFIER
                 push!(args, Expr(a))
-            elseif a isa BinarySyntaxOpCall && a.op isa OPERATOR{Tokens.ISSUBTYPE,false}
+            elseif a isa BinarySyntaxOpCall && is_issubt(a.op)
                 push!(args, Expr(a).args[1])
             end
         end
@@ -223,7 +240,7 @@ function _get_fparams(x::WhereOpCall, args = Symbol[])
         if !(a isa PUNCTUATION)
             if a isa IDENTIFIER
                 push!(args, Expr(a))
-            elseif a isa BinarySyntaxOpCall && a.op isa OPERATOR{Tokens.ISSUBTYPE,false} && a.arg1 isa IDENTIFIER
+            elseif a isa BinarySyntaxOpCall && is_issubt(a.op) && a.arg1 isa IDENTIFIER
                 push!(args, Expr(a.arg1))
             end
         end
@@ -239,7 +256,7 @@ function _get_fname(sig::WhereOpCall)
     return _get_fname(sig.arg1)
 end
 function _get_fname(sig::BinarySyntaxOpCall)
-    if sig.op isa OPERATOR{Tokens.DECLARATION,false}
+    if is_decl(sig.op)
         return _get_fname(sig.arg1)
     else
         return get_id(sig.arg1)
@@ -254,12 +271,12 @@ _get_fsig(fdecl::BinarySyntaxOpCall) = fdecl.arg1
 declares_function(x) = false
 declares_function(x::EXPR{FunctionDef}) = true
 function declares_function(x::BinarySyntaxOpCall)
-    if x.op isa OPERATOR{Tokens.EQ,false}
+    if is_eq(x.op)
         sig = x.arg1
         while true
             if sig isa EXPR{Call}
                 return true
-            elseif sig isa BinarySyntaxOpCall && sig.op isa OPERATOR{Tokens.DECLARATION,false} || sig isa WhereOpCall
+            elseif sig isa BinarySyntaxOpCall && is_decl(sig.op) || sig isa WhereOpCall
                 sig = sig.arg1
             else
                 return false

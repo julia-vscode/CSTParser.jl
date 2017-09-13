@@ -20,15 +20,15 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
 
     while ps.nt.kind == Tokens.DOT || ps.nt.kind == Tokens.DDOT || ps.nt.kind == Tokens.DDDOT
         d = OPERATOR(next(ps))
-        if d isa OPERATOR{Tokens.DOT,false}
-            push!(args, OPERATOR{Tokens.DOT,false}(1, 1:1))
-        elseif d isa OPERATOR{Tokens.DDOT,false}
-            push!(args, OPERATOR{Tokens.DOT,false}(1, 1:1))
-            push!(args, OPERATOR{Tokens.DOT,false}(1, 1:1))
-        elseif d isa OPERATOR{Tokens.DDDOT,false}
-            push!(args, OPERATOR{Tokens.DOT,false}(1, 1:1))
-            push!(args, OPERATOR{Tokens.DOT,false}(1, 1:1))
-            push!(args, OPERATOR{Tokens.DOT,false}(1, 1:1))
+        if is_dot(d)
+            push!(args, OPERATOR(1, 1:1, Tokens.DOT, false))
+        elseif is_ddot(d)
+            push!(args, OPERATOR(1, 1:1, Tokens.DOT, false))
+            push!(args, OPERATOR(1, 1:1, Tokens.DOT, false))
+        elseif is_dddot(d)
+            push!(args, OPERATOR(1, 1:1, Tokens.DOT, false))
+            push!(args, OPERATOR(1, 1:1, Tokens.DOT, false))
+            push!(args, OPERATOR(1, 1:1, Tokens.DOT, false))
         end
     end
 
@@ -54,7 +54,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
             push!(args, a)
         elseif !is_colon && isoperator(ps.nt) && ps.ndot
             next(ps)
-            push!(args, OPERATOR{ps.t.kind,false}(ps.nt.startbyte - ps.t.startbyte - 1, 1 + (0:ps.t.endbyte - ps.t.startbyte)))
+            push!(args, OPERATOR(ps.nt.startbyte - ps.t.startbyte - 1, 1 + (0:ps.t.endbyte - ps.t.startbyte), ps.t.kind, false))
         else
             push!(args, INSTANCE(next(ps)))
         end

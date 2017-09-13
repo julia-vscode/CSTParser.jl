@@ -5,15 +5,19 @@ Get the IDENTIFIER name of a variable, possibly in the presence of
 type declaration operators.
 """
 function get_id(x::BinarySyntaxOpCall)
-    if x.op isa OPERATOR{Tokens.ISSUBTYPE,false} || x.op isa OPERATOR{Tokens.DECLARATION,false} || x.op isa OPERATOR{Tokens.WHERE,false}
+    if is_issubt(x.op) || is_decl(x.op)
         return get_id(x.arg1)
     else
         return x
     end
 end
 
+function get_id(x::WhereOpCall)
+    return get_id(x.arg1)
+end
+
 function get_id(x::UnarySyntaxOpCall)
-    if x.arg2 isa OPERATOR{DddotOp,Tokens.DDDOT,false}
+    if is_dddot(x.arg2)
         return get_id(x.arg1)
     else
         return x
@@ -32,7 +36,7 @@ Basic inference in the presence of type declarations.
 """
 get_t(x) = :Any
 function get_t(x::BinarySyntaxOpCall) 
-    if x.op isa OPERATOR{Tokens.DECLARATION,false}
+    if is_decl(x.op)
         return Expr(x.arg2)
     else
         return :Any

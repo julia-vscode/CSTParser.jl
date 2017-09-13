@@ -5,8 +5,7 @@ Expr(x::IDENTIFIER) = Symbol(normalize_julia_identifier(x.val))
 Expr(x::KEYWORD{T}) where {T} = Symbol(lowercase(string(T)))
 Expr(x::KEYWORD{Tokens.BREAK}) = Expr(:break)
 Expr(x::KEYWORD{Tokens.CONTINUE}) = Expr(:continue)
-Expr(x::OPERATOR{K,false}) where {K} = UNICODE_OPS_REVERSE[K]
-Expr(x::OPERATOR{K,true}) where {K} = Symbol(:., UNICODE_OPS_REVERSE[K])
+Expr(x::OPERATOR) = x.dot ? Symbol(:., UNICODE_OPS_REVERSE[x.kind]) : UNICODE_OPS_REVERSE[x.kind]
 Expr(x::PUNCTUATION{K}) where {K} = string(K)
 Expr(x::LITERAL{Tokens.TRUE}) = true
 Expr(x::LITERAL{Tokens.FALSE}) = false
@@ -389,7 +388,7 @@ end
 
 fix_range(a) = Expr(a)
 function fix_range(a::BinaryOpCall)
-    if (a.op isa OPERATOR{Tokens.IN,false} || a.op isa OPERATOR{Tokens.ELEMENT_OF,false})
+    if (is_in(a.op) || is_elof(a.op))
         Expr(:(=), Expr(a.arg1), Expr(a.arg2))
     else
         Expr(a)
@@ -666,7 +665,7 @@ function Expr(x::EXPR{Filter})
 end
 
 function convert_iter_assign(a)
-    if a isa BinaryOpCall && (a.op isa OPERATOR{Tokens.IN,false} || a.op isa OPERATOR{Tokens.ELEMENT_OF,false})
+    if a isa BinaryOpCall && (is_in(a.op) || is_elof(a.op))
         return Expr(:(=), Expr(a.arg1), Expr(a.arg2))
     else
         return Expr(a)
@@ -702,14 +701,14 @@ end
 
 
 function _get_import_block(x, i, ret)
-    while x.args[i + 1] isa OPERATOR{Tokens.DOT,false}
+    while is_dot(x.args[i + 1])
         i += 1
         push!(ret.args, :.)
     end
     while i < length(x.args) && !(x.args[i + 1] isa PUNCTUATION{Tokens.COMMA})
         i += 1
         a = x.args[i]
-        if !(a isa PUNCTUATION) && !(a isa OPERATOR{Tokens.DOT,false} || a isa OPERATOR{Tokens.COLON,false})
+        if !(a isa PUNCTUATION) && !(is_dot(a) || is_colon(a))
             push!(ret.args, Expr(a))
         end
     end
@@ -745,14 +744,14 @@ function expr_import(x, kw)
         ret = Expr(:toplevel)
         top = Expr(kw)
         i = 1
-        while x.args[i + 1] isa OPERATOR{Tokens.DOT,false}
+        while is_dot(x.args[i + 1])
             i += 1
             push!(top.args, :.)
         end
         while i < length(x.args) && !(x.args[i + 1] isa OPERATOR && precedence(x.args[i+1]) == ColonOp)
             i += 1
             a = x.args[i]
-            if !(a isa PUNCTUATION) && !(a isa OPERATOR{Tokens.DOT,false} || a isa OPERATOR{Tokens.COLON,false})
+            if !(a isa PUNCTUATION) && !(is_dot(a) || is_colon(a))
                 push!(top.args, Expr(a))
             end
         end
