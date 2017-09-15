@@ -67,9 +67,9 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     # there are interpolations in the string
     if prefixed != false || iscmd
         val = istrip ? ps.t.val[4:end - 3] : ps.t.val[2:end - 1]
-        expr = LITERAL{ps.t.kind}(sfullspan, sspan,
+        expr = LITERAL(sfullspan, sspan,
             iscmd ? replace(val, "\\`", "`") :
-                    replace(val, "\\\"", "\""))
+                    replace(val, "\\\"", "\""), ps.t.kind)
         if istrip
             adjust_lcp(expr)
             ret = EXPR{StringH}(Any[expr], sfullspan, sspan)
@@ -86,7 +86,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             if eof(input)
                 lspan = position(b)
                 str = tostr(b)[1:end - (istrip ? 3 : 1)]
-                ex = LITERAL{Tokens.STRING}(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, 1:(lspan + startbytes), str)
+                ex = LITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, 1:(lspan + startbytes), str, Tokens.STRING)
                 push!(ret.args, ex)
                 istrip && adjust_lcp(ex, true)
                 break
@@ -98,7 +98,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             elseif c == '$'
                 lspan = position(b)
                 str = tostr(b)
-                ex = LITERAL{Tokens.STRING}(lspan + startbytes, 1:(lspan + startbytes), str)
+                ex = LITERAL(lspan + startbytes, 1:(lspan + startbytes), str, Tokens.STRING)
                 push!(ret.args, ex); istrip && adjust_lcp(ex)
                 startbytes = 0
                 op = OPERATOR(1, 1:1, Tokens.EX_OR, false)
@@ -131,25 +131,25 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         end
     end
     
-    single_string_T = Union{LITERAL{Tokens.STRING},LITERAL{ps.t.kind}}
+    single_string_T = (Tokens.STRING,ps.t.kind)
     if istrip
         if lcp != nothing && !isempty(lcp)
             for expr in exprs_to_adjust
                 for (i, a) in enumerate(ret.args)
                     if expr == a
-                        ret.args[i] = typeof(a)(expr.fullspan, expr.span, replace(expr.val, "\n$lcp", "\n"))
+                        ret.args[i] = typeof(a)(expr.fullspan, expr.span, replace(expr.val, "\n$lcp", "\n"), expr.kind)
                     end
                 end
             end
         end
         # Drop leading newline
-        if ret.args[1] isa single_string_T &&
+        if ret.args[1] isa LITERAL && ret.args[1].kind in single_string_T &&
                 !isempty(ret.args[1].val) && ret.args[1].val[1] == '\n'
             ret.args[1] = dropleadlingnewline(ret.args[1])
         end
     end
 
-    if (length(ret.args) == 1 && ret.args[1] isa single_string_T)
+    if (length(ret.args) == 1 && ret.args[1] isa LITERAL && ret.args[1].kind in single_string_T)
         ret = ret.args[1]
     end
     update_span!(ret)
@@ -161,11 +161,11 @@ end
 adjustspan(x::IDENTIFIER) = IDENTIFIER(length(x.span), x.span, x.val)
 adjustspan(x::KEYWORD{T}) where {T} = KEYWORD{T}(length(x.span), x.span)
 adjustspan(x::OPERATOR) = OPERATOR(length(x.span), x.span, x.kind, x.dot)
-adjustspan(x::LITERAL{T}) where {T} = LITERAL{T}(length(x.span), x.span, x.val)
+adjustspan(x::LITERAL) = LITERAL(length(x.span), x.span, x.val, x.kind)
 adjustspan(x::PUNCTUATION) = PUNCTUATION(x.kind, length(x.span), x.span)
 function adjustspan(x::EXPR) 
     x.fullspan = length(x.span)
     return x
 end
 
-dropleadlingnewline(x::T) where T <: Union{LITERAL{Tokens.STRING},LITERAL{Tokens.TRIPLE_STRING},LITERAL{Tokens.CMD},LITERAL{Tokens.TRIPLE_CMD}} = T(x.fullspan, x.span, x.val[2:end])
+dropleadlingnewline(x::LITERAL) = LITERAL(x.fullspan, x.span, x.val[2:end], x.kind)

@@ -202,14 +202,14 @@ function parse_compound(ps::ParseState, ret)
     # Suffix on x_str
     elseif ret isa EXPR{x_Str} && ps.nt.kind == Tokens.IDENTIFIER
         arg = IDENTIFIER(next(ps))
-        push!(ret, LITERAL{Tokens.STRING}(arg.fullspan, arg.span, ps.t.val))
+        push!(ret, LITERAL(arg.fullspan, arg.span, ps.t.val, Tokens.STRING))
     elseif (ret isa IDENTIFIER || (ret isa BinarySyntaxOpCall && is_dot(ret.op))) && ps.nt.kind == Tokens.CMD
         next(ps)
         @catcherror ps arg = parse_string_or_cmd(ps, ret)
         ret = EXPR{x_Cmd}(Any[ret, arg])
     elseif ret isa EXPR{x_Cmd} && ps.nt.kind == Tokens.IDENTIFIER
         arg = IDENTIFIER(next(ps))
-        push!(ret, LITERAL{Tokens.STRING}(arg.fullspan, 1:span(arg), ps.t.val))
+        push!(ret, LITERAL(arg.fullspan, 1:span(arg), ps.t.val, Tokens.STRING))
     elseif ret isa UnarySyntaxOpCall && is_prime(ret.arg2)
         # prime operator followed by an identifier has an implicit multiplication
         @catcherror ps nextarg = @precedence ps 11 parse_expression(ps)
@@ -316,7 +316,7 @@ function parse(ps::ParseState, cont = false)
         top = EXPR{FileH}(Any[])
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
-            push!(top, LITERAL{nothing}(ps.nt.startbyte, 1:ps.nt.startbyte, ""))
+            push!(top, LITERAL(ps.nt.startbyte, 1:ps.nt.startbyte, "", Tokens.begin_plus))
         end
 
         while !ps.done && !ps.errored
@@ -336,7 +336,7 @@ function parse(ps::ParseState, cont = false)
     else
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
-            top = LITERAL{nothing}(ps.nt.startbyte, 1:ps.nt.startbyte, "")
+            top = LITERAL(ps.nt.startbyte, 1:ps.nt.startbyte, "", Tokens.begin_plus)
         else
             top = parse_doc(ps)
             last_line = ps.nt.startpos[1]

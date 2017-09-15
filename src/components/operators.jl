@@ -153,7 +153,7 @@ function parse_unary(ps::ParseState, op)
         return parse_unary_colon(ps, op)
     elseif (is_plus(op) || is_minus(op)) && (ps.nt.kind ==  Tokens.INTEGER || ps.nt.kind == Tokens.FLOAT) && isemptyws(ps.ws)
         arg = LITERAL(next(ps))
-        return LITERAL{ps.t.kind}(op.fullspan + arg.fullspan, first(arg.span):(last(arg.span) + length(op.span)), string(is_plus(op) ? "+" : "-" , ps.t.val))
+        return LITERAL(op.fullspan + arg.fullspan, first(arg.span):(last(arg.span) + length(op.span)), string(is_plus(op) ? "+" : "-" , ps.t.val), ps.t.kind)
         return arg
     end
 

@@ -45,14 +45,23 @@ end
 
 
 infer_t(x) = :Any
-infer_t(x::LITERAL{Tokens.INTEGER}) = :Int
-infer_t(x::LITERAL{Tokens.FLOAT}) = :Float64
-infer_t(x::LITERAL{Tokens.STRING}) = :String
-infer_t(x::LITERAL{Tokens.TRIPLE_STRING}) = :String
-infer_t(x::LITERAL{Tokens.CHAR}) = :Char
-infer_t(x::LITERAL{Tokens.TRUE}) = :Bool
-infer_t(x::LITERAL{Tokens.FALSE}) = :Bool
-infer_t(x::LITERAL{Tokens.CMD}) = :Cmd
+function infer_t(x::LITERAL)
+    if x.kind == Tokens.INTEGER
+        return :Int
+    elseif x.kind == Tokens.FLOAT
+        return :Float64
+    elseif x.kind == Tokens.STRING
+        return :String
+    elseif x.kind == Tokens.TRIPLE_STRING
+        return :String
+    elseif x.kind == Tokens.CHAR
+        return :Char
+    elseif x.kind == Tokens.TRUE || x.kind == Tokens.FALSE
+        return :Bool
+    elseif x.kind == Tokens.CMD
+        return :Cmd
+    end
+end
 
 infer_t(x::EXPR{Vect}) = :(Array{Any,1})
 infer_t(x::EXPR{Vcat}) = :(Array{Any,N})

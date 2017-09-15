@@ -7,9 +7,6 @@ Expr(x::KEYWORD{Tokens.BREAK}) = Expr(:break)
 Expr(x::KEYWORD{Tokens.CONTINUE}) = Expr(:continue)
 Expr(x::OPERATOR) = x.dot ? Symbol(:., UNICODE_OPS_REVERSE[x.kind]) : UNICODE_OPS_REVERSE[x.kind]
 Expr(x::PUNCTUATION)= string(x.kind)
-Expr(x::LITERAL{Tokens.TRUE}) = true
-Expr(x::LITERAL{Tokens.FALSE}) = false
-function Expr(x::LITERAL{nothing}) end
 
 function julia_normalization_map(c::Int32, x::Ptr{Void})::Int32
     return c == 0x00B5 ? 0x03BC : # micro sign -> greek small letter mu
@@ -61,9 +58,35 @@ function sized_uint_oct_literal(s::AbstractString)
     return Base.parse(BigInt, s)
 end
 
+function Expr(x::LITERAL)
+    if x.kind == Tokens.TRUE
+        return true
+    elseif x.kind == Tokens.FALSE
+        return false
+    elseif is_nothing(x)
+        return nothing
+    elseif x.kind == Tokens.INTEGER
+        return Expr_int(x)
+    elseif x.kind == Tokens.FLOAT
+        return Expr_float(x)
+    elseif x.kind == Tokens.CHAR
+        return Expr_char(x)
+    elseif x.kind == Tokens.MACRO
+        return Symbol(x.val)
+    elseif x.kind == Tokens.STRING
+        return x.val
+    elseif x.kind == Tokens.TRIPLE_STRING
+        return x.val
+    elseif x.kind == Tokens.CMD
+        return Expr_cmd(x)
+    elseif x.kind == Tokens.TRIPLE_CMD
+        return Expr_tcmd(x)
+    end
+end
+
 const TYPEMAX_INT64_STR = string(typemax(Int))
 const TYPEMAX_INT128_STR = string(typemax(Int128))
-function Expr(x::LITERAL{Tokens.INTEGER})
+function Expr_int(x)
     is_hex = is_oct = is_bin = false
     val = replace(x.val, "_", "")
     if sizeof(val) > 2 && val[1] == '0'
@@ -82,13 +105,13 @@ function Expr(x::LITERAL{Tokens.INTEGER})
     Base.parse(BigInt, val)
 end
 
-function Expr(x::LITERAL{Tokens.FLOAT})
+function Expr_float(x)
     if 'f' in x.val
         return Base.parse(Float32, replace(x.val, 'f', 'e'))
     end
     Base.parse(Float64, x.val)
 end
-function Expr(x::LITERAL{Tokens.CHAR})
+function Expr_char(x)
     val = Base.unescape_string(x.val[2:end - 1])
     # one byte e.g. '\xff' maybe not valid UTF-8
     # but we want to use the raw value as a codepoint in this case
@@ -96,9 +119,7 @@ function Expr(x::LITERAL{Tokens.CHAR})
     length(val) == 1 || error("Invalid character literal")
     val[1]
 end
-Expr(x::LITERAL{Tokens.MACRO}) = Symbol(x.val)
-Expr(x::LITERAL{Tokens.STRING}) = x.val
-Expr(x::LITERAL{Tokens.TRIPLE_STRING}) = x.val
+
 
 # Expressions
 
@@ -169,8 +190,8 @@ end
 
 # cross compatability for line number insertion in macrocalls
 @static if VERSION < v"0.7.0-DEV.357"
-    Expr(x::LITERAL{Tokens.CMD}) = Expr(:macrocall, Symbol("@cmd"), x.val)
-    Expr(x::LITERAL{Tokens.TRIPLE_CMD}) = Expr(:macrocall, Symbol("@cmd"), x.val)
+    Expr_cmd(x) = Expr(:macrocall, Symbol("@cmd"), x.val)
+    Expr_tcmd(x) = Expr(:macrocall, Symbol("@cmd"), x.val)
 
     function Expr(x::EXPR{x_Str})
         if x.args[1] isa BinarySyntaxOpCall
@@ -219,8 +240,8 @@ end
         x
     end
 else
-    Expr(x::LITERAL{Tokens.CMD}) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
-    Expr(x::LITERAL{Tokens.TRIPLE_CMD}) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
+    Expr_cmd(x) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
+    Expr_tcmd(x) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
 
     function Expr(x::EXPR{x_Str})
         if x.args[1] isa BinarySyntaxOpCall
@@ -780,7 +801,7 @@ function Expr(x::EXPR{StringH})
     for (i, a) in enumerate(x.args)
         if a isa UnarySyntaxOpCall
             a = a.arg2
-        elseif typeof(a) == LITERAL{Tokens.STRING}
+        elseif a isa LITERAL && a.kind == Tokens.STRING
             if span(a) == 0 || ((i == 1 || i == length(x.args)) && span(a) == 1) || isempty(a.val)
                 continue
             end

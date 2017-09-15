@@ -179,11 +179,13 @@ ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
 
 isstring(x) = false
 isstring(x::EXPR{StringH}) = true
-isstring(x::LITERAL{Tokens.STRING}) = true
-isstring(x::LITERAL{Tokens.TRIPLE_STRING}) = true
+isstring(x::LITERAL) = x.kind == Tokens.STRING || x.kind == Tokens.TRIPLE_STRING
+is_integer(x) = x isa LITERAL && x.kind == Tokens.INTEGER
+is_float(x) = x isa LITERAL && x.kind == Tokens.FLOAT
+is_number(x) = x isa LITERAL && (x.kind == Tokens.INTEGER || x.kind == Tokens.FLOAT)
+is_nothing(x) = x isa LITERAL && x.kind == Tokens.begin_plus
 
-
-isajuxtaposition(ps::ParseState, ret) = ((ret isa LITERAL{Tokens.INTEGER} || ret isa LITERAL{Tokens.FLOAT}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || (
+isajuxtaposition(ps::ParseState, ret) = (is_number(ret) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || (
         (ret isa UnarySyntaxOpCall && is_prime(ret.arg2) && ps.nt.kind == Tokens.IDENTIFIER) ||
         ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
         ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING))) ||
@@ -316,10 +318,10 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                     io = IOBuffer(str)
                     x, ps = parse(ps, true)
                     sp = check_span(x)
-                    if length(x.args) > 0 && x.args[1] isa LITERAL{nothing}
+                    if length(x.args) > 0 && is_nothing(x.args[1])
                         shift!(x.args)
                     end
-                    if length(x.args) > 0 && x.args[end] isa LITERAL{nothing}
+                    if length(x.args) > 0 && is_nothing(x.args[end])
                         pop!(x.args)
                     end
                     x0 = Expr(x)

@@ -69,17 +69,18 @@ end
 KEYWORD(ps::ParseState) = KEYWORD{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
 
 
-struct LITERAL{K}
+struct LITERAL
     fullspan::Int
     span::UnitRange{Int}
     val::String
+    kind::Tokenize.Tokens.Kind
 end
 function LITERAL(ps::ParseState)
     if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING ||
        ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
         return parse_string_or_cmd(ps)
     else
-        LITERAL{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), ps.t.val)
+        LITERAL(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), ps.t.val, ps.t.kind)
     end
 end
 
@@ -331,7 +332,7 @@ abstract type Vect <: Head end
 
 Quotenode(x) = EXPR{Quotenode}(Any[x])
 
-const TRUE = LITERAL{Tokens.TRUE}(0, 1:0, "")
-const FALSE = LITERAL{Tokens.FALSE}(0, 1:0, "")
-const NOTHING = LITERAL{nothing}(0, 1:0, "")
+const TRUE = LITERAL(0, 1:0, "", Tokens.TRUE)
+const FALSE = LITERAL(0, 1:0, "", Tokens.FALSE)
+const NOTHING = LITERAL(0, 1:0, "", Tokens.begin_plus)
 const GlobalRefDOC = EXPR{GlobalRefDoc}(Any[], 0, 1:0)
