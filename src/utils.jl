@@ -83,6 +83,70 @@ macro precedence(ps, prec, body)
     end
 end
 
+struct TMP
+    newline::Bool
+    semicolon::Bool
+    inmacro::Bool
+    tuple::Bool
+    comma::Bool
+    insquare::Bool
+    range::Bool
+    ifelse::Bool
+    ifop::Bool
+    ws::Bool
+    wsop::Bool
+    precedence::Int
+end
+
+@noinline function create_tmp(c::Closer)
+    TMP(
+        c.newline,
+        c.semicolon,
+        c.inmacro,
+        c.tuple,
+        c.comma,
+        c.insquare,
+        c.range,
+        c.ifelse,
+        c.ifop,
+        c.ws,
+        c.wsop,
+        c.precedence
+    )
+end
+
+@noinline function update_from_tmp!(c::Closer, tmp::TMP)
+    c.newline = tmp.newline
+    c.semicolon = tmp.semicolon
+    c.inmacro = tmp.inmacro
+    c.tuple = tmp.tuple
+    c.comma = tmp.comma
+    c.insquare = tmp.insquare
+    c.range = tmp.range
+    c.ifelse = tmp.ifelse
+    c.ifop = tmp.ifop
+    c.ws = tmp.ws
+    c.wsop = tmp.wsop
+    c.precedence = tmp.precedence
+end
+
+
+@noinline function update_to_default!(c::Closer)
+    c.newline = true
+    c.semicolon = true
+    c.inmacro = false
+    c.tuple = false
+    c.comma = false
+    c.insquare = false
+    c.range = false
+    c.ifelse = false
+    c.ifop = false
+    c.ws = false
+    c.wsop = false
+    c.precedence = -1
+end
+
+
 """
     @default ps body
 
@@ -90,54 +154,10 @@ Parses the next expression using default closure rules.
 """
 macro default(ps, body)
     quote
-        local tmp1 = $(esc(ps)).closer.newline
-        local tmp2 = $(esc(ps)).closer.semicolon
-        local tmp3 = $(esc(ps)).closer.inmacro
-        local tmp4 = $(esc(ps)).closer.tuple
-        local tmp5 = $(esc(ps)).closer.comma
-        local tmp6 = $(esc(ps)).closer.insquare
-        # local tmp7 = $(esc(ps)).closer.brace
-        local tmp8 = $(esc(ps)).closer.range
-        local tmp9 = $(esc(ps)).closer.block
-        local tmp10 = $(esc(ps)).closer.ifelse
-        local tmp11 = $(esc(ps)).closer.ifop
-        # local tmp12 = $(esc(ps)).closer.trycatch
-        local tmp13 = $(esc(ps)).closer.ws
-        local tmp14 = $(esc(ps)).closer.wsop
-        local tmp15 = $(esc(ps)).closer.precedence
-        $(esc(ps)).closer.newline = true
-        $(esc(ps)).closer.semicolon = true
-        $(esc(ps)).closer.inmacro = false
-        $(esc(ps)).closer.tuple = false
-        $(esc(ps)).closer.comma = false
-        $(esc(ps)).closer.insquare = false
-        # $(esc(ps)).closer.brace = false
-        # $(esc(ps)).closer.square = false
-        $(esc(ps)).closer.range = false
-        $(esc(ps)).closer.ifelse = false
-        $(esc(ps)).closer.ifop = false
-        # $(esc(ps)).closer.trycatch = false
-        $(esc(ps)).closer.ws = false
-        $(esc(ps)).closer.wsop = false
-        $(esc(ps)).closer.precedence = -1
-
+        TMP = create_tmp($(esc(ps)).closer)
+        update_to_default!($(esc(ps)).closer)
         out = $(esc(body))
-
-        $(esc(ps)).closer.newline = tmp1
-        $(esc(ps)).closer.semicolon = tmp2
-        $(esc(ps)).closer.inmacro = tmp3
-        $(esc(ps)).closer.tuple = tmp4
-        $(esc(ps)).closer.comma = tmp5
-        $(esc(ps)).closer.insquare = tmp6
-        # $(esc(ps)).closer.brace = tmp7
-        $(esc(ps)).closer.range = tmp8
-        $(esc(ps)).closer.block = tmp9
-        $(esc(ps)).closer.ifelse = tmp10
-        $(esc(ps)).closer.ifop = tmp11
-        # $(esc(ps)).closer.trycatch = tmp12
-        $(esc(ps)).closer.ws = tmp13
-        $(esc(ps)).closer.wsop = tmp14
-        $(esc(ps)).closer.precedence = tmp15
+        update_from_tmp!($(esc(ps)).closer, TMP)
         out
     end
 end
@@ -183,7 +203,7 @@ isstring(x::LITERAL) = x.kind == Tokens.STRING || x.kind == Tokens.TRIPLE_STRING
 is_integer(x) = x isa LITERAL && x.kind == Tokens.INTEGER
 is_float(x) = x isa LITERAL && x.kind == Tokens.FLOAT
 is_number(x) = x isa LITERAL && (x.kind == Tokens.INTEGER || x.kind == Tokens.FLOAT)
-is_nothing(x) = x isa LITERAL && x.kind == Tokens.begin_plus
+is_nothing(x) = x isa LITERAL && x.kind == Tokens.NOTHING
 
 isajuxtaposition(ps::ParseState, ret) = (is_number(ret) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || (
         (ret isa UnarySyntaxOpCall && is_prime(ret.arg2) && ps.nt.kind == Tokens.IDENTIFIER) ||

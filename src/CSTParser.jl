@@ -316,7 +316,7 @@ function parse(ps::ParseState, cont = false)
         top = EXPR{FileH}(Any[])
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
-            push!(top, LITERAL(ps.nt.startbyte, 1:ps.nt.startbyte, "", Tokens.begin_plus))
+            push!(top, LITERAL(ps.nt.startbyte, 1:ps.nt.startbyte, "", Tokens.NOTHING))
         end
 
         while !ps.done && !ps.errored
@@ -336,7 +336,7 @@ function parse(ps::ParseState, cont = false)
     else
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
-            top = LITERAL(ps.nt.startbyte, 1:ps.nt.startbyte, "", Tokens.begin_plus)
+            top = LITERAL(ps.nt.startbyte, 1:ps.nt.startbyte, "", Tokens.NOTHING)
         else
             top = parse_doc(ps)
             last_line = ps.nt.startpos[1]
@@ -380,6 +380,6 @@ end
 
 ischainable(t::Token) = t.kind == Tokens.PLUS || t.kind == Tokens.STAR || t.kind == Tokens.APPROX
 
-# include("_precompile.jl")
-# _precompile_()
+include("_precompile.jl")
+_precompile_()
 end

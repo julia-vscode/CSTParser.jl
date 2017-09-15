@@ -1,10 +1,10 @@
 import Tokenize.Lexers: peekchar, readchar, iswhitespace, emit, emit_error,  accept_batch, eof
 
-const EmptyWS = Tokens.begin_delimiters
-const SemiColonWS = Tokens.end_delimiters
-const NewLineWS = Tokens.begin_literal
-const WS = Tokens.end_literal
-const InvisibleBrackets = Tokens.begin_invisible_keywords
+const EmptyWS = Tokens.EMPTY_WS
+const SemiColonWS = Tokens.SEMICOLON_WS
+const NewLineWS = Tokens.NEWLINE_WS
+const WS = Tokens.WS
+const InvisibleBrackets = Tokens.INVISIBLE_BRACKETS
 const EmptyWSToken = Token(EmptyWS, (0, 0), (0, 0), -1, -1, "")
 
 """

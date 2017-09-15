@@ -334,5 +334,5 @@ Quotenode(x) = EXPR{Quotenode}(Any[x])
 
 const TRUE = LITERAL(0, 1:0, "", Tokens.TRUE)
 const FALSE = LITERAL(0, 1:0, "", Tokens.FALSE)
-const NOTHING = LITERAL(0, 1:0, "", Tokens.begin_plus)
+const NOTHING = LITERAL(0, 1:0, "", Tokens.NOTHING)
 const GlobalRefDOC = EXPR{GlobalRefDoc}(Any[], 0, 1:0)
