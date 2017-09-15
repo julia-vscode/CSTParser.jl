@@ -10,7 +10,7 @@ function closer(ps::ParseState)
         ps.nt.kind == Tokens.LSQUARE ||
         (ps.nt.kind == Tokens.STRING && isemptyws(ps.ws)) ||
         ((ps.nt.kind == Tokens.RPAREN || ps.nt.kind == Tokens.RSQUARE) && isidentifier(ps.nt))  
-    )) || 
+    )) ||
     (ps.nt.kind == Tokens.COMMA && ps.closer.precedence > 0) ||
     ps.nt.kind == Tokens.ENDMARKER ||
     (ps.closer.comma && iscomma(ps.nt)) ||
@@ -614,3 +614,8 @@ is_prime(x) = x isa OPERATOR && x.kind == Tokens.PRIME
 is_cond(x) = x isa OPERATOR && x.kind == Tokens.CONDITIONAL
 is_where(x) = x isa OPERATOR && x.kind == Tokens.WHERE
 is_anon_func(x) = x isa OPERATOR && x.kind == Tokens.ANON_FUNC
+
+is_comma(x) = x isa PUNCTUATION && x.kind == Tokens.COMMA
+is_lparen(x) = x isa PUNCTUATION && x.kind == Tokens.LPAREN
+is_rparen(x) = x isa PUNCTUATION && x.kind == Tokens.RPAREN
+

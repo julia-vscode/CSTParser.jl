@@ -62,7 +62,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
         if ps.nt.kind == Tokens.DOT
             push!(args, PUNCTUATION(next(ps)))
         elseif isoperator(ps.nt) && ps.ndot
-            push!(args, PUNCTUATION{Tokens.DOT}(1, 1:1))
+            push!(args, PUNCTUATION(Tokens.DOT, 1, 1:1))
         else
             break
         end

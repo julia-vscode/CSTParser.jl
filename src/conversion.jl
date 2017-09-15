@@ -6,7 +6,7 @@ Expr(x::KEYWORD{T}) where {T} = Symbol(lowercase(string(T)))
 Expr(x::KEYWORD{Tokens.BREAK}) = Expr(:break)
 Expr(x::KEYWORD{Tokens.CONTINUE}) = Expr(:continue)
 Expr(x::OPERATOR) = x.dot ? Symbol(:., UNICODE_OPS_REVERSE[x.kind]) : UNICODE_OPS_REVERSE[x.kind]
-Expr(x::PUNCTUATION{K}) where {K} = string(K)
+Expr(x::PUNCTUATION)= string(x.kind)
 Expr(x::LITERAL{Tokens.TRUE}) = true
 Expr(x::LITERAL{Tokens.FALSE}) = false
 function Expr(x::LITERAL{nothing}) end
@@ -705,7 +705,7 @@ function _get_import_block(x, i, ret)
         i += 1
         push!(ret.args, :.)
     end
-    while i < length(x.args) && !(x.args[i + 1] isa PUNCTUATION{Tokens.COMMA})
+    while i < length(x.args) && !(is_comma(x.args[i + 1]))
         i += 1
         a = x.args[i]
         if !(a isa PUNCTUATION) && !(is_dot(a) || is_colon(a))
@@ -724,7 +724,7 @@ Expr(x::EXPR{Using}) = expr_import(x, :using)
 function expr_import(x, kw)
     col = find(a isa OPERATOR && precedence(a) == ColonOp for a in x.args)
 
-    comma = find(a isa PUNCTUATION{Tokens.COMMA} for a in x.args)
+    comma = find(is_comma(a) for a in x.args)
     if isempty(comma)
         ret = Expr(kw)
         i = 1
@@ -735,7 +735,7 @@ function expr_import(x, kw)
         while i < length(x.args)
             nextarg = Expr(kw)
             i = _get_import_block(x, i, nextarg)
-            if i < length(x.args) && (x.args[i + 1] isa PUNCTUATION{Tokens.COMMA})
+            if i < length(x.args) && is_comma(x.args[i + 1])
                 i += 1
             end
             push!(ret.args, nextarg)
@@ -758,7 +758,7 @@ function expr_import(x, kw)
         while i < length(x.args)
             nextarg = Expr(kw, top.args...)
             i = _get_import_block(x, i, nextarg)
-            if i < length(x.args) && (x.args[i + 1] isa PUNCTUATION{Tokens.COMMA})
+            if i < length(x.args) && (is_comma(x.args[i + 1]))
                 i += 1
             end
             push!(ret.args, nextarg)
