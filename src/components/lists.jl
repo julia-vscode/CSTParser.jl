@@ -22,7 +22,7 @@ function parse_tuple(ps::ParseState, ret::EXPR{TupleH})
         push!(ret, op)
     else
         @catcherror ps nextarg = @closer ps tuple parse_expression(ps)
-        if !(first(ret.args) isa PUNCTUATION{Tokens.LPAREN})
+        if !(is_lparen(first(ret.args)))
             push!(ret, op)
             push!(ret, nextarg)
         else

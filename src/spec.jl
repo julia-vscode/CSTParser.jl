@@ -45,11 +45,12 @@ struct IDENTIFIER
 end
 IDENTIFIER(ps::ParseState) = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), untokenize(ps.t))
 
-struct PUNCTUATION{K}
+struct PUNCTUATION
+    kind::Tokenize.Tokens.Kind
     fullspan::Int
     span::UnitRange{Int}
 end
-PUNCTUATION(ps::ParseState) = PUNCTUATION{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
+PUNCTUATION(ps::ParseState) = PUNCTUATION(ps.t.kind, ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
 
 struct OPERATOR
     fullspan::Int
