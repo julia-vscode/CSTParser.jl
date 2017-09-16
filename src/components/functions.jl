@@ -263,6 +263,8 @@ function _get_fname(sig::BinarySyntaxOpCall)
     end
 end
 _get_fname(sig) = get_id(sig.args[1])
+_get_fname(sig::UnaryOpCall) = sig.op
+_get_fname(sig::UnarySyntaxOpCall) = sig.arg1 isa OPERATOR ? sig.arg1 : sig.arg2
 
 _get_fsig(fdecl::EXPR{FunctionDef}) = fdecl.args[2]
 _get_fsig(fdecl::BinarySyntaxOpCall) = fdecl.arg1
