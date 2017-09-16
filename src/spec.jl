@@ -187,13 +187,13 @@ abstract type Head end
 abstract type Call <: Head end
 
 mutable struct UnaryOpCall
-    op
+    op::OPERATOR
     arg
     fullspan::Int
     span::UnitRange{Int}
     function UnaryOpCall(op, arg)
         fullspan = op.fullspan + arg.fullspan
-        new(op, arg, fullspan, 1:(fullspan - arg.fullspan - length(arg.span)))
+        new(op, arg, fullspan, 1:(fullspan - arg.fullspan + length(arg.span)))
     end
 end
 AbstractTrees.children(x::UnaryOpCall) = vcat(x.op, x.arg)
@@ -205,14 +205,14 @@ mutable struct UnarySyntaxOpCall
     span::UnitRange{Int}
     function UnarySyntaxOpCall(arg1, arg2)
         fullspan = arg1.fullspan + arg2.fullspan
-        new(arg1, arg2, fullspan, 1:(fullspan - arg2.fullspan - length(arg2.span)))
+        new(arg1, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
     end
 end
 AbstractTrees.children(x::UnarySyntaxOpCall) = vcat(x.arg1, x.arg2)
 
 mutable struct BinaryOpCall
     arg1
-    op
+    op::OPERATOR
     arg2
     fullspan::Int
     span::UnitRange{Int}
@@ -225,7 +225,7 @@ AbstractTrees.children(x::T) where T <: Union{BinaryOpCall} = vcat(x.arg1, x.op,
 
 mutable struct BinarySyntaxOpCall
     arg1
-    op
+    op::OPERATOR
     arg2
     fullspan::Int
     span::UnitRange{Int}

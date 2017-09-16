@@ -928,6 +928,6 @@ function _precompile_()
     precompile(CSTParser.update_span!, (CSTParser.EXPR{CSTParser.BareModule},))
     precompile(CSTParser.update_span!, (CSTParser.EXPR{CSTParser.ImportAll},))
     precompile(CSTParser.utf8proc_map_custom, (String, Int64, Function))
-    precompile(CSTParser.update_to_default!, (CSTParser.Closer, CSTParser.TMP))
-    precompile(CSTParser.update_from_tmp!, (CSTParser.Closer, CSTParser.TMP))
+    precompile(CSTParser.update_to_default!, (CSTParser.Closer, CSTParser.Closer_TMP))
+    precompile(CSTParser.update_from_tmp!, (CSTParser.Closer, CSTParser.Closer_TMP))
 end

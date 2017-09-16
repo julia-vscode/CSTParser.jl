@@ -25,6 +25,7 @@ function get_id(x::UnarySyntaxOpCall)
 end
 
 get_id(x::EXPR{Curly}) = get_id(x.args[1])
+get_id(x::EXPR{InvisBrackets}) = get_id(x.args[2])
 get_id(x) = x
 
 
