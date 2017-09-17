@@ -1,69 +1,58 @@
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.ABSTRACT}})
+function parse_abstract(ps::ParseState)
     # Switch for v0.6 compatability
     if ps.nt.kind == Tokens.TYPE
-        kw1 = INSTANCE(ps)
-        next(ps)
-        kw2 = INSTANCE(ps)
+        kw1 = KEYWORD(ps)
+        kw2 = KEYWORD(next(ps))
 
         @catcherror ps sig = @default ps @closer ps block parse_expression(ps)
 
-        next(ps)
-        ret = EXPR{Abstract}(EXPR[kw1, kw2, sig, INSTANCE(ps)], "")
+        ret = EXPR{Abstract}(Any[kw1, kw2, sig, KEYWORD(next(ps))])
     else
-        kw = INSTANCE(ps)
+        kw = KEYWORD(ps)
         @catcherror ps sig = @default ps parse_expression(ps)
 
-        ret = EXPR{Abstract}(EXPR[kw, sig], "")
+        ret = EXPR{Abstract}(Any[kw, sig])
     end
     return ret
 end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.BITSTYPE}})
-    kw = INSTANCE(ps)
+function parse_bitstype(ps::ParseState)
+    kw = KEYWORD(ps)
 
     @catcherror ps arg1 = @default ps @closer ps ws @closer ps wsop parse_expression(ps)
     @catcherror ps arg2 = @default ps parse_expression(ps)
 
-    ret = EXPR{Bitstype}(EXPR[kw, arg1, arg2], "")
-    return ret
+    return EXPR{Bitstype}(Any[kw, arg1, arg2])
 end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.PRIMITIVE}})
+function parse_primitive(ps::ParseState)
     if ps.nt.kind == Tokens.TYPE
-        kw1 = INSTANCE(ps)
-        next(ps)
-        kw2 = INSTANCE(ps)
+        kw1 = KEYWORD(ps)
+        kw2 = KEYWORD(next(ps))
         @catcherror ps sig = @default ps @closer ps ws @closer ps wsop parse_expression(ps)
         @catcherror ps arg = @default ps @closer ps block parse_expression(ps)
 
-        next(ps)
-        ret = EXPR{Primitive}(EXPR[kw1, kw2, sig, arg, INSTANCE(ps)], "")
+        ret = EXPR{Primitive}(Any[kw1, kw2, sig, arg, KEYWORD(next(ps))])
     else
         ret = IDENTIFIER(ps)
     end
     return ret
 end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPEALIAS}})
-    kw = INSTANCE(ps)
+function parse_typealias(ps::ParseState)
+    kw = KEYWORD(ps)
 
     @catcherror ps arg1 = @closer ps ws @closer ps wsop parse_expression(ps)
     @catcherror ps arg2 = parse_expression(ps)
 
-    return EXPR{TypeAlias}(EXPR[kw, arg1, arg2], "")
+    return EXPR{TypeAlias}(Any[kw, arg1, arg2])
 end
 
-parse_kw(ps::ParseState, ::Type{Val{Tokens.TYPE}}) = parse_struct(ps, TRUE)
-parse_kw(ps::ParseState, ::Type{Val{Tokens.IMMUTABLE}}) = parse_struct(ps, FALSE)
-
-# new 0.6 syntax
-parse_kw(ps::ParseState, ::Type{Val{Tokens.STRUCT}}) = parse_struct(ps, FALSE)
-
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.MUTABLE}})
+function parse_mutable(ps::ParseState)
     if ps.nt.kind == Tokens.STRUCT
-        kw = INSTANCE(ps)
+        kw = KEYWORD(ps)
         next(ps)
-        @catcherror ps ret = parse_struct(ps, TRUE)
+        @catcherror ps ret = parse_struct(ps, true)
         unshift!(ret, kw)
         update_span!(ret)
     else
@@ -74,14 +63,10 @@ end
 
 
 function parse_struct(ps::ParseState, mutable)
-    kw = INSTANCE(ps)
+    kw = KEYWORD(ps)
     @catcherror ps sig = @default ps @closer ps block @closer ps ws parse_expression(ps)
-    block = EXPR{Block}(EXPR[], 0, 1:0, "")
-    @catcherror ps @default ps parse_block(ps, block)
-
-    # Construction
-    T = mutable == TRUE ? Tokens.TYPE : Tokens.IMMUTABLE
-    next(ps)
-    ret = EXPR{mutable == TRUE ? Mutable : Struct}(EXPR[kw, sig, block, INSTANCE(ps)], "")
-    return ret
+    blockargs = Any[]
+    @catcherror ps @default ps parse_block(ps, blockargs)
+    
+    return EXPR{mutable ? Mutable : Struct}(Any[kw, sig, EXPR{Block}(blockargs), KEYWORD(next(ps))])
 end

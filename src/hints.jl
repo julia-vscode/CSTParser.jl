@@ -64,7 +64,7 @@ function make_error(ps, range, code, text)
     ps.errored = true
     ps.error_code = code
     push!(ps.diagnostics, Diagnostic{code}(range, [], text))
-    return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, 0:-1, text)
+    return EXPR{ERROR}(Any[INSTANCE(ps)])
 end
 
 function error_unexpected(ps, tok)
@@ -92,6 +92,9 @@ function error_unexpected(ps, tok)
     elseif tok.kind == Tokens.RSQUARE
         return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedRSquare,
                          "Unexpected [")
+    elseif tok.kind == Tokens.ERROR
+        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedRSquare,
+                            "Unexpected token $(Tokenize.Tokens.untokenize(tok))")
     else
         error("Internal error")
     end
@@ -112,6 +115,6 @@ function error_token(ps, tok)
         return error_eof(ps, ps.t.endbyte+1, Diagnostics.UnexpectedCmdEnd, "Unexpected end of command")
     else
         ps.errored = true
-        return EXPR{ERROR}(EXPR[INSTANCE(ps)], 0, 0:-1, "Unknown error")
+        return EXPR{ERROR}(Any[INSTANCE(ps)])
     end
 end

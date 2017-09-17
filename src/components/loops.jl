@@ -1,13 +1,10 @@
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.FOR}})
-    # Parsing
-    kw = INSTANCE(ps)
+function parse_for(ps::ParseState)
+    kw = KEYWORD(ps)
     @catcherror ps ranges = @default ps parse_ranges(ps)
-    block = EXPR{Block}(EXPR[], 0, 1:0, "")
-    @catcherror ps @default ps parse_block(ps, block)
-    next(ps)
-    ret = EXPR{For}(EXPR[kw, ranges, block, INSTANCE(ps)], "")
-
-    return ret
+    
+    blockargs = Any[]
+    @catcherror ps @default ps parse_block(ps, blockargs)
+    return EXPR{For}(Any[kw, ranges, EXPR{Block}(blockargs), KEYWORD(next(ps))])
 end
 
 
@@ -16,18 +13,17 @@ function parse_ranges(ps::ParseState)
 
     if !is_range(arg)
         ps.errored = true
-        return EXPR{ERROR}(EXPR[], 0, 0:-1, "invalid iteration specification")
+        return EXPR{ERROR}(Any[])
     end
     if ps.nt.kind == Tokens.COMMA
-        arg = EXPR{Block}(EXPR[arg], "")
+        arg = EXPR{Block}(Any[arg])
         while ps.nt.kind == Tokens.COMMA
-            next(ps)
-            push!(arg, INSTANCE(ps))
+            push!(arg, PUNCTUATION(next(ps)))
 
             @catcherror ps nextarg = @closer ps comma @closer ps ws parse_expression(ps)
             if !is_range(nextarg)
                 ps.errored = true
-                return EXPR{ERROR}(EXPR[], 0, 0:-1, "invalid iteration specification")
+                return EXPR{ERROR}(Any[])
             end
             push!(arg, nextarg)
         end
@@ -37,16 +33,16 @@ end
 
 
 function is_range(x) false end
-function is_range(x::EXPR{BinarySyntaxOpCall})
-    if x.args[2] isa EXPR{OPERATOR{AssignmentOp,Tokens.EQ,false}}
+function is_range(x::BinarySyntaxOpCall)
+    if is_eq(x.op)
         return true
     else
         return false
     end
 end
 
-function is_range(x::EXPR{BinaryOpCall})
-    if x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.IN,false}} || x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ELEMENT_OF,false}}
+function is_range(x::BinaryOpCall)
+    if is_in(x.op) || is_elof(x.op)
         return true
     else
         return false
@@ -55,26 +51,16 @@ end
 
 
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.WHILE}})
-    # Parsing
-    kw = INSTANCE(ps)
+function parse_while(ps::ParseState)
+    kw = KEYWORD(ps)
     @catcherror ps cond = @default ps @closer ps ws parse_expression(ps)
-    block = EXPR{Block}(EXPR[], 0, 1:0, "")
-    @catcherror ps @default ps parse_block(ps, block)
-    next(ps)
+    blockargs = Any[]
+    @catcherror ps @default ps parse_block(ps, blockargs)
 
-    ret = EXPR{While}(EXPR[kw, cond, block, INSTANCE(ps)], "")
-
-    return ret
+    return EXPR{While}(Any[kw, cond, EXPR{Block}(blockargs), KEYWORD(next(ps))])
 end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.BREAK}})
-    return EXPR{Break}(EXPR[INSTANCE(ps)], "")
-end
 
-function parse_kw(ps::ParseState, ::Type{Val{Tokens.CONTINUE}})
-    return EXPR{Continue}(EXPR[INSTANCE(ps)], "")
-end
 
 
 """
@@ -84,19 +70,17 @@ Having hit `for` not at the beginning of an expression return a generator.
 Comprehensions are parsed as SQUAREs containing a generator.
 """
 function parse_generator(ps::ParseState, ret)
-    next(ps)
-    kw = INSTANCE(ps)
-    ret = EXPR{Generator}(EXPR[ret, kw], "")
+    kw = KEYWORD(next(ps))
+    ret = EXPR{Generator}(Any[ret, kw])
     @catcherror ps ranges = @closer ps paren @closer ps square parse_ranges(ps)
 
     if ps.nt.kind == Tokens.IF
         if ranges isa EXPR{Block}
-            ranges = EXPR{Filter}(EXPR[ranges.args...], "")
+            ranges = EXPR{Filter}(ranges.args)
         else
-            ranges = EXPR{Filter}(EXPR[ranges], "")
+            ranges = EXPR{Filter}(Any[ranges])
         end
-        next(ps)
-        unshift!(ranges, INSTANCE(ps))
+        unshift!(ranges, KEYWORD(next(ps)))
         @catcherror ps cond = @closer ps range @closer ps paren parse_expression(ps)
         unshift!(ranges, cond)
         push!(ret, ranges)
@@ -108,9 +92,8 @@ function parse_generator(ps::ParseState, ret)
         end
     end
 
-    # This should reverse order of iterators
     if ret.args[1] isa EXPR{Generator} || ret.args[1] isa EXPR{Flatten}
-        ret = EXPR{Flatten}(EXPR[ret], "")
+        ret = EXPR{Flatten}(Any[ret])
     end
 
     return ret

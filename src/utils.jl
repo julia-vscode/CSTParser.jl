@@ -10,7 +10,7 @@ function closer(ps::ParseState)
         ps.nt.kind == Tokens.LSQUARE ||
         (ps.nt.kind == Tokens.STRING && isemptyws(ps.ws)) ||
         ((ps.nt.kind == Tokens.RPAREN || ps.nt.kind == Tokens.RSQUARE) && isidentifier(ps.nt))  
-    )) || 
+    )) ||
     (ps.nt.kind == Tokens.COMMA && ps.closer.precedence > 0) ||
     ps.nt.kind == Tokens.ENDMARKER ||
     (ps.closer.comma && iscomma(ps.nt)) ||
@@ -83,6 +83,72 @@ macro precedence(ps, prec, body)
     end
 end
 
+
+# Closer_TMP and ancillary functions help reduce code generation
+struct Closer_TMP
+    newline::Bool
+    semicolon::Bool
+    inmacro::Bool
+    tuple::Bool
+    comma::Bool
+    insquare::Bool
+    range::Bool
+    ifelse::Bool
+    ifop::Bool
+    ws::Bool
+    wsop::Bool
+    precedence::Int
+end
+
+@noinline function create_tmp(c::Closer)
+    Closer_TMP(
+        c.newline,
+        c.semicolon,
+        c.inmacro,
+        c.tuple,
+        c.comma,
+        c.insquare,
+        c.range,
+        c.ifelse,
+        c.ifop,
+        c.ws,
+        c.wsop,
+        c.precedence
+    )
+end
+
+@noinline function update_from_tmp!(c::Closer, tmp::Closer_TMP)
+    c.newline = tmp.newline
+    c.semicolon = tmp.semicolon
+    c.inmacro = tmp.inmacro
+    c.tuple = tmp.tuple
+    c.comma = tmp.comma
+    c.insquare = tmp.insquare
+    c.range = tmp.range
+    c.ifelse = tmp.ifelse
+    c.ifop = tmp.ifop
+    c.ws = tmp.ws
+    c.wsop = tmp.wsop
+    c.precedence = tmp.precedence
+end
+
+
+@noinline function update_to_default!(c::Closer)
+    c.newline = true
+    c.semicolon = true
+    c.inmacro = false
+    c.tuple = false
+    c.comma = false
+    c.insquare = false
+    c.range = false
+    c.ifelse = false
+    c.ifop = false
+    c.ws = false
+    c.wsop = false
+    c.precedence = -1
+end
+
+
 """
     @default ps body
 
@@ -90,54 +156,10 @@ Parses the next expression using default closure rules.
 """
 macro default(ps, body)
     quote
-        local tmp1 = $(esc(ps)).closer.newline
-        local tmp2 = $(esc(ps)).closer.semicolon
-        local tmp3 = $(esc(ps)).closer.inmacro
-        local tmp4 = $(esc(ps)).closer.tuple
-        local tmp5 = $(esc(ps)).closer.comma
-        local tmp6 = $(esc(ps)).closer.insquare
-        # local tmp7 = $(esc(ps)).closer.brace
-        local tmp8 = $(esc(ps)).closer.range
-        local tmp9 = $(esc(ps)).closer.block
-        local tmp10 = $(esc(ps)).closer.ifelse
-        local tmp11 = $(esc(ps)).closer.ifop
-        # local tmp12 = $(esc(ps)).closer.trycatch
-        local tmp13 = $(esc(ps)).closer.ws
-        local tmp14 = $(esc(ps)).closer.wsop
-        local tmp15 = $(esc(ps)).closer.precedence
-        $(esc(ps)).closer.newline = true
-        $(esc(ps)).closer.semicolon = true
-        $(esc(ps)).closer.inmacro = false
-        $(esc(ps)).closer.tuple = false
-        $(esc(ps)).closer.comma = false
-        $(esc(ps)).closer.insquare = false
-        # $(esc(ps)).closer.brace = false
-        # $(esc(ps)).closer.square = false
-        $(esc(ps)).closer.range = false
-        $(esc(ps)).closer.ifelse = false
-        $(esc(ps)).closer.ifop = false
-        # $(esc(ps)).closer.trycatch = false
-        $(esc(ps)).closer.ws = false
-        $(esc(ps)).closer.wsop = false
-        $(esc(ps)).closer.precedence = -1
-
+        TMP = create_tmp($(esc(ps)).closer)
+        update_to_default!($(esc(ps)).closer)
         out = $(esc(body))
-
-        $(esc(ps)).closer.newline = tmp1
-        $(esc(ps)).closer.semicolon = tmp2
-        $(esc(ps)).closer.inmacro = tmp3
-        $(esc(ps)).closer.tuple = tmp4
-        $(esc(ps)).closer.comma = tmp5
-        $(esc(ps)).closer.insquare = tmp6
-        # $(esc(ps)).closer.brace = tmp7
-        $(esc(ps)).closer.range = tmp8
-        $(esc(ps)).closer.block = tmp9
-        $(esc(ps)).closer.ifelse = tmp10
-        $(esc(ps)).closer.ifop = tmp11
-        # $(esc(ps)).closer.trycatch = tmp12
-        $(esc(ps)).closer.ws = tmp13
-        $(esc(ps)).closer.wsop = tmp14
-        $(esc(ps)).closer.precedence = tmp15
+        update_from_tmp!($(esc(ps)).closer, TMP)
         out
     end
 end
@@ -151,7 +173,7 @@ macro catcherror(ps, body)
     quote
         $(esc(body))
         if $(esc(ps)).errored
-            return EXPR{ERROR}(EXPR[INSTANCE($(esc(ps)))], 0, 0:-1, "Unknown error")
+            return EXPR{ERROR}(Any[INSTANCE($(esc(ps)))], 0, 0:-1)
         end
     end
 end
@@ -178,10 +200,15 @@ ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
                           t.kind == Tokens.AT_SIGN
 
 isstring(x) = false
-isstring(x::EXPR{T}) where T <: Union{StringH, LITERAL{Tokens.STRING},LITERAL{Tokens.TRIPLE_STRING}} = true
+isstring(x::EXPR{StringH}) = true
+isstring(x::LITERAL) = x.kind == Tokens.STRING || x.kind == Tokens.TRIPLE_STRING
+is_integer(x) = x isa LITERAL && x.kind == Tokens.INTEGER
+is_float(x) = x isa LITERAL && x.kind == Tokens.FLOAT
+is_number(x) = x isa LITERAL && (x.kind == Tokens.INTEGER || x.kind == Tokens.FLOAT)
+is_nothing(x) = x isa LITERAL && x.kind == Tokens.NOTHING
 
-isajuxtaposition(ps::ParseState, ret) = ((ret isa EXPR{LITERAL{Tokens.INTEGER}} || ret isa EXPR{LITERAL{Tokens.FLOAT}}) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || (
-        (ret isa EXPR{UnarySyntaxOpCall} && ret.args[2] isa EXPR{OPERATOR{16,Tokens.PRIME,false}} && ps.nt.kind == Tokens.IDENTIFIER) ||
+isajuxtaposition(ps::ParseState, ret) = (is_number(ret) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || (
+        (ret isa UnarySyntaxOpCall && is_prime(ret.arg2) && ps.nt.kind == Tokens.IDENTIFIER) ||
         ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
         ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING))) ||
         (isstring(ret) && ps.nt.kind == Tokens.IDENTIFIER && ps.ws.kind == EmptyWS)
@@ -244,7 +271,7 @@ end
 
 function flisp_parse(stream::IO; greedy::Bool = true, raise::Bool = true)
     pos = position(stream)
-    ex, Δ = flisp_parse(readstring(stream), 1, greedy = greedy, raise = raise)
+    ex, Δ = flisp_parse(read(stream, String), 1, greedy = greedy, raise = raise)
     seek(stream, pos + Δ - 1)
     return ex
 end
@@ -308,15 +335,15 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                 try
                     # print(N)
                     print("\r", rpad(string(N), 5), rpad(string(signif(fail / N * 100, 3)), 8), rpad(string(signif(err / N * 100, 3)), 8), rpad(string(signif(neq / N * 100, 3)), 8))
-                    str = readstring(file)
+                    str = read(file, String)
                     ps = ParseState(str)
                     io = IOBuffer(str)
                     x, ps = parse(ps, true)
                     sp = check_span(x)
-                    if length(x.args) > 0 && x.args[1] isa EXPR{LITERAL{nothing}}
+                    if length(x.args) > 0 && is_nothing(x.args[1])
                         shift!(x.args)
                     end
-                    if length(x.args) > 0 && x.args[end] isa EXPR{LITERAL{nothing}}
+                    if length(x.args) > 0 && is_nothing(x.args[end])
                         pop!(x.args)
                     end
                     x0 = Expr(x)
@@ -429,7 +456,61 @@ Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
 function check_span(x::EXPR{StringH}, neq = []) end
-function check_span(x, neq = [])
+function check_span(x::T, neq = []) where T <: Union{IDENTIFIER,LITERAL,OPERATOR,KEYWORD,PUNCTUATION} neq end
+
+function check_span(x::UnaryOpCall, neq = []) 
+    check_span(x.op)
+    check_span(x.arg)
+    if x.op.fullspan + x.arg.fullspan != x.fullspan
+        push!(neq, x)
+    end
+    neq
+end
+function check_span(x::UnarySyntaxOpCall, neq = []) 
+    check_span(x.arg1)
+    check_span(x.arg2)
+    if x.arg1.fullspan + x.arg2.fullspan != x.fullspan
+        push!(neq, x)
+    end
+    neq
+end
+
+function check_span(x::T, neq = []) where T <: Union{BinaryOpCall,BinarySyntaxOpCall}
+    check_span(x.arg1)
+    check_span(x.op)
+    check_span(x.arg2)
+    if x.arg1.fullspan + x.op.fullspan + x.arg2.fullspan != x.fullspan
+        push!(neq, x)
+    end
+    neq
+end
+
+function check_span(x::WhereOpCall, neq = [])
+    check_span(x.arg1)
+    check_span(x.op)
+    for a in x.args
+        check_span(a)
+    end
+    if x.arg1.fullspan + x.op.fullspan + sum(a.fullspan for a in x.args) != x.fullspan
+        push!(neq, x)
+    end
+    neq
+end
+
+function check_span(x::ConditionalOpCall, neq = [])
+    check_span(x.cond)
+    check_span(x.op1)
+    check_span(x.arg1)
+    check_span(x.op2)
+    check_span(x.arg2)
+    if x.cond.fullspan + x.op1.fullspan + x.arg1.fullspan + x.op2.fullspan + x.arg2.fullspan != x.fullspan
+        push!(neq, x)
+    end
+    neq
+end
+
+
+function check_span(x::EXPR, neq = [])
     s = 0
     for a in x.args
         check_span(a, neq)
@@ -444,10 +525,10 @@ end
 function speed_test()
     dir = dirname(Base.find_source_file("base.jl"))
     println("speed test : ", @timed(for i = 1:5
-    parse(readstring(joinpath(dir, "inference.jl")), true);
-    parse(readstring(joinpath(dir, "random.jl")), true);
-    parse(readstring(joinpath(dir, "show.jl")), true);
-    parse(readstring(joinpath(dir, "abstractarray.jl")), true);
+    parse(read(joinpath(dir, "inference.jl"), String), true);
+    parse(read(joinpath(dir, "random.jl"), String), true);
+    parse(read(joinpath(dir, "show.jl"), String), true);
+    parse(read(joinpath(dir, "abstractarray.jl"), String), true);
 end)[2])
 end
 
@@ -460,7 +541,7 @@ function check_reformat()
     fs = filter(f -> endswith(f, ".jl"), readdir())
     for (i, f) in enumerate(fs)
         f == "deprecated.jl" && continue
-        str = readstring(f)
+        str = read(f, String)
         x, ps = parse(ParseState(str), true);
         cnt = 0
         for i = 1:length(x) - 1
@@ -479,23 +560,127 @@ end
 is_func_call(x) = false
 is_func_call(x::EXPR) = false
 is_func_call(x::EXPR{Call}) = true
-is_func_call(x::EXPR{UnaryOpCall}) = true
-function is_func_call(x::EXPR{BinarySyntaxOpCall})#::Bool
-    if length(x.args) > 1 && (x.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}} || x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}})
-        return is_func_call(x.args[1])
-    end
-    return false
-end
-
-
-function get_last_token(x::CSTParser.EXPR)
-    if isempty(x.args)
-        return x
+is_func_call(x::UnaryOpCall) = true
+function is_func_call(x::BinarySyntaxOpCall)
+    if is_decl(x.op)
+        return is_func_call(x.arg1)
     else
-        return get_last_token(last(x.args))
+        return false
     end
 end
+function is_func_call(x::WhereOpCall)
+    return is_func_call(x.arg1)
+end
 
-function trailing_ws_length(x::CSTParser.EXPR)
+function trailing_ws_length(x)
     x.fullspan - length(x.span)
+end
+
+
+
+# Unrelated
+function collect_calls(M::Module, calls = [])
+    for n in names(M, true, true)
+        !isdefined(M, n) && continue
+        x = getfield(M, n)
+        if x isa Function
+            t = typeof(x)
+            if t.name.module == M
+                collect_calls(x,calls)
+            end
+        end
+    end
+    calls
+end
+
+function collect_calls(f::Function, calls = [])
+    for m in methods(f)
+        try
+        spec = m.specializations
+        spec == nothing && continue
+        if spec isa TypeMapEntry
+            while true
+                push!(calls, spec.sig)
+                spec = spec.next
+                spec == nothing && break
+            end
+        elseif spec isa TypeMapLevel
+            spec = spec.arg1[1].arg1
+            for s in spec
+                push!(calls, s.sig)
+            end
+        end
+        catch
+            println(m)
+        end
+    end
+    calls
+end
+
+is_exor(x) = x isa OPERATOR && x.kind == Tokens.EX_OR && x.dot == false
+is_decl(x) = x isa OPERATOR && x.kind == Tokens.DECLARATION
+is_issubt(x) = x isa OPERATOR && x.kind == Tokens.ISSUBTYPE
+is_issupt(x) = x isa OPERATOR && x.kind == Tokens.ISSUPERTYPE
+is_and(x) = x isa OPERATOR && x.kind == Tokens.AND && x.dot == false
+is_not(x) = x isa OPERATOR && x.kind == Tokens.NOT && x.dot == false
+is_plus(x) = x isa OPERATOR && x.kind == Tokens.PLUS && x.dot == false
+is_minus(x) = x isa OPERATOR && x.kind == Tokens.MINUS && x.dot == false
+is_star(x) = x isa OPERATOR && x.kind == Tokens.STAR && x.dot == false
+is_eq(x) = x isa OPERATOR && x.kind == Tokens.EQ && x.dot == false
+is_dot(x) = x isa OPERATOR && x.kind == Tokens.DOT
+is_ddot(x) = x isa OPERATOR && x.kind == Tokens.DDOT
+is_dddot(x) = x isa OPERATOR && x.kind == Tokens.DDDOT
+is_pairarrow(x) = x isa OPERATOR && x.kind == Tokens.PAIR_ARROW && x.dot == false
+is_in(x) = x isa OPERATOR && x.kind == Tokens.IN && x.dot == false
+is_elof(x) = x isa OPERATOR && x.kind == Tokens.ELEMENT_OF && x.dot == false
+is_colon(x) = x isa OPERATOR && x.kind == Tokens.COLON
+is_prime(x) = x isa OPERATOR && x.kind == Tokens.PRIME 
+is_cond(x) = x isa OPERATOR && x.kind == Tokens.CONDITIONAL
+is_where(x) = x isa OPERATOR && x.kind == Tokens.WHERE
+is_anon_func(x) = x isa OPERATOR && x.kind == Tokens.ANON_FUNC
+
+is_comma(x) = x isa PUNCTUATION && x.kind == Tokens.COMMA
+is_lparen(x) = x isa PUNCTUATION && x.kind == Tokens.LPAREN
+is_rparen(x) = x isa PUNCTUATION && x.kind == Tokens.RPAREN
+
+Base.start(x::EXPR) = 1
+Base.next(x::EXPR, s) = x.args[s], s + 1
+Base.done(x::EXPR, s) = s > length(x.args)
+
+Base.start(x::UnaryOpCall) = 1
+Base.next(x::UnaryOpCall, s) = s == 1 ? x.op : x.arg , s + 1
+Base.done(x::UnaryOpCall, s) = s > 2
+
+Base.start(x::UnarySyntaxOpCall) = 1
+Base.next(x::UnarySyntaxOpCall, s) = s == 1 ? x.arg1 : x.arg2 , s + 1
+Base.done(x::UnarySyntaxOpCall, s) = s > 2
+
+Base.start(x::BinarySyntaxOpCall) = 1
+Base.next(x::BinarySyntaxOpCall, s) = getfield(x, s) , s + 1
+Base.done(x::BinarySyntaxOpCall, s) = s > 3
+
+Base.start(x::BinaryOpCall) = 1
+Base.next(x::BinaryOpCall, s) = getfield(x, s) , s + 1
+Base.done(x::BinaryOpCall, s) = s > 3
+
+Base.start(x::WhereOpCall) = 1
+function Base.next(x::WhereOpCall, s) 
+    if s == 1
+        return x.arg1, 2
+    elseif s == 2
+        return x.op, 3
+    else
+        return x.args[s - 2] , s + 1
+    end
+end
+Base.done(x::WhereOpCall, s) = s > 2 + length(x.args)
+
+Base.start(x::ConditionalOpCall) = 1
+Base.next(x::ConditionalOpCall, s) = getfield(x, s) , s + 1
+Base.done(x::ConditionalOpCall, s) = s > 5
+
+for t in (CSTParser.IDENTIFIER, CSTParser.OPERATOR, CSTParser.LITERAL, CSTParser.PUNCTUATION, CSTParser.KEYWORD)
+    Base.start(x::t) = 1
+    Base.next(x::t, s) = x, s + 1
+    Base.done(x::t, s) = true
 end

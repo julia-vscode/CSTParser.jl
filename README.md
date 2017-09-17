@@ -33,7 +33,7 @@ Parser.SyntaxNode
     Parser.KEYWORD{K}
     Parser.LITERAL{K}
     Parser.OPERATOR{P,K,dot}
-    Parser.PUNCTUATION{K}
+    Parser.PUNCTUATION
   Parser.QUOTENODE
 ```
 

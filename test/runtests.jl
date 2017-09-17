@@ -3,6 +3,6 @@ using Base.Test
 
 import CSTParser: parse, remlineinfo!, span, flisp_parse
 
-include("diagnostics.jl")
 include("parser.jl")
+# include("diagnostics.jl")
 CSTParser.check_base()

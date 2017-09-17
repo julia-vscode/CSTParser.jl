@@ -4,23 +4,28 @@
 Get the IDENTIFIER name of a variable, possibly in the presence of 
 type declaration operators.
 """
-function get_id(x::EXPR{BinarySyntaxOpCall})
-    if x.args[2] isa EXPR{OPERATOR{ComparisonOp,Tokens.ISSUBTYPE,false}} || x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}} || x.args[2] isa EXPR{OPERATOR{WhereOp,Tokens.WHERE,false}}
-        return get_id(x.args[1])
+function get_id(x::BinarySyntaxOpCall)
+    if is_issubt(x.op) || is_decl(x.op)
+        return get_id(x.arg1)
     else
         return x
     end
 end
 
-function get_id(x::EXPR{UnarySyntaxOpCall})
-    if x.args[2] isa EXPR{OPERATOR{DddotOp,Tokens.DDDOT,false}}
-        return get_id(x.args[1])
+function get_id(x::WhereOpCall)
+    return get_id(x.arg1)
+end
+
+function get_id(x::UnarySyntaxOpCall)
+    if is_dddot(x.arg2)
+        return get_id(x.arg1)
     else
         return x
     end
 end
 
 get_id(x::EXPR{Curly}) = get_id(x.args[1])
+get_id(x::EXPR{InvisBrackets}) = get_id(x.args[2])
 get_id(x) = x
 
 
@@ -31,9 +36,9 @@ get_id(x) = x
 Basic inference in the presence of type declarations.
 """
 get_t(x) = :Any
-function get_t(x::EXPR{BinarySyntaxOpCall}) 
-    if x.args[2] isa EXPR{OPERATOR{DeclarationOp,Tokens.DECLARATION,false}}
-        return Expr(x.args[3])
+function get_t(x::BinarySyntaxOpCall) 
+    if is_decl(x.op)
+        return Expr(x.arg2)
     else
         return :Any
     end
@@ -41,14 +46,23 @@ end
 
 
 infer_t(x) = :Any
-infer_t(x::EXPR{LITERAL{Tokens.INTEGER}}) = :Int
-infer_t(x::EXPR{LITERAL{Tokens.FLOAT}}) = :Float64
-infer_t(x::EXPR{LITERAL{Tokens.STRING}}) = :String
-infer_t(x::EXPR{LITERAL{Tokens.TRIPLE_STRING}}) = :String
-infer_t(x::EXPR{LITERAL{Tokens.CHAR}}) = :Char
-infer_t(x::EXPR{LITERAL{Tokens.TRUE}}) = :Bool
-infer_t(x::EXPR{LITERAL{Tokens.FALSE}}) = :Bool
-infer_t(x::EXPR{LITERAL{Tokens.CMD}}) = :Cmd
+function infer_t(x::LITERAL)
+    if x.kind == Tokens.INTEGER
+        return :Int
+    elseif x.kind == Tokens.FLOAT
+        return :Float64
+    elseif x.kind == Tokens.STRING
+        return :String
+    elseif x.kind == Tokens.TRIPLE_STRING
+        return :String
+    elseif x.kind == Tokens.CHAR
+        return :Char
+    elseif x.kind == Tokens.TRUE || x.kind == Tokens.FALSE
+        return :Bool
+    elseif x.kind == Tokens.CMD
+        return :Cmd
+    end
+end
 
 infer_t(x::EXPR{Vect}) = :(Array{Any,1})
 infer_t(x::EXPR{Vcat}) = :(Array{Any,N})

@@ -1,10 +1,10 @@
-import Tokenize.Lexers: peekchar, prevchar, readchar, iswhitespace, emit, emit_error, backup!, accept_batch, eof
+import Tokenize.Lexers: peekchar, readchar, iswhitespace, emit, emit_error,  accept_batch, eof
 
-const EmptyWS = Tokens.begin_delimiters
-const SemiColonWS = Tokens.end_delimiters
-const NewLineWS = Tokens.begin_literal
-const WS = Tokens.end_literal
-const InvisibleBrackets = Tokens.begin_invisible_keywords
+const EmptyWS = Tokens.EMPTY_WS
+const SemiColonWS = Tokens.SEMICOLON_WS
+const NewLineWS = Tokens.NEWLINE_WS
+const WS = Tokens.WS
+const InvisibleBrackets = Tokens.INVISIBLE_BRACKETS
 const EmptyWSToken = Token(EmptyWS, (0, 0), (0, 0), -1, -1, "")
 
 """
@@ -47,7 +47,7 @@ The parser's interface with `Tokenize.Lexers.Lexer`. This alters the output of `
 + Keeps track of the previous, current and next tokens.
 """
 mutable struct ParseState
-    l::Lexer
+    l::Lexer{Base.AbstractIOBuffer{Array{UInt8, 1}},Tokenize.Tokens.Token}
     done::Bool
     lt::Token
     t::Token
@@ -92,11 +92,6 @@ function next(ps::ParseState)
 
 
     ps.nnt, ps.done  = next(ps.l, ps.done)
-    # Reject new kws for now
-    # if ps.nnt.kind == Tokens.STRUCT || ps.nnt.kind == Tokens.STRUCT || ps.nnt.kind == Tokens.MUTABLE
-    #     ps.nnt = Token(Tokens.IDENTIFIER, ps.nnt.startpos, ps.nnt.endpos, ps.nnt.startbyte, ps.nnt.endbyte, ps.nnt.val)
-    # end
-
     # Handle dotted operators
     if ps.nt.kind == Tokens.DOT && ps.nws.kind == EmptyWS && isoperator(ps.nnt) && !non_dotted_op(ps.nnt)
         # ps.nt = ps.nnt
@@ -167,24 +162,18 @@ end
 
 function read_comment(l::Lexer)
     if peekchar(l) != '='
-        c = readchar(l)
-        if c == '\n' || eof(c)
-            backup!(l)
-            return true
-        end
         while true
-            c = readchar(l)
-            if c == '\n' || eof(c)
-                backup!(l)
+            pc = peekchar(l)
+            if pc == '\n' || eof(pc)
                 return true
             end
+            readchar(l)
         end
     else
         c = readchar(l) # consume the '='
         n_start, n_end = 1, 0
         while true
             if eof(c)
-                emit_error(l, Tokens.EOF_MULTICOMMENT)
                 return false
             end
             nc = readchar(l)
@@ -194,12 +183,11 @@ function read_comment(l::Lexer)
                 n_end += 1
             end
             if n_start == n_end
-                return false
+                return true
             end
             c = nc
         end
     end
 end
-
 
 isemptyws(t::Token) = t.kind == EmptyWS
