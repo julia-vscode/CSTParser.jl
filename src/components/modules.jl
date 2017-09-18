@@ -12,7 +12,7 @@ function parse_module(ps::ParseState)
         push!(block, a)
     end
 
-    return EXPR{(kw isa KEYWORD{Tokens.MODULE} ? ModuleH : BareModule)}(Any[kw, arg, block, KEYWORD(next(ps))])
+    return EXPR{(is_module(kw) ? ModuleH : BareModule)}(Any[kw, arg, block, KEYWORD(next(ps))])
 end
 
 function parse_dot_mod(ps::ParseState, is_colon = false)
@@ -73,8 +73,8 @@ end
 
 function parse_imports(ps::ParseState)
     kw = KEYWORD(ps)
-    kwt = kw isa KEYWORD{Tokens.IMPORT} ? Import :
-          kw isa KEYWORD{Tokens.IMPORTALL} ? ImportAll :
+    kwt = is_import(kw) ? Import :
+          is_importall(kw) ? ImportAll :
           Using
     tk = ps.t.kind
 

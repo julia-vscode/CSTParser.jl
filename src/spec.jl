@@ -60,13 +60,12 @@ struct OPERATOR
 end
 OPERATOR(ps::ParseState) = OPERATOR(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), ps.t.kind, ps.dot)
 
-struct KEYWORD{K}
+struct KEYWORD
+    kind::Tokenize.Tokens.Kind
     fullspan::Int
     span::UnitRange{Int}
-    KEYWORD{K}(fullspan::Int,span::UnitRange{Int}) where K = new{K}(fullspan, span)
-    KEYWORD{K}() where K = new{K}(0, 1:0)
 end
-KEYWORD(ps::ParseState) = KEYWORD{ps.t.kind}(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
+KEYWORD(ps::ParseState) = KEYWORD(ps.t.kind, ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
 
 
 struct LITERAL
@@ -335,4 +334,5 @@ Quotenode(x) = EXPR{Quotenode}(Any[x])
 const TRUE = LITERAL(0, 1:0, "", Tokens.TRUE)
 const FALSE = LITERAL(0, 1:0, "", Tokens.FALSE)
 const NOTHING = LITERAL(0, 1:0, "", Tokens.NOTHING)
+
 const GlobalRefDOC = EXPR{GlobalRefDoc}(Any[], 0, 1:0)
