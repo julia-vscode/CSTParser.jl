@@ -2,9 +2,15 @@ import Base: Expr
 
 # Terminals
 Expr(x::IDENTIFIER) = Symbol(normalize_julia_identifier(x.val))
-Expr(x::KEYWORD{T}) where {T} = Symbol(lowercase(string(T)))
-Expr(x::KEYWORD{Tokens.BREAK}) = Expr(:break)
-Expr(x::KEYWORD{Tokens.CONTINUE}) = Expr(:continue)
+function Expr(x::KEYWORD)
+    if x.kind == Tokens.BREAK
+        return Expr(:break)
+    elseif x.kind == Tokens.CONTINUE
+        return Expr(:continue)
+    else
+        return Symbol(lowercase(string(x.kind)))
+    end
+end
 Expr(x::OPERATOR) = x.dot ? Symbol(:., UNICODE_OPS_REVERSE[x.kind]) : UNICODE_OPS_REVERSE[x.kind]
 Expr(x::PUNCTUATION)= string(x.kind)
 
@@ -678,7 +684,7 @@ end
 function Expr(x::EXPR{Filter})
     ret = Expr(:filter)
     for a in x.args
-        if !(a isa KEYWORD{Tokens.IF} || a isa PUNCTUATION)
+        if !(is_if(a) || a isa PUNCTUATION)
             push!(ret.args, convert_iter_assign(a))
         end
     end

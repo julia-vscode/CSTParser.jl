@@ -617,6 +617,7 @@ function collect_calls(f::Function, calls = [])
     calls
 end
 
+# OPERATOR
 is_exor(x) = x isa OPERATOR && x.kind == Tokens.EX_OR && x.dot == false
 is_decl(x) = x isa OPERATOR && x.kind == Tokens.DECLARATION
 is_issubt(x) = x isa OPERATOR && x.kind == Tokens.ISSUBTYPE
@@ -639,9 +640,17 @@ is_cond(x) = x isa OPERATOR && x.kind == Tokens.CONDITIONAL
 is_where(x) = x isa OPERATOR && x.kind == Tokens.WHERE
 is_anon_func(x) = x isa OPERATOR && x.kind == Tokens.ANON_FUNC
 
+# PUNCTUATION
 is_comma(x) = x isa PUNCTUATION && x.kind == Tokens.COMMA
 is_lparen(x) = x isa PUNCTUATION && x.kind == Tokens.LPAREN
 is_rparen(x) = x isa PUNCTUATION && x.kind == Tokens.RPAREN
+
+# KEYWORD
+is_if(x) = x isa KEYWORD && x.kind == Tokens.IF
+is_module(x) = x isa KEYWORD && x.kind == Tokens.MODULE
+is_import(x) = x isa KEYWORD && x.kind == Tokens.IMPORT
+is_importall(x) = x isa KEYWORD && x.kind == Tokens.IMPORTALL
+
 
 Base.start(x::EXPR) = 1
 Base.next(x::EXPR, s) = x.args[s], s + 1

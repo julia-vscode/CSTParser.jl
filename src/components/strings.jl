@@ -159,7 +159,7 @@ end
 
 
 adjustspan(x::IDENTIFIER) = IDENTIFIER(length(x.span), x.span, x.val)
-adjustspan(x::KEYWORD{T}) where {T} = KEYWORD{T}(length(x.span), x.span)
+adjustspan(x::KEYWORD)= KEYWORD(x.kind, length(x.span), x.span)
 adjustspan(x::OPERATOR) = OPERATOR(length(x.span), x.span, x.kind, x.dot)
 adjustspan(x::LITERAL) = LITERAL(length(x.span), x.span, x.val, x.kind)
 adjustspan(x::PUNCTUATION) = PUNCTUATION(x.kind, length(x.span), x.span)
