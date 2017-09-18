@@ -1,5 +1,6 @@
 function parse_module(ps::ParseState)
     kw = KEYWORD(ps)
+    @assert kw.kind == Tokens.MODULE || kw.kind == Tokens.BAREMODULE # work around julia issue #23766
     if ps.nt.kind == Tokens.IDENTIFIER
         arg = IDENTIFIER(next(ps))
     else

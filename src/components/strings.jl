@@ -66,10 +66,11 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
 
     # there are interpolations in the string
     if prefixed != false || iscmd
-        val = istrip ? ps.t.val[4:end - 3] : ps.t.val[2:end - 1]
+        t_str = val(ps.t, ps)
+        _val = istrip ? t_str[4:end - 3] : t_str[2:end - 1]
         expr = LITERAL(sfullspan, sspan,
-            iscmd ? replace(val, "\\`", "`") :
-                    replace(val, "\\\"", "\""), ps.t.kind)
+            iscmd ? replace(_val, "\\`", "`") :
+                    replace(_val, "\\\"", "\""), ps.t.kind)
         if istrip
             adjust_lcp(expr)
             ret = EXPR{StringH}(Any[expr], sfullspan, sspan)
@@ -78,7 +79,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         end
     else
         ret = EXPR{StringH}(Any[], sfullspan, sspan)
-        input = IOBuffer(ps.t.val)
+        input = IOBuffer(val(ps.t, ps))
         startbytes = istrip ? 3 : 1
         seek(input, startbytes)
         b = IOBuffer()

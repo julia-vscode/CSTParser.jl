@@ -37,16 +37,16 @@ precedence(kind::Tokens.Kind) = kind == Tokens.DDDOT ? DddotOp :
                        kind == Tokens.PRIME ?             16 : 20
 
 precedence(x) = 0
-precedence(x::Token) = precedence(x.kind)
+precedence(x::AbstractToken) = precedence(x.kind)
 precedence(x::OPERATOR) = precedence(x.kind)
 
 
 isoperator(kind) = Tokens.begin_ops < kind < Tokens.end_ops
-isoperator(t::Token) = isoperator(t.kind)
+isoperator(t::AbstractToken) = isoperator(t.kind)
 
 
 isunaryop(op::OPERATOR) = isunaryop(op.kind)
-isunaryop(t::Token) = isunaryop(t.kind)
+isunaryop(t::AbstractToken) = isunaryop(t.kind)
 
 isunaryop(kind) = kind == Tokens.ISSUBTYPE ||
                   kind == Tokens.ISSUPERTYPE ||
@@ -64,7 +64,7 @@ isunaryop(kind) = kind == Tokens.ISSUBTYPE ||
                   kind == Tokens.COLON
 
 
-isunaryandbinaryop(t::Token) = isunaryandbinaryop(t.kind)
+isunaryandbinaryop(t::AbstractToken) = isunaryandbinaryop(t.kind)
 isunaryandbinaryop(kind) = kind == Tokens.PLUS ||
                            kind == Tokens.MINUS ||
                            kind == Tokens.EX_OR ||
@@ -76,7 +76,7 @@ isunaryandbinaryop(kind) = kind == Tokens.PLUS ||
                            kind == Tokens.COLON
 
 isbinaryop(op::OPERATOR) = isbinaryop(op.kind)
-isbinaryop(t::Token) = isbinaryop(t.kind)
+isbinaryop(t::AbstractToken) = isbinaryop(t.kind)
 isbinaryop(kind) = isoperator(kind) &&
                     !(kind == Tokens.SQUARE_ROOT ||
                     kind == Tokens.CUBE_ROOT ||
@@ -84,9 +84,9 @@ isbinaryop(kind) = isoperator(kind) &&
                     kind == Tokens.NOT ||
                     kind == Tokens.NOT_SIGN)
 
-isassignment(t::Token) = Tokens.begin_assignments < t.kind < Tokens.end_assignments
+isassignment(t::AbstractToken) = Tokens.begin_assignments < t.kind < Tokens.end_assignments
 
-function non_dotted_op(t::Token)
+function non_dotted_op(t::AbstractToken)
     k = t.kind
     return (k == Tokens.COLON_EQ ||
             k == Tokens.PAIR_ARROW ||
@@ -153,7 +153,7 @@ function parse_unary(ps::ParseState, op)
         return parse_unary_colon(ps, op)
     elseif (is_plus(op) || is_minus(op)) && (ps.nt.kind ==  Tokens.INTEGER || ps.nt.kind == Tokens.FLOAT) && isemptyws(ps.ws)
         arg = LITERAL(next(ps))
-        return LITERAL(op.fullspan + arg.fullspan, first(arg.span):(last(arg.span) + length(op.span)), string(is_plus(op) ? "+" : "-" , ps.t.val), ps.t.kind)
+        return LITERAL(op.fullspan + arg.fullspan, first(arg.span):(last(arg.span) + length(op.span)), string(is_plus(op) ? "+" : "-" , val(ps.t, ps)), ps.t.kind)
         return arg
     end
 

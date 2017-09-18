@@ -14,12 +14,24 @@ randop() = rand(["-->", "→",
                  "::",
                  ".", "->"])
 
-function test_expr(str)
+test_expr_broken(str) = test_expr(str, false)
+
+function test_expr(str, show_data = true)
     x, ps = CSTParser.parse(ParseState(str))
 
     x0 = Expr(x)
     x1 = remlineinfo!(flisp_parse(str))
-    !ps.errored && x0 == x1# && isempty(span(x))
+    if ps.errored || x0 != x1
+        if show_data
+            println("Mismatch between flisp and CSTParser when parsing string $str")
+            println("ParserState:\n $ps\n")
+            println("CSTParser Expr:\n $x\n")
+            println("Converted CSTParser Expr:\n $x0\n")
+            println("Base EXPR:\n $x1\n")
+        end
+        return false
+    end
+    return true
 end
 
 @testset "All tests" begin
@@ -89,7 +101,7 @@ end
         @test "!(a,b)" |> test_expr
         @test "¬(a,b)" |> test_expr
         @test "~(a,b)" |> test_expr
-        @test_broken "<:(a,b)" |> test_expr
+        @test_broken "<:(a,b)" |> test_expr_broken
         @test "√(a,b)" |> test_expr
         @test "\$(a,b)" |> test_expr
         @test ":(a,b)" |> test_expr
@@ -341,7 +353,7 @@ end
     @test "(arg for x in X if A for y in Y for z in Z)" |> test_expr
     @test "(arg for x in X if A for y in Y if B for z in Z)" |> test_expr
     @test "(arg for x in X if A for y in Y if B for z in Z if C)" |> test_expr
-    @test_broken "(arg for x in X, y in Y for z in Z)" |> test_expr
+    @test_broken "(arg for x in X, y in Y for z in Z)" |> test_expr_broken
     @test "(arg for x in X, y in Y if A for z in Z)" |> test_expr
 end
 
@@ -679,9 +691,9 @@ end""" |> test_expr
 end
 
 @testset "Broken things" begin
-    @test_broken "\$(a) * -\$(b)" |> test_expr
-    @test_broken "function(f, args...; kw...) end" |> test_expr
-    @test_broken "-1^a" |> test_expr
+    @test_broken "\$(a) * -\$(b)" |> test_expr_broken
+    @test_broken "function(f, args...; kw...) end" |> test_expr_broken
+    @test_broken "-1^a" |> test_expr_broken
 end
 
 # test_fsig_decl(str) = (x->x.id).(CSTParser._get_fsig(CSTParser.parse(str)).defs)
