@@ -64,7 +64,7 @@ function make_error(ps, range, code, text)
     ps.errored = true
     ps.error_code = code
     push!(ps.diagnostics, Diagnostic{code}(range, [], text))
-    return EXPR{ERROR}(Any[INSTANCE(ps)])
+    return EXPR(ERROR, Any[INSTANCE(ps)])
 end
 
 function error_unexpected(ps, tok)
@@ -115,6 +115,6 @@ function error_token(ps, tok)
         return error_eof(ps, ps.t.endbyte+1, Diagnostics.UnexpectedCmdEnd, "Unexpected end of command")
     else
         ps.errored = true
-        return EXPR{ERROR}(Any[INSTANCE(ps)])
+        return EXPR(ERROR, Any[INSTANCE(ps)])
     end
 end

@@ -9,7 +9,7 @@ function closer(ps::ParseState)
         ps.nt.kind == Tokens.LBRACE ||
         ps.nt.kind == Tokens.LSQUARE ||
         (ps.nt.kind == Tokens.STRING && isemptyws(ps.ws)) ||
-        ((ps.nt.kind == Tokens.RPAREN || ps.nt.kind == Tokens.RSQUARE) && isidentifier(ps.nt))  
+        ((ps.nt.kind == Tokens.RPAREN || ps.nt.kind == Tokens.RSQUARE) && isidentifier(ps.nt))
     )) ||
     (ps.nt.kind == Tokens.COMMA && ps.closer.precedence > 0) ||
     ps.nt.kind == Tokens.ENDMARKER ||
@@ -30,7 +30,7 @@ function closer(ps::ParseState)
         !(!ps.closer.inmacro && ps.nt.kind == Tokens.FOR) &&
         !(ps.nt.kind == Tokens.DO) &&
         !(
-            (isbinaryop(ps.nt) && !(isemptyws(ps.nws) && isunaryop(ps.nt) && ps.closer.wsop)) || 
+            (isbinaryop(ps.nt) && !(isemptyws(ps.nws) && isunaryop(ps.nt) && ps.closer.wsop)) ||
             (isunaryop(ps.t) && ps.ws.kind == WS)
         )) ||
     (ps.nt.startbyte ≥ ps.closer.stop) ||
@@ -173,7 +173,7 @@ macro catcherror(ps, body)
     quote
         $(esc(body))
         if $(esc(ps)).errored
-            return EXPR{ERROR}(Any[INSTANCE($(esc(ps)))], 0, 0:-1)
+            return EXPR(ERROR, Any[INSTANCE($(esc(ps)))], 0, 0:-1)
         end
     end
 end
@@ -196,11 +196,10 @@ isinstance(t::Token) = isidentifier(t) ||
 
 ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
                           t.kind == Tokens.END ||
-                          Tokens.LSQUARE ≤ t.kind ≤ Tokens.RPAREN || 
+                          Tokens.LSQUARE ≤ t.kind ≤ Tokens.RPAREN ||
                           t.kind == Tokens.AT_SIGN
-
 isstring(x) = false
-isstring(x::EXPR{StringH}) = true
+isstring(x::EXPR) = x.head == StringH ? true : false
 isstring(x::LITERAL) = x.kind == Tokens.STRING || x.kind == Tokens.TRIPLE_STRING
 is_integer(x) = x isa LITERAL && x.kind == Tokens.INTEGER
 is_float(x) = x isa LITERAL && x.kind == Tokens.FLOAT
@@ -455,10 +454,9 @@ check_span(x, neq = [])
 Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
-function check_span(x::EXPR{StringH}, neq = []) end
 function check_span(x::T, neq = []) where T <: Union{IDENTIFIER,LITERAL,OPERATOR,KEYWORD,PUNCTUATION} neq end
 
-function check_span(x::UnaryOpCall, neq = []) 
+function check_span(x::UnaryOpCall, neq = [])
     check_span(x.op)
     check_span(x.arg)
     if x.op.fullspan + x.arg.fullspan != x.fullspan
@@ -466,7 +464,7 @@ function check_span(x::UnaryOpCall, neq = [])
     end
     neq
 end
-function check_span(x::UnarySyntaxOpCall, neq = []) 
+function check_span(x::UnarySyntaxOpCall, neq = [])
     check_span(x.arg1)
     check_span(x.arg2)
     if x.arg1.fullspan + x.arg2.fullspan != x.fullspan
@@ -558,8 +556,7 @@ end
 
 
 is_func_call(x) = false
-is_func_call(x::EXPR) = false
-is_func_call(x::EXPR{Call}) = true
+is_func_call(x::EXPR) = x.head == Call ? true : false
 is_func_call(x::UnaryOpCall) = true
 function is_func_call(x::BinarySyntaxOpCall)
     if is_decl(x.op)
@@ -634,7 +631,7 @@ is_pairarrow(x) = x isa OPERATOR && x.kind == Tokens.PAIR_ARROW && x.dot == fals
 is_in(x) = x isa OPERATOR && x.kind == Tokens.IN && x.dot == false
 is_elof(x) = x isa OPERATOR && x.kind == Tokens.ELEMENT_OF && x.dot == false
 is_colon(x) = x isa OPERATOR && x.kind == Tokens.COLON
-is_prime(x) = x isa OPERATOR && x.kind == Tokens.PRIME 
+is_prime(x) = x isa OPERATOR && x.kind == Tokens.PRIME
 is_cond(x) = x isa OPERATOR && x.kind == Tokens.CONDITIONAL
 is_where(x) = x isa OPERATOR && x.kind == Tokens.WHERE
 is_anon_func(x) = x isa OPERATOR && x.kind == Tokens.ANON_FUNC
@@ -642,6 +639,13 @@ is_anon_func(x) = x isa OPERATOR && x.kind == Tokens.ANON_FUNC
 is_comma(x) = x isa PUNCTUATION && x.kind == Tokens.COMMA
 is_lparen(x) = x isa PUNCTUATION && x.kind == Tokens.LPAREN
 is_rparen(x) = x isa PUNCTUATION && x.kind == Tokens.RPAREN
+
+for head in instances(Head)
+    f_name = Symbol("is_" * lowercase(string(head)))
+    @eval begin
+        $f_name(x) = x isa EXPR && x.head == $head
+    end
+end
 
 Base.start(x::EXPR) = 1
 Base.next(x::EXPR, s) = x.args[s], s + 1
@@ -664,7 +668,7 @@ Base.next(x::BinaryOpCall, s) = getfield(x, s) , s + 1
 Base.done(x::BinaryOpCall, s) = s > 3
 
 Base.start(x::WhereOpCall) = 1
-function Base.next(x::WhereOpCall, s) 
+function Base.next(x::WhereOpCall, s)
     if s == 1
         return x.arg1, 2
     elseif s == 2
@@ -683,4 +687,8 @@ for t in (CSTParser.IDENTIFIER, CSTParser.OPERATOR, CSTParser.LITERAL, CSTParser
     Base.start(x::t) = 1
     Base.next(x::t, s) = x, s + 1
     Base.done(x::t, s) = true
+end
+
+@noinline function unhandled_head(head::Head)
+    error("internal error: unhandled head: $head")
 end

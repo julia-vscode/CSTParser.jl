@@ -29,7 +29,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     iscmd = ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
 
     if ps.errored
-        return EXPR{ERROR}(Any[])
+        return EXPR(ERROR, Any[])
     end
 
     lcp = nothing
@@ -72,12 +72,12 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     replace(val, "\\\"", "\""), ps.t.kind)
         if istrip
             adjust_lcp(expr)
-            ret = EXPR{StringH}(Any[expr], sfullspan, sspan)
+            ret = EXPR(StringH, Any[expr], sfullspan, sspan)
         else
             return expr
         end
     else
-        ret = EXPR{StringH}(Any[], sfullspan, sspan)
+        ret = EXPR(StringH, Any[], sfullspan, sspan)
         input = IOBuffer(ps.t.val)
         startbytes = istrip ? 3 : 1
         seek(input, startbytes)
@@ -108,7 +108,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     skip(input, 1)
                     ps1 = ParseState(input)
                     @catcherror ps interp = @closer ps1 paren parse_expression(ps1)
-                    call = UnarySyntaxOpCall(op, EXPR{InvisBrackets}(Any[lparen, interp, rparen]))
+                    call = UnarySyntaxOpCall(op, EXPR(InvisBrackets, Any[lparen, interp, rparen]))
                     push!(ret.args, call)
                     # Compared to flisp/JuliaParser, we have an extra lookahead token,
                     # so we need to back up one here

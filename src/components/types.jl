@@ -6,12 +6,12 @@ function parse_abstract(ps::ParseState)
 
         @catcherror ps sig = @default ps @closer ps block parse_expression(ps)
 
-        ret = EXPR{Abstract}(Any[kw1, kw2, sig, KEYWORD(next(ps))])
+        ret = EXPR(Abstract, Any[kw1, kw2, sig, KEYWORD(next(ps))])
     else
         kw = KEYWORD(ps)
         @catcherror ps sig = @default ps parse_expression(ps)
 
-        ret = EXPR{Abstract}(Any[kw, sig])
+        ret = EXPR(Abstract, Any[kw, sig])
     end
     return ret
 end
@@ -22,7 +22,7 @@ function parse_bitstype(ps::ParseState)
     @catcherror ps arg1 = @default ps @closer ps ws @closer ps wsop parse_expression(ps)
     @catcherror ps arg2 = @default ps parse_expression(ps)
 
-    return EXPR{Bitstype}(Any[kw, arg1, arg2])
+    return EXPR(Bitstype, Any[kw, arg1, arg2])
 end
 
 function parse_primitive(ps::ParseState)
@@ -32,7 +32,7 @@ function parse_primitive(ps::ParseState)
         @catcherror ps sig = @default ps @closer ps ws @closer ps wsop parse_expression(ps)
         @catcherror ps arg = @default ps @closer ps block parse_expression(ps)
 
-        ret = EXPR{Primitive}(Any[kw1, kw2, sig, arg, KEYWORD(next(ps))])
+        ret = EXPR(Primitive, Any[kw1, kw2, sig, arg, KEYWORD(next(ps))])
     else
         ret = IDENTIFIER(ps)
     end
@@ -45,7 +45,7 @@ function parse_typealias(ps::ParseState)
     @catcherror ps arg1 = @closer ps ws @closer ps wsop parse_expression(ps)
     @catcherror ps arg2 = parse_expression(ps)
 
-    return EXPR{TypeAlias}(Any[kw, arg1, arg2])
+    return EXPR(TypeAlias, Any[kw, arg1, arg2])
 end
 
 function parse_mutable(ps::ParseState)
@@ -68,5 +68,5 @@ function parse_struct(ps::ParseState, mutable)
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
     
-    return EXPR{mutable ? Mutable : Struct}(Any[kw, sig, EXPR{Block}(blockargs), KEYWORD(next(ps))])
+    return EXPR(mutable ? Mutable : Struct, Any[kw, sig, EXPR(Block, blockargs), KEYWORD(next(ps))])
 end

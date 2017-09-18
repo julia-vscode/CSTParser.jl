@@ -4,7 +4,7 @@ function parse_for(ps::ParseState)
     
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
-    return EXPR{For}(Any[kw, ranges, EXPR{Block}(blockargs), KEYWORD(next(ps))])
+    return EXPR(For, Any[kw, ranges, EXPR(Block, blockargs), KEYWORD(next(ps))])
 end
 
 
@@ -13,17 +13,17 @@ function parse_ranges(ps::ParseState)
 
     if !is_range(arg)
         ps.errored = true
-        return EXPR{ERROR}(Any[])
+        return EXPR(ERROR, Any[])
     end
     if ps.nt.kind == Tokens.COMMA
-        arg = EXPR{Block}(Any[arg])
+        arg = EXPR(Block, Any[arg])
         while ps.nt.kind == Tokens.COMMA
             push!(arg, PUNCTUATION(next(ps)))
 
             @catcherror ps nextarg = @closer ps comma @closer ps ws parse_expression(ps)
             if !is_range(nextarg)
                 ps.errored = true
-                return EXPR{ERROR}(Any[])
+                return EXPR(ERROR, Any[])
             end
             push!(arg, nextarg)
         end
@@ -57,7 +57,7 @@ function parse_while(ps::ParseState)
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
 
-    return EXPR{While}(Any[kw, cond, EXPR{Block}(blockargs), KEYWORD(next(ps))])
+    return EXPR(While, Any[kw, cond, EXPR(Block, blockargs), KEYWORD(next(ps))])
 end
 
 
@@ -71,29 +71,29 @@ Comprehensions are parsed as SQUAREs containing a generator.
 """
 function parse_generator(ps::ParseState, ret)
     kw = KEYWORD(next(ps))
-    ret = EXPR{Generator}(Any[ret, kw])
+    ret = EXPR(Generator, Any[ret, kw])
     @catcherror ps ranges = @closer ps paren @closer ps square parse_ranges(ps)
 
     if ps.nt.kind == Tokens.IF
-        if ranges isa EXPR{Block}
-            ranges = EXPR{Filter}(ranges.args)
+        if is_block(ranges)
+            ranges = EXPR(Filter, ranges.args)
         else
-            ranges = EXPR{Filter}(Any[ranges])
+            ranges = EXPR(Filter, Any[ranges])
         end
         unshift!(ranges, KEYWORD(next(ps)))
         @catcherror ps cond = @closer ps range @closer ps paren parse_expression(ps)
         unshift!(ranges, cond)
         push!(ret, ranges)
     else
-        if ranges isa EXPR{Block}
+        if is_block(ranges)
             append!(ret, ranges)
         else
             push!(ret, ranges)
         end
     end
 
-    if ret.args[1] isa EXPR{Generator} || ret.args[1] isa EXPR{Flatten}
-        ret = EXPR{Flatten}(Any[ret])
+    if is_generator(ret.args[1]) || is_flatten(ret.args[1])
+        ret = EXPR(Flatten, Any[ret])
     end
 
     return ret

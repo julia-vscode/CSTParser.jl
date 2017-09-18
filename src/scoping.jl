@@ -1,7 +1,7 @@
 """
     get_id(x)
 
-Get the IDENTIFIER name of a variable, possibly in the presence of 
+Get the IDENTIFIER name of a variable, possibly in the presence of
 type declaration operators.
 """
 function get_id(x::BinarySyntaxOpCall)
@@ -24,11 +24,15 @@ function get_id(x::UnarySyntaxOpCall)
     end
 end
 
-get_id(x::EXPR{Curly}) = get_id(x.args[1])
-get_id(x::EXPR{InvisBrackets}) = get_id(x.args[2])
-get_id(x) = x
-
-
+function get_id(x::EXPR)
+    if x.head == Curly
+        return get_id(x.args[1])
+    elseif x.head == InvisBrackets
+        return get_id(x.args[2])
+    else
+        return x
+    end
+end
 
 """
     get_t(x)
@@ -36,7 +40,7 @@ get_id(x) = x
 Basic inference in the presence of type declarations.
 """
 get_t(x) = :Any
-function get_t(x::BinarySyntaxOpCall) 
+function get_t(x::BinarySyntaxOpCall)
     if is_decl(x.op)
         return Expr(x.arg2)
     else
@@ -64,27 +68,32 @@ function infer_t(x::LITERAL)
     end
 end
 
-infer_t(x::EXPR{Vect}) = :(Array{Any,1})
-infer_t(x::EXPR{Vcat}) = :(Array{Any,N})
-infer_t(x::EXPR{TypedVcat}) = :(Array{$(Expr(x.args[1])),N})
-infer_t(x::EXPR{Hcat}) = :(Array{Any,2})
-infer_t(x::EXPR{TypedHcat}) = :(Array{$(Expr(x.args[1])),2})
-infer_t(x::EXPR{Quote}) = :Expr
-infer_t(x::EXPR{StringH}) = :String
-infer_t(x::EXPR{Quotenode}) = :QuoteNode
-
+function infer_t(x::EXPR)
+    x.head == Vect && return :(Array{Any,1})
+    x.head == Vcat && return :(Array{Any,N})
+    x.head == TypedVcat && return :(Array{$(Expr(x.args[1])),N})
+    x.head == Hcat && return :(Array{Any,2})
+    x.head == TypedHcat && return :(Array{$(Expr(x.args[1])),2})
+    x.head == Quote && return :Expr
+    x.head == StringH && return :String
+    x.head == Quotenode && return :QuoteNode
+    error("unknowd head, got $(x.head)")
+end
 
 """
     contributes_scope(x)
 Checks whether the body of `x` is included in the toplevel namespace.
 """
 contributes_scope(x) = false
-contributes_scope(x::EXPR{FileH}) = true
-contributes_scope(x::EXPR{Begin}) = true
-contributes_scope(x::EXPR{Block}) = true
-contributes_scope(x::EXPR{Const}) = true
-contributes_scope(x::EXPR{Global}) = true
-contributes_scope(x::EXPR{Local}) = true
-contributes_scope(x::EXPR{If}) = true
-contributes_scope(x::EXPR{MacroCall}) = true
-contributes_scope(x::EXPR{TopLevel}) = true
+function contributes_scope(x::EXPR)
+    x.head == FileH && return true
+    x.head == Begin && return true
+    x.head == Block && return true
+    x.head == Const && return true
+    x.head == Global && return true
+    x.head == Local && return true
+    x.head == If && return true
+    x.head == MacroCall && return true
+    x.head == TopLevel && return true
+    return false
+end

@@ -3,7 +3,7 @@ function parse_begin(ps::ParseState)
     blockargs = Any[]
     @catcherror ps arg = @default ps parse_block(ps, blockargs, (Tokens.END,), true)
 
-    return EXPR{Begin}(Any[kw, EXPR{Block}(blockargs), KEYWORD(next(ps))])
+    return EXPR(Begin, Any[kw, EXPR(Block, blockargs), KEYWORD(next(ps))])
 end
 
 function parse_quote(ps::ParseState)
@@ -11,7 +11,7 @@ function parse_quote(ps::ParseState)
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
 
-    return EXPR{Quote}(Any[kw, EXPR{Block}(blockargs), KEYWORD(next(ps))])
+    return EXPR(Quote, Any[kw, EXPR(Block, blockargs), KEYWORD(next(ps))])
 end
 
 """
@@ -21,10 +21,11 @@ Parses an array of expressions (stored in ret) until 'end' is the next token.
 Returns `ps` the token before the closing `end`, the calling function is
 assumed to handle the closer.
 """
-function parse_block(ps::ParseState, ret::EXPR{Block}, closers = (Tokens.END,), docable = false)
+function parse_block(ps::ParseState, ret::EXPR, closers = (Tokens.END,), docable = false)
+    ret.head != Block && unhandled_head(ret.head)
     parse_block(ps, ret.args, closers, docable)
     update_span!(ret)
-    return 
+    return
 end
 
 
@@ -41,5 +42,5 @@ function parse_block(ps::ParseState, ret::Vector{Any}, closers = (Tokens.END,), 
         end
         push!(ret, a)
     end
-    return 
+    return
 end

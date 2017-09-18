@@ -6,13 +6,13 @@ function parse_module(ps::ParseState)
         @catcherror ps arg = @precedence ps 15 @closer ps block @closer ps ws parse_expression(ps)
     end
 
-    block = EXPR{Block}(Any[])
+    block = EXPR(Block, Any[])
     @default ps while ps.nt.kind !== Tokens.END
         @catcherror ps a = @closer ps block parse_doc(ps)
         push!(block, a)
     end
 
-    return EXPR{(kw isa KEYWORD{Tokens.MODULE} ? ModuleH : BareModule)}(Any[kw, arg, block, KEYWORD(next(ps))])
+    return EXPR((kw isa KEYWORD{Tokens.MODULE} ? ModuleH : BareModule), Any[kw, arg, block, KEYWORD(next(ps))])
 end
 
 function parse_dot_mod(ps::ParseState, is_colon = false)
@@ -43,9 +43,9 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
         if ps.nt.kind == Tokens.AT_SIGN
             at = PUNCTUATION(next(ps))
             a = INSTANCE(next(ps))
-            push!(args, EXPR{MacroName}(Any[at, a]))
+            push!(args, EXPR(MacroName, Any[at, a]))
         elseif ps.nt.kind == Tokens.LPAREN
-            a = EXPR{InvisBrackets}(Any[PUNCTUATION(next(ps))])
+            a = EXPR(InvisBrackets, Any[PUNCTUATION(next(ps))])
             @catcherror ps push!(a, @default ps @closer ps paren parse_expression(ps))
             push!(a, PUNCTUATION(next(ps)))
             push!(args, a)
@@ -81,9 +81,9 @@ function parse_imports(ps::ParseState)
     arg = parse_dot_mod(ps)
 
     if ps.nt.kind != Tokens.COMMA && ps.nt.kind != Tokens.COLON
-        ret = EXPR{kwt}(vcat(kw, arg))
+        ret = EXPR(kwt, vcat(kw, arg))
     elseif ps.nt.kind == Tokens.COLON
-        ret = EXPR{kwt}(vcat(kw, arg))
+        ret = EXPR(kwt, vcat(kw, arg))
         push!(ret, OPERATOR(next(ps)))
 
         @catcherror ps arg = parse_dot_mod(ps, true)
@@ -94,7 +94,7 @@ function parse_imports(ps::ParseState)
             append!(ret, arg)
         end
     else
-        ret = EXPR{kwt}(vcat(kw, arg))
+        ret = EXPR(kwt, vcat(kw, arg))
         while ps.nt.kind == Tokens.COMMA
             push!(ret, PUNCTUATION(next(ps)))
             @catcherror ps arg = parse_dot_mod(ps)
@@ -115,7 +115,7 @@ function parse_export(ps::ParseState)
         push!(args, arg)
     end
 
-    return EXPR{Export}(args)
+    return EXPR(Export, args)
 end
 
 
