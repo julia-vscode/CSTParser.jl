@@ -63,6 +63,8 @@ function parse_call_and(ps::ParseState, ret)
     ret = UnarySyntaxOpCall(ret, arg)
     return ret
 end
+
+# NEEDS FIX: these are broken (i.e. `<:(a,b) where T = 1`)
 function parse_call_issubt(ps::ParseState, ret)
     arg = @precedence ps 13 parse_expression(ps)
     ret = EXPR{Call}(Any[ret; arg.args])
@@ -75,30 +77,12 @@ function parse_call_issupt(ps::ParseState, ret)
     return ret
 end
 
-function parse_call_not(ps::ParseState, ret)
+function parse_call_PlusOp(ps::ParseState, ret)
     arg = @precedence ps 13 parse_expression(ps)
     if arg isa EXPR{TupleH}
         ret = EXPR{Call}(Any[ret; arg.args])
-    else
-        ret = UnaryOpCall(ret, arg)
-    end
-    return ret
-end
-
-function parse_call_plus(ps::ParseState, ret)
-    arg = @precedence ps 13 parse_expression(ps)
-    if arg isa EXPR{TupleH}
-        ret = EXPR{Call}(Any[ret; arg.args])
-    else
-        ret = UnaryOpCall(ret, arg)
-    end
-    return ret
-end
-
-function parse_call_minus(ps::ParseState, ret)
-    arg = @precedence ps 13 parse_expression(ps)
-    if arg isa EXPR{TupleH}
-        ret = EXPR{Call}(Any[ret; arg.args])
+    elseif arg isa WhereOpCall && arg.arg1 isa EXPR{TupleH}
+        ret = WhereOpCall(EXPR{Call}(Any[ret; arg.arg1.args]), arg.op, arg.args)
     else
         ret = UnaryOpCall(ret, arg)
     end
@@ -106,14 +90,10 @@ function parse_call_minus(ps::ParseState, ret)
 end
 
 function parse_call(ps::ParseState, ret)
-    if is_plus(ret)
-        return parse_call_plus(ps, ret)
-    elseif is_minus(ret)
-        return parse_call_minus(ps, ret)
+    if is_plus(ret) || is_minus(ret) || is_not(ret)
+        return parse_call_PlusOp(ps, ret)
     elseif is_and(ret)
         return parse_call_and(ps, ret)
-    elseif is_not(ret)
-        return parse_call_not(ps, ret)
     elseif is_exor(ret)
         return parse_call_exor(ps, ret)
     elseif is_decl(ret)
