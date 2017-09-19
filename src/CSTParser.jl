@@ -7,7 +7,7 @@ using AbstractTrees
 using Tokenize
 import Base: next, start, done, length, first, last, endof, getindex, setindex!
 import Tokenize.Tokens
-import Tokenize.Tokens: Token, iskeyword, isliteral, isoperator, untokenize
+import Tokenize.Tokens: RawToken, AbstractToken, iskeyword, isliteral, isoperator, untokenize
 import Tokenize.Lexers: Lexer, peekchar, iswhitespace
 
 export ParseState, parse_expression
@@ -202,14 +202,14 @@ function parse_compound(ps::ParseState, ret)
     # Suffix on x_str
     elseif ret isa EXPR{x_Str} && ps.nt.kind == Tokens.IDENTIFIER
         arg = IDENTIFIER(next(ps))
-        push!(ret, LITERAL(arg.fullspan, arg.span, ps.t.val, Tokens.STRING))
+        push!(ret, LITERAL(arg.fullspan, arg.span, val(ps.t, ps), Tokens.STRING))
     elseif (ret isa IDENTIFIER || (ret isa BinarySyntaxOpCall && is_dot(ret.op))) && ps.nt.kind == Tokens.CMD
         next(ps)
         @catcherror ps arg = parse_string_or_cmd(ps, ret)
         ret = EXPR{x_Cmd}(Any[ret, arg])
     elseif ret isa EXPR{x_Cmd} && ps.nt.kind == Tokens.IDENTIFIER
         arg = IDENTIFIER(next(ps))
-        push!(ret, LITERAL(arg.fullspan, 1:span(arg), ps.t.val, Tokens.STRING))
+        push!(ret, LITERAL(arg.fullspan, 1:span(arg), val(ps.t, ps), Tokens.STRING))
     elseif ret isa UnarySyntaxOpCall && is_prime(ret.arg2)
         # prime operator followed by an identifier has an implicit multiplication
         @catcherror ps nextarg = @precedence ps 11 parse_expression(ps)
@@ -292,7 +292,7 @@ function parse_doc(ps::ParseState)
 
         ret = parse_expression(ps)
         ret = EXPR{MacroCall}(Any[GlobalRefDOC, doc, ret])
-    elseif ps.nt.kind == Tokens.IDENTIFIER && ps.nt.val == "doc" && (ps.nnt.kind == Tokens.STRING || ps.nnt.kind == Tokens.TRIPLE_STRING)
+    elseif ps.nt.kind == Tokens.IDENTIFIER && val(ps.nt, ps) == "doc" && (ps.nnt.kind == Tokens.STRING || ps.nnt.kind == Tokens.TRIPLE_STRING)
         doc = IDENTIFIER(next(ps))
         next(ps)
         @catcherror ps arg = parse_string_or_cmd(ps, doc)
@@ -378,7 +378,7 @@ end
 
 
 
-ischainable(t::Token) = t.kind == Tokens.PLUS || t.kind == Tokens.STAR || t.kind == Tokens.APPROX
+ischainable(t::AbstractToken) = t.kind == Tokens.PLUS || t.kind == Tokens.STAR || t.kind == Tokens.APPROX
 
 include("_precompile.jl")
 _precompile_()

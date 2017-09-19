@@ -5,7 +5,7 @@ const SemiColonWS = Tokens.SEMICOLON_WS
 const NewLineWS = Tokens.NEWLINE_WS
 const WS = Tokens.WS
 const InvisibleBrackets = Tokens.INVISIBLE_BRACKETS
-const EmptyWSToken = Token(EmptyWS, (0, 0), (0, 0), -1, -1, "")
+const EmptyWSToken = RawToken(EmptyWS, (0, 0), (0, 0), -1, -1)
 
 """
     Closer
@@ -47,16 +47,16 @@ The parser's interface with `Tokenize.Lexers.Lexer`. This alters the output of `
 + Keeps track of the previous, current and next tokens.
 """
 mutable struct ParseState
-    l::Lexer{Base.AbstractIOBuffer{Array{UInt8, 1}},Tokenize.Tokens.Token}
+    l::Lexer{Base.AbstractIOBuffer{Array{UInt8, 1}},RawToken}
     done::Bool
-    lt::Token
-    t::Token
-    nt::Token
-    nnt::Token
-    lws::Token
-    ws::Token
-    nws::Token
-    nnws::Token
+    lt::RawToken
+    t::RawToken
+    nt::RawToken
+    nnt::RawToken
+    lws::RawToken
+    ws::RawToken
+    nws::RawToken
+    nnws::RawToken
     dot::Bool
     ndot::Bool
     diagnostics::Vector{Diagnostics.Diagnostic}
@@ -65,7 +65,8 @@ mutable struct ParseState
     errored::Bool
 end
 function ParseState(str::Union{IO,String})
-    ps = ParseState(tokenize(str), false, Token(), Token(), Token(), Token(), Token(), Token(), Token(), Token(), true, true, Diagnostics.Diagnostic[], Closer(), Diagnostics.ParseFailure, false)
+    ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(),
+                    true, true, Diagnostics.Diagnostic[], Closer(), Diagnostics.ParseFailure, false)
     return next(next(ps))
 end
 
@@ -76,7 +77,7 @@ function Base.show(io::IO, ps::ParseState)
     println(io, "next    : ", ps.nt.kind, " ($(ps.nt))", "    ($(wstype(ps.nws)))")
 end
 peekchar(ps::ParseState) = peekchar(ps.l)
-wstype(t::Token) = t.kind == EmptyWS ? "empty" :
+wstype(t::AbstractToken) = t.kind == EmptyWS ? "empty" :
                    t.kind == NewLineWS ? "ws w/ newline" :
                    t.kind == SemiColonWS ? "ws w/ semicolon" : "ws"
 
@@ -95,13 +96,13 @@ function next(ps::ParseState)
     # Handle dotted operators
     if ps.nt.kind == Tokens.DOT && ps.nws.kind == EmptyWS && isoperator(ps.nnt) && !non_dotted_op(ps.nnt)
         # ps.nt = ps.nnt
-        ps.nt = Token(ps.nnt.kind, (ps.nnt.startpos[1], ps.nnt.startpos[2] - 1), ps.nnt.endpos, ps.nnt.startbyte - 1, ps.nnt.endbyte, ps.nnt.val)
+        ps.nt = RawToken(ps.nnt.kind, (ps.nnt.startpos[1], ps.nnt.startpos[2] - 1), ps.nnt.endpos, ps.nnt.startbyte - 1, ps.nnt.endbyte)
         ps.ndot = true
         # combines whitespace, comments and semicolons
         if iswhitespace(peekchar(ps.l)) || peekchar(ps.l) == '#' || peekchar(ps.l) == ';'
             ps.nws = lex_ws_comment(ps.l, readchar(ps.l))
         else
-            ps.nws = Token(EmptyWS, (0, 0), (0, 0), ps.nnt.endbyte, ps.nnt.endbyte, "")
+            ps.nws = RawToken(EmptyWS, (0, 0), (0, 0), ps.nnt.endbyte, ps.nnt.endbyte)
         end
         ps.nnt, _ = next(ps.l, ps.done)
     else
@@ -190,4 +191,4 @@ function read_comment(l::Lexer)
     end
 end
 
-isemptyws(t::Token) = t.kind == EmptyWS
+isemptyws(t::AbstractToken) = t.kind == EmptyWS

@@ -43,7 +43,7 @@ struct IDENTIFIER
     val::String
     IDENTIFIER(fullspan::Int, span::UnitRange{Int}, val::String) = new(fullspan, span, val)
 end
-IDENTIFIER(ps::ParseState) = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), untokenize(ps.t))
+IDENTIFIER(ps::ParseState) = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), val(ps.t, ps))
 
 struct PUNCTUATION
     kind::Tokenize.Tokens.Kind
@@ -79,7 +79,7 @@ function LITERAL(ps::ParseState)
        ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
         return parse_string_or_cmd(ps)
     else
-        LITERAL(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), ps.t.val, ps.t.kind)
+        LITERAL(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), val(ps.t, ps), ps.t.kind)
     end
 end
 

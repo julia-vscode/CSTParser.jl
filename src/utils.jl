@@ -179,22 +179,22 @@ macro catcherror(ps, body)
 end
 
 
-isidentifier(t::Token) = t.kind == Tokens.IDENTIFIER
+isidentifier(t::AbstractToken) = t.kind == Tokens.IDENTIFIER
 
-isliteral(t::Token) = Tokens.begin_literal < t.kind < Tokens.end_literal
+isliteral(t::AbstractToken) = Tokens.begin_literal < t.kind < Tokens.end_literal
 
-isbool(t::Token) =  Tokens.TRUE ≤ t.kind ≤ Tokens.FALSE
-iscomma(t::Token) =  t.kind == Tokens.COMMA
+isbool(t::AbstractToken) =  Tokens.TRUE ≤ t.kind ≤ Tokens.FALSE
+iscomma(t::AbstractToken) =  t.kind == Tokens.COMMA
 
-iskw(t::Token) = Tokens.iskeyword(t.kind)
+iskw(t::AbstractToken) = Tokens.iskeyword(t.kind)
 
-isinstance(t::Token) = isidentifier(t) ||
+isinstance(t::AbstractToken) = isidentifier(t) ||
                        isliteral(t) ||
                        isbool(t) ||
                        iskw(t)
 
 
-ispunctuation(t::Token) = t.kind == Tokens.COMMA ||
+ispunctuation(t::AbstractToken) = t.kind == Tokens.COMMA ||
                           t.kind == Tokens.END ||
                           Tokens.LSQUARE ≤ t.kind ≤ Tokens.RPAREN || 
                           t.kind == Tokens.AT_SIGN
@@ -635,7 +635,7 @@ is_pairarrow(x) = x isa OPERATOR && x.kind == Tokens.PAIR_ARROW && x.dot == fals
 is_in(x) = x isa OPERATOR && x.kind == Tokens.IN && x.dot == false
 is_elof(x) = x isa OPERATOR && x.kind == Tokens.ELEMENT_OF && x.dot == false
 is_colon(x) = x isa OPERATOR && x.kind == Tokens.COLON
-is_prime(x) = x isa OPERATOR && x.kind == Tokens.PRIME 
+is_prime(x) = x isa OPERATOR && x.kind == Tokens.PRIME
 is_cond(x) = x isa OPERATOR && x.kind == Tokens.CONDITIONAL
 is_where(x) = x isa OPERATOR && x.kind == Tokens.WHERE
 is_anon_func(x) = x isa OPERATOR && x.kind == Tokens.ANON_FUNC
@@ -693,3 +693,5 @@ for t in (CSTParser.IDENTIFIER, CSTParser.OPERATOR, CSTParser.LITERAL, CSTParser
     Base.next(x::t, s) = x, s + 1
     Base.done(x::t, s) = true
 end
+
+@inline val(token::RawToken, ps::ParseState) = String(ps.l.io.data[token.startbyte+1:token.endbyte+1])
