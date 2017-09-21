@@ -174,7 +174,7 @@ Handles cases where an expression - `ret` - is not followed by
 + an expression preceded by a unary operator
 + A number followed by an expression (with no seperating white space)
 """
-function parse_compound(ps::ParseState, ret)
+function parse_compound(ps::ParseState, ret::ANY)
     if ps.nt.kind == Tokens.FOR
         ret = parse_generator(ps, ret)
     elseif ps.nt.kind == Tokens.DO

@@ -1,4 +1,4 @@
-function parse_do(ps::ParseState, ret)
+function parse_do(ps::ParseState, ret::ANY)
     kw = KEYWORD(next(ps))
 
     args = EXPR{TupleH}(Any[])
