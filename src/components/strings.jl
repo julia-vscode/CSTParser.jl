@@ -118,7 +118,11 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     pos = position(input)
                     ps1 = ParseState(input)
                     next(ps1)
-                    t = INSTANCE(ps1)
+                    if ps1.t.kind == Tokens.WHITESPACE
+                        t = EXPR{ERROR}([], ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
+                    else
+                        t = INSTANCE(ps1)
+                    end
                     # Attribute trailing whitespace to the string
                     # t.fullspan = length(t.span)
                     t = adjustspan(t)
