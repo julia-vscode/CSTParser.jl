@@ -212,7 +212,7 @@ function _get_fparams(x::EXPR{Curly}, args = Symbol[])
 end
 
 function _get_fparams(x::WhereOpCall, args = Symbol[])
-    if x.args[1] isa WhereOpCall
+    if x.arg1 isa WhereOpCall
         _get_fparams(x.arg1, args)
     end
     for i = 1:length(x.args)
