@@ -1,7 +1,7 @@
 function parse_for(ps::ParseState)
     kw = KEYWORD(ps)
     @catcherror ps ranges = @default ps parse_ranges(ps)
-    
+
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
     return EXPR{For}(Any[kw, ranges, EXPR{Block}(blockargs), KEYWORD(next(ps))])
@@ -9,21 +9,23 @@ end
 
 
 function parse_ranges(ps::ParseState)
+    startbyte = ps.nt.startbyte
     arg = @closer ps range @closer ps ws parse_expression(ps)
 
     if !is_range(arg)
-        ps.errored = true
-        return EXPR{ERROR}(Any[])
+        return make_error(ps, startbyte + (0:length(arg.span)-1),
+                          Diagnostics.InvalidIter, "invalid iteration specification")
     end
     if ps.nt.kind == Tokens.COMMA
         arg = EXPR{Block}(Any[arg])
         while ps.nt.kind == Tokens.COMMA
             push!(arg, PUNCTUATION(next(ps)))
 
+            startbyte = ps.nt.startbyte
             @catcherror ps nextarg = @closer ps comma @closer ps ws parse_expression(ps)
             if !is_range(nextarg)
-                ps.errored = true
-                return EXPR{ERROR}(Any[])
+                return make_error(ps, startbyte + (0:length(arg.span)-1),
+                                  Diagnostics.InvalidIter, "invalid iteration specification")
             end
             push!(arg, nextarg)
         end

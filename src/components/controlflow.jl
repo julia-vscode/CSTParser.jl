@@ -26,11 +26,12 @@ function parse_if(ps::ParseState, nested = false)
     # Parsing
     kw = KEYWORD(ps)
     if ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS
-        return EXPR{ERROR}(Any[])
+        return make_error(ps, 1 + (ps.t.endbyte:ps.t.endbyte), Diagnostics.MissingConditional,
+            "missing conditional in `$(lowercase(string(ps.t.kind)))`")
     end
     @catcherror ps cond = @default ps @closer ps block @closer ps ws parse_expression(ps)
 
-    
+
     ifblockargs = Any[]
     @catcherror ps @default ps @closer ps ifelse parse_block(ps, ifblockargs, (Tokens.END, Tokens.ELSE, Tokens.ELSEIF))
 
@@ -71,7 +72,7 @@ function parse_let(ps::ParseState)
             push!(args, PUNCTUATION(next(ps)))
         end
     end
-    
+
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
 

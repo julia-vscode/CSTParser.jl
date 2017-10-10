@@ -27,6 +27,8 @@ UnexpectedCharEnd,
 UnexpectedComma,
 UnexpectedOperator,
 UnexpectedIdentifier,
+MissingConditional,
+InvalidIter,
 ParseFailure)
 
 @enum(LintCodes,

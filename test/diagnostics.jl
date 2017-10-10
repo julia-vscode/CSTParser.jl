@@ -3,7 +3,7 @@ using CSTParser
 using CSTParser.Diagnostics: Diagnostic, ErrorCodes
 
 using CSTParser.Diagnostics: UnexpectedInputEnd, UnexpectedOperator, UnexpectedIdentifier, UnexpectedStringEnd,
-    UnexpectedCommentEnd, UnexpectedBlockEnd, UnexpectedCmdEnd, UnexpectedCharEnd
+    UnexpectedCommentEnd, UnexpectedBlockEnd, UnexpectedCmdEnd, UnexpectedCharEnd, InvalidIter, MissingConditional
 
 
 function do_diag_test(text)
@@ -55,6 +55,20 @@ let diags = do_diag_test("a ? b c")
 #  a ? b c
 #    ^
     @test diags[1] isa Diagnostic{UnexpectedIdentifier}
+end
+
+let diags = do_diag_test("[x for (x ? true : false)]")
+#  REPL[2]:1:8 ERROR: invalid iteration specification
+#  [x for (x ? true : false)]
+#         ^~~~~~~~~~~~~~~~~~
+    @test diags[1] isa Diagnostic{InvalidIter}
+end
+
+let diags = do_diag_test("if\n\true\nend")
+#  REPL[3]:1:3 ERROR: missing conditional in `if`
+#  if
+#    ^
+    @test diags[1] isa Diagnostic{MissingConditional}
 end
 
 function test_eof_diag(text, code)
