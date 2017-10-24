@@ -165,7 +165,7 @@ end
 # NEEDS FIX
 _arg_id(x) = x
 _arg_id(x::IDENTIFIER) = x
-_arg_id(x::EXPR{Quotenode}) = x.val
+_arg_id(x::EXPR{Quotenode}) = x.args[1]
 _arg_id(x::EXPR{Curly}) = _arg_id(x.args[1])
 _arg_id(x::EXPR{Kw}) = _arg_id(x.args[1])
 
