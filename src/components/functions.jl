@@ -237,6 +237,7 @@ _get_fname(sig::EXPR{TupleH}) = NOTHING
 function _get_fname(sig::WhereOpCall)
     return _get_fname(sig.arg1)
 end
+_get_fname(sig::BinaryOpCall) = sig.op
 function _get_fname(sig::BinarySyntaxOpCall)
     if is_decl(sig.op)
         return _get_fname(sig.arg1)
