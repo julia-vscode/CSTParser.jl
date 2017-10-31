@@ -27,6 +27,7 @@ UnexpectedCharEnd,
 UnexpectedComma,
 UnexpectedOperator,
 UnexpectedIdentifier,
+UnexepectedEnd,
 MissingConditional,
 InvalidIter,
 ParseFailure)
@@ -70,6 +71,7 @@ function make_error(ps, range, code, text)
 end
 
 function error_unexpected(ps, tok)
+    info(ps.t)
     if tok.kind == Tokens.ENDMARKER
         return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedInputEnd,
                           "Unexpected end of input")
@@ -94,6 +96,9 @@ function error_unexpected(ps, tok)
     elseif tok.kind == Tokens.RSQUARE
         return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedRSquare,
                          "Unexpected [")
+    elseif tok.kind == Tokens.END
+        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedRSquare,
+                            "Unexpected end")
     elseif tok.kind == Tokens.ERROR
         return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedRSquare,
                             "Unexpected token $(val(tok, ps))")
