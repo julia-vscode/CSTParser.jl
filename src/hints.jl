@@ -71,7 +71,6 @@ function make_error(ps, range, code, text)
 end
 
 function error_unexpected(ps, tok)
-    info(ps.t)
     if tok.kind == Tokens.ENDMARKER
         return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedInputEnd,
                           "Unexpected end of input")
