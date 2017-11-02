@@ -28,6 +28,7 @@ UnexpectedComma,
 UnexpectedOperator,
 UnexpectedIdentifier,
 UnexepectedEnd,
+UnexepectedToken,
 MissingConditional,
 InvalidIter,
 ParseFailure)
@@ -99,10 +100,12 @@ function error_unexpected(ps, tok)
         return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedRSquare,
                             "Unexpected end")
     elseif tok.kind == Tokens.ERROR
-        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedRSquare,
+        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.Unexpected,
                             "Unexpected token $(val(tok, ps))")
     else
-        error("Internal error")
+        # error("Internal error")
+        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexepectedToken,
+        "Unexpected token $(val(tok, ps))")
     end
 end
 
