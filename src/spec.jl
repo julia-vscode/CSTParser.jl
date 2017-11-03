@@ -19,7 +19,7 @@ const PrimeOp       = 16
 const DddotOp       = 7
 const AnonFuncOp    = 14
 
-abstract type AbstractEXPR
+abstract type AbstractEXPR end
 
 # Invariants:
 # if !isempty(e.args)
