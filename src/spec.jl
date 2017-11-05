@@ -19,6 +19,7 @@ const PrimeOp       = 16
 const DddotOp       = 7
 const AnonFuncOp    = 14
 
+abstract type AbstractEXPR end
 
 # Invariants:
 # if !isempty(e.args)
@@ -26,7 +27,7 @@ const AnonFuncOp    = 14
 #   first(e.span) == first(first(e.args).span)
 #   last(e.span) == sum(x->x.fullspan, e.args[1:end-1]) + last(last(e.args).span)
 # end
-mutable struct EXPR{T}
+mutable struct EXPR{T} <: AbstractEXPR
     args::Vector
     # The full width of this expression including any whitespace
     fullspan::Int
@@ -37,7 +38,9 @@ end
 
 abstract type ERROR end
 
-struct IDENTIFIER
+abstract type LeafNode <: AbstractEXPR end
+    
+struct IDENTIFIER <: LeafNode
     fullspan::Int
     span::UnitRange{Int}
     val::String
@@ -45,14 +48,14 @@ struct IDENTIFIER
 end
 @noinline IDENTIFIER(ps::ParseState) = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), val(ps.t, ps))
 
-struct PUNCTUATION
+struct PUNCTUATION <: LeafNode
     kind::Tokenize.Tokens.Kind
     fullspan::Int
     span::UnitRange{Int}
 end
 @noinline PUNCTUATION(ps::ParseState) = PUNCTUATION(ps.t.kind, ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
 
-struct OPERATOR
+struct OPERATOR <: LeafNode
     fullspan::Int
     span::UnitRange{Int}
     kind::Tokenize.Tokens.Kind
@@ -60,7 +63,7 @@ struct OPERATOR
 end
 @noinline OPERATOR(ps::ParseState) = OPERATOR(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), ps.t.kind, ps.dot)
 
-struct KEYWORD
+struct KEYWORD <: LeafNode
     kind::Tokenize.Tokens.Kind
     fullspan::Int
     span::UnitRange{Int}
@@ -68,7 +71,7 @@ end
 @noinline KEYWORD(ps::ParseState) = KEYWORD(ps.t.kind, ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
 
 
-struct LITERAL
+struct LITERAL <: LeafNode
     fullspan::Int
     span::UnitRange{Int}
     val::String
@@ -85,12 +88,7 @@ end
 
 AbstractTrees.children(x::EXPR) = x.args
 
-span(x::EXPR) = length(x.span)
-span(x::OPERATOR) = length(x.span)
-span(x::IDENTIFIER) = length(x.span)
-span(x::KEYWORD) = length(x.span)
-span(x::PUNCTUATION) = length(x.span)
-span(x::LITERAL) = length(x.span)
+span(x::AbstractEXPR) = length(x.span)
 
 function update_span!(x) end
 function update_span!(x::EXPR)
