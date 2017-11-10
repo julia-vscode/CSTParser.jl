@@ -688,12 +688,12 @@ end
     m = first(methods(f))
     @test DSE.keywords(f, m) == [:a, :b]
 end""" |> test_expr
+    @test "-1^a" |> test_expr_broken
 end
 
 @testset "Broken things" begin
     @test_broken "\$(a) * -\$(b)" |> test_expr_broken
     @test_broken "function(f, args...; kw...) end" |> test_expr_broken
-    @test_broken "-1^a" |> test_expr_broken
 end
 
 # test_fsig_decl(str) = (x->x.id).(CSTParser._get_fsig(CSTParser.parse(str)).defs)
