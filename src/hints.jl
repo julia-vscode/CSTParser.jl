@@ -27,8 +27,8 @@ UnexpectedCharEnd,
 UnexpectedComma,
 UnexpectedOperator,
 UnexpectedIdentifier,
-UnexepectedEnd,
-UnexepectedToken,
+UnexpectedEnd,
+UnexpectedToken,
 MissingConditional,
 InvalidIter,
 ParseFailure)
@@ -97,7 +97,7 @@ function error_unexpected(ps, tok)
         return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedRSquare,
                          "Unexpected [")
     elseif tok.kind == Tokens.END
-        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedRSquare,
+        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedEnd,
                             "Unexpected end")
     elseif tok.kind == Tokens.ERROR
         return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedToken,
