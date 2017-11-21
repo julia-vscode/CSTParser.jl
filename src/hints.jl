@@ -104,7 +104,7 @@ function error_unexpected(ps, tok)
                             "Unexpected token $(val(tok, ps))")
     else
         # error("Internal error")
-        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexepectedToken,
+        return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedToken,
         "Unexpected token $(val(tok, ps))")
     end
 end
