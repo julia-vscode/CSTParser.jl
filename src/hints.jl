@@ -95,7 +95,7 @@ function error_unexpected(ps, tok)
                           "Unexpected [")
     elseif tok.kind == Tokens.RSQUARE
         return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedRSquare,
-                         "Unexpected [")
+                         "Unexpected ]")
     elseif tok.kind == Tokens.END
         return make_error(ps, tok.startbyte:tok.endbyte, Diagnostics.UnexpectedEnd,
                             "Unexpected end")
