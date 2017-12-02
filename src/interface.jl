@@ -119,27 +119,48 @@ function _get_fparams(x::WhereOpCall, args = Symbol[])
     return unique(args)
 end
 
+function get_where_params(x, params = [])
+    return params
+end
 
-# _get_fname(sig::EXPR{FunctionDef}) = _get_fname(sig.args[2])
-# _get_fname(sig::IDENTIFIER) = sig
-# _get_fname(sig::EXPR{TupleH}) = NOTHING
-# function _get_fname(sig::WhereOpCall)
-#     return _get_fname(sig.arg1)
-# end
-# _get_fname(sig::BinaryOpCall) = sig.op
-# function _get_fname(sig::BinarySyntaxOpCall)
-#     if is_decl(sig.op)
-#         return _get_fname(sig.arg1)
-#     else
-#         return get_id(sig.arg1)
-#     end
-# end
-# _get_fname(sig) = get_id(sig.args[1])
-# _get_fname(sig::UnaryOpCall) = sig.op
-# _get_fname(sig::UnarySyntaxOpCall) = sig.arg1 isa OPERATOR ? sig.arg1 : sig.arg2
+function get_where_params(x::WhereOpCall, params = [])
+    for i = 1:length(x.args)
+        a = x.args[i]
+        if !(a isa PUNCTUATION)
+            param = rem_subtype(a)
+            param = rem_curly(param)
+            push!(params, str_value(param))
+        end
+    end
+    return params
+end
 
-# _get_fsig(fdecl::EXPR{FunctionDef}) = fdecl.args[2]
-# _get_fsig(fdecl::BinarySyntaxOpCall) = fdecl.arg1
+function get_curly_params(x, params = [])
+end
+function get_curly_params(x::EXPR{Curly}, params = [])
+    for i = 2:length(x.args)
+        a = x.args[i]
+        if !(a isa PUNCTUATION)
+            param = rem_subtype(a)
+            push!(params, str_value(param))
+        end
+    end
+    return params
+end
+
+
+
+function get_sig_params(x, params = [])
+    get_where_params(x, params)
+    if x isa WhereOpCall && x.arg1 isa WhereOpCall
+        get_sig_params(x.arg1, params)
+    end
+    x = rem_where(x)
+    x = rem_call(x)
+    get_curly_params(x, params)
+    return params
+end
+
 
 function rem_subtype(x)
     if x isa BinarySyntaxOpCall && x.op isa OPERATOR && x.op.kind == Tokens.ISSUBTYPE
@@ -223,7 +244,7 @@ defines_macro(x::EXPR{Macro}) = true
 
 
 function defines_datatype(x)
-    defines_struct(x)
+    defines_struct(x) || defines_abstract(x) || defines_primitive(x)
 end
 
 defines_struct(x) = x isa EXPR{Struct} || defines_mutable(x)
@@ -253,6 +274,10 @@ get_sig(x::EXPR{Mutable}) = x.args[3]
 get_sig(x::EXPR{Abstract}) = length(x.args) == 4 ? x.args[3] : x.args[2]
 get_sig(x::EXPR{T}) where T <: Union{Primitive,Bitstype}  = x.args[3]
 get_sig(x::EXPR{FunctionDef}) = x.args[2]
+get_sig(x::EXPR{Macro}) = x.args[2]
+function get_sig(x::BinarySyntaxOpCall)
+    return x.arg1
+end
 
 function get_name(x::EXPR{T}) where T <: Union{Struct,Mutable,Abstract,Primitive,Bitstype}
     sig = get_sig(x)
@@ -285,6 +310,14 @@ function get_name(x::EXPR{FunctionDef})
     return sig
 end
 
+function get_name(x::EXPR{Macro})
+    sig = get_sig(x)
+    sig = rem_call(sig)
+    sig = rem_invis(sig)
+    return sig
+end
+
+
 function get_name(x::BinarySyntaxOpCall)
     sig = x.arg1
     if sig isa UnaryOpCall
@@ -295,6 +328,32 @@ function get_name(x::BinarySyntaxOpCall)
     sig = rem_call(sig)
     sig = rem_curly(sig)
     sig = rem_invis(sig)
+end
+
+
+
+function get_args(x)
+    sig = get_sig(x)
+    sig = rem_where(sig)
+    sig = rem_decl(sig)
+    return get_args(sig)
+end
+function get_args(sig::EXPR{Call})
+    args = []
+    sig = rem_where(sig)
+    sig = rem_decl(sig)
+    if sig isa EXPR{Call}
+        for i = 2:length(sig.args)
+            arg = sig.args[i]
+            arg isa PUNCTUATION && continue
+            arg isa EXPR{Parameters} && continue
+            arg_name = get_arg_name(arg)
+            push!(args, arg_name)
+        end
+    else
+        error("not sig: $sig")
+    end
+    return args
 end
 
 function get_arg_name(arg)
@@ -328,6 +387,6 @@ get_body(x::EXPR{Mutable}) = x.args[4]
     
 
 declares_function = defines_function
-_get_fname = get_name
-_get_fsig = get_sig
+
+
 

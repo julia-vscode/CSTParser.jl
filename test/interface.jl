@@ -62,3 +62,16 @@ end
     @test CSTParser.str_value(CSTParser.get_name(CSTParser.parse("!(x) = x"))) == "!"
 end
 
+@testset "get_sig_params" begin
+    @test CSTParser.get_where_params(CSTParser.parse("a where T")) == ["T"]
+    @test CSTParser.get_where_params(CSTParser.parse("a where {T}")) == ["T"]
+    @test CSTParser.get_where_params(CSTParser.parse("a where {T,S}")) == ["T", "S"]
+    @test CSTParser.get_where_params(CSTParser.parse("a where T <: S")) == ["T"]
+    @test CSTParser.get_where_params(CSTParser.parse("a where T{S}")) == ["T"]
+    @test CSTParser.get_where_params(CSTParser.parse("a where T{S} <: R")) == ["T"]
+    @test CSTParser.get_sig_params(CSTParser.parse("f() where T")) == ["T"]
+    @test CSTParser.get_sig_params(CSTParser.parse("f{T}()")) == ["T"]
+    @test CSTParser.get_sig_params(CSTParser.parse("f{T}() where S")) == ["S", "T"]
+    @test CSTParser.get_sig_params(CSTParser.parse("f{T}() where S{R} where J")) == ["J", "S", "T"]
+end
+
