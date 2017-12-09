@@ -75,3 +75,26 @@ end
     @test CSTParser.get_sig_params(CSTParser.parse("f{T}() where S{R} where J")) == ["J", "S", "T"]
 end
 
+@testset "get_sig_params" begin
+    f = x -> CSTParser.str_value.(CSTParser.get_args(CSTParser.parse(x)))
+    @test f("function f(a) end") == ["a"]
+    @test f("function f(a::T) end") == ["a"]
+    @test f("function f(a,b) end") == ["a", "b"]
+    @test f("function f(a::T,b::T) end") == ["a", "b"]
+    @test f("function f(a::T,b::T) where T end") == ["a", "b"]
+    @test f("function f{T}(a::T,b::T) where T end") == ["a", "b"]
+    @test f("function f{T}(a::T,b::T;c = 1) where T end") == ["a", "b", "c"]
+
+    @test f("a -> a") == ["a"]
+    @test f("a::T -> a") == ["a"]
+    @test f("(a::T) -> a") == ["a"]
+    @test f("(a,b) -> a") == ["a", "b"]
+
+    @test f("map(1:10) do a 
+        a
+    end") == ["a"]
+    @test f("map(1:10) do a,b
+        a
+    end") == ["a", "b"]
+end
+

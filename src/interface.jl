@@ -13,6 +13,8 @@ function is_func_call(x::WhereOpCall)
     return is_func_call(x.arg1)
 end
 
+is_assignment(x) = x isa BinarySyntaxOpCall && is_eq(x.op)
+
 # OPERATOR
 is_exor(x) = x isa OPERATOR && x.kind == Tokens.EX_OR && x.dot == false
 is_decl(x) = x isa OPERATOR && x.kind == Tokens.DECLARATION
@@ -37,6 +39,14 @@ is_where(x) = x isa OPERATOR && x.kind == Tokens.WHERE
 is_anon_func(x) = x isa OPERATOR && x.kind == Tokens.ANON_FUNC
 
 # PUNCTUATION
+is_punc(x) = x isa PUNCTUATION && 
+    x.kind == Tokens.COMMA && 
+    x.kind == Tokens.LPAREN &&
+    x.kind == Tokens.RPAREN &&
+    x.kind == Tokens.LBRACE &&
+    x.kind == Tokens.RBRACE &&
+    x.kind == Tokens.LSQUARE &&
+    x.kind == Tokens.RSQUARE
 is_comma(x) = x isa PUNCTUATION && x.kind == Tokens.COMMA
 is_lparen(x) = x isa PUNCTUATION && x.kind == Tokens.LPAREN
 is_rparen(x) = x isa PUNCTUATION && x.kind == Tokens.RPAREN
@@ -51,6 +61,14 @@ is_module(x) = x isa KEYWORD && x.kind == Tokens.MODULE
 is_import(x) = x isa KEYWORD && x.kind == Tokens.IMPORT
 is_importall(x) = x isa KEYWORD && x.kind == Tokens.IMPORTALL
 
+
+# Literals
+
+is_lit_string(x) = x isa LITERAL && x.kind == Tokens.STRING || x.kind == Tokens.TRIPLE_STRING
+
+is_valid_iterator(x) = false
+is_valid_iterator(x::BinarySyntaxOpCall) = is_eq(x.op) 
+is_valid_iterator(x::BinaryOpCall) = is_in(x.op) || is_elof(x.op)
 
 _arg_id(x) = x
 _arg_id(x::IDENTIFIER) = x
@@ -78,47 +96,6 @@ function _arg_id(x::WhereOpCall)
     return _arg_id(x.arg1)
 end
 
-
-_get_fparams(x, args = Symbol[]) = args
-
-function _get_fparams(x::EXPR{Call}, args = Symbol[])
-    if x.args[1] isa EXPR{Curly}
-        _get_fparams(x.args[1], args)
-    end
-    unique(args)
-end
-
-function _get_fparams(x::EXPR{Curly}, args = Symbol[])
-    for i = 3:length(x.args)
-        a = x.args[i]
-        if !(a isa PUNCTUATION)
-            if a isa IDENTIFIER
-                push!(args, Expr(a))
-            elseif a isa BinarySyntaxOpCall && is_issubt(a.op)
-                push!(args, Expr(a).args[1])
-            end
-        end
-    end
-    unique(args)
-end
-
-function _get_fparams(x::WhereOpCall, args = Symbol[])
-    if x.arg1 isa WhereOpCall
-        _get_fparams(x.arg1, args)
-    end
-    for i = 1:length(x.args)
-        a = x.args[i]
-        if !(a isa PUNCTUATION)
-            if a isa IDENTIFIER
-                push!(args, Expr(a))
-            elseif a isa BinarySyntaxOpCall && is_issubt(a.op) && a.arg1 isa IDENTIFIER
-                push!(args, Expr(a.arg1))
-            end
-        end
-    end
-    return unique(args)
-end
-
 function get_where_params(x, params = [])
     return params
 end
@@ -136,6 +113,7 @@ function get_where_params(x::WhereOpCall, params = [])
 end
 
 function get_curly_params(x, params = [])
+    return params
 end
 function get_curly_params(x::EXPR{Curly}, params = [])
     for i = 2:length(x.args)
@@ -218,6 +196,14 @@ function rem_dddot(x)
     end
 end
 
+function rem_kw(x)
+    if x isa EXPR{Kw}
+        return x.args[1]
+    else
+        return x
+    end
+end
+
 # Definitions
 defines_function(x) = false
 defines_function(x::EXPR{FunctionDef}) = true
@@ -257,9 +243,10 @@ end
 
 defines_module(x) = x isa EXPR{ModuleH} || x isa EXPR{BareModule}
 
+defines_anon_function(x) = x isa BinarySyntaxOpCall && is_anon_func(x.op)
 
 function has_sig(x)
-    defines_datatype(x) || defines_function(x) || defines_macro(x)
+    defines_datatype(x) || defines_function(x) || defines_macro(x) || defines_anon_function(x)
 end
 
 
@@ -320,7 +307,7 @@ end
 
 function get_name(x::BinarySyntaxOpCall)
     sig = x.arg1
-    if sig isa UnaryOpCall
+    if sig isa UnaryOpCall 
         return sig.op
     end
     sig = rem_where(sig)
@@ -330,14 +317,48 @@ function get_name(x::BinarySyntaxOpCall)
     sig = rem_invis(sig)
 end
 
-
+function get_args(x::IDENTIFIER)
+    return []
+end
 
 function get_args(x)
+    if defines_anon_function(x) && !(x.arg1 isa EXPR{TupleH})
+        arg = x.arg1
+        arg = rem_invis(arg)
+        arg = get_arg_name(arg)
+        return [arg]
+    end
     sig = get_sig(x)
     sig = rem_where(sig)
     sig = rem_decl(sig)
     return get_args(sig)
 end
+
+function get_args(sig::EXPR{TupleH})
+    args = []
+    for i = 2:length(sig.args)
+        arg = sig.args[i]
+        arg isa PUNCTUATION && continue
+        arg isa EXPR{Parameters} && continue
+        arg_name = get_arg_name(arg)
+        push!(args, arg_name)
+    end
+    return args
+end
+
+
+function get_args(x::EXPR{Do})
+    args = []
+    for i = 1:length(x.args[3].args)
+        arg = x.args[3].args[i]
+        arg isa PUNCTUATION && continue
+        arg isa EXPR{Parameters} && continue
+        arg_name = get_arg_name(arg)
+        push!(args, arg_name)
+    end
+    return args
+end
+
 function get_args(sig::EXPR{Call})
     args = []
     sig = rem_where(sig)
@@ -346,9 +367,17 @@ function get_args(sig::EXPR{Call})
         for i = 2:length(sig.args)
             arg = sig.args[i]
             arg isa PUNCTUATION && continue
-            arg isa EXPR{Parameters} && continue
-            arg_name = get_arg_name(arg)
-            push!(args, arg_name)
+            if arg isa EXPR{Parameters}
+                for j = 1:length(arg.args)
+                    parg = arg.args[j]
+                    parg isa PUNCTUATION && continue
+                    parg_name = get_arg_name(parg)
+                    push!(args, parg_name)
+                end
+            else
+                arg_name = get_arg_name(arg)
+                push!(args, arg_name)
+            end
         end
     else
         error("not sig: $sig")
@@ -356,7 +385,57 @@ function get_args(sig::EXPR{Call})
     return args
 end
 
+function get_args(x::EXPR{Struct})
+    args = []
+    for arg in x.args[3]
+        if !defines_function(arg)
+            arg = rem_decl(arg)
+            push!(args, arg)
+        end
+    end
+    return args
+end
+
+function get_args(x::EXPR{Mutable})
+    args = []
+    for arg in x.args[4]
+        if !defines_function(arg)
+            arg = rem_decl(arg)
+            push!(args, arg)
+        end
+    end
+    return args
+end
+
+function get_args(x::EXPR{Flatten})
+    get_args(x.args[1])
+end
+
+function get_args(x::EXPR{T}) where T <: Union{Generator,Filter}
+    args = []
+    if x.args[1] isa EXPR{Flatten} || x.args[1] isa EXPR{Generator}
+        append!(args, get_args(x.args[1]))
+    end
+
+    if x.args[3] isa EXPR{Filter}
+        return get_args(x.args[3])
+    else
+        for i = 3:length(x.args)
+            arg = x.args[i]
+            if is_valid_iterator(arg)
+                arg = rem_decl(arg.arg1)
+                arg = flatten_tuple(arg)
+                arg = rem_decl.(arg)
+                append!(args, arg)
+            end
+        end
+        return args
+    end
+end
+
+
 function get_arg_name(arg)
+    arg = rem_kw(arg)
     arg = rem_dddot(arg)
     arg = rem_where(arg)
     arg = rem_decl(arg)
@@ -388,5 +467,16 @@ get_body(x::EXPR{Mutable}) = x.args[4]
 
 declares_function = defines_function
 
-
+function flatten_tuple(x, out = [])
+    if x isa IDENTIFIER
+        push!(out, x)
+    elseif x isa EXPR{TupleH}
+        for arg in x
+            if !(x isa PUNCTUATION)
+                flatten_tuple(arg, out)
+            end
+        end
+    end
+    return out
+end
 
