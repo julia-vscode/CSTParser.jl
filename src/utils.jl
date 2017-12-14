@@ -561,22 +561,6 @@ function check_reformat()
 end
 
 
-
-is_func_call(x) = false
-is_func_call(x::EXPR) = false
-is_func_call(x::EXPR{Call}) = true
-is_func_call(x::UnaryOpCall) = true
-function is_func_call(x::BinarySyntaxOpCall)
-    if is_decl(x.op)
-        return is_func_call(x.arg1)
-    else
-        return false
-    end
-end
-function is_func_call(x::WhereOpCall)
-    return is_func_call(x.arg1)
-end
-
 function trailing_ws_length(x)
     x.fullspan - length(x.span)
 end
@@ -622,39 +606,6 @@ function collect_calls(f::Function, calls = [])
     calls
 end
 
-# OPERATOR
-is_exor(x) = x isa OPERATOR && x.kind == Tokens.EX_OR && x.dot == false
-is_decl(x) = x isa OPERATOR && x.kind == Tokens.DECLARATION
-is_issubt(x) = x isa OPERATOR && x.kind == Tokens.ISSUBTYPE
-is_issupt(x) = x isa OPERATOR && x.kind == Tokens.ISSUPERTYPE
-is_and(x) = x isa OPERATOR && x.kind == Tokens.AND && x.dot == false
-is_not(x) = x isa OPERATOR && x.kind == Tokens.NOT && x.dot == false
-is_plus(x) = x isa OPERATOR && x.kind == Tokens.PLUS && x.dot == false
-is_minus(x) = x isa OPERATOR && x.kind == Tokens.MINUS && x.dot == false
-is_star(x) = x isa OPERATOR && x.kind == Tokens.STAR && x.dot == false
-is_eq(x) = x isa OPERATOR && x.kind == Tokens.EQ && x.dot == false
-is_dot(x) = x isa OPERATOR && x.kind == Tokens.DOT
-is_ddot(x) = x isa OPERATOR && x.kind == Tokens.DDOT
-is_dddot(x) = x isa OPERATOR && x.kind == Tokens.DDDOT
-is_pairarrow(x) = x isa OPERATOR && x.kind == Tokens.PAIR_ARROW && x.dot == false
-is_in(x) = x isa OPERATOR && x.kind == Tokens.IN && x.dot == false
-is_elof(x) = x isa OPERATOR && x.kind == Tokens.ELEMENT_OF && x.dot == false
-is_colon(x) = x isa OPERATOR && x.kind == Tokens.COLON
-is_prime(x) = x isa OPERATOR && x.kind == Tokens.PRIME
-is_cond(x) = x isa OPERATOR && x.kind == Tokens.CONDITIONAL
-is_where(x) = x isa OPERATOR && x.kind == Tokens.WHERE
-is_anon_func(x) = x isa OPERATOR && x.kind == Tokens.ANON_FUNC
-
-# PUNCTUATION
-is_comma(x) = x isa PUNCTUATION && x.kind == Tokens.COMMA
-is_lparen(x) = x isa PUNCTUATION && x.kind == Tokens.LPAREN
-is_rparen(x) = x isa PUNCTUATION && x.kind == Tokens.RPAREN
-
-# KEYWORD
-is_if(x) = x isa KEYWORD && x.kind == Tokens.IF
-is_module(x) = x isa KEYWORD && x.kind == Tokens.MODULE
-is_import(x) = x isa KEYWORD && x.kind == Tokens.IMPORT
-is_importall(x) = x isa KEYWORD && x.kind == Tokens.IMPORTALL
 
 
 Base.start(x::EXPR) = 1
@@ -700,3 +651,7 @@ for t in (CSTParser.IDENTIFIER, CSTParser.OPERATOR, CSTParser.LITERAL, CSTParser
 end
 
 @inline val(token::RawToken, ps::ParseState) = String(ps.l.io.data[token.startbyte+1:token.endbyte+1])
+
+str_value(x) = ""
+str_value(x::T) where T <: Union{IDENTIFIER,LITERAL} = x.val
+str_value(x::OPERATOR) = string(Expr(x))

@@ -32,6 +32,7 @@ include("components/types.jl")
 include("conversion.jl")
 include("display.jl")
 include("scoping.jl")
+include("interface.jl")
 
 
 """
