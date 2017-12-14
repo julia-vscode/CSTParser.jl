@@ -64,7 +64,7 @@ is_importall(x) = x isa KEYWORD && x.kind == Tokens.IMPORTALL
 
 # Literals
 
-is_lit_string(x) = x isa LITERAL && x.kind == Tokens.STRING || x.kind == Tokens.TRIPLE_STRING
+is_lit_string(x) = x isa LITERAL && (x.kind == Tokens.STRING || x.kind == Tokens.TRIPLE_STRING)
 
 is_valid_iterator(x) = false
 is_valid_iterator(x::BinarySyntaxOpCall) = is_eq(x.op) 
@@ -131,7 +131,7 @@ end
 function get_sig_params(x, params = [])
     get_where_params(x, params)
     if x isa WhereOpCall && x.arg1 isa WhereOpCall
-        get_sig_params(x.arg1, params)
+        get_where_params(x.arg1, params)
     end
     x = rem_where(x)
     x = rem_call(x)
@@ -174,7 +174,7 @@ end
 
 function rem_where(x)
     if x isa WhereOpCall
-        return x.arg1
+        return rem_where(x.arg1)
     else
         return x
     end
@@ -463,9 +463,6 @@ get_body(x::EXPR{FunctionDef}) = x.args[3]
 get_body(x::EXPR{Macro}) = x.args[3]
 get_body(x::EXPR{Struct}) = x.args[3]
 get_body(x::EXPR{Mutable}) = x.args[4]
-    
-
-declares_function = defines_function
 
 function flatten_tuple(x, out = [])
     if x isa IDENTIFIER
