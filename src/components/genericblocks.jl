@@ -24,7 +24,7 @@ assumed to handle the closer.
 function parse_block(ps::ParseState, ret::EXPR{Block}, closers = (Tokens.END,), docable = false)
     parse_block(ps, ret.args, closers, docable)
     update_span!(ret)
-    return 
+    return
 end
 
 
@@ -41,5 +41,5 @@ function parse_block(ps::ParseState, ret::Vector{Any}, closers = (Tokens.END,), 
         end
         push!(ret, a)
     end
-    return 
+    return
 end

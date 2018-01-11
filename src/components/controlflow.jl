@@ -18,49 +18,37 @@ function parse_do(ps::ParseState, ret::ANY)
 end
 
 """
-    parse_if(ps, ret, nested=false, puncs=[])
+    parse_if(ps)
 
 Parse an `if` block.
 """
-function parse_if(ps::ParseState, nested = false)
-    # Parsing
-    kw = KEYWORD(ps)
-    if ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS
-        return make_error(ps, 1 + (ps.t.endbyte:ps.t.endbyte), Diagnostics.MissingConditional,
-            "missing conditional in `$(lowercase(string(ps.t.kind)))`")
+function parse_if(ps::ParseState)
+    ifargs = Any[]
+    found_else = false
+    while true
+        kw = KEYWORD(ps)
+        push!(ifargs, kw)
+        ps.t.kind == Tokens.END && break
+        if found_else
+            return make_error(ps, 1 + (ps.t.startbyte:ps.t.endbyte), Diagnostics.UnexpectedToken,
+                              "expected `end` got `$(val(ps.t, ps))`")
+        end
+        if ps.t.kind != Tokens.ELSE
+            if ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS
+                return make_error(ps, 1 + (ps.t.endbyte:ps.t.endbyte), Diagnostics.MissingConditional,
+                    "missing conditional in `$(lowercase(string(ps.t.kind)))`")
+            end
+            @catcherror ps cond = @default ps @closer ps block @closer ps ws parse_expression(ps)
+            push!(ifargs, cond)
+        else
+            found_else = true
+        end
+        block = Any[]
+        @catcherror ps @default ps @closer ps ifelse parse_block(ps, block, (Tokens.END, Tokens.ELSE, Tokens.ELSEIF))
+        push!(ifargs, EXPR{Block}(block))
+        next(ps)
     end
-    @catcherror ps cond = @default ps @closer ps block @closer ps ws parse_expression(ps)
-
-
-    ifblockargs = Any[]
-    @catcherror ps @default ps @closer ps ifelse parse_block(ps, ifblockargs, (Tokens.END, Tokens.ELSE, Tokens.ELSEIF))
-
-    if nested
-        ret = EXPR{If}(Any[cond, EXPR{Block}(ifblockargs)])
-    else
-        ret = EXPR{If}(Any[kw, cond, EXPR{Block}(ifblockargs)])
-    end
-
-    elseblock = EXPR{Block}(Any[], 0, 1:0)
-    if ps.nt.kind == Tokens.ELSEIF
-        push!(ret, KEYWORD(next(ps)))
-
-        @catcherror ps push!(elseblock, parse_if(ps, true))
-    end
-    elsekw = ps.nt.kind == Tokens.ELSE
-    if ps.nt.kind == Tokens.ELSE
-        push!(ret, KEYWORD(next(ps)))
-        @catcherror ps @default ps parse_block(ps, elseblock)
-    end
-
-    # Construction
-    !nested && next(ps)
-    if !(isempty(elseblock.args) && !elsekw)
-        push!(ret, elseblock)
-    end
-    !nested && push!(ret, KEYWORD(ps))
-
-    return ret
+    return EXPR{If}(ifargs)
 end
 
 function parse_let(ps::ParseState)
