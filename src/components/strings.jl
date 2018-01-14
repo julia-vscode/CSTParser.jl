@@ -40,10 +40,10 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         (isempty(str) || (lcp != nothing && isempty(lcp))) && return
         (last && str[end] == '\n') && return (lcp = "")
         idxstart, idxend = 2, 1
-        while idxend < sizeof(str) && (lcp == nothing || !isempty(lcp))
+        while nextind(str, idxend) - 1 < sizeof(str) && (lcp == nothing || !isempty(lcp))
             idxend = skip_to_nl(str, idxend)
             idxstart = nextind(str, idxend)
-            while idxend < sizeof(str)
+            while nextind(str, idxend) - 1 < sizeof(str)
                 c = str[nextind(str, idxend)]
                 if c == ' ' || c == '\t'
                     idxend += 1
@@ -58,7 +58,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 end
             end
         end
-        if idxstart != idxend + 1
+        if idxstart != nextind(str, idxend)
             prefix = str[idxstart:idxend]
             lcp = lcp === nothing ? prefix : longest_common_prefix(lcp, prefix)
         end
