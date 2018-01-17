@@ -481,8 +481,20 @@ function Expr(x::EXPR{Hcat})
     ret
 end
 
-function Expr(x::EXPR{Vcat})
-    ret = Expr(:vcat)
+function Expr(x::EXPR{Cell1d})
+    ret = Expr(:cell1d)
+    for a in x.args
+        if !(a isa PUNCTUATION)
+            push!(ret.args, Expr(a))
+        end
+    end
+    ret
+end
+
+
+
+function Expr(x::EXPR)
+    ret = Expr(:call)
     for a in x.args
         if !(a isa PUNCTUATION)
             push!(ret.args, Expr(a))
