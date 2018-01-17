@@ -20,6 +20,10 @@ Parses a macro call. Expects to start on the `@`.
 """
 function parse_macrocall(ps::ParseState)
     at = PUNCTUATION(ps)
+    if !isemptyws(ps)
+        #TODO: error code
+        return EXPR{ERROR}(Any[INSTANCE($(esc(ps)))], 0, 0:-1)
+    end
     mname = EXPR{MacroName}(Any[at, IDENTIFIER(next(ps))])
 
     # Handle cases with @ at start of dotted expressions

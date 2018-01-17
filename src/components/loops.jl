@@ -71,7 +71,7 @@ parse_generator(ps)
 Having hit `for` not at the beginning of an expression return a generator.
 Comprehensions are parsed as SQUAREs containing a generator.
 """
-function parse_generator(ps::ParseState, ret::ANY)
+function parse_generator(ps::ParseState, @nospecialize ret)
     kw = KEYWORD(next(ps))
     ret = EXPR{Generator}(Any[ret, kw])
     @catcherror ps ranges = @closer ps paren @closer ps square parse_ranges(ps)

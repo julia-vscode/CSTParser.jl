@@ -48,36 +48,36 @@ end
 
 Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
 """
-function parse_call_exor(ps::ParseState, ret::ANY)
+function parse_call_exor(ps::ParseState, @nospecialize ret)
     arg = @precedence ps 20 parse_expression(ps)
     ret = UnarySyntaxOpCall(ret, arg)
     return ret
 end
-function parse_call_decl(ps::ParseState, ret::ANY)
+function parse_call_decl(ps::ParseState, @nospecialize ret)
     arg = @precedence ps 20 parse_expression(ps)
     ret = UnarySyntaxOpCall(ret, arg)
     return ret
 end
-function parse_call_and(ps::ParseState, ret::ANY)
+function parse_call_and(ps::ParseState, @nospecialize ret)
     arg = @precedence ps 20 parse_expression(ps)
     ret = UnarySyntaxOpCall(ret, arg)
     return ret
 end
 
 # NEEDS FIX: these are broken (i.e. `<:(a,b) where T = 1`)
-function parse_call_issubt(ps::ParseState, ret::ANY)
+function parse_call_issubt(ps::ParseState, @nospecialize ret)
     arg = @precedence ps 13 parse_expression(ps)
     ret = EXPR{Call}(Any[ret; arg.args])
     return ret
 end
 
-function parse_call_issupt(ps::ParseState, ret::ANY)
+function parse_call_issupt(ps::ParseState, @nospecialize ret)
     arg = @precedence ps 13 parse_expression(ps)
     ret = EXPR{Call}(Any[ret; arg.args])
     return ret
 end
 
-function parse_call_PlusOp(ps::ParseState, ret::ANY)
+function parse_call_PlusOp(ps::ParseState, @nospecialize ret)
     arg = @precedence ps 13 parse_expression(ps)
     if arg isa EXPR{TupleH}
         ret = EXPR{Call}(Any[ret; arg.args])
@@ -89,7 +89,7 @@ function parse_call_PlusOp(ps::ParseState, ret::ANY)
     return ret
 end
 
-function parse_call(ps::ParseState, ret::ANY)
+function parse_call(ps::ParseState, @nospecialize ret)
     if is_plus(ret) || is_minus(ret) || is_not(ret)
         return parse_call_PlusOp(ps, ret)
     elseif is_and(ret)

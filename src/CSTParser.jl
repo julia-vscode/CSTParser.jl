@@ -1,6 +1,5 @@
 __precompile__()
 module CSTParser
-isdefined(Base, :GenericIOBuffer) ? (import Base.GenericIOBuffer) : (GenericIOBuffer{T} = Base.AbstractIOBuffer{T})
 global debug = true
 
 using AbstractTrees
@@ -175,7 +174,7 @@ Handles cases where an expression - `ret` - is not followed by
 + an expression preceded by a unary operator
 + A number followed by an expression (with no seperating white space)
 """
-function parse_compound(ps::ParseState, ret::ANY)
+function parse_compound(ps::ParseState, @nospecialize ret)
     if ps.nt.kind == Tokens.FOR
         ret = parse_generator(ps, ret)
     elseif ps.nt.kind == Tokens.DO
@@ -282,7 +281,7 @@ function parse(str::String, cont = false)
 end
 
 function parse_doc(ps::ParseState)
-    if ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING
+    if (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING) && !isemptyws(ps.nws)
         doc = LITERAL(next(ps))
         if (ps.nt.kind == Tokens.ENDMARKER || ps.nt.kind == Tokens.END)
             return doc

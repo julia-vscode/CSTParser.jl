@@ -47,7 +47,7 @@ The parser's interface with `Tokenize.Lexers.Lexer`. This alters the output of `
 + Keeps track of the previous, current and next tokens.
 """
 mutable struct ParseState
-    l::Lexer{Base.AbstractIOBuffer{Array{UInt8, 1}},RawToken}
+    l::Lexer{Base.GenericIOBuffer{Array{UInt8, 1}},RawToken}
     done::Bool
     lt::RawToken
     t::RawToken
