@@ -366,13 +366,19 @@ function Expr(x::EXPR{Try})
 end
 
 function Expr(x::EXPR{Let})
-    ret = Expr(:let, Expr(x.args[end - 1]))
-    for i = 1:length(x.args) - 2
-        a = x.args[i]
-        if !(a isa PUNCTUATION || a isa KEYWORD)
-            push!(ret.args, Expr(a))
+    ret = Expr(:let)
+    if x.args[2] isa EXPR{Block}
+        arg = Expr(:block)
+        for a in x.args[2].args
+            if !(a isa PUNCTUATION)
+                push!(arg.args, fix_range(a))
+            end
         end
+        push!(ret.args, arg)
+    else
+        push!(ret.args, fix_range(x.args[2]))
     end
+    push!(ret.args, Expr(x.args[3]))
     ret
 end
 

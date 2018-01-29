@@ -65,13 +65,19 @@ end
 
 function parse_let(ps::ParseState)
     args = Any[KEYWORD(ps)]
-    @default ps @closer ps comma @closer ps block while !closer(ps)
-        @catcherror ps a = parse_expression(ps)
-        push!(args, a)
-        if ps.nt.kind == Tokens.COMMA
-            push!(args, PUNCTUATION(next(ps)))
+    arg = @closer ps range @closer ps ws parse_expression(ps)
+    
+    if ps.nt.kind == Tokens.COMMA
+        arg = EXPR{Block}(Any[arg])
+        while ps.nt.kind == Tokens.COMMA
+            push!(arg, PUNCTUATION(next(ps)))
+
+            startbyte = ps.nt.startbyte
+            @catcherror ps nextarg = @closer ps comma @closer ps ws parse_expression(ps)
+            push!(arg, nextarg)
         end
     end
+    push!(args, arg)
 
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
