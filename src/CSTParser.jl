@@ -59,7 +59,7 @@ function parse_expression(ps::ParseState)
     elseif ps.t.kind == Tokens.LSQUARE
         @catcherror ps ret = parse_array(ps)
     elseif ps.t.kind == Tokens.LBRACE
-        @catcherror ps ret = parse_cell1d(ps)
+        @catcherror ps ret = parse_braces(ps)
     elseif isinstance(ps.t) || isoperator(ps.t)
         if ps.t.kind == Tokens.WHERE
             ret = IDENTIFIER(ps)

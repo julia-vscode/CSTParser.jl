@@ -193,12 +193,11 @@ function parse_curly(ps::ParseState, ret)
     return EXPR{Curly}(args)
 end
 
-function parse_cell1d(ps::ParseState)
-    ret = EXPR{Cell1d}(Any[PUNCTUATION(ps)])
+function parse_braces(ps::ParseState)
     args = Any[PUNCTUATION(ps)]
     @catcherror ps @default ps @closer ps brace parse_comma_sep(ps, args, true, false)
     push!(args, PUNCTUATION(next(ps)))
-    return EXPR{Cell1d}(args)
+    return EXPR{Braces}(args)
 end
 
 

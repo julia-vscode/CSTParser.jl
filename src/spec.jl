@@ -272,7 +272,8 @@ abstract type Abstract <: Head end
 abstract type Begin <: Head end
 abstract type Bitstype <: Head end
 abstract type Block <: Head end
-abstract type Cell1d <: Head end
+abstract type Braces <: Head end
+abstract type BracesCat <: Head end
 abstract type Const <: Head end
 abstract type Comparison <: Head end
 abstract type Curly <: Head end
