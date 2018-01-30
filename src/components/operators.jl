@@ -378,7 +378,11 @@ function parse_operator(ps::ParseState, @nospecialize ret, op)
     elseif P == PowerOp
         return parse_operator_power(ps, ret, op)
     end
-    @catcherror ps nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
+    ltor = LtoR(P)
+    if K == Tokens.LPIPE
+        ltor = true
+    end
+    @catcherror ps nextarg = @precedence ps P - ltor parse_expression(ps)
 
     # Construction
     if issyntaxcall(op)
