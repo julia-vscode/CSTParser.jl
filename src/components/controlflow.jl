@@ -123,7 +123,7 @@ function parse_try(ps::ParseState)
             catchblock = EXPR{Block}(Any[], 0, 1:0)
             @catcherror ps @default ps @closer ps trycatch parse_block(ps, catchblock, (Tokens.END, Tokens.FINALLY))
             if !(caught isa IDENTIFIER || caught == FALSE)
-                unshift!(catchblock, caught)
+                pushfirst!(catchblock, caught)
                 caught = FALSE
             end
         end

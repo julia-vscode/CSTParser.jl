@@ -82,9 +82,9 @@ function parse_generator(ps::ParseState, @nospecialize ret)
         else
             ranges = EXPR{Filter}(Any[ranges])
         end
-        unshift!(ranges, KEYWORD(next(ps)))
+        pushfirst!(ranges, KEYWORD(next(ps)))
         @catcherror ps cond = @closer ps range @closer ps paren parse_expression(ps)
-        unshift!(ranges, cond)
+        pushfirst!(ranges, cond)
         push!(ret, ranges)
     else
         if ranges isa EXPR{Block}

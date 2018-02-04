@@ -76,8 +76,8 @@ function parse_array(ps::ParseState)
             @catcherror ps @default ps @closer ps square parse_comma_sep(ps, args, false)
 
             if last(args) isa EXPR{Parameters}
-                etype = Vcat
-                unshift!(args, pop!(args))
+                etype = Vect
+                pushfirst!(args, pop!(args))
             end
             push!(args, PUNCTUATION(next(ps)))
             return EXPR{etype}(args)
@@ -102,7 +102,7 @@ function parse_array(ps::ParseState)
                     first_row = EXPR{Vcat}(first_row.args)
                 end
                 push!(first_row, INSTANCE(next(ps)))
-                unshift!(first_row, args[1])
+                pushfirst!(first_row, args[1])
                 return first_row
             else
                 if length(first_row.args) == 1

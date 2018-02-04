@@ -69,7 +69,7 @@ end
         @test "!" |> test_expr
         @test "~" |> test_expr
         @test "&" |> test_expr
-        @test "::" |> test_expr
+        # @test "::" |> test_expr
         @test "<:" |> test_expr
         @test ">:" |> test_expr
         @test "¬" |> test_expr
@@ -264,43 +264,43 @@ end
 
 @testset "Types" begin
     @testset "Abstract" begin
-        @test "abstract t" |> test_expr
-        @test "abstract t{T}" |> test_expr
-        @test "abstract t <: S" |> test_expr
-        @test "abstract t{T} <: S" |> test_expr
+        @test "abstract type t end" |> test_expr
+        @test "abstract type t{T} end" |> test_expr
+        @test "abstract type t <: S end" |> test_expr
+        @test "abstract type t{T} <: S end" |> test_expr
     end
 
     @testset "Bitstype" begin
-        @test "bitstype 64 Int" |> test_expr
-        @test "bitstype 4*16 Int" |> test_expr
+        @test "primitive type Int 64 end" |> test_expr
+        @test "primitive type Int 4*16 end" |> test_expr
     end
 
-    @testset "Typealias" begin
-        @test "typealias name fsd" |> test_expr
-    end
+    # @testset "Typealias" begin
+    #     @test "typealias name fsd" |> test_expr
+    # end
 
     @testset "Structs" begin
-        @test "type a end" |> test_expr
-        @test "type a; end" |> test_expr
-        @test "type a; b;end" |> test_expr
-        @test """type a
+        @test "struct a end" |> test_expr
+        @test "struct a; end" |> test_expr
+        @test "struct a; b;end" |> test_expr
+        @test """struct a
             arg1
         end""" |> test_expr
-        @test """type a <: T
+        @test """struct a <: T
             arg1::Int
             arg2::Int
         end""" |> test_expr
-        @test """type a
+        @test """struct a
             arg1::T
         end""" |> test_expr
-        @test """type a{T}
+        @test """struct a{T}
             arg1::T
             a(args) = new(args)
         end""" |> test_expr
-        @test """type a <: Int
+        @test """struct a <: Int
             arg1::Vector{Int}
         end""" |> test_expr
-        @test """immutable a <: Int
+        @test """mutable struct a <: Int
             arg1::Vector{Int}
         end""" |> test_expr
     end

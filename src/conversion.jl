@@ -94,7 +94,7 @@ const TYPEMAX_INT64_STR = string(typemax(Int))
 const TYPEMAX_INT128_STR = string(typemax(Int128))
 function Expr_int(x)
     is_hex = is_oct = is_bin = false
-    val = replace(x.val, "_", "")
+    val = replace(x.val, "_" => "")
     if sizeof(val) > 2 && val[1] == '0'
         c = val[2]
         c == 'x' && (is_hex = true)
@@ -113,7 +113,7 @@ end
 
 function Expr_float(x)
     if 'f' in x.val
-        return Base.parse(Float32, replace(x.val, 'f', 'e'))
+        return Base.parse(Float32, replace(x.val, 'f' => 'e'))
     end
     Base.parse(Float64, x.val)
 end
@@ -121,7 +121,7 @@ function Expr_char(x)
     val = Base.unescape_string(x.val[2:end - 1])
     # one byte e.g. '\xff' maybe not valid UTF-8
     # but we want to use the raw value as a codepoint in this case
-    sizeof(val) == 1 && return Char(Vector{UInt8}(val)[1])
+    sizeof(val) == 1 && return Char(codeunit(val, 1))
     length(val) == 1 || error("Invalid character literal")
     val[1]
 end
@@ -325,7 +325,7 @@ Expr(x::EXPR{Struct}) = Expr(:struct, false, Expr(x.args[2]), Expr(x.args[3]))
 Expr(x::EXPR{Mutable}) = length(x.args) == 4 ? Expr(:struct, true, Expr(x.args[2]), Expr(x.args[3])) : Expr(:struct, true, Expr(x.args[3]), Expr(x.args[4]))
 Expr(x::EXPR{Abstract}) = length(x.args) == 2 ? Expr(:abstract, Expr(x.args[2])) : Expr(:abstract, Expr(x.args[3]))
 Expr(x::EXPR{Bitstype}) = Expr(:bitstype, Expr(x.args[2]), Expr(x.args[3]))
-Expr(x::EXPR{Primitive}) = Expr(:primitive, Expr(x.args[4]), Expr(x.args[3]))
+Expr(x::EXPR{Primitive}) = Expr(:primitive, Expr(x.args[3]), Expr(x.args[4]))
 Expr(x::EXPR{TypeAlias}) = Expr(:typealias, Expr(x.args[2]), Expr(x.args[3]))
 
 function Expr(x::EXPR{FunctionDef})
@@ -641,7 +641,7 @@ end
 
 function Expr(x::EXPR{Flatten})
     iters, args = get_inner_gen(x)
-    i = shift!(iters)
+    i = popfirst!(iters)
     ex = Expr(:generator, Expr(args[1]), convert_iter_assign(i))
     for i in iters
         ex = Expr(:generator, ex, convert_iter_assign(i))
@@ -795,7 +795,18 @@ function expr_import(x, kw)
             push!(ret.args, nextarg)
         end
     end
+    _convert_importexpr!(ret)
     return ret
+end
+
+function _convert_importexpr!(x::Expr)
+    if x.head == :toplevel
+        foreach(_convert_importexpr!, x.args)
+    else
+        x1 = Expr(:., x.args...)
+        empty!(x.args)
+        push!(x.args, x1)
+    end
 end
 
 function Expr(x::EXPR{FileH})

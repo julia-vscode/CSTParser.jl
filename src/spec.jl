@@ -113,10 +113,10 @@ function Base.push!(e::EXPR, arg)
     push!(e.args, arg)
 end
 
-function Base.unshift!(e::EXPR, arg)
+function Base.pushfirst!(e::EXPR, arg)
     e.fullspan += arg.fullspan
     e.span = first(arg.span):last(e.span)
-    unshift!(e.args, arg)
+    pushfirst!(e.args, arg)
 end
 
 function Base.pop!(e::EXPR)

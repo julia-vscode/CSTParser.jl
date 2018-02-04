@@ -55,7 +55,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
             push!(args, a)
         elseif !is_colon && isoperator(ps.nt) && ps.ndot
             next(ps)
-            push!(args, OPERATOR(ps.nt.startbyte - ps.t.startbyte - 1, 1 + (0:ps.t.endbyte - ps.t.startbyte), ps.t.kind, false))
+            push!(args, OPERATOR(ps.nt.startbyte - ps.t.startbyte - 1, broadcast(+, 1, (0:ps.t.endbyte - ps.t.startbyte)), ps.t.kind, false))
         else
             push!(args, INSTANCE(next(ps)))
         end

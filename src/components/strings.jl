@@ -2,7 +2,7 @@ function longest_common_prefix(prefixa, prefixb)
     maxplength = min(sizeof(prefixa), sizeof(prefixb))
     maxplength == 0 && return ""
     idx = findfirst(i -> (prefixa[i] != prefixb[i]), 1:maxplength)
-    idx = idx == 0 ? maxplength : idx - 1
+    idx = idx == nothing ? maxplength : idx - 1
     prefixa[1:idx]
 end
 
@@ -19,11 +19,11 @@ tostr(buf::IOBuffer) = unescape_string(String(take!(buf)))
 parse_string_or_cmd(ps)
 
 When trying to make an `INSTANCE` from a string token we must check for
-interpolating operators.
+interpolating opoerators.
 """
 function parse_string_or_cmd(ps::ParseState, prefixed = false)
     sfullspan = ps.nt.startbyte - ps.t.startbyte
-    sspan = 1 + (0:(ps.t.endbyte - ps.t.startbyte))
+    sspan = broadcast(+, 1, (0:(ps.t.endbyte - ps.t.startbyte)))
 
     istrip = (ps.t.kind == Tokens.TRIPLE_STRING) || (ps.t.kind == Tokens.TRIPLE_CMD)
     iscmd = ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
@@ -69,8 +69,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         t_str = val(ps.t, ps)
         _val = istrip ? t_str[4:end - 3] : t_str[2:end - 1]
         expr = LITERAL(sfullspan, sspan,
-            iscmd ? replace(_val, "\\`", "`") :
-                    replace(_val, "\\\"", "\""), ps.t.kind)
+            iscmd ? replace(_val, "\\`" => "`") :
+                    replace(_val, "\\\"" => "\""), ps.t.kind)
         if istrip
             adjust_lcp(expr)
             ret = EXPR{StringH}(Any[expr], sfullspan, sspan)
@@ -142,7 +142,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             for expr in exprs_to_adjust
                 for (i, a) in enumerate(ret.args)
                     if expr == a
-                        ret.args[i] = typeof(a)(expr.fullspan, expr.span, replace(expr.val, "\n$lcp", "\n"), expr.kind)
+                        ret.args[i] = typeof(a)(expr.fullspan, expr.span, replace(expr.val, "\n$lcp" => "\n"), expr.kind)
                     end
                 end
             end

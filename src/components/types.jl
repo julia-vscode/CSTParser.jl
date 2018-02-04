@@ -53,7 +53,7 @@ function parse_mutable(ps::ParseState)
         kw = KEYWORD(ps)
         next(ps)
         @catcherror ps ret = parse_struct(ps, true)
-        unshift!(ret, kw)
+        pushfirst!(ret, kw)
         update_span!(ret)
     else
         ret = IDENTIFIER(ps)

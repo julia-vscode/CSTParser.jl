@@ -20,7 +20,7 @@ Parses a macro call. Expects to start on the `@`.
 """
 function parse_macrocall(ps::ParseState)
     at = PUNCTUATION(ps)
-    if !isemptyws(ps)
+    if !isemptyws(ps.ws)
         #TODO: error code
         return EXPR{ERROR}(Any[INSTANCE(ps)], 0, 0:-1)
     end

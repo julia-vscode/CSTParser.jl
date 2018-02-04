@@ -252,10 +252,10 @@ function flisp_parse(str::AbstractString, pos::Int; greedy::Bool=true, raise::Bo
                     (Ptr{UInt8}, Csize_t, Int32, Int32),
                     bstr, sizeof(bstr), pos-1, greedy ? 1 : 0)
     if raise && isa(ex,Expr) && ex.head === :error
-        throw(Base.ParseError(ex.args[1]))
+        throw(Meta.ParseError(ex.args[1]))
     end
     if ex === ()
-        raise && throw(Base.ParseError("end of input"))
+        raise && throw(Meta.ParseError("end of input"))
         ex = Expr(:error, "end of input")
     end
     return ex, pos+1 # C is zero-based, Julia is 1-based
@@ -345,7 +345,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                     x, ps = parse(ps, true)
                     sp = check_span(x)
                     if length(x.args) > 0 && is_nothing(x.args[1])
-                        shift!(x.args)
+                        popfirst!(x.args)
                     end
                     if length(x.args) > 0 && is_nothing(x.args[end])
                         pop!(x.args)
