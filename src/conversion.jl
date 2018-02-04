@@ -14,7 +14,7 @@ end
 Expr(x::OPERATOR) = x.dot ? Symbol(:., UNICODE_OPS_REVERSE[x.kind]) : UNICODE_OPS_REVERSE[x.kind]
 Expr(x::PUNCTUATION)= string(x.kind)
 
-function julia_normalization_map(c::Int32, x::Ptr{Void})::Int32
+function julia_normalization_map(c::Int32, x::Ptr{Nothing})::Int32
     return c == 0x00B5 ? 0x03BC : # micro sign -> greek small letter mu
            c == 0x025B ? 0x03B5 : # latin small letter open e -> greek small letter
            c
@@ -22,21 +22,21 @@ end
 
 # Note: This code should be in julia base
 function utf8proc_map_custom(str::String, options, func)
-    norm_func = cfunction(func, Int32, (Int32, Ptr{Void}))
-    nwords = ccall(:utf8proc_decompose_custom, Int, (Ptr{UInt8}, Int, Ptr{UInt8}, Int, Cint, Ptr{Void}, Ptr{Void}),
+    norm_func = cfunction(func, Int32, (Int32, Ptr{Nothing}))
+    nwords = ccall(:utf8proc_decompose_custom, Int, (Ptr{UInt8}, Int, Ptr{UInt8}, Int, Cint, Ptr{Nothing}, Ptr{Nothing}),
                    str, sizeof(str), C_NULL, 0, options, norm_func, C_NULL)
-    nwords < 0 && Base.UTF8proc.utf8proc_error(nwords)
+    nwords < 0 && Base.Unicode.utf8proc_error(nwords)
     buffer = Base.StringVector(nwords * 4)
-    nwords = ccall(:utf8proc_decompose_custom, Int, (Ptr{UInt8}, Int, Ptr{UInt8}, Int, Cint, Ptr{Void}, Ptr{Void}),
+    nwords = ccall(:utf8proc_decompose_custom, Int, (Ptr{UInt8}, Int, Ptr{UInt8}, Int, Cint, Ptr{Nothing}, Ptr{Nothing}),
                    str, sizeof(str), buffer, nwords, options, norm_func, C_NULL)
-    nwords < 0 && Base.UTF8proc.utf8proc_error(nwords)
+    nwords < 0 && Base.Unicode.utf8proc_error(nwords)
     nbytes = ccall(:utf8proc_reencode, Int, (Ptr{UInt8}, Int, Cint), buffer, nwords, options)
-    nbytes < 0 && Base.UTF8proc.utf8proc_error(nbytes)
+    nbytes < 0 && Base.Unicode.utf8proc_error(nbytes)
     return String(resize!(buffer, nbytes))
 end
 
 function normalize_julia_identifier(str::AbstractString)
-    options = Base.UTF8proc.UTF8PROC_STABLE | Base.UTF8proc.UTF8PROC_COMPOSE
+    options = Base.Unicode.UTF8PROC_STABLE | Base.Unicode.UTF8PROC_COMPOSE
     utf8proc_map_custom(String(str), options, julia_normalization_map)
 end
 
@@ -383,9 +383,7 @@ function Expr(x::EXPR{Let})
 end
 
 function Expr(x::EXPR{Do})
-    ret = Expr(x.args[1])
-    insert!(ret.args, 2, Expr(:->, Expr(x.args[3]), Expr(x.args[4])))
-    ret
+    Expr(:do, Expr(x.args[1]), Expr(:->, Expr(x.args[3]), Expr(x.args[4])))
 end
 
 

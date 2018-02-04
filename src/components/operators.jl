@@ -189,7 +189,7 @@ function parse_unary_colon(ps::ParseState, op)
 end
 
 # Parse assignments
-function parse_operator_eq(ps::ParseState, @nospecialize ret, op)
+function parse_operator_eq(ps::ParseState, @nospecialize(ret), op)
     # Parsing
     @catcherror ps nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
 
@@ -205,7 +205,7 @@ function parse_operator_eq(ps::ParseState, @nospecialize ret, op)
 end
 
 # Parse conditionals
-function parse_operator_cond(ps::ParseState, @nospecialize ret, op)
+function parse_operator_cond(ps::ParseState, @nospecialize(ret), op)
     @catcherror ps nextarg = @closer ps ifop parse_expression(ps)
     @catcherror ps op2 = OPERATOR(next(ps))
     @catcherror ps nextarg2 = @closer ps comma @precedence ps 0 parse_expression(ps)
@@ -214,7 +214,7 @@ function parse_operator_cond(ps::ParseState, @nospecialize ret, op)
 end
 
 # Parse comparisons
-function parse_comp_operator(ps::ParseState, @nospecialize ret, op)
+function parse_comp_operator(ps::ParseState, @nospecialize(ret), op)
     @catcherror ps nextarg = @precedence ps ComparisonOp - LtoR(ComparisonOp) parse_expression(ps)
     if ret isa EXPR{Comparison}
         push!(ret, op)
@@ -232,7 +232,7 @@ function parse_comp_operator(ps::ParseState, @nospecialize ret, op)
 end
 
 # Parse ranges
-function parse_operator_colon(ps::ParseState, @nospecialize ret, op)
+function parse_operator_colon(ps::ParseState, @nospecialize(ret), op)
     @catcherror ps nextarg = @precedence ps ColonOp - LtoR(ColonOp) parse_expression(ps)
     if ret isa BinarySyntaxOpCall && is_colon(ret.op)
         ret = EXPR{ColonOpCall}(Any[ret.arg1, ret.op, ret.arg2])
@@ -248,7 +248,7 @@ end
 
 
 # Parse power (special case for preceding unary ops)
-function parse_operator_power(ps::ParseState, @nospecialize ret, op)
+function parse_operator_power(ps::ParseState, @nospecialize(ret), op)
     @catcherror ps nextarg = @precedence ps PowerOp - LtoR(PowerOp) @closer ps inwhere parse_expression(ps)
 
     # Construction
@@ -269,7 +269,7 @@ end
 
 
 # parse where
-function parse_operator_where(ps::ParseState, @nospecialize ret, op)
+function parse_operator_where(ps::ParseState, @nospecialize(ret), op)
     args = Any[]
     if ps.nt.kind == Tokens.LBRACE
         next(ps)
@@ -290,7 +290,7 @@ function parse_operator_where(ps::ParseState, @nospecialize ret, op)
 end
 
 # parse dot access
-function parse_operator_dot(ps::ParseState, @nospecialize ret, op)
+function parse_operator_dot(ps::ParseState, @nospecialize(ret), op)
     if ps.nt.kind == Tokens.LPAREN
         @catcherror ps sig = @default ps @closer ps paren parse_call(ps, ret)
         args = EXPR{TupleH}(sig.args[2:end])
@@ -330,20 +330,20 @@ function parse_operator_dot(ps::ParseState, @nospecialize ret, op)
 end
 
 
-function parse_operator_dddot(ps::ParseState, @nospecialize ret, op)
+function parse_operator_dddot(ps::ParseState, @nospecialize(ret), op)
     return UnarySyntaxOpCall(ret, op)
 end
 
-function parse_operator_prime(ps::ParseState, @nospecialize ret, op)
+function parse_operator_prime(ps::ParseState, @nospecialize(ret), op)
     return UnarySyntaxOpCall(ret, op)
 end
 
-function parse_operator_anon_func(ps::ParseState, @nospecialize ret, op)
+function parse_operator_anon_func(ps::ParseState, @nospecialize(ret), op)
     @catcherror ps arg = @closer ps comma @precedence ps 0 parse_expression(ps)
     return BinarySyntaxOpCall(ret, op, EXPR{Block}(Any[arg]))
 end
 
-function parse_operator(ps::ParseState, @nospecialize ret, op)
+function parse_operator(ps::ParseState, @nospecialize(ret), op)
     K,dot = op.kind, op.dot
     P = precedence(K)
 

@@ -4,7 +4,7 @@ parse_tuple(ps, ret)
 `ret` is followed by a comma so tries to parse the rest of the
 tuple.
 """
-function parse_tuple(ps::ParseState, @nospecialize ret)
+function parse_tuple(ps::ParseState, @nospecialize(ret))
     op = PUNCTUATION(next(ps))
 
     if closer(ps) || (isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX)

@@ -22,7 +22,7 @@ function parse_macrocall(ps::ParseState)
     at = PUNCTUATION(ps)
     if !isemptyws(ps)
         #TODO: error code
-        return EXPR{ERROR}(Any[INSTANCE($(esc(ps)))], 0, 0:-1)
+        return EXPR{ERROR}(Any[INSTANCE(ps)], 0, 0:-1)
     end
     mname = EXPR{MacroName}(Any[at, IDENTIFIER(next(ps))])
 
