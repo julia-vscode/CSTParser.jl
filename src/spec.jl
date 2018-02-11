@@ -183,7 +183,7 @@ end
 abstract type Head end
 abstract type Call <: Head end
 
-mutable struct UnaryOpCall
+mutable struct UnaryOpCall <: AbstractEXPR
     op::OPERATOR
     arg
     fullspan::Int
@@ -195,7 +195,7 @@ mutable struct UnaryOpCall
 end
 AbstractTrees.children(x::UnaryOpCall) = vcat(x.op, x.arg)
 
-mutable struct UnarySyntaxOpCall
+mutable struct UnarySyntaxOpCall <: AbstractEXPR
     arg1
     arg2
     fullspan::Int
@@ -207,7 +207,7 @@ mutable struct UnarySyntaxOpCall
 end
 AbstractTrees.children(x::UnarySyntaxOpCall) = vcat(x.arg1, x.arg2)
 
-mutable struct BinaryOpCall
+mutable struct BinaryOpCall <: AbstractEXPR
     arg1
     op::OPERATOR
     arg2
@@ -220,7 +220,7 @@ mutable struct BinaryOpCall
 end
 AbstractTrees.children(x::T) where T <: Union{BinaryOpCall} = vcat(x.arg1, x.op, x.arg2)
 
-mutable struct BinarySyntaxOpCall
+mutable struct BinarySyntaxOpCall <: AbstractEXPR
     arg1
     op::OPERATOR
     arg2
@@ -233,7 +233,7 @@ mutable struct BinarySyntaxOpCall
 end
 AbstractTrees.children(x::T) where T <: Union{BinarySyntaxOpCall} = vcat(x.arg1, x.op, x.arg2)
 
-mutable struct WhereOpCall
+mutable struct WhereOpCall <: AbstractEXPR
     arg1
     op::OPERATOR
     args::Vector
@@ -249,7 +249,7 @@ mutable struct WhereOpCall
 end
 AbstractTrees.children(x::T) where T <: Union{WhereOpCall} = vcat(x.arg1, x.op, x.args)
 
-mutable struct ConditionalOpCall
+mutable struct ConditionalOpCall <: AbstractEXPR
     cond
     op1::OPERATOR
     arg1
