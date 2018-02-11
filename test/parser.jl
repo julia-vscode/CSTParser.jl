@@ -520,6 +520,9 @@ end
         @test """let x = 1, y = 2
             f(x)
         end""" |> test_expr
+        @test """let
+            x
+        end""" |> test_expr
     end
 
     @testset "Do" begin
@@ -564,7 +567,7 @@ end
     @test "m!=m" |> test_expr
     @test "+(x...)" |> test_expr
     @test "+(promote(x,y)...)" |> test_expr
-    @test "\$(x...)" |> test_expr
+    @test "\$(x...)" |> test_expr #
     @test "ccall(:gethostname, stdcall, Int32, ())" |> test_expr
     @test "@inbounds @ncall a b c" |> test_expr
     @test "(a+b)``" |> test_expr
@@ -597,13 +600,13 @@ end
         (indices(A,n) for n = 1:nd)
     end...]
     """ |> test_expr
-    @test """Base.@__doc__(bitstype \$(sizeof(basetype) * 8) \$(esc(typename)) <: Enum{\$(basetype)})""" |> test_expr
+    @test """Base.@__doc__(bitstype \$(sizeof(basetype) * 8) \$(esc(typename)) <: Enum{\$(basetype)})""" |> test_expr #
     @test """
     @spawnat(p,
         let m = a
             isa(m, Exception) ? m : nothing
         end)
-    """ |> test_expr
+    """ |> test_expr #
     @test "[@spawn f(R, first(c), last(c)) for c in splitrange(length(R), nworkers())]" |> test_expr
     @test "M.:(a)" |> test_expr
     @test """

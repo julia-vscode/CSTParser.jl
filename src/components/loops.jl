@@ -13,7 +13,7 @@ function parse_ranges(ps::ParseState)
     arg = @closer ps range @closer ps ws parse_expression(ps)
 
     if !is_range(arg)
-        return make_error(ps, startbyte + (0:length(arg.span)-1),
+        return make_error(ps, broadcast(+, startbyte, (0:length(arg.span)-1)),
                           Diagnostics.InvalidIter, "invalid iteration specification")
     end
     if ps.nt.kind == Tokens.COMMA

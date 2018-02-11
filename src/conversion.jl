@@ -22,7 +22,7 @@ end
 
 # Note: This code should be in julia base
 function utf8proc_map_custom(str::String, options, func)
-    norm_func = cfunction(func, Int32, (Int32, Ptr{Nothing}))
+    norm_func = cfunction(func, Int32, Tuple{Int32, Ptr{Nothing}})
     nwords = ccall(:utf8proc_decompose_custom, Int, (Ptr{UInt8}, Int, Ptr{UInt8}, Int, Cint, Ptr{Nothing}, Ptr{Nothing}),
                    str, sizeof(str), C_NULL, 0, options, norm_func, C_NULL)
     nwords < 0 && Base.Unicode.utf8proc_error(nwords)
@@ -237,7 +237,7 @@ end
     """
     function remlineinfo!(x)
         if isa(x, Expr)
-            id = find(map(x -> (isa(x, Expr) && x.head == :line) || (isdefined(:LineNumberNode) && x isa LineNumberNode), x.args))
+            id = find(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
             deleteat!(x.args, id)
             for j in x.args
                 remlineinfo!(j)
@@ -288,18 +288,21 @@ else
     function remlineinfo!(x)
         if isa(x, Expr)
             if x.head == :macrocall && x.args[2] != nothing
-                id = find(map(x -> (isa(x, Expr) && x.head == :line) || (isdefined(:LineNumberNode) && x isa LineNumberNode), x.args))
+                id = find(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
                 deleteat!(x.args, id)
                 for j in x.args
                     remlineinfo!(j)
                 end
                 insert!(x.args, 2, nothing)
             else
-                id = find(map(x -> (isa(x, Expr) && x.head == :line) || (isdefined(:LineNumberNode) && x isa LineNumberNode), x.args))
+                id = find(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
                 deleteat!(x.args, id)
                 for j in x.args
                     remlineinfo!(j)
                 end
+            end
+            if x.head == :elseif && x.args[1] isa Expr && x.args[1].head == :block && length(x.args[1].args) == 1
+                x.args[1] = x.args[1].args[1]
             end
         end
         x
@@ -345,10 +348,32 @@ Expr(x::EXPR{BareModule}) = Expr(:module, false, Expr(x.args[2]), Expr(x.args[3]
 
 # Control Flow
 
+# function Expr(x::EXPR{If}, iselseif = false)
+#     ret = Expr(iselseif ? :elseif : :if)
+#     iselseif = false
+#     for a in x.args
+#         if a isa KEYWORD && a.kind == Tokens.ELSEIF
+#             iselseif = true
+#         end
+#         if !(a isa PUNCTUATION || a isa KEYWORD)
+#             push!(ret.args, a isa EXPR{If} ? Expr(a, iselseif) : Expr(a))
+#         end
+#     end
+#     ret
+# end
 function Expr(x::EXPR{If})
     ret = Expr(:if)
-    for a in x.args
-        if !(a isa PUNCTUATION || a isa KEYWORD)
+    iselseif = false
+    n = length(x.args)
+    i = 0
+    while i < n
+        i += 1
+        a = x.args[i]
+        if a isa KEYWORD && a.kind == Tokens.ELSEIF
+            i += 1
+            r1 = Expr(x.args[i].args[1])
+            push!(ret.args, Expr(:elseif, r1.args...))
+        elseif !(a isa PUNCTUATION || a isa KEYWORD)
             push!(ret.args, Expr(a))
         end
     end
@@ -367,7 +392,11 @@ end
 
 function Expr(x::EXPR{Let})
     ret = Expr(:let)
-    if x.args[2] isa EXPR{Block}
+    if length(x.args) == 3
+        push!(ret.args, Expr(:block))
+        push!(ret.args, Expr(x.args[2]))
+        return ret
+    elseif x.args[2] isa EXPR{Block}
         arg = Expr(:block)
         for a in x.args[2].args
             if !(a isa PUNCTUATION)
@@ -756,58 +785,29 @@ function expr_import(x, kw)
     col = find(a isa OPERATOR && precedence(a) == ColonOp for a in x.args)
 
     comma = find(is_comma(a) for a in x.args)
-    if isempty(comma)
-        ret = Expr(kw)
-        i = 1
-        _get_import_block(x, i, ret)
-    elseif isempty(col)
-        ret = Expr(:toplevel)
-        i = 1
-        while i < length(x.args)
-            nextarg = Expr(kw)
-            i = _get_import_block(x, i, nextarg)
-            if i < length(x.args) && is_comma(x.args[i + 1])
-                i += 1
-            end
-            push!(ret.args, nextarg)
-        end
-    else
-        ret = Expr(:toplevel)
-        top = Expr(kw)
-        i = 1
-        while is_dot(x.args[i + 1])
-            i += 1
-            push!(top.args, :.)
-        end
-        while i < length(x.args) && !(x.args[i + 1] isa OPERATOR && precedence(x.args[i+1]) == ColonOp)
-            i += 1
-            a = x.args[i]
-            if !(a isa PUNCTUATION) && !(is_dot(a) || is_colon(a))
-                push!(top.args, Expr(a))
-            end
-        end
-        while i < length(x.args)
-            nextarg = Expr(kw, top.args...)
-            i = _get_import_block(x, i, nextarg)
-            if i < length(x.args) && (is_comma(x.args[i + 1]))
-                i += 1
-            end
-            push!(ret.args, nextarg)
+    
+    header = []
+    args = [Expr(:.)]
+    i = 1 #skip keyword
+    while i < length(x.args)
+        i+=1
+        a = x.args[i]
+        if is_colon(a)
+            push!(header, popfirst!(args))
+            push!(args, Expr(:.))
+        elseif is_comma(a)
+            push!(args, Expr(:.))
+        elseif !(a isa PUNCTUATION)
+            push!(last(args).args, Expr(a))
         end
     end
-    _convert_importexpr!(ret)
-    return ret
+    if isempty(header)
+        return Expr(kw, args...)
+    else
+        return Expr(kw, Expr(:(:), header..., args...))
+    end
 end
 
-function _convert_importexpr!(x::Expr)
-    if x.head == :toplevel
-        foreach(_convert_importexpr!, x.args)
-    else
-        x1 = Expr(:., x.args...)
-        empty!(x.args)
-        push!(x.args, x1)
-    end
-end
 
 function Expr(x::EXPR{FileH})
     ret = Expr(:file)

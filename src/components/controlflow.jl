@@ -65,20 +65,21 @@ end
 
 function parse_let(ps::ParseState)
     args = Any[KEYWORD(ps)]
-    arg = @closer ps range @closer ps ws parse_expression(ps)
-    
-    if ps.nt.kind == Tokens.COMMA
-        arg = EXPR{Block}(Any[arg])
-        while ps.nt.kind == Tokens.COMMA
-            push!(arg, PUNCTUATION(next(ps)))
+    if !(ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS)
+        info("here")
+        arg = @closer ps range @closer ps ws parse_expression(ps)
+        if ps.nt.kind == Tokens.COMMA
+            arg = EXPR{Block}(Any[arg])
+            while ps.nt.kind == Tokens.COMMA
+                push!(arg, PUNCTUATION(next(ps)))
 
-            startbyte = ps.nt.startbyte
-            @catcherror ps nextarg = @closer ps comma @closer ps ws parse_expression(ps)
-            push!(arg, nextarg)
+                startbyte = ps.nt.startbyte
+                @catcherror ps nextarg = @closer ps comma @closer ps ws parse_expression(ps)
+                push!(arg, nextarg)
+            end
         end
+        push!(args, arg)
     end
-    push!(args, arg)
-
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
 

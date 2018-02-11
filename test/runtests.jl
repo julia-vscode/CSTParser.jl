@@ -1,5 +1,5 @@
 using CSTParser
-using Base.Test
+using Test
 
 import CSTParser: parse, remlineinfo!, span, flisp_parse
 

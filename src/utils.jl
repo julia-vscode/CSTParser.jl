@@ -300,11 +300,11 @@ norm_ast(a::Any) = begin
             elseif fa == Symbol("@big_str")
                 s = a.args[2]
                 n = tryparse(BigInt,s)
-                if !isnull(n)
+                if !(n == nothing)
                     return get(n)
                 end
                 n = tryparse(BigFloat,s)
-                if !isnull(n)
+                if !(n == nothing)
                     return isnan(get(n)) ? :NaN : get(n)
                 end
                 return s
