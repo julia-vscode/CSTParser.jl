@@ -1,40 +1,42 @@
 
-precedence(op::Int) = op < Tokens.end_assignments ?  1 :
-                       op < Tokens.end_conditional ? 2 :
-                       op < Tokens.end_arrow ?       3 :
-                       op < Tokens.end_lazyor ?      4 :
-                       op < Tokens.end_lazyand ?     5 :
-                       op < Tokens.end_comparison ?  6 :
-                       op < Tokens.end_pipe ?        7 :
-                       op < Tokens.end_colon ?       8 :
-                       op < Tokens.end_plus ?        9 :
-                       op < Tokens.end_bitshifts ?   10 :
-                       op < Tokens.end_times ?       11 :
-                       op < Tokens.end_rational ?    12 :
-                       op < Tokens.end_power ?       13 :
-                       op < Tokens.end_decl ?        14 :
-                       op < Tokens.end_where ?       15 : 16
+precedence(op::Int) = op < Tokens.end_assignments ?  AssignmentOp :
+                       op < Tokens.end_pairarrow ? 2 :
+                       op < Tokens.end_conditional ? ConditionalOp :
+                       op < Tokens.end_arrow ?       ArrowOp :
+                       op < Tokens.end_lazyor ?      LazyOrOp :
+                       op < Tokens.end_lazyand ?     LazyAndOp :
+                       op < Tokens.end_comparison ?  ComparisonOp :
+                       op < Tokens.end_pipe ?        PipeOp :
+                       op < Tokens.end_colon ?       ColonOp :
+                       op < Tokens.end_plus ?        PlusOp :
+                       op < Tokens.end_bitshifts ?   BitShiftOp :
+                       op < Tokens.end_times ?       TimesOp :
+                       op < Tokens.end_rational ?    RationalOp :
+                       op < Tokens.end_power ?       PowerOp :
+                       op < Tokens.end_decl ?        DeclarationOp :
+                       op < Tokens.end_where ?       WhereOp : DotOp
 
 precedence(kind::Tokens.Kind) = kind == Tokens.DDDOT ? DddotOp :
                         kind < Tokens.begin_assignments ? 0 :
-                        kind < Tokens.end_assignments ?   1 :
-                       kind < Tokens.end_conditional ?    2 :
-                       kind < Tokens.end_arrow ?          3 :
-                       kind < Tokens.end_lazyor ?         4 :
-                       kind < Tokens.end_lazyand ?        5 :
-                       kind < Tokens.end_comparison ?     6 :
-                       kind < Tokens.end_pipe ?           7 :
-                       kind < Tokens.end_colon ?          8 :
-                       kind < Tokens.end_plus ?           9 :
-                       kind < Tokens.end_bitshifts ?      10 :
-                       kind < Tokens.end_times ?          11 :
-                       kind < Tokens.end_rational ?       12 :
-                       kind < Tokens.end_power ?          13 :
-                       kind < Tokens.end_decl ?           14 :
-                       kind < Tokens.end_where ?          15 :
-                       kind < Tokens.end_dot ?            16 :
+                        kind < Tokens.end_assignments ?   AssignmentOp :
+                        kind < Tokens.end_pairarrow ?   2 :
+                       kind < Tokens.end_conditional ?    ConditionalOp :
+                       kind < Tokens.end_arrow ?          ArrowOp :
+                       kind < Tokens.end_lazyor ?         LazyOrOp :
+                       kind < Tokens.end_lazyand ?        LazyAndOp :
+                       kind < Tokens.end_comparison ?     ComparisonOp :
+                       kind < Tokens.end_pipe ?           PipeOp :
+                       kind < Tokens.end_colon ?          ColonOp :
+                       kind < Tokens.end_plus ?           PlusOp :
+                       kind < Tokens.end_bitshifts ?      BitShiftOp :
+                       kind < Tokens.end_times ?          TimesOp :
+                       kind < Tokens.end_rational ?       RationalOp :
+                       kind < Tokens.end_power ?          PowerOp :
+                       kind < Tokens.end_decl ?           DeclarationOp :
+                       kind < Tokens.end_where ?          WhereOp :
+                       kind < Tokens.end_dot ?            DotOp :
                        kind == Tokens.ANON_FUNC ? AnonFuncOp :
-                       kind == Tokens.PRIME ?             16 : 20
+                       kind == Tokens.PRIME ?             PrimeOp : 20
 
 precedence(x) = 0
 precedence(x::AbstractToken) = precedence(x.kind)
@@ -112,10 +114,10 @@ issyntaxcall(op) = false
 function issyntaxcall(op::OPERATOR)
     K = op.kind
     P = precedence(K)
-    P == 1 && !(K == Tokens.APPROX || K == Tokens.PAIR_ARROW) ||
+    P == AssignmentOp && !(K == Tokens.APPROX || K == Tokens.PAIR_ARROW) ||
     K == Tokens.RIGHT_ARROW ||
-    P == 4 ||
-    P == 5 ||
+    P == LazyOrOp ||
+    P == LazyAndOp ||
     K == Tokens.ISSUBTYPE ||
     K == Tokens.ISSUPERTYPE ||
     K == Tokens.COLON ||
@@ -160,8 +162,8 @@ function parse_unary(ps::ParseState, op)
     # Parsing
     P = precedence(K)
     prec = P == DeclarationOp ? DeclarationOp :
-                K == Tokens.AND ? 14 :
-                K == Tokens.EX_OR ? 20 : 13
+                K == Tokens.AND ? DeclarationOp :
+                K == Tokens.EX_OR ? 20 : PowerOp
     @catcherror ps arg = @precedence ps prec parse_expression(ps)
 
     if issyntaxunarycall(op)
@@ -283,7 +285,7 @@ function parse_operator_where(ps::ParseState, @nospecialize(ret), op)
         end
         push!(args, PUNCTUATION(next(ps)))
     else
-        @catcherror ps nextarg = @precedence ps 5 @closer ps inwhere parse_expression(ps)
+        @catcherror ps nextarg = @precedence ps LazyAndOp @closer ps inwhere parse_expression(ps)
         push!(args, nextarg)
     end
     return WhereOpCall(ret, op, args)
