@@ -66,8 +66,7 @@ end
 function parse_let(ps::ParseState)
     args = Any[KEYWORD(ps)]
     if !(ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS)
-        info("here")
-        arg = @closer ps range @closer ps ws parse_expression(ps)
+        arg = @closer ps range @closer ps ws @closer ps newline parse_expression(ps)
         if ps.nt.kind == Tokens.COMMA
             arg = EXPR{Block}(Any[arg])
             while ps.nt.kind == Tokens.COMMA

@@ -50,6 +50,9 @@ Parses a function call. Expects to start before the opening parentheses and is p
 """
 function parse_call_exor(ps::ParseState, @nospecialize ret)
     arg = @precedence ps 20 parse_expression(ps)
+    if arg isa EXPR{TupleH} && length(arg.args) == 3 && arg.args[2] isa UnarySyntaxOpCall && arg.args[2].arg2 isa OPERATOR && is_dddot(arg.args[2].arg2)
+        arg = EXPR{InvisBrackets}(arg.args)
+    end
     ret = UnarySyntaxOpCall(ret, arg)
     return ret
 end
