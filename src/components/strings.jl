@@ -7,7 +7,7 @@ function longest_common_prefix(prefixa, prefixb)
 end
 
 function skip_to_nl(str, idxend)
-    while (idxend < length(str)) && str[idxend] != '\n'
+    while (idxend < sizeof(str)) && str[idxend] != '\n'
         idxend = nextind(str, idxend)
     end
     idxend
@@ -135,7 +135,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             end
         end
     end
-    
+
     single_string_T = (Tokens.STRING,ps.t.kind)
     if istrip
         if lcp != nothing && !isempty(lcp)
@@ -168,7 +168,7 @@ adjustspan(x::KEYWORD)= KEYWORD(x.kind, length(x.span), x.span)
 adjustspan(x::OPERATOR) = OPERATOR(length(x.span), x.span, x.kind, x.dot)
 adjustspan(x::LITERAL) = LITERAL(length(x.span), x.span, x.val, x.kind)
 adjustspan(x::PUNCTUATION) = PUNCTUATION(x.kind, length(x.span), x.span)
-function adjustspan(x::EXPR) 
+function adjustspan(x::EXPR)
     x.fullspan = length(x.span)
     return x
 end

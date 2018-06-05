@@ -548,6 +548,23 @@ end
     "\"\"\"\n$(ws1)a\n$(ws1)b\n$(ws2)c\n$(ws2)d\n$(ws2)\"\"\"" |> test_expr
     "\"\"\"\n$(ws1)a\n\n$(ws1)b\n\n$(ws2)c\n\n$(ws2)d\n\n$(ws2)\"\"\"" |> test_expr
     @test "\"\"\"\n$(ws1)α\n$(ws1)β\n$(ws2)γ\n$(ws2)δ\n$(ws2)\"\"\"" |> test_expr
+    let str = """
+    begin
+        @info \"\"\"
+            METADATA \$is out-of-date — you may not have the latest version of \$pkg
+            Use `Pkg.update()` to get the latest versions of your packages
+            \"\"\"
+    end
+    """
+    @test Expr(CSTParser.parse(str)) == Expr(:block, Expr(:macrocall,
+        Symbol("@info"), Expr(:string,
+        "METADATA ",
+        :is,
+        " out-of-date — you may not have the latest version of ",
+        :pkg,
+        "\nUse `Pkg.update()` to get the latest versions of your packages\n"
+        )))
+    end
 end
 
 @testset "No longer broken things" begin
