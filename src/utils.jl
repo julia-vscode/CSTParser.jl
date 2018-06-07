@@ -267,7 +267,7 @@ function flisp_parse(str::AbstractString; raise::Bool=true)
         return ex
     end
     if !done(str, pos)
-        raise && throw(Base.ParseError("extra token after end of expression"))
+        raise && throw(Meta.ParseError("extra token after end of expression"))
         return Expr(:error, "extra token after end of expression")
     end
     return ex
@@ -329,7 +329,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
     fail = 0
     bfail = 0
     ret = []
-    oldstderr = STDERR
+    oldstderr = stderr
     redirect_stderr()
     for (rp, d, files) in walkdir(dir)
         for f in files
@@ -359,7 +359,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                     catch er
                         isa(er, InterruptException) && rethrow(er)
                         if display
-                            Base.showerror(STDOUT, er, catch_backtrace())
+                            Base.showerror(stdout, er, catch_backtrace())
                             println()
                         end
                         bfail += 1
@@ -400,7 +400,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                 catch er
                     isa(er, InterruptException) && rethrow(er)
                     if display
-                        Base.showerror(STDOUT, er, catch_backtrace())
+                        Base.showerror(stdout, er, catch_backtrace())
                         println()
                     end
                     fail += 1
