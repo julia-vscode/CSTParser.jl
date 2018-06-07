@@ -61,7 +61,7 @@ struct OPERATOR <: LeafNode
     kind::Tokenize.Tokens.Kind
     dot::Bool
 end
-@noinline OPERATOR(ps::ParseState) = OPERATOR(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), ps.t.kind, ps.dot)
+@noinline OPERATOR(ps::ParseState) = OPERATOR(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), ps.t.kind, ps.t.dotop)
 
 struct KEYWORD <: LeafNode
     kind::Tokenize.Tokens.Kind
@@ -86,7 +86,7 @@ function LITERAL(ps::ParseState)
     end
 end
 
-AbstractTrees.children(x::EXPR) = x.args
+# AbstractTrees.children(x::EXPR) = x.args
 
 span(x::AbstractEXPR) = length(x.span)
 
@@ -193,7 +193,7 @@ mutable struct UnaryOpCall
         new(op, arg, fullspan, 1:(fullspan - arg.fullspan + length(arg.span)))
     end
 end
-AbstractTrees.children(x::UnaryOpCall) = vcat(x.op, x.arg)
+# AbstractTrees.children(x::UnaryOpCall) = vcat(x.op, x.arg)
 
 mutable struct UnarySyntaxOpCall
     arg1
@@ -205,7 +205,7 @@ mutable struct UnarySyntaxOpCall
         new(arg1, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
     end
 end
-AbstractTrees.children(x::UnarySyntaxOpCall) = vcat(x.arg1, x.arg2)
+# AbstractTrees.children(x::UnarySyntaxOpCall) = vcat(x.arg1, x.arg2)
 
 mutable struct BinaryOpCall
     arg1
@@ -218,7 +218,7 @@ mutable struct BinaryOpCall
         new(arg1, op, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
     end
 end
-AbstractTrees.children(x::T) where T <: Union{BinaryOpCall} = vcat(x.arg1, x.op, x.arg2)
+# AbstractTrees.children(x::T) where T <: Union{BinaryOpCall} = vcat(x.arg1, x.op, x.arg2)
 
 mutable struct BinarySyntaxOpCall
     arg1
@@ -231,7 +231,7 @@ mutable struct BinarySyntaxOpCall
         new(arg1, op, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
     end
 end
-AbstractTrees.children(x::T) where T <: Union{BinarySyntaxOpCall} = vcat(x.arg1, x.op, x.arg2)
+# AbstractTrees.children(x::T) where T <: Union{BinarySyntaxOpCall} = vcat(x.arg1, x.op, x.arg2)
 
 mutable struct WhereOpCall
     arg1
@@ -247,7 +247,7 @@ mutable struct WhereOpCall
         new(arg1, op, args, fullspan, 1:(fullspan - last(args).fullspan + length(last(args).span)))
     end
 end
-AbstractTrees.children(x::T) where T <: Union{WhereOpCall} = vcat(x.arg1, x.op, x.args)
+# AbstractTrees.children(x::T) where T <: Union{WhereOpCall} = vcat(x.arg1, x.op, x.args)
 
 mutable struct ConditionalOpCall
     cond
@@ -263,7 +263,7 @@ mutable struct ConditionalOpCall
     end
 end
 
-AbstractTrees.children(x::ConditionalOpCall) = vcat(x.cond, x.op1, x.arg1, x.op2, x.arg2)
+# AbstractTrees.children(x::ConditionalOpCall) = vcat(x.cond, x.op1, x.arg1, x.op2, x.arg2)
 
 abstract type ComparisonOpCall <: Head end
 abstract type ChainOpCall <: Head end

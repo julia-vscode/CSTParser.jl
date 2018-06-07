@@ -93,7 +93,8 @@ function parse_call_PlusOp(ps::ParseState, @nospecialize ret)
 end
 
 function parse_call(ps::ParseState, @nospecialize ret)
-    if is_plus(ret) || is_minus(ret) || is_not(ret)
+    # if is_plus(ret) || is_minus(ret) || is_not(ret)
+    if is_minus(ret) || is_not(ret)
         return parse_call_PlusOp(ps, ret)
     elseif is_and(ret)
         return parse_call_and(ps, ret)

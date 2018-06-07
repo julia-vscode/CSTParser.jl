@@ -53,7 +53,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
         elseif ps.nt.kind == Tokens.EX_OR
             @catcherror ps a = @closer ps comma parse_expression(ps)
             push!(args, a)
-        elseif !is_colon && isoperator(ps.nt) && ps.ndot
+        elseif !is_colon && isoperator(ps.nt)
             next(ps)
             push!(args, OPERATOR(ps.nt.startbyte - ps.t.startbyte - 1, broadcast(+, 1, (0:ps.t.endbyte - ps.t.startbyte)), ps.t.kind, false))
         else
@@ -62,8 +62,11 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
 
         if ps.nt.kind == Tokens.DOT
             push!(args, PUNCTUATION(next(ps)))
-        elseif isoperator(ps.nt) && ps.ndot
+        elseif isoperator(ps.nt) && ps.nt.kind == Tokens.DOT
             push!(args, PUNCTUATION(Tokens.DOT, 1, 1:1))
+        elseif isoperator(ps.nt) && ps.nt.dotop
+            push!(args, PUNCTUATION(Tokens.DOT, 1, 1:1))
+            ps.nt = RawToken(ps.nt.kind, ps.nt.startpos, ps.nt.endpos, ps.nt.startbyte + 1, ps.nt.endbyte, ps.nt.token_error, false)
         else
             break
         end

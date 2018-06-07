@@ -57,16 +57,13 @@ mutable struct ParseState
     ws::RawToken
     nws::RawToken
     nnws::RawToken
-    dot::Bool
-    ndot::Bool
     diagnostics::Vector{Diagnostics.Diagnostic}
     closer::Closer
     error_code::Diagnostics.ErrorCodes
     errored::Bool
 end
 function ParseState(str::Union{IO,String})
-    ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(),
-                    true, true, Diagnostics.Diagnostic[], Closer(), Diagnostics.ParseFailure, false)
+    ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(),Diagnostics.Diagnostic[], Closer(), Diagnostics.ParseFailure, false)
     return next(next(ps))
 end
 
@@ -89,25 +86,9 @@ function next(ps::ParseState)
     ps.lws = ps.ws
     ps.ws = ps.nws
     ps.nws = ps.nnws
-    ps.dot = ps.ndot
-
 
     ps.nnt, ps.done  = next(ps.l, ps.done)
-    # Handle dotted operators
-    if ps.nt.kind == Tokens.DOT && ps.nws.kind == EmptyWS && isoperator(ps.nnt) && !non_dotted_op(ps.nnt)
-        # ps.nt = ps.nnt
-        ps.nt = RawToken(ps.nnt.kind, (ps.nnt.startpos[1], ps.nnt.startpos[2] - 1), ps.nnt.endpos, ps.nnt.startbyte - 1, ps.nnt.endbyte)
-        ps.ndot = true
-        # combines whitespace, comments and semicolons
-        if iswhitespace(peekchar(ps.l)) || peekchar(ps.l) == '#' || peekchar(ps.l) == ';'
-            ps.nws = lex_ws_comment(ps.l, readchar(ps.l))
-        else
-            ps.nws = RawToken(EmptyWS, (0, 0), (0, 0), ps.nnt.endbyte, ps.nnt.endbyte)
-        end
-        ps.nnt, _ = next(ps.l, ps.done)
-    else
-        ps.ndot = false
-    end
+    
     # combines whitespace, comments and semicolons
     if iswhitespace(peekchar(ps.l)) || peekchar(ps.l) == '#' || peekchar(ps.l) == ';'
         ps.nnws = lex_ws_comment(ps.l, readchar(ps.l))

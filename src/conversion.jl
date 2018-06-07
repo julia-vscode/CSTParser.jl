@@ -164,7 +164,7 @@ function Expr(x::EXPR{Comparison})
     end
     ret
 end
-Expr(x::EXPR{ColonOpCall}) = Expr(:(:), Expr(x.args[1]), Expr(x.args[3]), Expr(x.args[5]))
+Expr(x::EXPR{ColonOpCall}) = Expr(:call, :(:), Expr(x.args[1]), Expr(x.args[3]), Expr(x.args[5]))
 
 
 function Expr(x::WhereOpCall)
@@ -782,9 +782,8 @@ Expr(x::EXPR{ImportAll}) = expr_import(x, :importall)
 Expr(x::EXPR{Using}) = expr_import(x, :using)
 
 function expr_import(x, kw)
-    col = find(a isa OPERATOR && precedence(a) == ColonOp for a in x.args)
-
-    comma = find(is_comma(a) for a in x.args)
+    col = findall(a-> a isa OPERATOR && precedence(a) == ColonOp, x.args)
+    comma = findall(is_comma, x.args)
     
     header = []
     args = [Expr(:.)]

@@ -236,12 +236,12 @@ end
 # Parse ranges
 function parse_operator_colon(ps::ParseState, @nospecialize(ret), op)
     @catcherror ps nextarg = @precedence ps ColonOp - LtoR(ColonOp) parse_expression(ps)
-    if ret isa BinarySyntaxOpCall && is_colon(ret.op)
+    if ret isa BinaryOpCall && is_colon(ret.op)
         ret = EXPR{ColonOpCall}(Any[ret.arg1, ret.op, ret.arg2])
         push!(ret, op)
         push!(ret, nextarg)
     else
-        ret = BinarySyntaxOpCall(ret, op, nextarg)
+        ret = BinaryOpCall(ret, op, nextarg)
     end
     return ret
 end
