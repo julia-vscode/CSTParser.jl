@@ -71,7 +71,7 @@ function Expr(x::LITERAL)
         return false
     elseif is_nothing(x)
         return nothing
-    elseif x.kind == Tokens.INTEGER
+    elseif x.kind == Tokens.INTEGER || x.kind == Tokens.BIN_INT || x.kind == Tokens.HEX_INT || x.kind == Tokens.OCT_INT
         return Expr_int(x)
     elseif x.kind == Tokens.FLOAT
         return Expr_float(x)
@@ -237,7 +237,7 @@ end
     """
     function remlineinfo!(x)
         if isa(x, Expr)
-            id = find(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
+            id = findall(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
             deleteat!(x.args, id)
             for j in x.args
                 remlineinfo!(j)
@@ -288,14 +288,14 @@ else
     function remlineinfo!(x)
         if isa(x, Expr)
             if x.head == :macrocall && x.args[2] != nothing
-                id = find(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
+                id = findall(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
                 deleteat!(x.args, id)
                 for j in x.args
                     remlineinfo!(j)
                 end
                 insert!(x.args, 2, nothing)
             else
-                id = find(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
+                id = findall(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
                 deleteat!(x.args, id)
                 for j in x.args
                     remlineinfo!(j)
@@ -327,9 +327,9 @@ end
 Expr(x::EXPR{Struct}) = Expr(:struct, false, Expr(x.args[2]), Expr(x.args[3]))
 Expr(x::EXPR{Mutable}) = length(x.args) == 4 ? Expr(:struct, true, Expr(x.args[2]), Expr(x.args[3])) : Expr(:struct, true, Expr(x.args[3]), Expr(x.args[4]))
 Expr(x::EXPR{Abstract}) = length(x.args) == 2 ? Expr(:abstract, Expr(x.args[2])) : Expr(:abstract, Expr(x.args[3]))
-Expr(x::EXPR{Bitstype}) = Expr(:bitstype, Expr(x.args[2]), Expr(x.args[3]))
+# Expr(x::EXPR{Bitstype}) = Expr(:bitstype, Expr(x.args[2]), Expr(x.args[3]))
 Expr(x::EXPR{Primitive}) = Expr(:primitive, Expr(x.args[3]), Expr(x.args[4]))
-Expr(x::EXPR{TypeAlias}) = Expr(:typealias, Expr(x.args[2]), Expr(x.args[3]))
+# Expr(x::EXPR{TypeAlias}) = Expr(:typealias, Expr(x.args[2]), Expr(x.args[3]))
 
 function Expr(x::EXPR{FunctionDef})
     ret = Expr(:function)

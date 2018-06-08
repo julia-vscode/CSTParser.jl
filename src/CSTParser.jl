@@ -142,12 +142,10 @@ function parse_kw(ps)
         return EXPR{ERROR}(Any[])
     elseif k == Tokens.ABSTRACT
         return parse_abstract(ps)
-    elseif k == Tokens.BITSTYPE
-        return parse_bitstype(ps)
     elseif k == Tokens.PRIMITIVE
         return parse_primitive(ps)
-    elseif k == Tokens.TYPEALIAS
-        return parse_typealias(ps)
+    # elseif k == Tokens.TYPEALIAS
+    #     return parse_typealias(ps)
     elseif k == Tokens.TYPE
         return parse_struct(ps, true)
     elseif k == Tokens.IMMUTABLE || k == Tokens.STRUCT
@@ -221,7 +219,7 @@ function parse_compound(ps::ParseState, @nospecialize ret)
         return error_unexpected(ps, ps.nt)
     elseif ret isa OPERATOR
         ps.errored = true
-        diag_range = ps.nt.startbyte - (ret.fullspan - length(ret.span) - first(ret.span) + 1) + ((-length(ret.span)):-1)
+        diag_range = ps.nt.startbyte - (ret.fullspan - length(ret.span) - first(ret.span) + 1) .+ ((-length(ret.span)):-1)
         push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedOperator}(
             # TODO: Which operator? How do we get at the spelling
             diag_range, [], "Unexpected operator"

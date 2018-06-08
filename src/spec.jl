@@ -270,7 +270,7 @@ abstract type ChainOpCall <: Head end
 abstract type ColonOpCall <: Head end
 abstract type Abstract <: Head end
 abstract type Begin <: Head end
-abstract type Bitstype <: Head end
+# abstract type Bitstype <: Head end
 abstract type Block <: Head end
 abstract type Braces <: Head end
 abstract type BracesCat <: Head end
@@ -302,7 +302,7 @@ abstract type StringH <: Head end
 abstract type Struct <: Head end
 abstract type Try <: Head end
 abstract type TupleH <: Head end
-abstract type TypeAlias <: Head end
+# abstract type TypeAlias <: Head end
 abstract type FileH <: Head end
 abstract type Return <: Head end
 abstract type While <: Head end

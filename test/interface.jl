@@ -23,7 +23,7 @@ end
     @test CSTParser.defines_abstract(CSTParser.parse("abstract type T end"))
     @test CSTParser.defines_abstract(CSTParser.parse("abstract T"))
     @test CSTParser.defines_primitive(CSTParser.parse("primitive type a b end"))
-    @test CSTParser.defines_primitive(CSTParser.parse("bitstype a b"))
+    # @test CSTParser.defines_primitive(CSTParser.parse("bitstype a b"))
 end
 
 @testset "get_name" begin

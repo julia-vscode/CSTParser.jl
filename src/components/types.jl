@@ -16,14 +16,14 @@ function parse_abstract(ps::ParseState)
     return ret
 end
 
-function parse_bitstype(ps::ParseState)
-    kw = KEYWORD(ps)
+# function parse_bitstype(ps::ParseState)
+#     kw = KEYWORD(ps)
 
-    @catcherror ps arg1 = @default ps @closer ps ws @closer ps wsop parse_expression(ps)
-    @catcherror ps arg2 = @default ps parse_expression(ps)
+#     @catcherror ps arg1 = @default ps @closer ps ws @closer ps wsop parse_expression(ps)
+#     @catcherror ps arg2 = @default ps parse_expression(ps)
 
-    return EXPR{Bitstype}(Any[kw, arg1, arg2])
-end
+#     return EXPR{Bitstype}(Any[kw, arg1, arg2])
+# end
 
 function parse_primitive(ps::ParseState)
     if ps.nt.kind == Tokens.TYPE
@@ -39,14 +39,14 @@ function parse_primitive(ps::ParseState)
     return ret
 end
 
-function parse_typealias(ps::ParseState)
-    kw = KEYWORD(ps)
+# function parse_typealias(ps::ParseState)
+#     kw = KEYWORD(ps)
 
-    @catcherror ps arg1 = @closer ps ws @closer ps wsop parse_expression(ps)
-    @catcherror ps arg2 = parse_expression(ps)
+#     @catcherror ps arg1 = @closer ps ws @closer ps wsop parse_expression(ps)
+#     @catcherror ps arg2 = parse_expression(ps)
 
-    return EXPR{TypeAlias}(Any[kw, arg1, arg2])
-end
+#     return EXPR{TypeAlias}(Any[kw, arg1, arg2])
+# end
 
 function parse_mutable(ps::ParseState)
     if ps.nt.kind == Tokens.STRUCT

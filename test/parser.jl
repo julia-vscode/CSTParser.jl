@@ -270,7 +270,7 @@ end
         @test "abstract type t{T} <: S end" |> test_expr
     end
 
-    @testset "Bitstype" begin
+    @testset "primitive" begin
         @test "primitive type Int 64 end" |> test_expr
         @test "primitive type Int 4*16 end" |> test_expr
     end
@@ -600,7 +600,7 @@ end
         (indices(A,n) for n = 1:nd)
     end...]
     """ |> test_expr
-    @test """Base.@__doc__(bitstype \$(sizeof(basetype) * 8) \$(esc(typename)) <: Enum{\$(basetype)})""" |> test_expr #
+    # @test """Base.@__doc__(bitstype \$(sizeof(basetype) * 8) \$(esc(typename)) <: Enum{\$(basetype)})""" |> test_expr #
     @test """
     @spawnat(p,
         let m = a

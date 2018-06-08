@@ -321,7 +321,79 @@ norm_ast(a::Any) = begin
     return a
 end
 
-function check_base(dir = dirname(Base.find_source_file("base.jl")), display = false)
+function flisp_parsefile(str, display = true)
+    io = IOBuffer(str)
+    failed = false
+    x1 = Expr(:file)
+    try
+        while !eof(io)
+            push!(x1.args, flisp_parse(io))
+        end
+    catch er
+        isa(er, InterruptException) && rethrow(er)
+        if display
+            Base.showerror(stdout, er, catch_backtrace())
+            println()
+        end
+        return x1, true
+    end
+    if length(x1.args) > 0  && x1.args[end] == nothing
+        pop!(x1.args)
+    end
+    x1 = norm_ast(x1)
+    remlineinfo!(x1)
+    return x1, false
+end
+
+function cst_parsefile(str)
+    x, ps = CSTParser.parse(ParseState(str), true)
+    sp = check_span(x)
+    # remove leading/trailing nothings
+    if length(x.args) > 0 && is_nothing(x.args[1])
+        popfirst!(x.args)
+    end
+    if length(x.args) > 0 && is_nothing(x.args[end])
+        pop!(x.args)
+    end
+    x0 = norm_ast(Expr(x))
+    x0, ps.errored, sp
+end
+
+function check_file(file, ret)
+    str = read(file, String)
+    x0, cstfailed, sp = cst_parsefile(str)
+    x1, flispfailed = flisp_parsefile(str)
+    
+    print("\r                             ")
+    if !isempty(sp)
+        printstyled(file, color = :blue)
+        @show sp
+        println()
+        push!(ret, (file, :span))
+    end
+    if cstfailed
+        err += 1
+        printstyled(file, color = :yellow)
+        println()
+        push!(ret, (file, :errored))
+    elseif !(x0 == x1)
+        cumfail = 0
+        neq += 1
+        printstyled(file, color = :green)
+        println()
+        if display
+            c0, c1 = CSTParser.compare(x0, x1)
+            aerr += 1
+            printstyled(string("    ", c0), bold = true, color = :ligth_red)
+            println()
+            printstyled(string("    ", c1), bold = true, color = :light_green)
+            println()
+        end
+        push!(ret, (file, :noteq))
+    end    
+end
+
+function check_base(dir = dirname(Base.find_source_file("essentials.jl")), display = false)
     N = 0
     neq = 0
     err = 0
@@ -337,66 +409,9 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
             if endswith(file, ".jl")
                 N += 1
                 try
-                    # print(N)
-                    print("\r", rpad(string(N), 5), rpad(string(signif(fail / N * 100, 3)), 8), rpad(string(signif(err / N * 100, 3)), 8), rpad(string(signif(neq / N * 100, 3)), 8))
-                    str = read(file, String)
-                    ps = ParseState(str)
-                    io = IOBuffer(str)
-                    x, ps = parse(ps, true)
-                    sp = check_span(x)
-                    if length(x.args) > 0 && is_nothing(x.args[1])
-                        popfirst!(x.args)
-                    end
-                    if length(x.args) > 0 && is_nothing(x.args[end])
-                        pop!(x.args)
-                    end
-                    x0 = Expr(x)
-                    x1 = Expr(:file)
-                    try
-                        while !eof(io)
-                            push!(x1.args, flisp_parse(io))
-                        end
-                    catch er
-                        isa(er, InterruptException) && rethrow(er)
-                        if display
-                            Base.showerror(stdout, er, catch_backtrace())
-                            println()
-                        end
-                        bfail += 1
-                        continue
-                    end
-                    if length(x1.args) > 0  && x1.args[end] == nothing
-                        pop!(x1.args)
-                    end
-                    x0, x1 = norm_ast(x0), norm_ast(x1)
-                    remlineinfo!(x1)
-                    print("\r                             ")
-                    if !isempty(sp)
-                        print_with_color(:blue, file)
-                        @show sp
-                        println()
-                        push!(ret, (file, :span))
-                    end
-                    if ps.errored
-                        err += 1
-                        print_with_color(:yellow, file)
-                        println()
-                        push!(ret, (file, :errored))
-                    elseif !(x0 == x1)
-                        cumfail = 0
-                        neq += 1
-                        print_with_color(:green, file)
-                        println()
-                        if display
-                            c0, c1 = CSTParser.compare(x0, x1)
-                            aerr += 1
-                            print_with_color(:light_red, string("    ", c0), bold = true)
-                            println()
-                            print_with_color(:light_green, string("    ", c1), bold = true)
-                            println()
-                        end
-                        push!(ret, (file, :noteq))
-                    end
+                    print("\r", rpad(string(N), 5), rpad(string(round(fail / N * 100, sigdigits = 3)), 8), rpad(string(round(err / N * 100, sigdigits = 3)), 8), rpad(string(round(neq / N * 100, sigdigits = 3)), 8))
+                    
+                    check_file(file, ret)
                 catch er
                     isa(er, InterruptException) && rethrow(er)
                     if display
@@ -404,7 +419,7 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
                         println()
                     end
                     fail += 1
-                    print_with_color(:red, file)
+                    printstyled(file, color = :red)
                     println()
                     push!(ret, (file, :failed))
                 end
@@ -414,13 +429,13 @@ function check_base(dir = dirname(Base.find_source_file("base.jl")), display = f
     redirect_stderr(oldstderr)
     if bfail + fail + err + neq > 0
         println("\r$N files")
-        print_with_color(:red, "failed")
+        printstyled("failed", color = :red)
         println(" : $fail    $(100*fail/N)%")
-        print_with_color(:yellow, "errored")
+        printstyled("errored", color = :yellow)
         println(" : $err     $(100*err/N)%")
-        print_with_color(:green, "not eq.")
+        printstyled("not eq.", color = :green)
         println(" : $neq    $(100*neq/N)%", "  -  $aerr     $(100*aerr/N)%")
-        print_with_color(:magenta, "base failed")
+        printstyled("base failed", color = :magenta)
         println(" : $bfail    $(100*bfail/N)%")
     end
     ret

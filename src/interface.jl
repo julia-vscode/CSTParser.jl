@@ -237,8 +237,8 @@ defines_struct(x) = x isa EXPR{Struct} || defines_mutable(x)
 defines_mutable(x) = x isa EXPR{Mutable}
 defines_abstract(x) = x isa EXPR{Abstract}
 function defines_primitive(x) 
-    x isa EXPR{Primitive} || 
-    x isa EXPR{Bitstype} # NEEDS FIX: v0.6 dep
+    x isa EXPR{Primitive} #|| 
+    # x isa EXPR{Bitstype} # NEEDS FIX: v0.6 dep
 end
 
 defines_module(x) = x isa EXPR{ModuleH} || x isa EXPR{BareModule}
@@ -259,14 +259,16 @@ Should only be called when has_sig(x) == true.
 get_sig(x::EXPR{Struct}) = x.args[2]
 get_sig(x::EXPR{Mutable}) = x.args[3]
 get_sig(x::EXPR{Abstract}) = length(x.args) == 4 ? x.args[3] : x.args[2]
-get_sig(x::EXPR{T}) where T <: Union{Primitive,Bitstype}  = x.args[3]
+# get_sig(x::EXPR{T}) where T <: Union{Primitive,Bitstype}  = x.args[3]
+get_sig(x::EXPR{Primitive}) = x.args[3]
 get_sig(x::EXPR{FunctionDef}) = x.args[2]
 get_sig(x::EXPR{Macro}) = x.args[2]
 function get_sig(x::BinarySyntaxOpCall)
     return x.arg1
 end
 
-function get_name(x::EXPR{T}) where T <: Union{Struct,Mutable,Abstract,Primitive,Bitstype}
+# function get_name(x::EXPR{T}) where T <: Union{Struct,Mutable,Abstract,Primitive,Bitstype}
+function get_name(x::EXPR{T}) where T <: Union{Struct,Mutable,Abstract,Primitive}
     sig = get_sig(x)
     sig = rem_where(sig)
     sig = rem_subtype(sig)
