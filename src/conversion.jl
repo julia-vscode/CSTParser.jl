@@ -49,7 +49,8 @@ function sized_uint_literal(s::AbstractString, b::Integer)
     l <= 16  && return Base.parse(UInt16,  s)
     l <= 32  && return Base.parse(UInt32,  s)
     l <= 64  && return Base.parse(UInt64,  s)
-    l <= 128 && return Base.parse(UInt128, s)
+    # l <= 128 && return Base.parse(UInt128, s)
+    l <= 128 && return Expr(:macrocall, Symbol("@uint128_str"), nothing, s)
     return Base.parse(BigInt, s)
 end
 
@@ -118,7 +119,12 @@ function Expr_float(x)
     Base.parse(Float64, x.val)
 end
 function Expr_char(x)
-    val = Base.unescape_string(x.val[2:end - 1])
+    # val = Base.unescape_string(x.val[2:end - 1])
+    if x.val == "'''"
+        val = Base.unescape_string("\'")
+    else
+        val = Base.unescape_string(strip(x.val, '\''))
+    end
     # one byte e.g. '\xff' maybe not valid UTF-8
     # but we want to use the raw value as a codepoint in this case
     sizeof(val) == 1 && return Char(codeunit(val, 1))
@@ -417,6 +423,7 @@ end
 
 
 # Loops
+Expr(x::EXPR{Outer}) = Expr(:outer, Expr(x.args[2]))
 
 function Expr(x::EXPR{For})
     ret = Expr(:for)

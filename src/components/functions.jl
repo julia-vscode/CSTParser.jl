@@ -13,7 +13,7 @@ function parse_function(ps::ParseState)
         @catcherror ps sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_expression(ps)
     end
 
-    while ps.nt.kind == Tokens.WHERE
+    while ps.nt.kind == Tokens.WHERE && ps.ws.kind != Tokens.NEWLINE_WS
         @catcherror ps sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_compound(ps, sig)
     end
 

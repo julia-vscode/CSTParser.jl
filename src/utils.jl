@@ -292,11 +292,11 @@ norm_ast(a::Any) = begin
         if a.head === :macrocall
             fa = a.args[1]
             if fa === Symbol("@int128_str")
-                return Base.parse(Int128,a.args[2])
+                return Base.parse(Int128,a.args[3])
             elseif fa === Symbol("@uint128_str")
-                return Base.parse(UInt128,a.args[2])
+                return Base.parse(UInt128,a.args[3])
             elseif fa === Symbol("@bigint_str")
-                return  Base.parse(BigInt,a.args[2])
+                return  Base.parse(BigInt,a.args[3])
             elseif fa == Symbol("@big_str")
                 s = a.args[2]
                 n = tryparse(BigInt,s)
@@ -359,7 +359,7 @@ function cst_parsefile(str)
     x0, ps.errored, sp
 end
 
-function check_file(file, ret)
+function check_file(file, ret, neq)
     str = read(file, String)
     x0, cstfailed, sp = cst_parsefile(str)
     x1, flispfailed = flisp_parsefile(str)
@@ -372,23 +372,18 @@ function check_file(file, ret)
         push!(ret, (file, :span))
     end
     if cstfailed
-        err += 1
         printstyled(file, color = :yellow)
         println()
         push!(ret, (file, :errored))
     elseif !(x0 == x1)
         cumfail = 0
-        neq += 1
         printstyled(file, color = :green)
         println()
-        if display
-            c0, c1 = CSTParser.compare(x0, x1)
-            aerr += 1
-            printstyled(string("    ", c0), bold = true, color = :ligth_red)
-            println()
-            printstyled(string("    ", c1), bold = true, color = :light_green)
-            println()
-        end
+        c0, c1 = CSTParser.compare(x0, x1)
+        printstyled(string("    ", c0), bold = true, color = :ligth_red)
+        println()
+        printstyled(string("    ", c1), bold = true, color = :light_green)
+        println()
         push!(ret, (file, :noteq))
     end    
 end
@@ -411,7 +406,7 @@ function check_base(dir = dirname(Base.find_source_file("essentials.jl")), displ
                 try
                     print("\r", rpad(string(N), 5), rpad(string(round(fail / N * 100, sigdigits = 3)), 8), rpad(string(round(err / N * 100, sigdigits = 3)), 8), rpad(string(round(neq / N * 100, sigdigits = 3)), 8))
                     
-                    check_file(file, ret)
+                    check_file(file, ret, neq)
                 catch er
                     isa(er, InterruptException) && rethrow(er)
                     if display

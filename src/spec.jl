@@ -293,6 +293,7 @@ abstract type Macro <: Head end
 abstract type MacroCall <: Head end
 abstract type MacroName <: Head end
 abstract type Mutable <: Head end
+abstract type Outer <: Head end
 abstract type Parameters <: Head end
 abstract type Primitive <: Head end
 abstract type Quote <: Head end

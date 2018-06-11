@@ -7,7 +7,7 @@ function longest_common_prefix(prefixa, prefixb)
 end
 
 function skip_to_nl(str, idxend)
-    while (idxend < length(str)) && str[idxend] != '\n'
+    while (idxend < sizeof(str)) && str[idxend] != '\n'
         idxend = nextind(str, idxend)
     end
     idxend
@@ -86,7 +86,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         while true
             if eof(input)
                 lspan = position(b)
-                str = tostr(b)[1:end - (istrip ? 3 : 1)]
+                str = tostr(b)
+                str = istrip ? str[1:prevind(str, prevind(str, prevind(str, sizeof(str))))] : str[1:prevind(str, sizeof(str))]
                 ex = LITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, 1:(lspan + startbytes), str, Tokens.STRING)
                 push!(ret.args, ex)
                 istrip && adjust_lcp(ex, true)
