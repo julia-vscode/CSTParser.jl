@@ -699,3 +699,57 @@ end
 str_value(x) = ""
 str_value(x::T) where T <: Union{IDENTIFIER,LITERAL} = x.val
 str_value(x::OPERATOR) = string(Expr(x))
+
+_unescape_string(s::AbstractString) = sprint(_unescape_string, s, sizehint=lastindex(s))
+function _unescape_string(io, s::AbstractString)
+    a = Iterators.Stateful(s)
+    for c in a
+        if !isempty(a) && c == '\\'
+            c = popfirst!(a)
+            if c == 'x' || c == 'u' || c == 'U'
+                n = k = 0
+                m = c == 'x' ? 2 :
+                    c == 'u' ? 4 : 8
+                while (k+=1) <= m && !isempty(a)
+                    nc = Base.peek(a)
+                    n = '0' <= nc <= '9' ? n<<4 + nc-'0' :
+                        'a' <= nc <= 'f' ? n<<4 + nc-'a'+10 :
+                        'A' <= nc <= 'F' ? n<<4 + nc-'A'+10 : break
+                    popfirst!(a)
+                end
+                if k == 1
+                    throw(ArgumentError("invalid $(m == 2 ? "hex (\\x)" :
+                                            "unicode (\\u)") escape sequence used in $(repr(s))"))
+                end
+                if m == 2 # \x escape sequence
+                    write(io, UInt8(n))
+                else
+                    print(io, Char(n))
+                end
+            elseif '0' <= c <= '7'
+                k = 1
+                n = c-'0'
+                while (k+=1) <= 3 && !isempty(a)
+                    c  = Base.peek(a)
+                    n = ('0' <= c <= '7') ? n<<3 + c-'0' : break
+                    popfirst!(a)
+                end
+                if n > 255
+                    throw(ArgumentError("octal escape sequence out of range"))
+                end
+                write(io, UInt8(n))
+            else
+                print(io, c == 'a' ? '\a' :
+                          c == 'b' ? '\b' :
+                          c == 't' ? '\t' :
+                          c == 'n' ? '\n' :
+                          c == 'v' ? '\v' :
+                          c == 'f' ? '\f' :
+                          c == 'r' ? '\r' :
+                          c == 'e' ? '\e' : c)
+            end
+        else
+            print(io, c)
+        end
+    end
+end

@@ -13,20 +13,24 @@ function parse_function(ps::ParseState)
         @catcherror ps sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_expression(ps)
     end
 
+    if sig isa EXPR{InvisBrackets} && !(sig.args[2] isa EXPR{TupleH})
+        istuple = true
+        sig = EXPR{TupleH}(sig.args)
+    elseif sig isa EXPR{TupleH}
+        istuple = true
+    else
+        istuple = false
+    end
+
     while ps.nt.kind == Tokens.WHERE && ps.ws.kind != Tokens.NEWLINE_WS
         @catcherror ps sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_compound(ps, sig)
     end
-
-    if sig isa EXPR{InvisBrackets} && !(sig.args[2] isa EXPR{TupleH})
-        sig = EXPR{TupleH}(sig.args)
-    end
-
     
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
 
     if isempty(blockargs)
-        if sig isa EXPR{Call} || (sig isa WhereOpCall || (sig isa BinarySyntaxOpCall && !(is_exor(sig.arg1))))
+        if sig isa EXPR{Call} || (sig isa WhereOpCall || (sig isa BinarySyntaxOpCall && !(is_exor(sig.arg1)))) || istuple
             args = Any[sig, EXPR{Block}(blockargs)]
         else
             args = Any[sig]
@@ -56,29 +60,6 @@ function parse_call_exor(ps::ParseState, @nospecialize ret)
     ret = UnarySyntaxOpCall(ret, arg)
     return ret
 end
-function parse_call_decl(ps::ParseState, @nospecialize ret)
-    arg = @precedence ps 20 parse_expression(ps)
-    ret = UnarySyntaxOpCall(ret, arg)
-    return ret
-end
-function parse_call_and(ps::ParseState, @nospecialize ret)
-    arg = @precedence ps 20 parse_expression(ps)
-    ret = UnarySyntaxOpCall(ret, arg)
-    return ret
-end
-
-# NEEDS FIX: these are broken (i.e. `<:(a,b) where T = 1`)
-function parse_call_issubt(ps::ParseState, @nospecialize ret)
-    arg = @precedence ps 13 parse_expression(ps)
-    ret = EXPR{Call}(Any[ret; arg.args])
-    return ret
-end
-
-function parse_call_issupt(ps::ParseState, @nospecialize ret)
-    arg = @precedence ps 13 parse_expression(ps)
-    ret = EXPR{Call}(Any[ret; arg.args])
-    return ret
-end
 
 function parse_call_PlusOp(ps::ParseState, @nospecialize ret)
     arg = @precedence ps 13 parse_expression(ps)
@@ -93,19 +74,18 @@ function parse_call_PlusOp(ps::ParseState, @nospecialize ret)
 end
 
 function parse_call(ps::ParseState, @nospecialize ret)
-    # if is_plus(ret) || is_minus(ret) || is_not(ret)
     if is_minus(ret) || is_not(ret)
         return parse_call_PlusOp(ps, ret)
-    elseif is_and(ret)
-        return parse_call_and(ps, ret)
+    elseif is_and(ret) || is_decl(ret)
+        arg = @precedence ps 20 parse_expression(ps)
+        ret = UnarySyntaxOpCall(ret, arg)
+        return ret
     elseif is_exor(ret)
         return parse_call_exor(ps, ret)
-    elseif is_decl(ret)
-        return parse_call_decl(ps, ret)
-    elseif is_issubt(ret)
-        return parse_call_issubt(ps, ret)
-    elseif is_issupt(ret)
-        return parse_call_issupt(ps, ret)
+    elseif is_issubt(ret) || is_issupt(ret)
+        arg = @precedence ps 13 parse_expression(ps)
+        ret = EXPR{Call}(Any[ret; arg.args])
+        return ret
     end
     args = Any[ret, PUNCTUATION(next(ps))]
     @default ps @closer ps paren parse_comma_sep(ps, args)

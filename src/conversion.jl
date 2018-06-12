@@ -119,12 +119,7 @@ function Expr_float(x)
     Base.parse(Float64, x.val)
 end
 function Expr_char(x)
-    # val = Base.unescape_string(x.val[2:end - 1])
-    if x.val == "'''"
-        val = Base.unescape_string("\'")
-    else
-        val = Base.unescape_string(strip(x.val, '\''))
-    end
+    val = _unescape_string(x.val[2:prevind(x.val, sizeof(x.val))])
     # one byte e.g. '\xff' maybe not valid UTF-8
     # but we want to use the raw value as a codepoint in this case
     sizeof(val) == 1 && return Char(codeunit(val, 1))

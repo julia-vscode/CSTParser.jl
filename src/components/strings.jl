@@ -13,7 +13,7 @@ function skip_to_nl(str, idxend)
     idxend
 end
 
-tostr(buf::IOBuffer) = unescape_string(String(take!(buf)))
+tostr(buf::IOBuffer) = _unescape_string(String(take!(buf)))
 
 """
 parse_string_or_cmd(ps)
