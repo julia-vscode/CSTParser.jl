@@ -251,8 +251,7 @@ Parses an expression starting with a `(`.
 function parse_paren(ps::ParseState)  
     args = Any[PUNCTUATION(ps)]
     @catcherror ps @default ps @nocloser ps inwhere @closer ps paren parse_comma_sep(ps, args, false, true, true)
-
-    if ((length(args) == 2 && !(args[2] isa UnarySyntaxOpCall && is_dddot(args[2].arg2))) || (length(args) == 1 && args[1] isa EXPR{Block})) && ((ps.ws.kind != SemiColonWS || (length(args) == 2 && args[2] isa EXPR{Block})) && !(args[2] isa EXPR{Parameters}))
+    if ((length(args) == 2 && !(args[2] isa UnarySyntaxOpCall && is_dddot(args[2].arg2)))) && ((ps.ws.kind != SemiColonWS || (length(args) == 2 && args[2] isa EXPR{Block})) && !(args[2] isa EXPR{Parameters}))
         push!(args, PUNCTUATION(next(ps)))
         ret = EXPR{InvisBrackets}(args)
     else

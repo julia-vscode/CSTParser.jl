@@ -75,7 +75,26 @@ end
 
 function parse_call(ps::ParseState, @nospecialize ret)
     if is_minus(ret) || is_not(ret)
-        return parse_call_PlusOp(ps, ret)
+        arg = @closer ps inwhere @precedence ps 13 parse_expression(ps)
+        if arg isa EXPR{TupleH}
+            ret = EXPR{Call}(Any[ret; arg.args])
+        elseif arg isa WhereOpCall && arg.arg1 isa EXPR{TupleH}
+            ret = WhereOpCall(EXPR{Call}(Any[ret; arg.arg1.args]), arg.op, arg.args)
+        else
+            ret = UnaryOpCall(ret, arg)
+        end
+        
+        return ret
+    # elseif is_and(ret)
+    #     arg = @precedence ps 13 parse_expression(ps)
+    #     if arg isa EXPR{TupleH}
+    #         ret = EXPR{Call}(Any[ret; arg.args])
+    #     elseif arg isa WhereOpCall && arg.arg1 isa EXPR{TupleH}
+    #         ret = WhereOpCall(EXPR{Call}(Any[ret; arg.arg1.args]), arg.op, arg.args)
+    #     else
+    #         ret = UnaryOpCall(ret, arg)
+    #     end
+    #     return ret
     elseif is_and(ret) || is_decl(ret)
         arg = @precedence ps 20 parse_expression(ps)
         ret = UnarySyntaxOpCall(ret, arg)
@@ -113,7 +132,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = f
     end
 
     if ps.ws.kind == SemiColonWS
-        if block && !(istuple && length(args) > 2) && !(length(args) == 1 && args[1] isa PUNCTUATION)
+        if block && !(istuple && length(args) > 2) && !(length(args) == 1 && args[1] isa PUNCTUATION) && !(last(args) isa UnarySyntaxOpCall && is_dddot(last(args).arg2))
             args1 = Any[pop!(args)]
             @nocloser ps newline @closer ps comma while @nocloser ps semicolon !closer(ps)
                 @catcherror ps a = parse_expression(ps)
@@ -131,7 +150,6 @@ function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = f
                 if kw && !ps.closer.brace && a isa BinarySyntaxOpCall && is_eq(a.op)
                     a = EXPR{Kw}(Any[a.arg1, a.op, a.arg2])
                 end
-                # push!(paras, a)
                 push!(args1, a)
                 if ps.nt.kind == Tokens.COMMA
                     push!(args1, PUNCTUATION(next(ps)))

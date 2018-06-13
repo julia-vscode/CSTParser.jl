@@ -266,7 +266,7 @@ function flisp_parse(str::AbstractString; raise::Bool=true)
     if isa(ex,Expr) && ex.head === :error
         return ex
     end
-    if !done(str, pos)
+    if !(pos > ncodeunits(str))
         raise && throw(Meta.ParseError("extra token after end of expression"))
         return Expr(:error, "extra token after end of expression")
     end
@@ -619,17 +619,10 @@ end
 Base.iterate(x::EXPR) = length(x) == 0 ? nothing : x.args[1], 1
 Base.iterate(x::EXPR, s) = s < length(x) ? (x.args[s + 1], s + 1) : nothing
 Base.length(x::EXPR) = length(x.args)
-# Base.start(x::EXPR) = 1
-# Base.next(x::EXPR, s) = x.args[s], s + 1
-# Base.done(x::EXPR, s) = s > length(x.args)
 
 Base.iterate(x::UnaryOpCall) = x.op, 1
 Base.iterate(x::UnaryOpCall, s) = s == 1 ? (x.arg, 2) : nothing
 Base.length(x::UnaryOpCall) = 2
-# Base.start(x::UnaryOpCall) = 1
-# Base.next(x::UnaryOpCall, s) = s == 1 ? x.op : x.arg , s + 1
-# Base.done(x::UnaryOpCall, s) = s > 2
-
 
 Base.iterate(x::UnarySyntaxOpCall) = x.arg1, 1
 Base.iterate(x::UnarySyntaxOpCall, s) = s == 1 ? (x.arg2, 2) : nothing
@@ -649,49 +642,26 @@ Base.length(x::BinarySyntaxOpCall) = 3
 Base.iterate(x::BinaryOpCall) = x.arg1, 1
 Base.iterate(x::BinaryOpCall, s) = s > 2 ? nothing : (getfield(x, s+1), s + 1)
 Base.length(x::BinaryOpCall) = 3
-# Base.start(x::BinaryOpCall) = 1
-# Base.next(x::BinaryOpCall, s) = getfield(x, s) , s + 1
-# Base.done(x::BinaryOpCall, s) = s > 3
-
 
 Base.iterate(x::WhereOpCall) = x.arg1, 1
 function Base.iterate(x::WhereOpCall, s) 
     if s == 1
-        return x.arg1, 2
-    elseif s == 2
-        return x.op, 3
-    else
-        return x.args[s - 2] , s + 1
+        return x.op, 2
+    elseif s < length(x)
+        return x.args[s - 1] , s + 1
     end
 end
 Base.length(x::WhereOpCall) = 2 + length(x.args)
-# Base.start(x::WhereOpCall) = 1
-# function Base.next(x::WhereOpCall, s) 
-#     if s == 1
-#         return x.arg1, 2
-#     elseif s == 2
-#         return x.op, 3
-#     else
-#         return x.args[s - 2] , s + 1
-#     end
-# end
-# Base.done(x::WhereOpCall, s) = s > 2 + length(x.args)
 
 Base.iterate(x::ConditionalOpCall) = x.cond, 1
 Base.iterate(x::ConditionalOpCall, s) = s < length(x) ? (getfield(x, s), s+1) : nothing
 Base.length(x::ConditionalOpCall) = 5
-# Base.start(x::ConditionalOpCall) = 1
-# Base.next(x::ConditionalOpCall, s) = getfield(x, s) , s + 1
-# Base.done(x::ConditionalOpCall, s) = s > 5
 
 for t in (CSTParser.IDENTIFIER, CSTParser.OPERATOR, CSTParser.LITERAL, CSTParser.PUNCTUATION, CSTParser.KEYWORD)
     Base.iterate(x::t) = x, 1
     Base.iterate(x::t, s) = nothing
     Base.length(x::t) = 1
     Base.isiterable(x::t) = false
-    # Base.start(x::t) = 1
-    # Base.next(x::t, s) = x, s + 1
-    # Base.done(x::t, s) = true
 end
 
 @inline val(token::RawToken, ps::ParseState) = String(ps.l.io.data[token.startbyte+1:token.endbyte+1])

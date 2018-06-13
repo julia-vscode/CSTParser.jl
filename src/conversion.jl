@@ -22,7 +22,7 @@ end
 
 # Note: This code should be in julia base
 function utf8proc_map_custom(str::String, options, func)
-    norm_func = cfunction(func, Int32, Tuple{Int32, Ptr{Nothing}})
+    norm_func = @cfunction $func Int32 (Int32, Ptr{Nothing})
     nwords = ccall(:utf8proc_decompose_custom, Int, (Ptr{UInt8}, Int, Ptr{UInt8}, Int, Cint, Ptr{Nothing}, Ptr{Nothing}),
                    str, sizeof(str), C_NULL, 0, options, norm_func, C_NULL)
     nwords < 0 && Base.Unicode.utf8proc_error(nwords)
@@ -272,6 +272,19 @@ else
         return ret
     end
 
+    function clear_at!(x)
+        if x isa Expr && x.head == :.
+            if x.args[2] isa QuoteNode && string(x.args[2].value)[1] == '@'
+                x.args[2].value = Symbol(string(x.args[2].value)[2:end])
+            end
+            if x.args[1] isa Symbol && string(x.args[1])[1] == '@'
+                x.args[1] = Symbol(string(x.args[1])[2:end])
+            else
+                clear_at!(x.args[1])
+            end
+        end
+    end
+
     function Expr(x::EXPR{MacroCall})
         ret = Expr(:macrocall)
         for a in x.args
@@ -280,6 +293,10 @@ else
             end
         end
         insert!(ret.args, 2, nothing)
+        if ret.args[1] isa Expr && ret.args[1].head == :. && string(ret.args[1].args[2].value)[1] != '@'
+            clear_at!(ret.args[1])
+            ret.args[1].args[2] = QuoteNode(Symbol(string('@', ret.args[1].args[2].value)))
+        end
         ret
     end
     """
