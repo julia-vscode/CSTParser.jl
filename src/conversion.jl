@@ -341,6 +341,19 @@ function Expr(x::EXPR{Call})
     ret
 end
 
+function Expr(x::EXPR{Braces})
+    ret = Expr(:braces)
+    for a in x.args
+        if a isa EXPR{Parameters}
+            insert!(ret.args, 1, Expr(a))
+        elseif !(a isa PUNCTUATION)
+            push!(ret.args, Expr(a))
+        end
+    end
+    ret
+end
+
+
 # Definitiions
 Expr(x::EXPR{Struct}) = Expr(:struct, false, Expr(x.args[2]), Expr(x.args[3]))
 Expr(x::EXPR{Mutable}) = length(x.args) == 4 ? Expr(:struct, true, Expr(x.args[2]), Expr(x.args[3])) : Expr(:struct, true, Expr(x.args[3]), Expr(x.args[4]))
