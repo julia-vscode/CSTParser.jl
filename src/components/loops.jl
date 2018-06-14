@@ -8,7 +8,7 @@ function parse_for(ps::ParseState)
 end
 
 
-function parse_ranges(ps::ParseState)
+function parse_iter(ps::ParseState)
     startbyte = ps.nt.startbyte
     #TODO: this is slow
     if ps.nt.kind == Tokens.IDENTIFIER && val(ps.nt, ps) == "outer" && ps.nws.kind != EmptyWS && !Tokens.isoperator(ps.nnt.kind) 
@@ -21,20 +21,25 @@ function parse_ranges(ps::ParseState)
     else
         arg = @closer ps range @closer ps ws parse_expression(ps)
     end
+    return arg
+end
 
-    if !is_range(arg)
-        return make_error(ps, broadcast(+, startbyte, (0:length(arg.span)-1)),
+function parse_ranges(ps::ParseState)
+    startbyte = ps.nt.startbyte
+    #TODO: this is slow
+    @catcherror ps arg = parse_iter(ps)
+
+    if (arg isa EXPR{Outer} && !is_range(arg.args[2])) || !is_range(arg)
+        return make_error(ps, broadcast(+, startbyte, (0:length(arg.span) .- 1)),
                           Diagnostics.InvalidIter, "invalid iteration specification")
     end
     if ps.nt.kind == Tokens.COMMA
         arg = EXPR{Block}(Any[arg])
         while ps.nt.kind == Tokens.COMMA
             push!(arg, PUNCTUATION(next(ps)))
-
-            startbyte = ps.nt.startbyte
-            @catcherror ps nextarg = @closer ps comma @closer ps ws parse_expression(ps)
-            if !is_range(nextarg)
-                return make_error(ps, startbyte + (0:length(arg.span)-1),
+            @catcherror ps nextarg = parse_iter(ps)
+            if (nextarg isa EXPR{Outer} && !is_range(nextarg.args[2])) || !is_range(nextarg)
+                return make_error(ps, startbyte .+ (0:length(arg.span) .- 1),
                                   Diagnostics.InvalidIter, "invalid iteration specification")
             end
             push!(arg, nextarg)
@@ -45,23 +50,8 @@ end
 
 
 function is_range(x) false end
-function is_range(x::BinarySyntaxOpCall)
-    if is_eq(x.op)
-        return true
-    else
-        return false
-    end
-end
-
-function is_range(x::BinaryOpCall)
-    if is_in(x.op) || is_elof(x.op)
-        return true
-    else
-        return false
-    end
-end
-
-
+function is_range(x::BinarySyntaxOpCall) is_eq(x.op) end
+function is_range(x::BinaryOpCall) is_in(x.op) || is_elof(x.op) end
 
 function parse_while(ps::ParseState)
     kw = KEYWORD(ps)
@@ -96,13 +86,12 @@ function parse_generator(ps::ParseState, @nospecialize ret)
         @catcherror ps cond = @closer ps range @closer ps paren parse_expression(ps)
         pushfirst!(ranges, cond)
         push!(ret, ranges)
+    elseif ranges isa EXPR{Block}
+        append!(ret, ranges)
     else
-        if ranges isa EXPR{Block}
-            append!(ret, ranges)
-        else
-            push!(ret, ranges)
-        end
+        push!(ret, ranges)
     end
+    
 
     if ret.args[1] isa EXPR{Generator} || ret.args[1] isa EXPR{Flatten}
         ret = EXPR{Flatten}(Any[ret])

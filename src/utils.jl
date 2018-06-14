@@ -537,11 +537,9 @@ function check_span(x::EXPR, neq = [])
 end
 
 function speed_test()
-    dir = dirname(Base.find_source_file("base.jl"))
+    dir = dirname(Base.find_source_file("essentials.jl"))
     println("speed test : ", @timed(for i = 1:5
-    parse(read(joinpath(dir, "inference.jl"), String), true);
-    parse(read(joinpath(dir, "random.jl"), String), true);
-    parse(read(joinpath(dir, "show.jl"), String), true);
+    parse(read(joinpath(dir, "essentials.jl"), String), true);
     parse(read(joinpath(dir, "abstractarray.jl"), String), true);
 end)[2])
 end

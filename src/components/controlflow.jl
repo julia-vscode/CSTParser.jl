@@ -26,7 +26,7 @@ function parse_if(ps::ParseState, nested = false)
     # Parsing
     kw = KEYWORD(ps)
     if ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS
-        return make_error(ps, 1 + (ps.t.endbyte:ps.t.endbyte), Diagnostics.MissingConditional,
+        return make_error(ps, 1 .+ (ps.t.endbyte:ps.t.endbyte), Diagnostics.MissingConditional,
             "missing conditional in `$(lowercase(string(ps.t.kind)))`")
     end
     @catcherror ps cond = @default ps @closer ps block @closer ps ws parse_expression(ps)
