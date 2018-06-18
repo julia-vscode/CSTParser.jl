@@ -535,6 +535,7 @@ end
     @test CSTParser.parse("\"\"\" \" \"\"\"").val == " \" "
     @test CSTParser.parse("\"\"\"a\"\"\"").val == "a"
     @test CSTParser.parse("\"\"\"\"\"\"").val == ""
+    @test CSTParser.parse("\"\"\"aδ\"\"\"").val == "aδ"
     @test CSTParser.parse("\"\"\"\n\t \ta\n\n\t \tb\"\"\"").val == "a\n\nb"
     @test Expr(CSTParser.parse("\"\"\"\ta\n\tb \$c\n\td\n\"\"\"")) == Expr(:string, "\ta\n\tb ", :c, "\n\td\n")
     @test Expr(CSTParser.parse("\"\"\"\n\ta\n\tb \$c\n\td\n\"\"\"")) == Expr(:string, "\ta\n\tb ", :c, "\n\td\n")
