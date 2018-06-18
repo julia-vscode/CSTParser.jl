@@ -8,10 +8,7 @@ function parse_module(ps::ParseState)
     end
 
     block = EXPR{Block}(Any[])
-    @default ps while ps.nt.kind !== Tokens.END
-        @catcherror ps a = @closer ps block parse_doc(ps)
-        push!(block, a)
-    end
+    @default ps parse_block(ps, block, (Tokens.END,), true)
 
     return EXPR{(is_module(kw) ? ModuleH : BareModule)}(Any[kw, arg, block, KEYWORD(next(ps))])
 end

@@ -376,6 +376,6 @@ end
 
 ischainable(t::AbstractToken) = t.kind == Tokens.PLUS || t.kind == Tokens.STAR || t.kind == Tokens.APPROX
 
-include("_precompile.jl")
-_precompile_()
+# include("_precompile.jl")
+# _precompile_()
 end
