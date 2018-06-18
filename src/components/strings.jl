@@ -86,7 +86,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         while true
             if eof(input)
                 lspan = position(b)
-                str = tostr(b)[1:end - (istrip ? 3 : 1)]
+                str = tostr(b)
+                str = String(Vector{UInt8}(str)[1:end - (istrip ? 3 : 1)])
                 ex = LITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, 1:(lspan + startbytes), str, Tokens.STRING)
                 push!(ret.args, ex)
                 istrip && adjust_lcp(ex, true)
