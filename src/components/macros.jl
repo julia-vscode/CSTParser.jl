@@ -37,16 +37,13 @@ function parse_macrocall(ps::ParseState)
             mname = BinarySyntaxOpCall(mname, op, Quotenode(nextarg))
         end
     end
-    args = Any[mname]
 
     if ps.nt.kind == Tokens.COMMA
-        return EXPR{MacroCall}(args)
-    end
-    if isemptyws(ps.ws) && ps.nt.kind == Tokens.LPAREN
-        push!(args, PUNCTUATION(next(ps)))
-        @catcherror ps @default ps @nocloser ps newline @closer ps paren parse_comma_sep(ps, args, false)
-        push!(args, PUNCTUATION(next(ps)))
+        return EXPR{MacroCall}(Any[mname])
+    elseif isemptyws(ps.ws) && ps.nt.kind == Tokens.LPAREN
+        return parse_call(ps, mname)
     else
+        args = Any[mname]
         insquare = ps.closer.insquare
         @default ps while !closer(ps)
             @catcherror ps a = @closer ps inmacro @closer ps ws @closer ps wsop parse_expression(ps)
@@ -55,6 +52,6 @@ function parse_macrocall(ps::ParseState)
                 break
             end
         end
+        return EXPR{MacroCall}(args)
     end
-    return EXPR{MacroCall}(args)
 end

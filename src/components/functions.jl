@@ -1,17 +1,7 @@
 function parse_function(ps::ParseState)
     kw = KEYWORD(ps)
-    if isoperator(ps.nt.kind) && ps.nt.kind != Tokens.EX_OR && ps.nnt.kind == Tokens.LPAREN
-        op = OPERATOR(next(ps))
-        args = Any[op, PUNCTUATION(next(ps))] 
-        @catcherror ps @default ps @closer ps paren parse_comma_sep(ps, args)
-        push!(args, PUNCTUATION(next(ps)))
-        sig = EXPR{Call}(args)
-        @default ps @closer ps inwhere @closer ps ws @closer ps block while !closer(ps)
-            @catcherror ps sig = parse_compound(ps, sig)
-        end
-    else
-        @catcherror ps sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_expression(ps)
-    end
+    
+    @catcherror ps sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_expression(ps)
 
     if sig isa EXPR{InvisBrackets} && !(sig.args[2] isa EXPR{TupleH})
         istuple = true
@@ -30,7 +20,7 @@ function parse_function(ps::ParseState)
     @catcherror ps @default ps parse_block(ps, blockargs)
 
     if isempty(blockargs)
-        if sig isa EXPR{Call} || (sig isa WhereOpCall || (sig isa BinarySyntaxOpCall && !(is_exor(sig.arg1)))) || istuple
+        if sig isa EXPR{Call} || sig isa WhereOpCall || (sig isa BinarySyntaxOpCall && !(is_exor(sig.arg1))) || istuple
             args = Any[sig, EXPR{Block}(blockargs)]
         else
             args = Any[sig]
@@ -52,66 +42,33 @@ end
 
 Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
 """
-function parse_call_exor(ps::ParseState, @nospecialize ret)
-    arg = @precedence ps 20 parse_expression(ps)
-    if arg isa EXPR{TupleH} && length(arg.args) == 3 && arg.args[2] isa UnarySyntaxOpCall && arg.args[2].arg2 isa OPERATOR && is_dddot(arg.args[2].arg2)
-        arg = EXPR{InvisBrackets}(arg.args)
-    end
-    ret = UnarySyntaxOpCall(ret, arg)
-    return ret
-end
-
-function parse_call_PlusOp(ps::ParseState, @nospecialize ret)
-    arg = @precedence ps 13 parse_expression(ps)
-    if arg isa EXPR{TupleH}
-        ret = EXPR{Call}(Any[ret; arg.args])
-    elseif arg isa WhereOpCall && arg.arg1 isa EXPR{TupleH}
-        ret = WhereOpCall(EXPR{Call}(Any[ret; arg.arg1.args]), arg.op, arg.args)
-    else
-        ret = UnaryOpCall(ret, arg)
-    end
-    return ret
-end
-
 function parse_call(ps::ParseState, @nospecialize ret)
     if is_minus(ret) || is_not(ret)
         arg = @closer ps inwhere @precedence ps 13 parse_expression(ps)
         if arg isa EXPR{TupleH}
-            ret = EXPR{Call}(Any[ret; arg.args])
+            return EXPR{Call}(Any[ret; arg.args])
         elseif arg isa WhereOpCall && arg.arg1 isa EXPR{TupleH}
-            ret = WhereOpCall(EXPR{Call}(Any[ret; arg.arg1.args]), arg.op, arg.args)
+            return WhereOpCall(EXPR{Call}(Any[ret; arg.arg1.args]), arg.op, arg.args)
         else
-            ret = UnaryOpCall(ret, arg)
+            return UnaryOpCall(ret, arg)
         end
-        
-        return ret
-    # elseif is_and(ret)
-    #     arg = @precedence ps 13 parse_expression(ps)
-    #     if arg isa EXPR{TupleH}
-    #         ret = EXPR{Call}(Any[ret; arg.args])
-    #     elseif arg isa WhereOpCall && arg.arg1 isa EXPR{TupleH}
-    #         ret = WhereOpCall(EXPR{Call}(Any[ret; arg.arg1.args]), arg.op, arg.args)
-    #     else
-    #         ret = UnaryOpCall(ret, arg)
-    #     end
-    #     return ret
-    elseif is_and(ret) || is_decl(ret)
+    elseif is_and(ret) || is_decl(ret) || is_exor(ret) 
         arg = @precedence ps 20 parse_expression(ps)
-        ret = UnarySyntaxOpCall(ret, arg)
-        return ret
-    elseif is_exor(ret)
-        return parse_call_exor(ps, ret)
+        if is_exor(ret) && arg isa EXPR{TupleH} && length(arg.args) == 3 && arg.args[2] isa UnarySyntaxOpCall && is_dddot(arg.args[2].arg2)
+            arg = EXPR{InvisBrackets}(arg.args)
+        end
+        return UnarySyntaxOpCall(ret, arg)
     elseif is_issubt(ret) || is_issupt(ret)
         arg = @precedence ps 13 parse_expression(ps)
-        ret = EXPR{Call}(Any[ret; arg.args])
-        return ret
+        return EXPR{Call}(Any[ret; arg.args])
     end
+    ismacro = ret isa EXPR{MacroName}
     args = Any[ret, PUNCTUATION(next(ps))]
-    @default ps @closer ps paren parse_comma_sep(ps, args)
+    @default ps @closer ps paren parse_comma_sep(ps, args, !ismacro)
     rparen = PUNCTUATION(next(ps))
     rparen.kind == Tokens.RPAREN || return error_unexpected(ps, ps.t)
     push!(args, rparen)
-    return EXPR{Call}(args)
+    return EXPR{ismacro ? MacroCall : Call}(args)
 end
 
 
