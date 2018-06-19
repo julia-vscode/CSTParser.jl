@@ -10,14 +10,12 @@ end
 
 function parse_iter(ps::ParseState)
     startbyte = ps.nt.startbyte
-    #TODO: this is slow
-    if ps.nt.kind == Tokens.IDENTIFIER && val(ps.nt, ps) == "outer" && ps.nws.kind != EmptyWS && !Tokens.isoperator(ps.nnt.kind) 
+    if ps.nt.kind == Tokens.OUTER && ps.nws.kind != EmptyWS && !Tokens.isoperator(ps.nnt.kind) 
         outer = INSTANCE(next(ps))
         arg = @closer ps range @closer ps ws parse_expression(ps)
         arg.arg1 = EXPR{Outer}([outer, arg.arg1])
         arg.fullspan += outer.fullspan
         arg.span = 1:(outer.fullspan + last(arg.span))
-
     else
         arg = @closer ps range @closer ps ws parse_expression(ps)
     end

@@ -152,6 +152,8 @@ function parse_kw(ps)
         return parse_struct(ps, false)
     elseif k == Tokens.MUTABLE
         return parse_mutable(ps)
+    elseif k == Tokens.OUTER
+        return IDENTIFIER(ps)
     end
 end
 
