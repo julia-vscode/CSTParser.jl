@@ -1,7 +1,7 @@
 function parse_function(ps::ParseState)
     kw = KEYWORD(ps)
     
-    @catcherror ps sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_expression(ps)
+    @catcherror ps sig = @closer ps inwhere @closer ps block @closer ps ws parse_expression(ps)
 
     if sig isa EXPR{InvisBrackets} && !(sig.args[2] isa EXPR{TupleH})
         istuple = true
@@ -13,11 +13,11 @@ function parse_function(ps::ParseState)
     end
 
     while ps.nt.kind == Tokens.WHERE && ps.ws.kind != Tokens.NEWLINE_WS
-        @catcherror ps sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_compound(ps, sig)
+        @catcherror ps sig = @closer ps inwhere @closer ps block @closer ps ws parse_compound(ps, sig)
     end
     
     blockargs = Any[]
-    @catcherror ps @default ps parse_block(ps, blockargs)
+    @catcherror ps parse_block(ps, blockargs)
 
     if isempty(blockargs)
         if sig isa EXPR{Call} || sig isa WhereOpCall || (sig isa BinarySyntaxOpCall && !(is_exor(sig.arg1))) || istuple

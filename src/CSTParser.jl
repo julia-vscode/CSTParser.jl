@@ -93,47 +93,47 @@ end
 function parse_kw(ps)
     k = ps.t.kind
     if k == Tokens.IF
-        return parse_if(ps)
+        return @default ps parse_if(ps)
     elseif k == Tokens.LET
-        return parse_let(ps)
+        return @default ps parse_let(ps)
     elseif k == Tokens.TRY
-        return parse_try(ps)
+        return @default ps parse_try(ps)
     elseif k == Tokens.FUNCTION
-        return parse_function(ps)
+        return @default ps parse_function(ps)
     elseif k == Tokens.BEGIN
-        return parse_begin(ps)
+        return @default ps parse_begin(ps)
     elseif k == Tokens.QUOTE
-        return parse_quote(ps)
+        return @default ps parse_quote(ps)
     elseif k == Tokens.FOR
-        return parse_for(ps)
+        return @default ps parse_for(ps)
     elseif k == Tokens.WHILE
-        return parse_while(ps)
+        return @default ps parse_while(ps)
     elseif k == Tokens.BREAK
         return INSTANCE(ps)
     elseif k == Tokens.CONTINUE
         return INSTANCE(ps)
     elseif k == Tokens.MACRO
-        return parse_macro(ps)
+        return @default ps parse_macro(ps)
     elseif k == Tokens.IMPORT
         return parse_imports(ps)
     elseif k == Tokens.IMPORTALL
         return parse_imports(ps)
     elseif k == Tokens.USING
         return parse_imports(ps)
-    elseif k == Tokens.MODULE
-        return parse_module(ps)
-    elseif k == Tokens.BAREMODULE
-        return parse_module(ps)
     elseif k == Tokens.EXPORT
         return parse_export(ps)
+    elseif k == Tokens.MODULE
+        return @default ps parse_module(ps)
+    elseif k == Tokens.BAREMODULE
+        return @default ps parse_module(ps)
     elseif k == Tokens.CONST
-        return parse_const(ps)
+        return @default ps parse_const(ps)
     elseif k == Tokens.GLOBAL
-        return parse_global(ps)
+        return @default ps parse_global(ps)
     elseif k == Tokens.LOCAL
-        return parse_local(ps)
+        return @default ps parse_local(ps)
     elseif k == Tokens.RETURN
-        return parse_return(ps)
+        return @default ps parse_return(ps)
     elseif k == Tokens.END
         return parse_end(ps)
     elseif k == Tokens.ELSE || k == Tokens.ELSEIF || k == Tokens.CATCH || k == Tokens.FINALLY
@@ -141,17 +141,17 @@ function parse_kw(ps)
         ps.errored = true
         return EXPR{ERROR}(Any[])
     elseif k == Tokens.ABSTRACT
-        return parse_abstract(ps)
+        return @default ps parse_abstract(ps)
     elseif k == Tokens.PRIMITIVE
-        return parse_primitive(ps)
+        return @default ps parse_primitive(ps)
     # elseif k == Tokens.TYPEALIAS
     #     return parse_typealias(ps)
     elseif k == Tokens.TYPE
-        return parse_struct(ps, true)
+        return @default ps parse_struct(ps, true)
     elseif k == Tokens.IMMUTABLE || k == Tokens.STRUCT
-        return parse_struct(ps, false)
+        return @default ps parse_struct(ps, false)
     elseif k == Tokens.MUTABLE
-        return parse_mutable(ps)
+        return @default ps parse_mutable(ps)
     elseif k == Tokens.OUTER
         return IDENTIFIER(ps)
     end
@@ -177,10 +177,18 @@ function parse_compound(ps::ParseState, @nospecialize ret)
     if ps.nt.kind == Tokens.FOR
         ret = parse_generator(ps, ret)
     elseif ps.nt.kind == Tokens.DO
-        ret = parse_do(ps, ret)
+        ret = @default ps parse_do(ps, ret)
     elseif isajuxtaposition(ps, ret)
         op = OPERATOR(0, 1:0, Tokens.STAR, false)
         ret = parse_operator(ps, ret, op)
+    elseif (ret isa EXPR{x_Str} ||  ret isa EXPR{x_Cmd}) && ps.nt.kind == Tokens.IDENTIFIER
+        arg = IDENTIFIER(next(ps))
+        push!(ret, LITERAL(arg.fullspan, arg.span, val(ps.t, ps), Tokens.STRING))
+    elseif (ret isa IDENTIFIER || (ret isa BinarySyntaxOpCall && is_dot(ret.op))) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING || ps.nt.kind == Tokens.CMD)
+        next(ps)
+        @catcherror ps arg = parse_string_or_cmd(ps, ret)
+        head = arg.kind == Tokens.CMD ? x_Cmd : x_Str
+        ret = EXPR{head}(Any[ret, arg])
     elseif ps.nt.kind == Tokens.LPAREN && isemptyws(ps.ws)
         ret = @closer ps paren parse_call(ps, ret)
     elseif ps.nt.kind == Tokens.LBRACE && isemptyws(ps.ws)
@@ -194,21 +202,6 @@ function parse_compound(ps::ParseState, @nospecialize ret)
     elseif isoperator(ps.nt)
         op = OPERATOR(next(ps))
         ret = parse_operator(ps, ret, op)
-    elseif (ret isa IDENTIFIER || (ret isa BinarySyntaxOpCall && is_dot(ret.op))) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)
-        next(ps)
-        @catcherror ps arg = parse_string_or_cmd(ps, ret)
-        ret = EXPR{x_Str}(Any[ret, arg])
-    # Suffix on x_str
-    elseif ret isa EXPR{x_Str} && ps.nt.kind == Tokens.IDENTIFIER
-        arg = IDENTIFIER(next(ps))
-        push!(ret, LITERAL(arg.fullspan, arg.span, val(ps.t, ps), Tokens.STRING))
-    elseif (ret isa IDENTIFIER || (ret isa BinarySyntaxOpCall && is_dot(ret.op))) && ps.nt.kind == Tokens.CMD
-        next(ps)
-        @catcherror ps arg = parse_string_or_cmd(ps, ret)
-        ret = EXPR{x_Cmd}(Any[ret, arg])
-    elseif ret isa EXPR{x_Cmd} && ps.nt.kind == Tokens.IDENTIFIER
-        arg = IDENTIFIER(next(ps))
-        push!(ret, LITERAL(arg.fullspan, 1:span(arg), val(ps.t, ps), Tokens.STRING))
     elseif ret isa UnarySyntaxOpCall && is_prime(ret.arg2)
         # prime operator followed by an identifier has an implicit multiplication
         @catcherror ps nextarg = @precedence ps 11 parse_expression(ps)

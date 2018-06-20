@@ -8,7 +8,7 @@ function parse_macro(ps::ParseState)
     end
 
     blockargs = Any[]
-    @catcherror ps @default ps parse_block(ps, blockargs)
+    @catcherror ps parse_block(ps, blockargs)
 
     return EXPR{Macro}(Any[kw, sig, EXPR{Block}(blockargs), KEYWORD(next(ps))])
 end

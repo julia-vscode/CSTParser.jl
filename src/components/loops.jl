@@ -1,9 +1,9 @@
 function parse_for(ps::ParseState)
     kw = KEYWORD(ps)
-    @catcherror ps ranges = @default ps parse_ranges(ps)
+    @catcherror ps ranges = parse_ranges(ps)
 
     blockargs = Any[]
-    @catcherror ps @default ps parse_block(ps, blockargs)
+    @catcherror ps parse_block(ps, blockargs)
     return EXPR{For}(Any[kw, ranges, EXPR{Block}(blockargs), KEYWORD(next(ps))])
 end
 
@@ -53,9 +53,9 @@ function is_range(x::BinaryOpCall) is_in(x.op) || is_elof(x.op) end
 
 function parse_while(ps::ParseState)
     kw = KEYWORD(ps)
-    @catcherror ps cond = @default ps @closer ps ws parse_expression(ps)
+    @catcherror ps cond = @closer ps ws parse_expression(ps)
     blockargs = Any[]
-    @catcherror ps @default ps parse_block(ps, blockargs)
+    @catcherror ps parse_block(ps, blockargs)
 
     return EXPR{While}(Any[kw, cond, EXPR{Block}(blockargs), KEYWORD(next(ps))])
 end

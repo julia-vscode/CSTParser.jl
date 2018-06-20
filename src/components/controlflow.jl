@@ -2,7 +2,7 @@ function parse_do(ps::ParseState, @nospecialize(ret))
     kw = KEYWORD(next(ps))
 
     args = EXPR{TupleH}(Any[])
-    @default ps @closer ps comma @closer ps block while !closer(ps)
+    @closer ps comma @closer ps block while !closer(ps)
         @catcherror ps a = parse_expression(ps)
 
         push!(args, a)
@@ -12,7 +12,7 @@ function parse_do(ps::ParseState, @nospecialize(ret))
     end
 
     blockargs = Any[]
-    @catcherror ps @default ps parse_block(ps, blockargs)
+    @catcherror ps parse_block(ps, blockargs)
 
     return EXPR{Do}(Any[ret, kw, args, EXPR{Block}(blockargs), PUNCTUATION(next(ps))])
 end
@@ -29,11 +29,11 @@ function parse_if(ps::ParseState, nested = false)
         return make_error(ps, 1 .+ (ps.t.endbyte:ps.t.endbyte), Diagnostics.MissingConditional,
             "missing conditional in `$(lowercase(string(ps.t.kind)))`")
     end
-    @catcherror ps cond = @default ps @closer ps block @closer ps ws parse_expression(ps)
+    @catcherror ps cond = @closer ps block @closer ps ws parse_expression(ps)
 
 
     ifblockargs = Any[]
-    @catcherror ps @default ps @closer ps ifelse parse_block(ps, ifblockargs, (Tokens.END, Tokens.ELSE, Tokens.ELSEIF))
+    @catcherror ps @closer ps ifelse parse_block(ps, ifblockargs, (Tokens.END, Tokens.ELSE, Tokens.ELSEIF))
 
     if nested
         ret = EXPR{If}(Any[cond, EXPR{Block}(ifblockargs)])
@@ -50,7 +50,7 @@ function parse_if(ps::ParseState, nested = false)
     elsekw = ps.nt.kind == Tokens.ELSE
     if ps.nt.kind == Tokens.ELSE
         push!(ret, KEYWORD(next(ps)))
-        @catcherror ps @default ps parse_block(ps, elseblock)
+        @catcherror ps parse_block(ps, elseblock)
     end
 
     # Construction
@@ -80,7 +80,7 @@ function parse_let(ps::ParseState)
         push!(args, arg)
     end
     blockargs = Any[]
-    @catcherror ps @default ps parse_block(ps, blockargs)
+    @catcherror ps parse_block(ps, blockargs)
 
     push!(args, EXPR{Block}(blockargs))
     push!(args, KEYWORD(next(ps)))
@@ -93,7 +93,7 @@ function parse_try(ps::ParseState)
     ret = EXPR{Try}(Any[kw])
 
     tryblockargs = Any[]
-    @catcherror ps @default ps @closer ps trycatch parse_block(ps, tryblockargs, (Tokens.END, Tokens.CATCH, Tokens.FINALLY))
+    @catcherror ps @closer ps trycatch parse_block(ps, tryblockargs, (Tokens.END, Tokens.CATCH, Tokens.FINALLY))
     push!(ret, EXPR{Block}(tryblockargs))
 
     # try closing early
@@ -118,10 +118,10 @@ function parse_try(ps::ParseState)
             if ps.ws.kind == SemiColonWS || ps.ws.kind == NewLineWS
                 caught = FALSE
             else
-                @catcherror ps caught = @default ps @closer ps ws @closer ps trycatch parse_expression(ps)
+                @catcherror ps caught = @closer ps ws @closer ps trycatch parse_expression(ps)
             end
             catchblock = EXPR{Block}(Any[], 0, 1:0)
-            @catcherror ps @default ps @closer ps trycatch parse_block(ps, catchblock, (Tokens.END, Tokens.FINALLY))
+            @catcherror ps @closer ps trycatch parse_block(ps, catchblock, (Tokens.END, Tokens.FINALLY))
             if !(caught isa IDENTIFIER || caught == FALSE)
                 pushfirst!(catchblock, caught)
                 caught = FALSE

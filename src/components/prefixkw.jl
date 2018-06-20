@@ -1,6 +1,6 @@
 function parse_const(ps::ParseState)
     kw = KEYWORD(ps)
-    @catcherror ps arg = @default ps parse_expression(ps)
+    @catcherror ps arg = parse_expression(ps)
 
     return EXPR{Const}(Any[kw, arg])
 end
@@ -14,14 +14,14 @@ end
 
 function parse_local(ps::ParseState)
     kw = KEYWORD(ps)
-    @catcherror ps arg = @default ps parse_expression(ps)
+    @catcherror ps arg = parse_expression(ps)
 
     return EXPR{Local}(Any[kw, arg])
 end
 
 function parse_return(ps::ParseState)
     kw = KEYWORD(ps)
-    @catcherror ps args = @default ps closer(ps) ? NOTHING : parse_expression(ps)
+    @catcherror ps args = closer(ps) ? NOTHING : parse_expression(ps)
 
     return EXPR{Return}(Any[kw, args])
 end

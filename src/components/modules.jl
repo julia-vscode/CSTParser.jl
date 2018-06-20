@@ -8,7 +8,7 @@ function parse_module(ps::ParseState)
     end
 
     block = EXPR{Block}(Any[])
-    @default ps parse_block(ps, block, (Tokens.END,), true)
+    parse_block(ps, block, (Tokens.END,), true)
 
     return EXPR{(is_module(kw) ? ModuleH : BareModule)}(Any[kw, arg, block, KEYWORD(next(ps))])
 end
@@ -44,7 +44,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
             push!(args, EXPR{MacroName}(Any[at, a]))
         elseif ps.nt.kind == Tokens.LPAREN
             a = EXPR{InvisBrackets}(Any[PUNCTUATION(next(ps))])
-            @catcherror ps push!(a, @default ps @closer ps paren parse_expression(ps))
+            @catcherror ps push!(a, @closer ps paren parse_expression(ps))
             push!(a, PUNCTUATION(next(ps)))
             push!(args, a)
         elseif ps.nt.kind == Tokens.EX_OR

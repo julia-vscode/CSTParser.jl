@@ -1,7 +1,7 @@
 function parse_begin(ps::ParseState)
     kw = KEYWORD(ps)
     blockargs = Any[]
-    @catcherror ps arg = @default ps parse_block(ps, blockargs, (Tokens.END,), true)
+    @catcherror ps arg = parse_block(ps, blockargs, (Tokens.END,), true)
 
     return EXPR{Begin}(Any[kw, EXPR{Block}(blockargs), KEYWORD(next(ps))])
 end
@@ -9,7 +9,7 @@ end
 function parse_quote(ps::ParseState)
     kw = KEYWORD(ps)
     blockargs = Any[]
-    @catcherror ps @default ps parse_block(ps, blockargs)
+    @catcherror ps parse_block(ps, blockargs)
 
     return EXPR{Quote}(Any[kw, EXPR{Block}(blockargs), KEYWORD(next(ps))])
 end
