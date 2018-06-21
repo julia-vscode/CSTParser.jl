@@ -108,7 +108,7 @@ function parse_call(ps::ParseState, @nospecialize ret)
     end
     ismacro = ret isa EXPR{MacroName}
     args = Any[ret, PUNCTUATION(next(ps))]
-    @default ps @closer ps paren parse_comma_sep(ps, args, !ismacro)
+    @default ps parse_comma_sep(ps, args, !ismacro)
     rparen = PUNCTUATION(next(ps))
     rparen.kind == Tokens.RPAREN || return error_unexpected(ps, ps.t)
     push!(args, rparen)
@@ -226,7 +226,7 @@ Comprehensions are parsed as SQUAREs containing a generator.
 function parse_generator(ps::ParseState, @nospecialize ret)
     kw = KEYWORD(next(ps))
     ret = EXPR{Generator}(Any[ret, kw])
-    @catcherror ps ranges = @closer ps paren @closer ps square parse_ranges(ps)
+    @catcherror ps ranges = @closer ps square parse_ranges(ps)
 
     if ps.nt.kind == Tokens.IF
         if ranges isa EXPR{Block}
@@ -235,7 +235,7 @@ function parse_generator(ps::ParseState, @nospecialize ret)
             ranges = EXPR{Filter}(Any[ranges])
         end
         pushfirst!(ranges, KEYWORD(next(ps)))
-        @catcherror ps cond = @closer ps range @closer ps paren parse_expression(ps)
+        @catcherror ps cond = @closer ps range parse_expression(ps)
         pushfirst!(ranges, cond)
         push!(ret, ranges)
     elseif ranges isa EXPR{Block}
@@ -285,7 +285,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
             push!(args, EXPR{MacroName}(Any[at, a]))
         elseif ps.nt.kind == Tokens.LPAREN
             a = EXPR{InvisBrackets}(Any[PUNCTUATION(next(ps))])
-            @catcherror ps push!(a, @closer ps paren parse_expression(ps))
+            @catcherror ps push!(a, parse_expression(ps))
             push!(a, PUNCTUATION(next(ps)))
             push!(args, a)
         elseif ps.nt.kind == Tokens.EX_OR

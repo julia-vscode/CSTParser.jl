@@ -217,7 +217,7 @@ function parse_if(ps::ParseState, nested = false)
 
 
     ifblockargs = Any[]
-    @catcherror ps @closer ps ifelse parse_block(ps, ifblockargs, (Tokens.END, Tokens.ELSE, Tokens.ELSEIF))
+    @catcherror ps parse_block(ps, ifblockargs, (Tokens.END, Tokens.ELSE, Tokens.ELSEIF))
 
     if nested
         ret = EXPR{If}(Any[cond, EXPR{Block}(ifblockargs)])
@@ -277,7 +277,7 @@ function parse_try(ps::ParseState)
     ret = EXPR{Try}(Any[kw])
 
     tryblockargs = Any[]
-    @catcherror ps @closer ps trycatch parse_block(ps, tryblockargs, (Tokens.END, Tokens.CATCH, Tokens.FINALLY))
+    @catcherror ps parse_block(ps, tryblockargs, (Tokens.END, Tokens.CATCH, Tokens.FINALLY))
     push!(ret, EXPR{Block}(tryblockargs))
 
     # try closing early
@@ -302,10 +302,10 @@ function parse_try(ps::ParseState)
             if ps.ws.kind == SemiColonWS || ps.ws.kind == NewLineWS
                 caught = FALSE
             else
-                @catcherror ps caught = @closer ps ws @closer ps trycatch parse_expression(ps)
+                @catcherror ps caught = @closer ps ws parse_expression(ps)
             end
             catchblock = EXPR{Block}(Any[], 0, 1:0)
-            @catcherror ps @closer ps trycatch parse_block(ps, catchblock, (Tokens.END, Tokens.FINALLY))
+            @catcherror ps parse_block(ps, catchblock, (Tokens.END, Tokens.FINALLY))
             if !(caught isa IDENTIFIER || caught == FALSE)
                 pushfirst!(catchblock, caught)
                 caught = FALSE

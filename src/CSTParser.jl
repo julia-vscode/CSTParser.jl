@@ -188,7 +188,7 @@ function parse_compound(ps::ParseState, @nospecialize ret)
         head = arg.kind == Tokens.CMD ? x_Cmd : x_Str
         ret = EXPR{head}(Any[ret, arg])
     elseif ps.nt.kind == Tokens.LPAREN && isemptyws(ps.ws)
-        ret = @closer ps paren parse_call(ps, ret)
+        ret = parse_call(ps, ret)
     elseif ps.nt.kind == Tokens.LBRACE && isemptyws(ps.ws)
         ret = @default ps @nocloser ps inwhere @closer ps brace parse_curly(ps, ret)
     elseif ps.nt.kind == Tokens.LSQUARE && isemptyws(ps.ws) && !(ret isa OPERATOR)
@@ -243,7 +243,7 @@ Parses an expression starting with a `(`.
 """
 function parse_paren(ps::ParseState)  
     args = Any[PUNCTUATION(ps)]
-    @catcherror ps @default ps @nocloser ps inwhere @closer ps paren parse_comma_sep(ps, args, false, true, true)
+    @catcherror ps @default ps @nocloser ps inwhere parse_comma_sep(ps, args, false, true, true)
     if ((length(args) == 2 && !(args[2] isa UnarySyntaxOpCall && is_dddot(args[2].arg2)))) && ((ps.ws.kind != SemiColonWS || (length(args) == 2 && args[2] isa EXPR{Block})) && !(args[2] isa EXPR{Parameters}))
         push!(args, PUNCTUATION(next(ps)))
         ret = EXPR{InvisBrackets}(args)

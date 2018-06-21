@@ -275,7 +275,7 @@ end
 # parse dot access
 function parse_operator_dot(ps::ParseState, @nospecialize(ret), op)
     if ps.nt.kind == Tokens.LPAREN
-        @catcherror ps sig = @default ps @closer ps paren parse_call(ps, ret)
+        @catcherror ps sig = @default ps parse_call(ps, ret)
         args = EXPR{TupleH}(sig.args[2:end])
         ret = BinarySyntaxOpCall(ret, op, args)
         return ret

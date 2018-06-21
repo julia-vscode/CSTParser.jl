@@ -21,13 +21,15 @@ function closer(ps::ParseState)
     (ps.closer.comma && iscomma(ps.nt)) ||
     (ps.closer.tuple && (iscomma(ps.nt) || isassignment(ps.nt))) ||
     (ps.nt.kind == Tokens.FOR && ps.closer.precedence > -1) ||
-    (ps.closer.paren && ps.nt.kind == Tokens.RPAREN) ||
-    (ps.closer.brace && ps.nt.kind == Tokens.RBRACE) ||
-    (ps.closer.square && ps.nt.kind == Tokens.RSQUARE) ||
     (ps.closer.block && ps.nt.kind == Tokens.END) ||
-    (ps.closer.ifelse && ps.nt.kind == Tokens.ELSEIF || ps.nt.kind == Tokens.ELSE) ||
+    (ps.nt.kind == Tokens.RPAREN) ||
+    (ps.nt.kind == Tokens.RBRACE) ||
+    (ps.nt.kind == Tokens.RSQUARE) ||
+    ps.nt.kind == Tokens.ELSEIF || 
+    ps.nt.kind == Tokens.ELSE ||
+    ps.nt.kind == Tokens.CATCH || 
+    ps.nt.kind == Tokens.FINALLY || 
     (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt) <= 0 || ps.nt.kind == Tokens.COLON)) ||
-    (ps.closer.trycatch && (ps.nt.kind == Tokens.CATCH || ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END)) ||
     (ps.closer.range && (ps.nt.kind == Tokens.FOR || iscomma(ps.nt) || ps.nt.kind == Tokens.IF)) ||
     (ps.closer.ws && !isemptyws(ps.ws) &&
         !(ps.nt.kind == Tokens.COMMA) &&
@@ -625,17 +627,10 @@ Base.length(x::UnaryOpCall) = 2
 Base.iterate(x::UnarySyntaxOpCall) = x.arg1, 1
 Base.iterate(x::UnarySyntaxOpCall, s) = s == 1 ? (x.arg2, 2) : nothing
 Base.length(x::UnarySyntaxOpCall) = 2
-# Base.start(x::UnarySyntaxOpCall) = 1
-# Base.next(x::UnarySyntaxOpCall, s) = s == 1 ? x.arg1 : x.arg2 , s + 1
-# Base.done(x::UnarySyntaxOpCall, s) = s > 2
-
 
 Base.iterate(x::BinarySyntaxOpCall) = x.arg1, 1
 Base.iterate(x::BinarySyntaxOpCall, s) = s > 2 ? nothing : (getfield(x, s+1), s + 1)
 Base.length(x::BinarySyntaxOpCall) = 3
-# Base.start(x::BinarySyntaxOpCall) = 1
-# Base.next(x::BinarySyntaxOpCall, s) = getfield(x, s) , s + 1
-# Base.done(x::BinarySyntaxOpCall, s) = s > 3
 
 Base.iterate(x::BinaryOpCall) = x.arg1, 1
 Base.iterate(x::BinaryOpCall, s) = s > 2 ? nothing : (getfield(x, s+1), s + 1)
