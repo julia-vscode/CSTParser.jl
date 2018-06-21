@@ -16,6 +16,7 @@ import .Diagnostics: Diagnostic, LintCodes
 include("lexer.jl")
 include("spec.jl")
 include("utils.jl")
+include("components/kw.jl")
 include("components/lists.jl")
 include("components/operators.jl")
 include("components/controlflow.jl")
@@ -56,9 +57,9 @@ function parse_expression(ps::ParseState)
     elseif ps.t.kind == Tokens.LPAREN
         @catcherror ps ret = parse_paren(ps)
     elseif ps.t.kind == Tokens.LSQUARE
-        @catcherror ps ret = parse_array(ps)
+        @catcherror ps ret = @default ps parse_array(ps)
     elseif ps.t.kind == Tokens.LBRACE
-        @catcherror ps ret = parse_braces(ps)
+        @catcherror ps ret = @default ps @closer ps brace parse_braces(ps)
     elseif isinstance(ps.t) || isoperator(ps.t)
         if ps.t.kind == Tokens.WHERE
             ret = IDENTIFIER(ps)
@@ -192,9 +193,9 @@ function parse_compound(ps::ParseState, @nospecialize ret)
     elseif ps.nt.kind == Tokens.LPAREN && isemptyws(ps.ws)
         ret = @closer ps paren parse_call(ps, ret)
     elseif ps.nt.kind == Tokens.LBRACE && isemptyws(ps.ws)
-        ret = parse_curly(ps, ret)
+        ret = @default ps @nocloser ps inwhere @closer ps brace parse_curly(ps, ret)
     elseif ps.nt.kind == Tokens.LSQUARE && isemptyws(ps.ws) && !(ret isa OPERATOR)
-        ret = @nocloser ps block parse_ref(ps, ret)
+        ret = @default ps @nocloser ps block parse_ref(ps, ret)
     elseif ps.nt.kind == Tokens.COMMA
         ret = parse_tuple(ps, ret)
     elseif isunaryop(ret) && ps.nt.kind != Tokens.EQ

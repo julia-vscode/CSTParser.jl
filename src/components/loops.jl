@@ -53,7 +53,7 @@ function is_range(x::BinaryOpCall) is_in(x.op) || is_elof(x.op) end
 
 function parse_while(ps::ParseState)
     kw = KEYWORD(ps)
-    @catcherror ps cond = @closer ps ws parse_expression(ps)
+    @catcherror ps cond = @closer ps ws @closer ps block parse_expression(ps)
     blockargs = Any[]
     @catcherror ps parse_block(ps, blockargs)
 
