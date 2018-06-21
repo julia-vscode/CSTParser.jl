@@ -13,14 +13,11 @@ Struct holding information on the tokens that will close the expression
 currently being parsed.
 """
 mutable struct Closer
-    toplevel::Bool
     newline::Bool
     semicolon::Bool
     tuple::Bool
     comma::Bool
-    dot::Bool
     paren::Bool
-    quotemode::Bool
     brace::Bool
     inmacro::Bool
     insquare::Bool
@@ -36,7 +33,7 @@ mutable struct Closer
     precedence::Int
     stop::Int
 end
-Closer() = Closer(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int))
+Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int))
 
 """
     ParseState

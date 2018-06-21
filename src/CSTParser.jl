@@ -16,18 +16,19 @@ import .Diagnostics: Diagnostic, LintCodes
 include("lexer.jl")
 include("spec.jl")
 include("utils.jl")
-include("components/kw.jl")
+include("components/internals.jl")
+include("components/keywords.jl")
 include("components/lists.jl")
 include("components/operators.jl")
-include("components/controlflow.jl")
-include("components/functions.jl")
-include("components/genericblocks.jl")
-include("components/loops.jl")
-include("components/macros.jl")
-include("components/modules.jl")
-include("components/prefixkw.jl")
+# include("components/controlflow.jl")
+# include("components/functions.jl")
+# include("components/genericblocks.jl")
+# include("components/loops.jl")
+# include("components/macros.jl")
+# include("components/modules.jl")
+# include("components/prefixkw.jl")
 include("components/strings.jl")
-include("components/types.jl")
+# include("components/types.jl")
 include("conversion.jl")
 include("display.jl")
 include("scoping.jl")
@@ -94,27 +95,27 @@ end
 function parse_kw(ps)
     k = ps.t.kind
     if k == Tokens.IF
-        return @default ps parse_if(ps)
+        return @default ps @closer ps block parse_if(ps)
     elseif k == Tokens.LET
-        return @default ps parse_let(ps)
+        return @default ps @closer ps block parse_let(ps)
     elseif k == Tokens.TRY
-        return @default ps parse_try(ps)
+        return @default ps @closer ps block parse_try(ps)
     elseif k == Tokens.FUNCTION
-        return @default ps parse_function(ps)
+        return @default ps @closer ps block parse_function(ps)
+    elseif k == Tokens.MACRO
+        return @default ps @closer ps block parse_macro(ps)
     elseif k == Tokens.BEGIN
-        return @default ps parse_begin(ps)
+        return @default ps @closer ps block parse_begin(ps)
     elseif k == Tokens.QUOTE
-        return @default ps parse_quote(ps)
+        return @default ps @closer ps block parse_quote(ps)
     elseif k == Tokens.FOR
-        return @default ps parse_for(ps)
+        return @default ps @closer ps block parse_for(ps)
     elseif k == Tokens.WHILE
-        return @default ps parse_while(ps)
+        return @default ps @closer ps block parse_while(ps)
     elseif k == Tokens.BREAK
         return INSTANCE(ps)
     elseif k == Tokens.CONTINUE
         return INSTANCE(ps)
-    elseif k == Tokens.MACRO
-        return @default ps parse_macro(ps)
     elseif k == Tokens.IMPORT
         return parse_imports(ps)
     elseif k == Tokens.IMPORTALL
@@ -123,10 +124,8 @@ function parse_kw(ps)
         return parse_imports(ps)
     elseif k == Tokens.EXPORT
         return parse_export(ps)
-    elseif k == Tokens.MODULE
-        return @default ps parse_module(ps)
-    elseif k == Tokens.BAREMODULE
-        return @default ps parse_module(ps)
+    elseif k == Tokens.MODULE ||  k == Tokens.BAREMODULE
+        return @default ps @closer ps block parse_module(ps)
     elseif k == Tokens.CONST
         return @default ps parse_const(ps)
     elseif k == Tokens.GLOBAL
@@ -145,14 +144,12 @@ function parse_kw(ps)
         return @default ps parse_abstract(ps)
     elseif k == Tokens.PRIMITIVE
         return @default ps parse_primitive(ps)
-    # elseif k == Tokens.TYPEALIAS
-    #     return parse_typealias(ps)
     elseif k == Tokens.TYPE
-        return @default ps parse_struct(ps, true)
+        return @default ps @closer ps block parse_struct(ps, true)
     elseif k == Tokens.IMMUTABLE || k == Tokens.STRUCT
-        return @default ps parse_struct(ps, false)
+        return @default ps @closer ps block parse_struct(ps, false)
     elseif k == Tokens.MUTABLE
-        return @default ps parse_mutable(ps)
+        return @default ps @closer ps block parse_mutable(ps)
     elseif k == Tokens.OUTER
         return IDENTIFIER(ps)
     end
@@ -178,7 +175,7 @@ function parse_compound(ps::ParseState, @nospecialize ret)
     if ps.nt.kind == Tokens.FOR
         ret = parse_generator(ps, ret)
     elseif ps.nt.kind == Tokens.DO
-        ret = @default ps parse_do(ps, ret)
+        ret = @default ps @closer ps block parse_do(ps, ret)
     elseif isajuxtaposition(ps, ret)
         op = OPERATOR(0, 1:0, Tokens.STAR, false)
         ret = parse_operator(ps, ret, op)
