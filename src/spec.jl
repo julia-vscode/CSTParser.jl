@@ -183,7 +183,7 @@ end
 abstract type Head end
 abstract type Call <: Head end
 
-mutable struct UnaryOpCall
+mutable struct UnaryOpCall <: AbstractEXPR
     op::OPERATOR
     arg
     fullspan::Int
@@ -193,9 +193,8 @@ mutable struct UnaryOpCall
         new(op, arg, fullspan, 1:(fullspan - arg.fullspan + length(arg.span)))
     end
 end
-# AbstractTrees.children(x::UnaryOpCall) = vcat(x.op, x.arg)
 
-mutable struct UnarySyntaxOpCall
+mutable struct UnarySyntaxOpCall <: AbstractEXPR
     arg1
     arg2
     fullspan::Int
@@ -205,9 +204,8 @@ mutable struct UnarySyntaxOpCall
         new(arg1, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
     end
 end
-# AbstractTrees.children(x::UnarySyntaxOpCall) = vcat(x.arg1, x.arg2)
 
-mutable struct BinaryOpCall
+mutable struct BinaryOpCall <: AbstractEXPR
     arg1
     op::OPERATOR
     arg2
@@ -218,9 +216,8 @@ mutable struct BinaryOpCall
         new(arg1, op, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
     end
 end
-# AbstractTrees.children(x::T) where T <: Union{BinaryOpCall} = vcat(x.arg1, x.op, x.arg2)
 
-mutable struct BinarySyntaxOpCall
+mutable struct BinarySyntaxOpCall <: AbstractEXPR
     arg1
     op::OPERATOR
     arg2
@@ -231,9 +228,8 @@ mutable struct BinarySyntaxOpCall
         new(arg1, op, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
     end
 end
-# AbstractTrees.children(x::T) where T <: Union{BinarySyntaxOpCall} = vcat(x.arg1, x.op, x.arg2)
 
-mutable struct WhereOpCall
+mutable struct WhereOpCall <: AbstractEXPR
     arg1
     op::OPERATOR
     args::Vector
@@ -247,9 +243,8 @@ mutable struct WhereOpCall
         new(arg1, op, args, fullspan, 1:(fullspan - last(args).fullspan + length(last(args).span)))
     end
 end
-# AbstractTrees.children(x::T) where T <: Union{WhereOpCall} = vcat(x.arg1, x.op, x.args)
 
-mutable struct ConditionalOpCall
+mutable struct ConditionalOpCall <: AbstractEXPR
     cond
     op1::OPERATOR
     arg1
@@ -262,8 +257,6 @@ mutable struct ConditionalOpCall
         new(cond, op1, arg1, op2, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
     end
 end
-
-# AbstractTrees.children(x::ConditionalOpCall) = vcat(x.cond, x.op1, x.arg1, x.op2, x.arg2)
 
 abstract type ComparisonOpCall <: Head end
 abstract type ChainOpCall <: Head end

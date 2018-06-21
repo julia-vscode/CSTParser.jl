@@ -188,14 +188,14 @@ seperated list.
 """
 function parse_curly(ps::ParseState, ret)
     args = Any[ret, PUNCTUATION(next(ps))]
-    @catcherror ps  @default ps @nocloser ps inwhere @closer ps brace parse_comma_sep(ps, args, true, false)
+    @catcherror ps  @default ps @nocloser ps inwhere @closer ps brace parse_comma_sep(ps, args, true)
     push!(args, PUNCTUATION(next(ps)))
     return EXPR{Curly}(args)
 end
 
 function parse_braces(ps::ParseState)
     args = Any[PUNCTUATION(ps)]
-    @catcherror ps @default ps @closer ps brace parse_comma_sep(ps, args, true, false)
+    @catcherror ps @default ps @closer ps brace parse_comma_sep(ps, args, true)
     push!(args, PUNCTUATION(next(ps)))
     return EXPR{Braces}(args)
 end

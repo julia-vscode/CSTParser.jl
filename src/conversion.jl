@@ -341,6 +341,7 @@ function Expr(x::EXPR{Call})
     ret
 end
 
+
 function Expr(x::EXPR{Braces})
     ret = Expr(:braces)
     for a in x.args
@@ -576,12 +577,15 @@ Expr(x::EXPR{Kw}) = Expr(:kw, Expr(x.args[1]), Expr(x.args[3]))
 function Expr(x::EXPR{Parameters})
     ret = Expr(:parameters)
     for a in x.args
-        if !(a isa PUNCTUATION)
+        if a isa EXPR{Parameters}
+            insert!(ret.args, 2, Expr(a))
+        elseif !(a isa PUNCTUATION)
             push!(ret.args, Expr(a))
         end
     end
-    return ret
+    ret
 end
+
 
 function Expr(x::EXPR{Return})
     ret = Expr(:return)

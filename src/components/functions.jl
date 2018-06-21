@@ -99,22 +99,30 @@ function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = f
             push!(args, body)
             return body
         else
-            kw = true
-            ps.nt.kind == Tokens.RPAREN && return args
-            args1 = Any[]
-            @nocloser ps inwhere @nocloser ps newline @nocloser ps semicolon @closer ps comma while !closer(ps)
-                @catcherror ps a = parse_expression(ps)
-                if kw && !ps.closer.brace && a isa BinarySyntaxOpCall && is_eq(a.op)
-                    a = EXPR{Kw}(Any[a.arg1, a.op, a.arg2])
-                end
-                push!(args1, a)
-                if ps.nt.kind == Tokens.COMMA
-                    push!(args1, PUNCTUATION(next(ps)))
-                end
-            end
-            paras = EXPR{Parameters}(args1)
-            push!(args, paras)
+            parse_parameters(ps, args)
         end
     end
     return args
+end
+
+function parse_parameters(ps, args::Vector{Any})
+    args1 = Any[]
+    @nocloser ps inwhere @nocloser ps newline  @closer ps comma while @nocloser ps semicolon !closer(ps)
+        @catcherror ps a = parse_expression(ps)
+        if !ps.closer.brace && a isa BinarySyntaxOpCall && is_eq(a.op)
+            a = EXPR{Kw}(Any[a.arg1, a.op, a.arg2])
+        end
+        push!(args1, a)
+        if ps.nt.kind == Tokens.COMMA
+            push!(args1, PUNCTUATION(next(ps)))
+        end
+        if ps.ws.kind == SemiColonWS
+            parse_parameters(ps, args1)
+        end
+    end
+    if !isempty(args1)
+        paras = EXPR{Parameters}(args1)
+        push!(args, paras)
+    end
+    return
 end
