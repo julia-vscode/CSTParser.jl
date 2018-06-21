@@ -59,6 +59,17 @@ macro closer(ps, opt, body)
     end
 end
 
+macro closeparen(ps, body)
+    quote
+        local tmp1 = $(esc(ps)).closer.paren
+        $(esc(ps)).closer.$opt = true
+        out = $(esc(body))
+        $(esc(ps)).closer.$opt = tmp1
+        out
+    end
+end
+
+
 """
     @nocloser ps rule body
 

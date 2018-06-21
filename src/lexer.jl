@@ -32,8 +32,9 @@ mutable struct Closer
     wsop::Bool
     precedence::Int
     stop::Int
+    cc::Vector
 end
-Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int))
+Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int), [])
 
 """
     ParseState

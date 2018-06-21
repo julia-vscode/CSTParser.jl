@@ -51,6 +51,25 @@ Acceptable starting tokens are:
 
 """
 function parse_expression(ps::ParseState)
+    if ps.nt.kind == Tokens.RPAREN
+        if ps.closer.paren
+            return ErrorToken()
+        else
+            return ErrorToken(INSTANCE(next(ps)))
+        end
+    elseif ps.nt.kind == Tokens.RSQUARE
+        if ps.closer.square
+            return ErrorToken()
+        else
+            return ErrorToken(INSTANCE(next(ps)))
+        end
+    elseif ps.nt.kind == Tokens.RBRACE
+        if ps.closer.square
+            return ErrorToken()
+        else
+            return ErrorToken(INSTANCE(next(ps)))
+        end
+    end
     next(ps)
     
     if iskeyword(ps.t.kind) && ps.t.kind != Tokens.DO
