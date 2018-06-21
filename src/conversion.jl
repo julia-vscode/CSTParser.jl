@@ -172,7 +172,9 @@ function Expr(x::WhereOpCall)
     ret = Expr(:where, Expr(x.arg1))
     for i = 1:length(x.args)
         a = x.args[i]
-        if !(a isa PUNCTUATION || a isa KEYWORD)
+        if a isa EXPR{Parameters}
+            insert!(ret.args, 2, Expr(a))
+        elseif !(a isa PUNCTUATION || a isa KEYWORD)
             push!(ret.args, Expr(a))
         end
     end
@@ -520,7 +522,9 @@ end
 function Expr(x::EXPR{Vect})
     ret = Expr(:vect)
     for a in x.args
-        if !(a isa PUNCTUATION)
+        if a isa EXPR{Parameters}
+            pushfirst!(ret.args, Expr(a))
+        elseif !(a isa PUNCTUATION)
             push!(ret.args, Expr(a))
         end
     end

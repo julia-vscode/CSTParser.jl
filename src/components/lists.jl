@@ -74,11 +74,6 @@ function parse_array(ps::ParseState)
             push!(args, first_arg)
             push!(args, PUNCTUATION(next(ps)))
             @catcherror ps @default ps @closer ps square parse_comma_sep(ps, args, false)
-
-            if last(args) isa EXPR{Parameters}
-                etype = Vect
-                pushfirst!(args, pop!(args))
-            end
             push!(args, PUNCTUATION(next(ps)))
             return EXPR{etype}(args)
         elseif ps.ws.kind == NewLineWS

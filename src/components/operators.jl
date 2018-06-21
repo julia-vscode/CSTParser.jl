@@ -196,11 +196,7 @@ function parse_operator_eq(ps::ParseState, @nospecialize(ret), op)
     @catcherror ps nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
 
     if is_func_call(ret)
-        # Construction
-        # NOTE: prior to v"0.6.0-dev.2360" (PR #20076), there was an issue w/ scheme parser
-        if VERSION > v"0.6.0-dev.2360" || (!((ret isa BinarySyntaxOpCall && is_decl(ret.op)) && (ret <: Union{UnaryOpCall,UnarySyntaxOpCall,BinaryOpCall,BinarySyntaxOpCall} || length(ret.args) > 1)) && ps.closer.precedence != 0)
-            nextarg = EXPR{Block}(Any[nextarg])
-        end
+        nextarg = EXPR{Block}(Any[nextarg])
     end
     
     return BinarySyntaxOpCall(ret, op, nextarg)
@@ -252,16 +248,8 @@ end
 # Parse power (special case for preceding unary ops)
 function parse_operator_power(ps::ParseState, @nospecialize(ret), op)
     @catcherror ps nextarg = @precedence ps PowerOp - LtoR(PowerOp) @closer ps inwhere parse_expression(ps)
-
-    # Construction
-    # NEEDS FIX
     if ret isa UnaryOpCall
-        if false
-            xx = EXPR{InvisBrackets}(Any[ret])
-            nextarg = BinaryOpCall(op, xx, nextarg)
-        else
-            nextarg = BinaryOpCall(ret.arg, op, nextarg)
-        end
+        nextarg = BinaryOpCall(ret.arg, op, nextarg)
         ret = UnaryOpCall(ret.op, nextarg)
     else
         ret = BinaryOpCall(ret, op, nextarg)
@@ -274,15 +262,8 @@ end
 function parse_operator_where(ps::ParseState, @nospecialize(ret), op)
     args = Any[]
     if ps.nt.kind == Tokens.LBRACE
-        next(ps)
-        push!(args, PUNCTUATION(ps))
-        @nocloser ps inwhere while ps.nt.kind != Tokens.RBRACE
-            @catcherror ps a = @default ps @nocloser ps newline @closer ps comma @closer ps brace parse_expression(ps)
-            push!(args, a)
-            if ps.nt.kind == Tokens.COMMA
-                push!(args, PUNCTUATION(next(ps)))
-            end
-        end
+        args = Any[PUNCTUATION(next(ps))]
+        @catcherror ps @default ps @closer ps brace parse_comma_sep(ps, args, true)
         push!(args, PUNCTUATION(next(ps)))
     else
         @catcherror ps nextarg = @precedence ps LazyAndOp @closer ps inwhere parse_expression(ps)
