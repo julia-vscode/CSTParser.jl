@@ -141,6 +141,16 @@ function Expr(x::EXPR)
     ret
 end
 
+function Expr(x::EXPR{ErrorToken})
+    ret = Expr(:error)
+    for a in x.args
+        if !(a isa PUNCTUATION)
+            push!(ret.args, Expr(a))
+        end
+    end
+    ret
+end
+
 # Op. expressions
 Expr(x::UnaryOpCall) = Expr(:call, Expr(x.op), Expr(x.arg))
 Expr(x::UnarySyntaxOpCall) = x.arg1 isa OPERATOR ? Expr(Expr(x.arg1), Expr(x.arg2)) : Expr(Expr(x.arg2), Expr(x.arg1))

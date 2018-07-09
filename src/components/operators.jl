@@ -152,68 +152,64 @@ Having hit a unary operator at the start of an expression return a call.
 function parse_unary(ps::ParseState, op)
     K,dot = op.kind, op.dot
     if is_colon(op)
-        return parse_unary_colon(ps, op)
+        ret = parse_unary_colon(ps, op)
     elseif (is_plus(op) || is_minus(op)) && (ps.nt.kind == Tokens.INTEGER || ps.nt.kind == Tokens.FLOAT) && isemptyws(ps.ws) && ps.nnt.kind!=Tokens.CIRCUMFLEX_ACCENT
         arg = LITERAL(next(ps))
-        return LITERAL(op.fullspan + arg.fullspan, first(arg.span):(last(arg.span) + length(op.span)), string(is_plus(op) ? "+" : "-" , val(ps.t, ps)), ps.t.kind)
-        return arg
-    end
-
-    # Parsing
-    P = precedence(K)
-    prec = P == DeclarationOp ? DeclarationOp :
-                K == Tokens.AND ? DeclarationOp :
-                K == Tokens.EX_OR ? 20 : PowerOp
-    @catcherror ps arg = @precedence ps prec parse_expression(ps)
-
-    if issyntaxunarycall(op)
-        ret = UnarySyntaxOpCall(op, arg)
+        ret = LITERAL(op.fullspan + arg.fullspan, first(arg.span):(last(arg.span) + length(op.span)), string(is_plus(op) ? "+" : "-" , val(ps.t, ps)), ps.t.kind)
     else
-        ret = UnaryOpCall(op, arg)
+        P = precedence(K)
+        prec = P == DeclarationOp ? DeclarationOp :
+                    K == Tokens.AND ? DeclarationOp :
+                    K == Tokens.EX_OR ? 20 : PowerOp
+        arg = @precedence ps prec parse_expression(ps)
+        if issyntaxunarycall(op)
+            ret = UnarySyntaxOpCall(op, arg)
+        else
+            ret = UnaryOpCall(op, arg)
+        end
     end
+
     return ret
 end
 
 function parse_unary_colon(ps::ParseState, op)
     if Tokens.begin_keywords < ps.nt.kind < Tokens.end_keywords
-        return EXPR{Quotenode}(Any[op, IDENTIFIER(next(ps))])
+        ret = EXPR{Quotenode}(Any[op, IDENTIFIER(next(ps))])
     elseif Tokens.begin_literal < ps.nt.kind < Tokens.end_literal ||
         isoperator(ps.nt.kind) ||
         ps.nt.kind == Tokens.IDENTIFIER
-        return EXPR{Quotenode}(Any[op, INSTANCE(next(ps))])
+        ret = EXPR{Quotenode}(Any[op, INSTANCE(next(ps))])
     elseif closer(ps)
-        return op
+        ret = op
     else
-        # Parsing
-        @catcherror ps arg = @precedence ps 20 parse_expression(ps)
-        return EXPR{Quote}(Any[op, arg])
+        arg = @precedence ps 20 parse_expression(ps)
+        ret = EXPR{Quote}(Any[op, arg])
     end
+    return ret
 end
 
-# Parse assignments
 function parse_operator_eq(ps::ParseState, @nospecialize(ret), op)
-    # Parsing
-    @catcherror ps nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
+    nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
 
     if is_func_call(ret)
         nextarg = EXPR{Block}(Any[nextarg])
     end
-    
     return BinarySyntaxOpCall(ret, op, nextarg)
 end
 
 # Parse conditionals
 function parse_operator_cond(ps::ParseState, @nospecialize(ret), op)
-    @catcherror ps nextarg = @closer ps ifop parse_expression(ps)
-    @catcherror ps op2 = OPERATOR(next(ps))
-    @catcherror ps nextarg2 = @closer ps comma @precedence ps 0 parse_expression(ps)
+    nextarg = @closer ps ifop parse_expression(ps)
+    op2 = OPERATOR(next(ps))
+    nextarg2 = @closer ps comma @precedence ps 0 parse_expression(ps)
 
     return ConditionalOpCall(ret, op, nextarg, op2, nextarg2)
 end
 
 # Parse comparisons
 function parse_comp_operator(ps::ParseState, @nospecialize(ret), op)
-    @catcherror ps nextarg = @precedence ps ComparisonOp - LtoR(ComparisonOp) parse_expression(ps)
+    nextarg = @precedence ps ComparisonOp - LtoR(ComparisonOp) parse_expression(ps)
+
     if ret isa EXPR{Comparison}
         push!(ret, op)
         push!(ret, nextarg)
@@ -231,11 +227,10 @@ end
 
 # Parse ranges
 function parse_operator_colon(ps::ParseState, @nospecialize(ret), op)
-    @catcherror ps nextarg = @precedence ps ColonOp - LtoR(ColonOp) parse_expression(ps)
+    nextarg = @precedence ps ColonOp - LtoR(ColonOp) parse_expression(ps)
+
     if ret isa BinaryOpCall && is_colon(ret.op)
-        ret = EXPR{ColonOpCall}(Any[ret.arg1, ret.op, ret.arg2])
-        push!(ret, op)
-        push!(ret, nextarg)
+        ret = EXPR{ColonOpCall}(Any[ret.arg1, ret.op, ret.arg2, op, nextarg])
     else
         ret = BinaryOpCall(ret, op, nextarg)
     end
@@ -247,7 +242,8 @@ end
 
 # Parse power (special case for preceding unary ops)
 function parse_operator_power(ps::ParseState, @nospecialize(ret), op)
-    @catcherror ps nextarg = @precedence ps PowerOp - LtoR(PowerOp) @closer ps inwhere parse_expression(ps)
+    nextarg = @precedence ps PowerOp - LtoR(PowerOp) @closer ps inwhere parse_expression(ps)
+    
     if ret isa UnaryOpCall
         nextarg = BinaryOpCall(ret.arg, op, nextarg)
         ret = UnaryOpCall(ret.op, nextarg)
@@ -260,44 +256,37 @@ end
 
 # parse where
 function parse_operator_where(ps::ParseState, @nospecialize(ret), op)
-    args = Any[]
-    if ps.nt.kind == Tokens.LBRACE
-        args = Any[PUNCTUATION(next(ps))]
-        @catcherror ps @default ps @closer ps brace parse_comma_sep(ps, args, true)
-        push!(args, PUNCTUATION(next(ps)))
+    nextarg = @precedence ps LazyAndOp @closer ps inwhere parse_expression(ps)
+    
+    if nextarg isa EXPR{Braces}
+        args = nextarg.args
     else
-        @catcherror ps nextarg = @precedence ps LazyAndOp @closer ps inwhere parse_expression(ps)
-        push!(args, nextarg)
+        args = Any[nextarg]
     end
     return WhereOpCall(ret, op, args)
 end
 
-# parse dot access
 function parse_operator_dot(ps::ParseState, @nospecialize(ret), op)
     if ps.nt.kind == Tokens.LPAREN
-        @catcherror ps sig = @default ps parse_call(ps, ret)
-        args = EXPR{TupleH}(sig.args[2:end])
-        ret = BinarySyntaxOpCall(ret, op, args)
-        return ret
+        sig = @default ps parse_call(ps, ret)
+        nextarg = EXPR{TupleH}(sig.args[2:end])
     elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA || ps.nt.kind == Tokens.WHERE
         nextarg = IDENTIFIER(next(ps))
     elseif ps.nt.kind == Tokens.COLON
         op2 = OPERATOR(next(ps))
         if ps.nt.kind == Tokens.LPAREN
-            @catcherror ps nextarg = @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)
+            nextarg = @closeparen ps @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)
             nextarg = EXPR{Quote}(Any[op2, nextarg])
-        else
-            @catcherror ps nextarg = @precedence ps DotOp - LtoR(DotOp) parse_unary(ps, op2)
+        else    
+            nextarg = @precedence ps DotOp - LtoR(DotOp) parse_unary(ps, op2)
         end
     elseif ps.nt.kind == Tokens.EX_OR && ps.nnt.kind == Tokens.LPAREN
         op2 = OPERATOR(next(ps))
-        @catcherror ps nextarg = parse_call(ps, op2)
+        nextarg = parse_call(ps, op2)
     else
-        @catcherror ps nextarg = @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)
+        nextarg = @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)
     end
 
-    # Construction
-    # NEEDS FIX
     if nextarg isa IDENTIFIER || nextarg isa EXPR{Vect} || (nextarg isa UnarySyntaxOpCall && is_exor(nextarg.arg1))
         ret = BinarySyntaxOpCall(ret, op, Quotenode(nextarg))
     elseif nextarg isa EXPR{MacroCall}
@@ -312,17 +301,8 @@ function parse_operator_dot(ps::ParseState, @nospecialize(ret), op)
     return ret
 end
 
-
-function parse_operator_dddot(ps::ParseState, @nospecialize(ret), op)
-    return UnarySyntaxOpCall(ret, op)
-end
-
-function parse_operator_prime(ps::ParseState, @nospecialize(ret), op)
-    return UnarySyntaxOpCall(ret, op)
-end
-
 function parse_operator_anon_func(ps::ParseState, @nospecialize(ret), op)
-    @catcherror ps arg = @closer ps comma @precedence ps 0 parse_expression(ps)
+    arg = @closer ps comma @precedence ps 0 parse_expression(ps)
     #TODO: remove after full deprecation of (x...) => (x...,)
     if ret isa EXPR{TupleH} && length(ret.args) == 3 && ret.args[2] isa UnarySyntaxOpCall && is_dddot(ret.args[2].arg2)
         ret = EXPR{InvisBrackets}(ret.args)
@@ -335,47 +315,40 @@ function parse_operator(ps::ParseState, @nospecialize(ret), op)
     P = precedence(K)
 
     if ret isa EXPR{ChainOpCall} && (is_star(op) || is_plus(op)) && op.kind == ret.args[2].kind
-        @catcherror ps nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
+        nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
         push!(ret, op)
         push!(ret, nextarg)
-        return ret
+        ret = ret
     elseif ret isa BinaryOpCall && (is_star(op) || is_plus(op)) && op.kind == ret.op.kind && !ret.op.dot
-        @catcherror ps nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
-        return EXPR{ChainOpCall}(Any[ret.arg1, ret.op, ret.arg2, op, nextarg])
-    end
-
-    if is_eq(op)
-        return parse_operator_eq(ps, ret, op)
+        nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
+        ret = EXPR{ChainOpCall}(Any[ret.arg1, ret.op, ret.arg2, op, nextarg])
+    elseif is_eq(op)
+        ret = parse_operator_eq(ps, ret, op)
     elseif is_cond(op)
-        return parse_operator_cond(ps, ret, op)
+        ret = parse_operator_cond(ps, ret, op)
     elseif is_colon(op)
-        return parse_operator_colon(ps, ret, op)
+        ret = parse_operator_colon(ps, ret, op)
     elseif is_where(op)
-        return parse_operator_where(ps, ret, op)
+        ret = parse_operator_where(ps, ret, op)
     elseif is_anon_func(op)
-        return parse_operator_anon_func(ps, ret, op)
+        ret = parse_operator_anon_func(ps, ret, op)
     elseif is_dot(op)
-        return parse_operator_dot(ps, ret, op)
-    elseif is_dddot(op)
-        return parse_operator_dddot(ps, ret, op)
-    elseif is_prime(op)
-        return parse_operator_prime(ps, ret, op)
+        ret = parse_operator_dot(ps, ret, op)
+    elseif is_dddot(op) || is_prime(op)
+        ret = UnarySyntaxOpCall(ret, op)
     elseif P == ComparisonOp
-        return parse_comp_operator(ps, ret, op)
+        ret = parse_comp_operator(ps, ret, op)
     elseif P == PowerOp
-        return parse_operator_power(ps, ret, op)
-    end
-    ltor = LtoR(P)
-    if K == Tokens.LPIPE
-        ltor = true
-    end
-    @catcherror ps nextarg = @precedence ps P - ltor parse_expression(ps)
-
-    # Construction
-    if issyntaxcall(op)
-        ret = BinarySyntaxOpCall(ret, op, nextarg)
+        ret = parse_operator_power(ps, ret, op)
     else
-        ret = BinaryOpCall(ret, op, nextarg)
+        ltor = K == Tokens.LPIPE ? true : LtoR(P)
+        nextarg = @precedence ps P - ltor parse_expression(ps)
+        
+        if issyntaxcall(op)
+            ret = BinarySyntaxOpCall(ret, op, nextarg)
+        else
+            ret = BinaryOpCall(ret, op, nextarg)
+        end
     end
     return ret
 end

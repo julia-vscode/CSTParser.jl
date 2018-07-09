@@ -1,29 +1,91 @@
+
+function parse_kw(ps)
+    k = ps.t.kind
+    if k == Tokens.IF
+        return @default ps @closer ps block parse_if(ps)
+    elseif k == Tokens.LET
+        return @default ps @closer ps block parse_let(ps)
+    elseif k == Tokens.TRY
+        return @default ps @closer ps block parse_try(ps)
+    elseif k == Tokens.FUNCTION
+        return @default ps @closer ps block parse_function(ps)
+    elseif k == Tokens.MACRO
+        return @default ps @closer ps block parse_macro(ps)
+    elseif k == Tokens.BEGIN
+        return @default ps @closer ps block parse_begin(ps)
+    elseif k == Tokens.QUOTE
+        return @default ps @closer ps block parse_quote(ps)
+    elseif k == Tokens.FOR
+        return @default ps @closer ps block parse_for(ps)
+    elseif k == Tokens.WHILE
+        return @default ps @closer ps block parse_while(ps)
+    elseif k == Tokens.BREAK
+        return INSTANCE(ps)
+    elseif k == Tokens.CONTINUE
+        return INSTANCE(ps)
+    elseif k == Tokens.IMPORT
+        return parse_imports(ps)
+    elseif k == Tokens.IMPORTALL
+        return parse_imports(ps)
+    elseif k == Tokens.USING
+        return parse_imports(ps)
+    elseif k == Tokens.EXPORT
+        return parse_export(ps)
+    elseif k == Tokens.MODULE ||  k == Tokens.BAREMODULE
+        return @default ps @closer ps block parse_module(ps)
+    elseif k == Tokens.CONST
+        return @default ps parse_const(ps)
+    elseif k == Tokens.GLOBAL
+        return @default ps parse_global(ps)
+    elseif k == Tokens.LOCAL
+        return @default ps parse_local(ps)
+    elseif k == Tokens.RETURN
+        return @default ps parse_return(ps)
+    elseif k == Tokens.END
+        return parse_end(ps)
+    elseif k == Tokens.ELSE || k == Tokens.ELSEIF || k == Tokens.CATCH || k == Tokens.FINALLY
+        push!(ps.errors, Error((ps.t.startbyte:ps.t.endbyte) .+ 1 , "Unexpected end."))
+        return ErrorToken(IDENTIFIER(ps))
+    elseif k == Tokens.ABSTRACT
+        return @default ps parse_abstract(ps)
+    elseif k == Tokens.PRIMITIVE
+        return @default ps parse_primitive(ps)
+    elseif k == Tokens.TYPE
+        return @default ps @closer ps block parse_struct(ps, true)
+    elseif k == Tokens.IMMUTABLE || k == Tokens.STRUCT
+        return @default ps @closer ps block parse_struct(ps, false)
+    elseif k == Tokens.MUTABLE
+        return @default ps @closer ps block parse_mutable(ps)
+    elseif k == Tokens.OUTER
+        return IDENTIFIER(ps)
+    end
+end
 # Prefix 
 
 function parse_const(ps::ParseState)
     kw = KEYWORD(ps)
-    @catcherror ps arg = parse_expression(ps)
+    arg = parse_expression(ps)
 
     return EXPR{Const}(Any[kw, arg])
 end
 
 function parse_global(ps::ParseState)
     kw = KEYWORD(ps)
-    @catcherror ps arg = parse_expression(ps)
+    arg = parse_expression(ps)
 
     return EXPR{Global}(Any[kw, arg])
 end
 
 function parse_local(ps::ParseState)
     kw = KEYWORD(ps)
-    @catcherror ps arg = parse_expression(ps)
+    arg = parse_expression(ps)
 
     return EXPR{Local}(Any[kw, arg])
 end
 
 function parse_return(ps::ParseState)
     kw = KEYWORD(ps)
-    @catcherror ps args = closer(ps) ? NOTHING : parse_expression(ps)
+    args = closer(ps) ? NOTHING : parse_expression(ps)
 
     return EXPR{Return}(Any[kw, args])
 end
@@ -31,29 +93,29 @@ end
 
 # One line
 
-function parse_abstract(ps::ParseState)
+@addctx :abstract function parse_abstract(ps::ParseState)
     # Switch for v0.6 compatability
     if ps.nt.kind == Tokens.TYPE
         kw1 = KEYWORD(ps)
         kw2 = KEYWORD(next(ps))
-        @catcherror ps sig = @closer ps block parse_expression(ps)
-        ret = EXPR{Abstract}(Any[kw1, kw2, sig, KEYWORD(next(ps))])
+        sig = @closer ps block parse_expression(ps)
+        ret = EXPR{Abstract}(Any[kw1, kw2, sig, accept_end(ps)])
     else
         kw = KEYWORD(ps)
-        @catcherror ps sig = parse_expression(ps)
+        sig = parse_expression(ps)
         ret = EXPR{Abstract}(Any[kw, sig])
     end
     return ret
 end
 
-function parse_primitive(ps::ParseState)
+@addctx :primitive function parse_primitive(ps::ParseState)
     if ps.nt.kind == Tokens.TYPE
         kw1 = KEYWORD(ps)
         kw2 = KEYWORD(next(ps))
-        @catcherror ps sig = @closer ps ws @closer ps wsop parse_expression(ps)
-        @catcherror ps arg = @closer ps block parse_expression(ps)
+        sig = @closer ps ws @closer ps wsop parse_expression(ps)
+        arg = @closer ps block parse_expression(ps)
 
-        ret = EXPR{Primitive}(Any[kw1, kw2, sig, arg, KEYWORD(next(ps))])
+        ret = EXPR{Primitive}(Any[kw1, kw2, sig, arg, accept_end(ps)])
     else
         ret = IDENTIFIER(ps)
     end
@@ -75,18 +137,18 @@ function parse_imports(ps::ParseState)
         ret = EXPR{kwt}(vcat(kw, arg))
         push!(ret, OPERATOR(next(ps)))
 
-        @catcherror ps arg = parse_dot_mod(ps, true)
+        arg = parse_dot_mod(ps, true)
         append!(ret, arg)
         while ps.nt.kind == Tokens.COMMA
-            push!(ret, PUNCTUATION(next(ps)))
-            @catcherror ps arg = parse_dot_mod(ps, true)
+            accept_comma(ps, ret)
+            arg = parse_dot_mod(ps, true)
             append!(ret, arg)
         end
     else
         ret = EXPR{kwt}(vcat(kw, arg))
         while ps.nt.kind == Tokens.COMMA
-            push!(ret, PUNCTUATION(next(ps)))
-            @catcherror ps arg = parse_dot_mod(ps)
+            accept_comma(ps, ret)
+            arg = parse_dot_mod(ps)
             append!(ret, arg)
         end
     end
@@ -100,7 +162,7 @@ function parse_export(ps::ParseState)
 
     while ps.nt.kind == Tokens.COMMA
         push!(args, PUNCTUATION(next(ps)))
-        @catcherror ps arg = parse_dot_mod(ps)[1]
+        arg = parse_dot_mod(ps)[1]
         push!(args, arg)
     end
 
@@ -110,26 +172,21 @@ end
 
 # Block
 
-function parse_begin(ps::ParseState)
+@addctx :begin function parse_begin(ps::ParseState)
     kw = KEYWORD(ps)
-    blockargs = Any[]
-    @catcherror ps arg = parse_block(ps, blockargs, (Tokens.END,), true)
-
-    return EXPR{Begin}(Any[kw, EXPR{Block}(blockargs), KEYWORD(next(ps))])
+    blockargs = parse_block(ps, Any[], (Tokens.END,), true)
+    return EXPR{Begin}(Any[kw, EXPR{Block}(blockargs), accept_end(ps)])
 end
 
-function parse_quote(ps::ParseState)
+@addctx :quote function parse_quote(ps::ParseState)
     kw = KEYWORD(ps)
-    blockargs = Any[]
-    @catcherror ps parse_block(ps, blockargs)
-
-    return EXPR{Quote}(Any[kw, EXPR{Block}(blockargs), KEYWORD(next(ps))])
+    blockargs = parse_block(ps)
+    return EXPR{Quote}(Any[kw, EXPR{Block}(blockargs), accept_end(ps)])
 end
 
-function parse_function(ps::ParseState)
+@addctx :function function parse_function(ps::ParseState)
     kw = KEYWORD(ps)
-    
-    @catcherror ps sig = @closer ps inwhere @closer ps ws parse_expression(ps)
+    sig = @closer ps inwhere @closer ps ws parse_expression(ps)
 
     if sig isa EXPR{InvisBrackets} && !(sig.args[2] isa EXPR{TupleH})
         istuple = true
@@ -141,11 +198,10 @@ function parse_function(ps::ParseState)
     end
 
     while ps.nt.kind == Tokens.WHERE && ps.ws.kind != Tokens.NEWLINE_WS
-        @catcherror ps sig = @closer ps inwhere @closer ps ws parse_compound(ps, sig)
+        sig = @closer ps inwhere @closer ps ws parse_compound(ps, sig)
     end
     
-    blockargs = Any[]
-    @catcherror ps parse_block(ps, blockargs)
+    blockargs = parse_block(ps)
 
     if isempty(blockargs)
         if sig isa EXPR{Call} || sig isa WhereOpCall || (sig isa BinarySyntaxOpCall && !(is_exor(sig.arg1))) || istuple
@@ -161,42 +217,33 @@ function parse_function(ps::ParseState)
     for a in args
         push!(ret, a)
     end
-    push!(ret, KEYWORD(next(ps)))
+    accept_end(ps, ret)
     return ret
 end
 
-function parse_macro(ps::ParseState)
+@addctx :macro function parse_macro(ps::ParseState)
     kw = KEYWORD(ps)
-    if ps.nt.kind == Tokens.IDENTIFIER
-        sig = IDENTIFIER(next(ps))
-        @catcherror ps sig = parse_call(ps, sig)
-    else
-        @catcherror ps sig = @closer ps ws parse_expression(ps)
-    end
+    sig = @closer ps ws parse_expression(ps)
+    blockargs = parse_block(ps)
 
-    blockargs = Any[]
-    @catcherror ps parse_block(ps, blockargs)
-
-    return EXPR{Macro}(Any[kw, sig, EXPR{Block}(blockargs), KEYWORD(next(ps))])
+    return EXPR{Macro}(Any[kw, sig, EXPR{Block}(blockargs), accept_end(ps)])
 end
 
 # loops
-function parse_for(ps::ParseState)
+@addctx :for function parse_for(ps::ParseState)
     kw = KEYWORD(ps)
-    @catcherror ps ranges = parse_ranges(ps)
+    ranges = parse_ranges(ps)
+    blockargs = parse_block(ps)
 
-    blockargs = Any[]
-    @catcherror ps parse_block(ps, blockargs)
-    return EXPR{For}(Any[kw, ranges, EXPR{Block}(blockargs), KEYWORD(next(ps))])
+    return EXPR{For}(Any[kw, ranges, EXPR{Block}(blockargs), accept_end(ps)])
 end
 
-function parse_while(ps::ParseState)
+@addctx :while function parse_while(ps::ParseState)
     kw = KEYWORD(ps)
-    @catcherror ps cond = @closer ps ws parse_expression(ps)
-    blockargs = Any[]
-    @catcherror ps parse_block(ps, blockargs)
+    cond = @closer ps ws parse_expression(ps)
+    blockargs = parse_block(ps)
 
-    return EXPR{While}(Any[kw, cond, EXPR{Block}(blockargs), KEYWORD(next(ps))])
+    return EXPR{While}(Any[kw, cond, EXPR{Block}(blockargs), accept_end(ps)])
 end
 
 # control flow
@@ -206,18 +253,16 @@ end
 
 Parse an `if` block.
 """
-function parse_if(ps::ParseState, nested = false)
+@addctx :if function parse_if(ps::ParseState, nested = false)
     # Parsing
     kw = KEYWORD(ps)
     if ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS
-        return make_error(ps, 1 .+ (ps.t.endbyte:ps.t.endbyte), Diagnostics.MissingConditional,
-            "missing conditional in `$(lowercase(string(ps.t.kind)))`")
+        push!(ps.errors, Error((ps.ws.startbyte:ps.ws.endbyte) .+ 1 , "Missing conditional in if statement."))
+        cond = ErrorToken()
+    else
+        cond = @closer ps ws parse_expression(ps)
     end
-    @catcherror ps cond = @closer ps ws parse_expression(ps)
-
-
-    ifblockargs = Any[]
-    @catcherror ps parse_block(ps, ifblockargs, (Tokens.END, Tokens.ELSE, Tokens.ELSEIF))
+    ifblockargs = parse_block(ps, Any[], (Tokens.END, Tokens.ELSE, Tokens.ELSEIF))
 
     if nested
         ret = EXPR{If}(Any[cond, EXPR{Block}(ifblockargs)])
@@ -225,91 +270,77 @@ function parse_if(ps::ParseState, nested = false)
         ret = EXPR{If}(Any[kw, cond, EXPR{Block}(ifblockargs)])
     end
 
-    elseblock = EXPR{Block}(Any[], 0, 1:0)
+    elseblockargs = Any[]
     if ps.nt.kind == Tokens.ELSEIF
         push!(ret, KEYWORD(next(ps)))
-
-        @catcherror ps push!(elseblock, parse_if(ps, true))
+        push!(elseblockargs, parse_if(ps, true))
     end
     elsekw = ps.nt.kind == Tokens.ELSE
     if ps.nt.kind == Tokens.ELSE
         push!(ret, KEYWORD(next(ps)))
-        @catcherror ps parse_block(ps, elseblock)
+        parse_block(ps, elseblockargs)
     end
 
     # Construction
-    !nested && next(ps)
-    if !(isempty(elseblock.args) && !elsekw)
-        push!(ret, elseblock)
+    if !(isempty(elseblockargs) && !elsekw)
+        push!(ret, EXPR{Block}(elseblockargs))
     end
-    !nested && push!(ret, KEYWORD(ps))
+    !nested && accept_end(ps, ret)
 
     return ret
 end
 
-function parse_let(ps::ParseState)
+@addctx :let function parse_let(ps::ParseState)
     args = Any[KEYWORD(ps)]
     if !(ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS)
-        arg = @closer ps range @closer ps ws @closer ps newline parse_expression(ps)
+        arg = @closer ps range @closer ps ws  parse_expression(ps)
         if ps.nt.kind == Tokens.COMMA
             arg = EXPR{Block}(Any[arg])
             while ps.nt.kind == Tokens.COMMA
-                push!(arg, PUNCTUATION(next(ps)))
-
+                accept_comma(ps, arg)
                 startbyte = ps.nt.startbyte
-                @catcherror ps nextarg = @closer ps comma @closer ps ws parse_expression(ps)
+                nextarg = @closer ps comma @closer ps ws parse_expression(ps)
                 push!(arg, nextarg)
             end
         end
         push!(args, arg)
     end
-    blockargs = Any[]
-    @catcherror ps parse_block(ps, blockargs)
-
+    
+    blockargs = parse_block(ps)
     push!(args, EXPR{Block}(blockargs))
-    push!(args, KEYWORD(next(ps)))
+    accept_end(ps, args)
 
     return EXPR{Let}(args)
 end
 
-function parse_try(ps::ParseState)
+@addctx :try function parse_try(ps::ParseState)
     kw = KEYWORD(ps)
     ret = EXPR{Try}(Any[kw])
 
-    tryblockargs = Any[]
-    @catcherror ps parse_block(ps, tryblockargs, (Tokens.END, Tokens.CATCH, Tokens.FINALLY))
+    tryblockargs = parse_block(ps, Any[], (Tokens.END, Tokens.CATCH, Tokens.FINALLY))
     push!(ret, EXPR{Block}(tryblockargs))
-
-    # try closing early
-    if ps.nt.kind == Tokens.END
-        push!(ret, FALSE)
-        push!(ret, EXPR{Block}(Any[], 0, 1:0))
-        push!(ret, KEYWORD(next(ps)))
-        return ret
-    end
 
     #  catch block
     if ps.nt.kind == Tokens.CATCH
         next(ps)
+        push!(ret, KEYWORD(ps))
         # catch closing early
         if ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END
-            push!(ret, KEYWORD(ps))
             caught = FALSE
             catchblock = EXPR{Block}(Any[], 0, 1:0)
         else
-            start_col = ps.t.startpos[2] + 4
-            push!(ret, KEYWORD(ps))
             if ps.ws.kind == SemiColonWS || ps.ws.kind == NewLineWS
                 caught = FALSE
             else
-                @catcherror ps caught = @closer ps ws parse_expression(ps)
+                caught = @closer ps ws parse_expression(ps)
             end
-            catchblock = EXPR{Block}(Any[], 0, 1:0)
-            @catcherror ps parse_block(ps, catchblock, (Tokens.END, Tokens.FINALLY))
+            
+            catchblockargs = parse_block(ps, Any[], (Tokens.END, Tokens.FINALLY))
             if !(caught isa IDENTIFIER || caught == FALSE)
-                pushfirst!(catchblock, caught)
+                pushfirst!(catchblockargs, caught)
                 caught = FALSE
             end
+            catchblock = EXPR{Block}(catchblockargs)
         end
     else
         caught = FALSE
@@ -324,49 +355,46 @@ function parse_try(ps::ParseState)
             ret.args[4] = FALSE
         end
         push!(ret, KEYWORD(next(ps)))
-        finallyblock = EXPR{Block}(Any[], 0, 1:0)
-        @catcherror ps parse_block(ps, finallyblock)
-        push!(ret, finallyblock)
+        finallyblockargs = parse_block(ps)
+        push!(ret, EXPR{Block}(finallyblockargs))
     end
 
-    push!(ret, KEYWORD(next(ps)))
+    push!(ret, accept_end(ps))
     return ret
 end
 
-function parse_do(ps::ParseState, @nospecialize(ret))
+@addctx :do function parse_do(ps::ParseState, @nospecialize(ret))
     kw = KEYWORD(next(ps))
 
     args = EXPR{TupleH}(Any[])
     @closer ps comma @closer ps block while !closer(ps)
-        @catcherror ps a = parse_expression(ps)
-
+        a = parse_expression(ps)
         push!(args, a)
         if ps.nt.kind == Tokens.COMMA
-            push!(args, PUNCTUATION(next(ps)))
+            accept_comma(ps, args)
         end
     end
 
-    blockargs = Any[]
-    @catcherror ps parse_block(ps, blockargs)
+    blockargs = parse_block(ps)
 
-    return EXPR{Do}(Any[ret, kw, args, EXPR{Block}(blockargs), PUNCTUATION(next(ps))])
+    return EXPR{Do}(Any[ret, kw, args, EXPR{Block}(blockargs), accept_end(ps)])
 end
 
 # modules
 
-function parse_module(ps::ParseState)
+@addctx :module function parse_module(ps::ParseState)
     kw = KEYWORD(ps)
     @assert kw.kind == Tokens.MODULE || kw.kind == Tokens.BAREMODULE # work around julia issue #23766
     if ps.nt.kind == Tokens.IDENTIFIER
         arg = IDENTIFIER(next(ps))
     else
-        @catcherror ps arg = @precedence ps 15 @closer ps ws parse_expression(ps)
+        arg = @precedence ps 15 @closer ps ws parse_expression(ps)
     end
 
-    block = EXPR{Block}(Any[])
-    parse_block(ps, block, (Tokens.END,), true)
+    blockargs = parse_block(ps, Any[], (Tokens.END,), true)
+    block = EXPR{Block}(blockargs)
 
-    return EXPR{(is_module(kw) ? ModuleH : BareModule)}(Any[kw, arg, block, KEYWORD(next(ps))])
+    return EXPR{(is_module(kw) ? ModuleH : BareModule)}(Any[kw, arg, block, accept_end(ps)])
 end
 
 
@@ -374,7 +402,7 @@ function parse_mutable(ps::ParseState)
     if ps.nt.kind == Tokens.STRUCT
         kw = KEYWORD(ps)
         next(ps)
-        @catcherror ps ret = parse_struct(ps, true)
+        ret = parse_struct(ps, true)
         pushfirst!(ret, kw)
         update_span!(ret)
     else
@@ -384,11 +412,10 @@ function parse_mutable(ps::ParseState)
 end
 
 
-function parse_struct(ps::ParseState, mutable)
+@addctx :struct function parse_struct(ps::ParseState, mutable)
     kw = KEYWORD(ps)
-    @catcherror ps sig = @closer ps ws parse_expression(ps)
-    blockargs = Any[]
-    @catcherror ps parse_block(ps, blockargs)
+    sig = @closer ps ws parse_expression(ps)    
+    blockargs = parse_block(ps)
     
-    return EXPR{mutable ? Mutable : Struct}(Any[kw, sig, EXPR{Block}(blockargs), KEYWORD(next(ps))])
+    return EXPR{mutable ? Mutable : Struct}(Any[kw, sig, EXPR{Block}(blockargs), accept_end(ps)])
 end

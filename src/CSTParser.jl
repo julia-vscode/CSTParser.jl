@@ -10,28 +10,17 @@ import Tokenize.Lexers: Lexer, peekchar, iswhitespace
 
 export ParseState, parse_expression
 
-include("hints.jl")
-import .Diagnostics: Diagnostic, LintCodes
-
 include("lexer.jl")
 include("spec.jl")
 include("utils.jl")
+include("recovery.jl")
 include("components/internals.jl")
 include("components/keywords.jl")
 include("components/lists.jl")
 include("components/operators.jl")
-# include("components/controlflow.jl")
-# include("components/functions.jl")
-# include("components/genericblocks.jl")
-# include("components/loops.jl")
-# include("components/macros.jl")
-# include("components/modules.jl")
-# include("components/prefixkw.jl")
 include("components/strings.jl")
-# include("components/types.jl")
 include("conversion.jl")
 include("display.jl")
-include("scoping.jl")
 include("interface.jl")
 
 
@@ -50,146 +39,48 @@ Acceptable starting tokens are:
 + An `@`.
 
 """
-function parse_expression(ps::ParseState)
-    if ps.nt.kind == Tokens.RPAREN
-        if ps.closer.paren
-            return ErrorToken()
-        else
-            return ErrorToken(INSTANCE(next(ps)))
-        end
-    elseif ps.nt.kind == Tokens.RSQUARE
-        if ps.closer.square
-            return ErrorToken()
-        else
-            return ErrorToken(INSTANCE(next(ps)))
-        end
-    elseif ps.nt.kind == Tokens.RBRACE
-        if ps.closer.square
-            return ErrorToken()
-        else
-            return ErrorToken(INSTANCE(next(ps)))
-        end
-    end
-    next(ps)
-    
-    if iskeyword(ps.t.kind) && ps.t.kind != Tokens.DO
-        @catcherror ps ret = parse_kw(ps)
-    elseif ps.t.kind == Tokens.LPAREN
-        @catcherror ps ret = parse_paren(ps)
-    elseif ps.t.kind == Tokens.LSQUARE
-        @catcherror ps ret = @default ps parse_array(ps)
-    elseif ps.t.kind == Tokens.LBRACE
-        @catcherror ps ret = @default ps @closer ps brace parse_braces(ps)
-    elseif isinstance(ps.t) || isoperator(ps.t)
-        if ps.t.kind == Tokens.WHERE
-            ret = IDENTIFIER(ps)
-        else
-            ret = INSTANCE(ps)
-        end
-        if is_colon(ret) && ps.nt.kind != Tokens.COMMA
-            @catcherror ps ret = parse_unary(ps, ret)
-        end
-    elseif ps.t.kind == Tokens.AT_SIGN
-        @catcherror ps ret = parse_macrocall(ps)
-################################################################################
-# Everything below here is an error
-################################################################################
-    elseif ps.t.kind in (Tokens.ENDMARKER, Tokens.COMMA, Tokens.RPAREN,
-                         Tokens.RBRACE,Tokens.RSQUARE)
-        return error_unexpected(ps, ps.t)
-    elseif ps.t.kind == Tokens.ERROR
-        return error_token(ps, ps.t)
+@addctx :expr function parse_expression(ps::ParseState)
+    if ps.nt.kind == Tokens.COMMA
+        pop!(ps.closer.cc)
+        push!(ps.errors, Error((ps.nt.startbyte:ps.nws.endbyte) .+ 1, "Expression began with a comma."))
+        ret = ErrorToken(PUNCTUATION(next(ps)))
+    elseif ps.nt.kind ∈ term_c && ps.nt.kind != Tokens.END
+        pop!(ps.closer.cc)
+        push!(ps.errors, Error((ps.nt.startbyte:ps.nws.endbyte) .+ 1, "Expression began with a terminal token: $(ps.nt.kind)."))
+        ret = ErrorToken(INSTANCE(next(ps)))
     else
-        ps.errored = true
-        return EXPR{ERROR}(Any[INSTANCE(ps)])
-    end
+        next(ps)
+        if iskeyword(ps.t.kind) && ps.t.kind != Tokens.DO
+            ret = parse_kw(ps)
+        elseif ps.t.kind == Tokens.LPAREN
+            ret = parse_paren(ps)
+        elseif ps.t.kind == Tokens.LSQUARE
+            ret = @default ps parse_array(ps)
+        elseif ps.t.kind == Tokens.LBRACE
+            ret = @default ps @closebrace ps parse_braces(ps)
+        elseif isinstance(ps.t) || isoperator(ps.t)
+            if ps.t.kind == Tokens.WHERE
+                ret = IDENTIFIER(ps)
+            else
+                ret = INSTANCE(ps)
+            end
+            if is_colon(ret) && ps.nt.kind != Tokens.COMMA
+                ret = parse_unary(ps, ret)
+            end
+        elseif ps.t.kind == Tokens.AT_SIGN
+            ret = parse_macrocall(ps)
+        else
+            ret = ErrorToken(INSTANCE(ps))
+            push!(ps.errors, Error((ps.nt.startbyte:ps.nws.endbyte) .+ 1, "Expression began with a : $(ps.nt.kind)."))
+        end
 
-    while !closer(ps)
-        @catcherror ps ret = parse_compound(ps, ret)
+        while !closer(ps)
+            ret = parse_compound(ps, ret)
+        end
     end
-
     return ret
 end
 
-function parse_kw(ps)
-    k = ps.t.kind
-    if k == Tokens.IF
-        return @default ps @closer ps block parse_if(ps)
-    elseif k == Tokens.LET
-        return @default ps @closer ps block parse_let(ps)
-    elseif k == Tokens.TRY
-        return @default ps @closer ps block parse_try(ps)
-    elseif k == Tokens.FUNCTION
-        return @default ps @closer ps block parse_function(ps)
-    elseif k == Tokens.MACRO
-        return @default ps @closer ps block parse_macro(ps)
-    elseif k == Tokens.BEGIN
-        return @default ps @closer ps block parse_begin(ps)
-    elseif k == Tokens.QUOTE
-        return @default ps @closer ps block parse_quote(ps)
-    elseif k == Tokens.FOR
-        return @default ps @closer ps block parse_for(ps)
-    elseif k == Tokens.WHILE
-        return @default ps @closer ps block parse_while(ps)
-    elseif k == Tokens.BREAK
-        return INSTANCE(ps)
-    elseif k == Tokens.CONTINUE
-        return INSTANCE(ps)
-    elseif k == Tokens.IMPORT
-        return parse_imports(ps)
-    elseif k == Tokens.IMPORTALL
-        return parse_imports(ps)
-    elseif k == Tokens.USING
-        return parse_imports(ps)
-    elseif k == Tokens.EXPORT
-        return parse_export(ps)
-    elseif k == Tokens.MODULE ||  k == Tokens.BAREMODULE
-        return @default ps @closer ps block parse_module(ps)
-    elseif k == Tokens.CONST
-        return @default ps parse_const(ps)
-    elseif k == Tokens.GLOBAL
-        return @default ps parse_global(ps)
-    elseif k == Tokens.LOCAL
-        return @default ps parse_local(ps)
-    elseif k == Tokens.RETURN
-        return @default ps parse_return(ps)
-    elseif k == Tokens.END
-        return parse_end(ps)
-    elseif k == Tokens.ELSE || k == Tokens.ELSEIF || k == Tokens.CATCH || k == Tokens.FINALLY
-        ret = IDENTIFIER(ps)
-        ps.errored = true
-        return EXPR{ERROR}(Any[])
-    elseif k == Tokens.ABSTRACT
-        return @default ps parse_abstract(ps)
-    elseif k == Tokens.PRIMITIVE
-        return @default ps parse_primitive(ps)
-    elseif k == Tokens.TYPE
-        return @default ps @closer ps block parse_struct(ps, true)
-    elseif k == Tokens.IMMUTABLE || k == Tokens.STRUCT
-        return @default ps @closer ps block parse_struct(ps, false)
-    elseif k == Tokens.MUTABLE
-        return @default ps @closer ps block parse_mutable(ps)
-    elseif k == Tokens.OUTER
-        return IDENTIFIER(ps)
-    end
-end
-
-"""
-    parse_compound(ps, ret)
-
-Handles cases where an expression - `ret` - is not followed by
-`closer(ps) == true`. Possible juxtapositions are:
-+ operators
-+ `(`, calls
-+ `[`, ref
-+ `{`, curly
-+ `,`, commas
-+ `for`, generators
-+ `do`
-+ strings
-+ an expression preceded by a unary operator
-+ A number followed by an expression (with no seperating white space)
-"""
 function parse_compound(ps::ParseState, @nospecialize ret)
     if ps.nt.kind == Tokens.FOR
         ret = parse_generator(ps, ret)
@@ -203,13 +94,23 @@ function parse_compound(ps::ParseState, @nospecialize ret)
         push!(ret, LITERAL(arg.fullspan, arg.span, val(ps.t, ps), Tokens.STRING))
     elseif (ret isa IDENTIFIER || (ret isa BinarySyntaxOpCall && is_dot(ret.op))) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING || ps.nt.kind == Tokens.CMD)
         next(ps)
-        @catcherror ps arg = parse_string_or_cmd(ps, ret)
+        arg = parse_string_or_cmd(ps, ret)
         head = arg.kind == Tokens.CMD ? x_Cmd : x_Str
         ret = EXPR{head}(Any[ret, arg])
-    elseif ps.nt.kind == Tokens.LPAREN && isemptyws(ps.ws)
-        ret = parse_call(ps, ret)
-    elseif ps.nt.kind == Tokens.LBRACE && isemptyws(ps.ws)
-        ret = @default ps @nocloser ps inwhere @closer ps brace parse_curly(ps, ret)
+    elseif ps.nt.kind == Tokens.LPAREN
+        if isemptyws(ps.ws)
+            ret = @closeparen ps parse_call(ps, ret)
+        else
+            push!(ps.errors, Error(ps.t.endbyte + 2:ps.nt.startbyte , "White space in function call."))
+            ret = ErrorToken(@closeparen ps parse_call(ps, ret))
+        end
+    elseif ps.nt.kind == Tokens.LBRACE
+        if isemptyws(ps.ws)
+            ret = @default ps @nocloser ps inwhere @closebrace ps parse_curly(ps, ret)
+        else
+            push!(ps.errors, Error(ps.t.endbyte + 2:ps.nt.startbyte , "White space in brace call."))
+            ret = ErrorToken(@default ps @nocloser ps inwhere @closebrace ps parse_curly(ps, ret))
+        end
     elseif ps.nt.kind == Tokens.LSQUARE && isemptyws(ps.ws) && !(ret isa OPERATOR)
         ret = @default ps @nocloser ps block parse_ref(ps, ret)
     elseif ps.nt.kind == Tokens.COMMA
@@ -221,36 +122,18 @@ function parse_compound(ps::ParseState, @nospecialize ret)
         ret = parse_operator(ps, ret, op)
     elseif ret isa UnarySyntaxOpCall && is_prime(ret.arg2)
         # prime operator followed by an identifier has an implicit multiplication
-        @catcherror ps nextarg = @precedence ps 11 parse_expression(ps)
-        ret = BinaryOpCall(ret, OPERATOR(0, 1:0, Tokens.STAR,false), nextarg, Tokens.STAR, false)
+        nextarg = @precedence ps 11 parse_expression(ps)
+        ret = BinaryOpCall(ret, OPERATOR(0, 1:0, Tokens.STAR,false), nextarg)
 ################################################################################
 # Everything below here is an error
 ################################################################################
-    elseif ps.nt.kind in (Tokens.ENDMARKER, Tokens.LPAREN, Tokens.RPAREN, Tokens.LBRACE,
-                          Tokens.LSQUARE, Tokens.RSQUARE)
-        return error_unexpected(ps, ps.nt)
-    elseif ret isa OPERATOR
-        ps.errored = true
-        diag_range = ps.nt.startbyte - (ret.fullspan - length(ret.span) - first(ret.span) + 1) .+ ((-length(ret.span)):-1)
-        push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedOperator}(
-            # TODO: Which operator? How do we get at the spelling
-            diag_range, [], "Unexpected operator"
-        ))
-        return EXPR{ERROR}(Any[INSTANCE(ps)])
-    elseif ps.nt.kind == Tokens.IDENTIFIER
-        ps.errored = true
-        push!(ps.diagnostics, Diagnostic{Diagnostics.UnexpectedIdentifier}(
-            ps.nt.startbyte:ps.nt.endbyte, [], "Unexpected identifier"
-        ))
-        return EXPR{ERROR}(Any[INSTANCE(ps)])
-    elseif ps.nt.kind == Tokens.ERROR
-        return error_token(ps, ps.nt)
+    elseif ps.nt.kind in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)
+        push!(ps.errors, Error((ps.t.startbyte:ps.nt.endbyte) .+ 1 , "Disallowed compound expression."))
+        ret = EXPR{ErrorToken}([ret, ErrorToken(PUNCTUATION(next(ps)))])
     else
-        ps.errored = true
-        return EXPR{ERROR}(Any[INSTANCE(ps)])
-    end
-    if ps.errored
-        return EXPR{ERROR}(Any[INSTANCE(ps)])
+        push!(ps.errors, Error((ps.t.startbyte:ps.nt.endbyte) .+ 1 , "Disallowed compound expression."))
+        nextarg = parse_expression(ps)
+        ret = EXPR{ErrorToken}([ret, nextarg])
     end
     return ret
 end
@@ -260,17 +143,17 @@ end
 
 Parses an expression starting with a `(`.
 """
-function parse_paren(ps::ParseState)  
+@addctx :paren function parse_paren(ps::ParseState)  
     args = Any[PUNCTUATION(ps)]
-    @catcherror ps @default ps @nocloser ps inwhere parse_comma_sep(ps, args, false, true, true)
+    @closeparen ps @default ps @nocloser ps inwhere parse_comma_sep(ps, args, false, true, true)
+
     if ((length(args) == 2 && !(args[2] isa UnarySyntaxOpCall && is_dddot(args[2].arg2)))) && ((ps.ws.kind != SemiColonWS || (length(args) == 2 && args[2] isa EXPR{Block})) && !(args[2] isa EXPR{Parameters}))
-        push!(args, PUNCTUATION(next(ps)))
+        accept_rparen(ps, args)
         ret = EXPR{InvisBrackets}(args)
     else
-        push!(args, PUNCTUATION(next(ps)))
+        accept_rparen(ps, args)
         ret = EXPR{TupleH}(args)
     end
-
     return ret
 end
 
@@ -294,7 +177,7 @@ function parse_doc(ps::ParseState)
         if (ps.nt.kind == Tokens.ENDMARKER || ps.nt.kind == Tokens.END)
             return doc
         elseif isbinaryop(ps.nt) && !closer(ps)
-            @catcherror ps ret = parse_compound(ps, doc)
+            ret = parse_compound(ps, doc)
             return ret
         end
 
@@ -303,7 +186,7 @@ function parse_doc(ps::ParseState)
     elseif ps.nt.kind == Tokens.IDENTIFIER && val(ps.nt, ps) == "doc" && (ps.nnt.kind == Tokens.STRING || ps.nnt.kind == Tokens.TRIPLE_STRING)
         doc = IDENTIFIER(next(ps))
         next(ps)
-        @catcherror ps arg = parse_string_or_cmd(ps, doc)
+        arg = parse_string_or_cmd(ps, doc)
         doc = EXPR{x_Str}(Any[doc, arg])
         ret = parse_expression(ps)
         ret = EXPR{MacroCall}(Any[GlobalRefDOC, doc, ret])
@@ -366,7 +249,6 @@ end
 function parse_file(path::String)
     x = parse(read(path, String), true)
     File([], [], path, x, [])
-    # File([], (f -> (joinpath(dirname(path), f[1]), f[2])).(_get_includes(x)), path, x, [])
 end
 
 function parse_directory(path::String, proj = Project(path, []))
@@ -383,10 +265,6 @@ function parse_directory(path::String, proj = Project(path, []))
     end
     proj
 end
-
-
-
-ischainable(t::AbstractToken) = t.kind == Tokens.PLUS || t.kind == Tokens.STAR || t.kind == Tokens.APPROX
 
 # include("_precompile.jl")
 # _precompile_()

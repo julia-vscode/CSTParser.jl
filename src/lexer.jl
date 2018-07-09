@@ -4,14 +4,8 @@ const EmptyWS = Tokens.EMPTY_WS
 const SemiColonWS = Tokens.SEMICOLON_WS
 const NewLineWS = Tokens.NEWLINE_WS
 const WS = Tokens.WS
-const InvisibleBrackets = Tokens.INVISIBLE_BRACKETS
 const EmptyWSToken = RawToken(EmptyWS, (0, 0), (0, 0), -1, -1)
 
-"""
-    Closer
-Struct holding information on the tokens that will close the expression
-currently being parsed.
-"""
 mutable struct Closer
     newline::Bool
     semicolon::Bool
@@ -32,18 +26,15 @@ mutable struct Closer
     wsop::Bool
     precedence::Int
     stop::Int
-    cc::Vector
+    cc::Vector{Symbol}
 end
 Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int), [])
 
-"""
-    ParseState
+struct Error
+    loc::UnitRange{Int}
+    description::String
+end
 
-The parser's interface with `Tokenize.Lexers.Lexer`. This alters the output of `tokenize` in three ways:
-+ Merging of whitespace, comments and semicolons;
-+ Skips DOT tokens where they are followed by another operator and marks the trailing operator as dotted.
-+ Keeps track of the previous, current and next tokens.
-"""
 mutable struct ParseState
     l::Lexer{Base.GenericIOBuffer{Array{UInt8, 1}},RawToken}
     done::Bool
@@ -55,13 +46,12 @@ mutable struct ParseState
     ws::RawToken
     nws::RawToken
     nnws::RawToken
-    diagnostics::Vector{Diagnostics.Diagnostic}
     closer::Closer
-    error_code::Diagnostics.ErrorCodes
     errored::Bool
+    errors::Vector
 end
 function ParseState(str::Union{IO,String})
-    ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(),Diagnostics.Diagnostic[], Closer(), Diagnostics.ParseFailure, false)
+    ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), Closer(), false, Error[])
     return next(next(ps))
 end
 
@@ -95,6 +85,11 @@ function next(ps::ParseState)
     end
     ps.done = ps.nt.kind == Tokens.ENDMARKER
     return ps
+end
+
+function Base.seek(ps::ParseState, offset)
+    seek(ps.l, offset)
+    next(next(ps))
 end
 
 

@@ -22,9 +22,9 @@ function closer(ps::ParseState)
     (ps.closer.tuple && (iscomma(ps.nt) || isassignment(ps.nt))) ||
     (ps.nt.kind == Tokens.FOR && ps.closer.precedence > -1) ||
     (ps.closer.block && ps.nt.kind == Tokens.END) ||
-    (ps.nt.kind == Tokens.RPAREN) ||
-    (ps.nt.kind == Tokens.RBRACE) ||
-    (ps.nt.kind == Tokens.RSQUARE) ||
+    (ps.closer.paren && ps.nt.kind == Tokens.RPAREN) ||
+    (ps.closer.brace && ps.nt.kind == Tokens.RBRACE) ||
+    (ps.closer.square && ps.nt.kind == Tokens.RSQUARE) ||
     ps.nt.kind == Tokens.ELSEIF || 
     ps.nt.kind == Tokens.ELSE ||
     ps.nt.kind == Tokens.CATCH || 
@@ -62,13 +62,37 @@ end
 macro closeparen(ps, body)
     quote
         local tmp1 = $(esc(ps)).closer.paren
-        $(esc(ps)).closer.$opt = true
+        $(esc(ps)).closer.paren = true
+        push!($(esc(ps)).closer.cc, :paren)
         out = $(esc(body))
-        $(esc(ps)).closer.$opt = tmp1
+        pop!($(esc(ps)).closer.cc)
+        $(esc(ps)).closer.paren = tmp1
         out
     end
 end
 
+macro closesquare(ps, body)
+    quote
+        local tmp1 = $(esc(ps)).closer.square
+        $(esc(ps)).closer.square = true
+        push!($(esc(ps)).closer.cc, :square)
+        out = $(esc(body))
+        pop!($(esc(ps)).closer.cc)
+        $(esc(ps)).closer.square = tmp1
+        out
+    end
+end
+macro closebrace(ps, body)
+    quote
+        local tmp1 = $(esc(ps)).closer.brace
+        $(esc(ps)).closer.brace = true
+        push!($(esc(ps)).closer.cc, :brace)
+        out = $(esc(body))
+        pop!($(esc(ps)).closer.cc)
+        $(esc(ps)).closer.brace = tmp1
+        out
+    end
+end
 
 """
     @nocloser ps rule body
@@ -627,7 +651,7 @@ function collect_calls(f::Function, calls = [])
 end
 
 
-Base.iterate(x::EXPR) = length(x) == 0 ? nothing : x.args[1], 1
+Base.iterate(x::EXPR) = length(x) == 0 ? nothing : (x.args[1], 1)
 Base.iterate(x::EXPR, s) = s < length(x) ? (x.args[s + 1], s + 1) : nothing
 Base.length(x::EXPR) = length(x.args)
 
@@ -727,3 +751,5 @@ function _unescape_string(io, s::AbstractString)
         end
     end
 end
+
+

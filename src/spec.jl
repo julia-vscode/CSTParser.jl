@@ -161,7 +161,7 @@ function INSTANCE(ps::ParseState)
     elseif ispunctuation(ps.t)
         return PUNCTUATION(ps)
     else
-        return error_unexpected(ps, ps.t)
+        return ErrorToken()
     end
 end
 

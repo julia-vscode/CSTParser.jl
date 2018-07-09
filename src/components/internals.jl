@@ -1,31 +1,45 @@
-"""
-    parse_block(ps, ret = EXPR(BLOCK,...))
+const term_c = (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE, Tokens.END, Tokens.ELSE, Tokens.ELSEIF, Tokens.CATCH, Tokens.FINALLY, Tokens.ENDMARKER)
 
-Parses an array of expressions (stored in ret) until 'end' is the next token.
-Returns `ps` the token before the closing `end`, the calling function is
-assumed to handle the closer.
-"""
-function parse_block(ps::ParseState, ret::EXPR{Block}, closers = (Tokens.END,), docable = false)
-    parse_block(ps, ret.args, closers, docable)
-    update_span!(ret)
-    return 
-end
-
-
-function parse_block(ps::ParseState, ret::Vector{Any}, closers = (Tokens.END,), docable = false)
-    # Parsing
-    while !(ps.nt.kind in closers) && !ps.errored
-        if ps.nt.kind == Tokens.ENDMARKER
-            return error_eof(ps, ps.nt.startbyte, Diagnostics.UnexpectedBlockEnd, "Unexpected end of block")
-        end
-        if docable
-            @catcherror ps a = parse_doc(ps)
+function parse_block(ps::ParseState, ret::Vector{Any} = Any[], closers = (Tokens.END,), docable = false)
+    while ps.nt.kind ∉ closers && !ps.errored
+        if ps.nt.kind ∈ term_c
+            if ps.nt.kind == Tokens.ENDMARKER
+                break
+            elseif ps.nt.kind == Tokens.RPAREN
+                if length(ps.closer.cc) > 1 && :paren == ps.closer.cc[end-1]
+                    break
+                else
+                    push!(ps.errors, Error((ps.nt.startbyte:ps.nt.endbyte) .+ 1 , "Unexpected )."))
+                    push!(ret, ErrorToken(INSTANCE(next(ps))))
+                end
+            elseif ps.nt.kind == Tokens.RBRACE
+                if length(ps.closer.cc) > 1 && :brace == ps.closer.cc[end-1]
+                    break
+                else
+                    push!(ps.errors, Error((ps.nt.startbyte:ps.nt.endbyte) .+ 1 , "Unexpected }."))
+                    push!(ret, ErrorToken(INSTANCE(next(ps))))
+                end
+            elseif ps.nt.kind == Tokens.RSQUARE
+                if length(ps.closer.cc) > 1 && :square == ps.closer.cc[end-1]
+                    break
+                else
+                    push!(ps.errors, Error((ps.nt.startbyte:ps.nt.endbyte) .+ 1 , "Unexpected ]."))
+                    push!(ret, ErrorToken(INSTANCE(next(ps))))
+                end
+            else
+                push!(ps.errors, Error((ps.nt.startbyte:ps.nt.endbyte) .+ 1 , "Unexpected $(ps.nt.kind)."))
+                push!(ret, ErrorToken(INSTANCE(next(ps))))
+            end
         else
-            @catcherror ps a = parse_expression(ps)
+            if docable
+                a = parse_doc(ps)
+            else
+                a = parse_expression(ps)
+            end
+            push!(ret, a)
         end
-        push!(ret, a)
     end
-    return 
+    return ret
 end
 
 
@@ -45,21 +59,19 @@ end
 
 function parse_ranges(ps::ParseState)
     startbyte = ps.nt.startbyte
-    #TODO: this is slow
-    @catcherror ps arg = parse_iter(ps)
+    arg = parse_iter(ps)
 
     if (arg isa EXPR{Outer} && !is_range(arg.args[2])) || !is_range(arg)
-        return make_error(ps, broadcast(+, startbyte, (0:length(arg.span) .- 1)),
-                          Diagnostics.InvalidIter, "invalid iteration specification")
-    end
-    if ps.nt.kind == Tokens.COMMA
+        push!(ps.errors, Error(ps.nt.startbyte - arg.fullspan:ps.nt.startbyte , "Incorrect iteration specification."))
+        arg = ErrorToken(arg)
+    elseif ps.nt.kind == Tokens.COMMA
         arg = EXPR{Block}(Any[arg])
         while ps.nt.kind == Tokens.COMMA
-            push!(arg, PUNCTUATION(next(ps)))
-            @catcherror ps nextarg = parse_iter(ps)
+            accept_comma(ps, arg)
+            nextarg = parse_iter(ps)
             if (nextarg isa EXPR{Outer} && !is_range(nextarg.args[2])) || !is_range(nextarg)
-                return make_error(ps, startbyte .+ (0:length(arg.span) .- 1),
-                                  Diagnostics.InvalidIter, "invalid iteration specification")
+                push!(ps.errors, Error(ps.nt.startbyte - nextarg.fullspan:ps.nt.startbyte , "Incorrect iteration specification."))
+                arg = ErrorToken(arg)
             end
             push!(arg, nextarg)
         end
@@ -73,11 +85,13 @@ function is_range(x::BinarySyntaxOpCall) is_eq(x.op) end
 function is_range(x::BinaryOpCall) is_in(x.op) || is_elof(x.op) end
 
 function parse_end(ps::ParseState)
-    ret = IDENTIFIER(ps)
-    if !ps.closer.square
-        ps.errored = true
-        return EXPR{ERROR}(Any[])
+    if ps.closer.square
+        ret = IDENTIFIER(ps)
+    else
+        push!(ps.errors, Error((ps.t.startbyte:ps.t.endbyte) .+ 1 , "Unexpected end."))
+        ret = ErrorToken(IDENTIFIER(ps))
     end
+    
     return ret
 end
 
@@ -90,34 +104,34 @@ function parse_call(ps::ParseState, @nospecialize ret)
     if is_minus(ret) || is_not(ret)
         arg = @closer ps inwhere @precedence ps 13 parse_expression(ps)
         if arg isa EXPR{TupleH}
-            return EXPR{Call}(Any[ret; arg.args])
+            ret = EXPR{Call}(Any[ret; arg.args])
         elseif arg isa WhereOpCall && arg.arg1 isa EXPR{TupleH}
-            return WhereOpCall(EXPR{Call}(Any[ret; arg.arg1.args]), arg.op, arg.args)
+            ret = WhereOpCall(EXPR{Call}(Any[ret; arg.arg1.args]), arg.op, arg.args)
         else
-            return UnaryOpCall(ret, arg)
+            ret = UnaryOpCall(ret, arg)
         end
     elseif is_and(ret) || is_decl(ret) || is_exor(ret) 
         arg = @precedence ps 20 parse_expression(ps)
         if is_exor(ret) && arg isa EXPR{TupleH} && length(arg.args) == 3 && arg.args[2] isa UnarySyntaxOpCall && is_dddot(arg.args[2].arg2)
             arg = EXPR{InvisBrackets}(arg.args)
         end
-        return UnarySyntaxOpCall(ret, arg)
+        ret = UnarySyntaxOpCall(ret, arg)
     elseif is_issubt(ret) || is_issupt(ret)
         arg = @precedence ps 13 parse_expression(ps)
-        return EXPR{Call}(Any[ret; arg.args])
+        ret = EXPR{Call}(Any[ret; arg.args])
+    else
+        ismacro = ret isa EXPR{MacroName}
+        args = Any[ret, PUNCTUATION(next(ps))]
+        @closeparen ps @default ps parse_comma_sep(ps, args, !ismacro)
+        accept_rparen(ps, args)
+        ret = EXPR{ismacro ? MacroCall : Call}(args)
     end
-    ismacro = ret isa EXPR{MacroName}
-    args = Any[ret, PUNCTUATION(next(ps))]
-    @default ps parse_comma_sep(ps, args, !ismacro)
-    rparen = PUNCTUATION(next(ps))
-    rparen.kind == Tokens.RPAREN || return error_unexpected(ps, ps.t)
-    push!(args, rparen)
-    return EXPR{ismacro ? MacroCall : Call}(args)
+    return ret
 end
 
 
 function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = false, istuple = false)
-    @catcherror ps @nocloser ps inwhere @nocloser ps newline @closer ps comma while !closer(ps)
+    @nocloser ps inwhere @nocloser ps newline @closer ps comma while !closer(ps)
         a = parse_expression(ps)
 
         if kw && !ps.closer.brace && a isa BinarySyntaxOpCall && is_eq(a.op)
@@ -125,7 +139,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = f
         end
         push!(args, a)
         if ps.nt.kind == Tokens.COMMA
-            push!(args, PUNCTUATION(next(ps)))
+            accept_comma(ps, args)
         end
         if ps.ws.kind == SemiColonWS
             break
@@ -136,12 +150,12 @@ function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = f
         if block && !(istuple && length(args) > 2) && !(length(args) == 1 && args[1] isa PUNCTUATION) && !(last(args) isa UnarySyntaxOpCall && is_dddot(last(args).arg2))
             args1 = Any[pop!(args)]
             @nocloser ps newline @closer ps comma while @nocloser ps semicolon !closer(ps)
-                @catcherror ps a = parse_expression(ps)
+                a = parse_expression(ps)
                 push!(args1, a)
             end
             body = EXPR{Block}(args1)
             push!(args, body)
-            return body
+            args = body
         else
             parse_parameters(ps, args)
         end
@@ -152,13 +166,13 @@ end
 function parse_parameters(ps, args::Vector{Any})
     args1 = Any[]
     @nocloser ps inwhere @nocloser ps newline  @closer ps comma while @nocloser ps semicolon !closer(ps)
-        @catcherror ps a = parse_expression(ps)
+        a = parse_expression(ps)
         if !ps.closer.brace && a isa BinarySyntaxOpCall && is_eq(a.op)
             a = EXPR{Kw}(Any[a.arg1, a.op, a.arg2])
         end
         push!(args1, a)
         if ps.nt.kind == Tokens.COMMA
-            push!(args1, PUNCTUATION(next(ps)))
+            accept_comma(ps, args1)
         end
         if ps.ws.kind == SemiColonWS
             parse_parameters(ps, args1)
@@ -179,18 +193,16 @@ Parses a macro call. Expects to start on the `@`.
 function parse_macrocall(ps::ParseState)
     at = PUNCTUATION(ps)
     if !isemptyws(ps.ws)
-        #TODO: error code
-        return EXPR{ERROR}(Any[INSTANCE(ps)], 0, 0:-1)
+        push!(ps.errors, Error((ps.ws.startbyte + 1:ps.ws.endbyte) .+ 1 , "Unexpected whitespace in macrocall."))
+        mname = ErrorToken(INSTANCE(next(ps)))
+    else
+        mname = EXPR{MacroName}(Any[at, IDENTIFIER(next(ps))])
     end
-    mname = EXPR{MacroName}(Any[at, IDENTIFIER(next(ps))])
 
     # Handle cases with @ at start of dotted expressions
     if ps.nt.kind == Tokens.DOT && isemptyws(ps.ws)
         while ps.nt.kind == Tokens.DOT
             op = OPERATOR(next(ps))
-            if ps.nt.kind != Tokens.IDENTIFIER
-                return EXPR{ERROR}(Any[])
-            end
             nextarg = IDENTIFIER(next(ps))
             mname = BinarySyntaxOpCall(mname, op, Quotenode(nextarg))
         end
@@ -204,7 +216,7 @@ function parse_macrocall(ps::ParseState)
         args = Any[mname]
         insquare = ps.closer.insquare
         @default ps while !closer(ps)
-            @catcherror ps a = @closer ps inmacro @closer ps ws @closer ps wsop parse_expression(ps)
+            a = @closer ps inmacro @closer ps ws @closer ps wsop parse_expression(ps)
             push!(args, a)
             if insquare && ps.nt.kind == Tokens.FOR
                 break
@@ -226,7 +238,7 @@ Comprehensions are parsed as SQUAREs containing a generator.
 function parse_generator(ps::ParseState, @nospecialize ret)
     kw = KEYWORD(next(ps))
     ret = EXPR{Generator}(Any[ret, kw])
-    @catcherror ps ranges = @closer ps square parse_ranges(ps)
+    ranges = @closesquare ps parse_ranges(ps)
 
     if ps.nt.kind == Tokens.IF
         if ranges isa EXPR{Block}
@@ -235,7 +247,7 @@ function parse_generator(ps::ParseState, @nospecialize ret)
             ranges = EXPR{Filter}(Any[ranges])
         end
         pushfirst!(ranges, KEYWORD(next(ps)))
-        @catcherror ps cond = @closer ps range parse_expression(ps)
+        cond = @closer ps range parse_expression(ps)
         pushfirst!(ranges, cond)
         push!(ret, ranges)
     elseif ranges isa EXPR{Block}
@@ -285,11 +297,11 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
             push!(args, EXPR{MacroName}(Any[at, a]))
         elseif ps.nt.kind == Tokens.LPAREN
             a = EXPR{InvisBrackets}(Any[PUNCTUATION(next(ps))])
-            @catcherror ps push!(a, parse_expression(ps))
-            push!(a, PUNCTUATION(next(ps)))
+            push!(a, @closeparen ps parse_expression(ps))
+            accept_rparen(ps, a)
             push!(args, a)
         elseif ps.nt.kind == Tokens.EX_OR
-            @catcherror ps a = @closer ps comma parse_expression(ps)
+            a = @closer ps comma parse_expression(ps)
             push!(args, a)
         elseif !is_colon && isoperator(ps.nt)
             next(ps)
@@ -300,9 +312,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
 
         if ps.nt.kind == Tokens.DOT
             push!(args, PUNCTUATION(next(ps)))
-        elseif isoperator(ps.nt) && ps.nt.kind == Tokens.DOT
-            push!(args, PUNCTUATION(Tokens.DOT, 1, 1:1))
-        elseif isoperator(ps.nt) && ps.nt.dotop
+        elseif isoperator(ps.nt) && (ps.nt.dotop || ps.nt.kind == Tokens.DOT)
             push!(args, PUNCTUATION(Tokens.DOT, 1, 1:1))
             ps.nt = RawToken(ps.nt.kind, ps.nt.startpos, ps.nt.endpos, ps.nt.startbyte + 1, ps.nt.endbyte, ps.nt.token_error, false)
         else

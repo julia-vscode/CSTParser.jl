@@ -109,7 +109,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     rparen = PUNCTUATION(Tokens.RPAREN, 1, 1:1)
                     skip(input, 1)
                     ps1 = ParseState(input)
-                    @catcherror ps interp = @closer ps1 paren parse_expression(ps1)
+                    interp = @closer ps1 paren parse_expression(ps1)
                     call = UnarySyntaxOpCall(op, EXPR{InvisBrackets}(Any[lparen, interp, rparen]))
                     push!(ret.args, call)
                     # Compared to flisp/JuliaParser, we have an extra lookahead token,
