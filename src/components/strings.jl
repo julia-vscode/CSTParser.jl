@@ -29,7 +29,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     iscmd = ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
 
     if ps.errored
-        return EXPR{ERROR}(Any[])
+        return ErrorToken()
     end
 
     lcp = nothing
@@ -120,7 +120,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     ps1 = ParseState(input)
                     next(ps1)
                     if ps1.t.kind == Tokens.WHITESPACE
-                        t = EXPR{ERROR}([], ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
+                        t = EXPR{ErrorToken}([], ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
                     else
                         t = INSTANCE(ps1)
                     end

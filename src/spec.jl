@@ -36,7 +36,6 @@ mutable struct EXPR{T} <: AbstractEXPR
     span::UnitRange{Int}
 end
 
-abstract type ERROR end
 
 abstract type LeafNode <: AbstractEXPR end
     
@@ -148,9 +147,7 @@ function Base.append!(a::EXPR, b::KEYWORD)
 end
 
 function INSTANCE(ps::ParseState)
-    if ps.errored
-        return EXPR{ERROR}(Any[], ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
-    elseif isidentifier(ps.t)
+    if isidentifier(ps.t)
         return IDENTIFIER(ps)
     elseif isliteral(ps.t)
         return LITERAL(ps)

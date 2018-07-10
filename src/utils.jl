@@ -206,20 +206,6 @@ macro default(ps, body)
     end
 end
 
-"""
-    @catcherror ps body
-
-Checks for `ps.errored`.
-"""
-macro catcherror(ps, body)
-    quote
-        $(esc(body))
-        if $(esc(ps)).errored
-            return EXPR{ERROR}(Any[INSTANCE($(esc(ps)))], 0, 0:-1)
-        end
-    end
-end
-
 
 isidentifier(t::AbstractToken) = t.kind == Tokens.IDENTIFIER
 

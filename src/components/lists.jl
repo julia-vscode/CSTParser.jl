@@ -45,7 +45,7 @@ function parse_array(ps::ParseState)
 
     if ps.nt.kind == Tokens.RSQUARE
         accept_rsquare(ps, args)
-        return EXPR{Vect}(args)
+        ret = EXPR{Vect}(args)
     else
         first_arg = @nocloser ps newline @closesquare ps  @closer ps insquare @closer ps ws @closer ps wsop @closer ps comma parse_expression(ps)
 
@@ -135,8 +135,8 @@ function parse_array(ps::ParseState)
                 return ret
             end
         else
-            ps.errored = true
-            ret = EXPR{ERROR}(Any[INSTANCE(ps)])
+            push!(ret, first_arg)
+            push!(ret, accept_rsquare(ps))
         end
     end
     return ret
