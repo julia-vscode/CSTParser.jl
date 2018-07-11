@@ -135,6 +135,7 @@ function parse_array(ps::ParseState)
                 return ret
             end
         else
+            ret = EXPR{Vect}(args)
             push!(ret, first_arg)
             push!(ret, accept_rsquare(ps))
         end
