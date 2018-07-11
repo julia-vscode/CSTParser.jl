@@ -41,11 +41,9 @@ Acceptable starting tokens are:
 """
 @addctx :expr function parse_expression(ps::ParseState)
     if ps.nt.kind == Tokens.COMMA
-        pop!(ps.closer.cc)
         push!(ps.errors, Error((ps.nt.startbyte:ps.nws.endbyte) .+ 1, "Expression began with a comma."))
         ret = ErrorToken(PUNCTUATION(next(ps)))
     elseif ps.nt.kind ∈ term_c && ps.nt.kind != Tokens.END
-        pop!(ps.closer.cc)
         push!(ps.errors, Error((ps.nt.startbyte:ps.nws.endbyte) .+ 1, "Expression began with a terminal token: $(ps.nt.kind)."))
         ret = ErrorToken(INSTANCE(next(ps)))
     else
