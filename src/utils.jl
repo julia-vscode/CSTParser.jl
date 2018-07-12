@@ -672,9 +672,9 @@ Base.iterate(x::ConditionalOpCall, s) = s < length(x) ? (getfield(x, s), s+1) : 
 Base.length(x::ConditionalOpCall) = 5
 
 for t in (CSTParser.IDENTIFIER, CSTParser.OPERATOR, CSTParser.LITERAL, CSTParser.PUNCTUATION, CSTParser.KEYWORD)
-    Base.iterate(x::t) = x, 1
+    Base.iterate(x::t) = nothing
     Base.iterate(x::t, s) = nothing
-    Base.length(x::t) = 1
+    Base.length(x::t) = 0
     Base.isiterable(x::t) = false
 end
 
