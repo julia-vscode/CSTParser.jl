@@ -13,15 +13,14 @@ function parse_function(ps::ParseState)
         @catcherror ps sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_expression(ps)
     end
 
-    while ps.nt.kind == Tokens.WHERE
-        @catcherror ps sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_compound(ps, sig)
-    end
-
     if sig isa EXPR{InvisBrackets} && !(sig.args[2] isa EXPR{TupleH})
         sig = EXPR{TupleH}(sig.args)
     end
 
-    
+    while ps.nt.kind == Tokens.WHERE
+        @catcherror ps sig = @default ps @closer ps inwhere @closer ps block @closer ps ws parse_compound(ps, sig)
+    end
+
     blockargs = Any[]
     @catcherror ps @default ps parse_block(ps, blockargs)
 

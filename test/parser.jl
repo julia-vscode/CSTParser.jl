@@ -255,12 +255,11 @@ end
         @test """function ()
             return
         end""" |> test_expr
+        @test """function (args::Vararg{Any,N}) where N
+            return
+        end""" |> test_expr
     end
 end
-
-
-
-
 
 @testset "Types" begin
     @testset "Abstract" begin

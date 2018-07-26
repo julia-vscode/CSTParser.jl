@@ -84,6 +84,7 @@ end
     @test f("function f(a::T,b::T) where T end") == ["a", "b"]
     @test f("function f{T}(a::T,b::T) where T end") == ["a", "b"]
     @test f("function f{T}(a::T,b::T;c = 1) where T end") == ["a", "b", "c"]
+    @test f("function(args::Vararg{Any,N}) where N end") == ["args"]
 
     @test f("a -> a") == ["a"]
     @test f("a::T -> a") == ["a"]
