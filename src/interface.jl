@@ -321,6 +321,10 @@ function get_args(x::IDENTIFIER)
     return []
 end
 
+function get_args(x::OPERATOR)
+    return []
+end
+
 function get_args(x)
     if defines_anon_function(x) && !(x.arg1 isa EXPR{TupleH})
         arg = x.arg1
