@@ -39,7 +39,7 @@ end
 abstract type ERROR end
 
 abstract type LeafNode <: AbstractEXPR end
-    
+
 struct IDENTIFIER <: LeafNode
     fullspan::Int
     span::UnitRange{Int}
@@ -86,6 +86,9 @@ function LITERAL(ps::ParseState)
     end
 end
 
+for T in (:IDENTIFIER, :PUNCTUATION, :KEYWORD, :LITERAL, :OPERATOR)
+    @eval AbstractTrees.children(x::$T) = ()
+end
 AbstractTrees.children(x::EXPR) = x.args
 
 span(x::AbstractEXPR) = length(x.span)
@@ -98,7 +101,7 @@ function update_span!(x::EXPR)
         x.fullspan += a.fullspan
     end
     x.span = first(first(x.args).span):(x.fullspan - last(x.args).fullspan + last(last(x.args).span))
-    return 
+    return
 end
 
 function EXPR{T}(args::Vector) where {T}
@@ -183,6 +186,35 @@ end
 abstract type Head end
 abstract type Call <: Head end
 
+struct ChildIterator{T}
+    node::T
+end
+function Base.length(c::ChildIterator)
+    ncfs = nchildfields(c.node)
+    ncfs + (hasva(c.node) ? length(getfield(c.node, ncfs+1)) : 0)
+end
+Base.endof(c::ChildIterator) = length(c)
+nchildfields(x::AbstractEXPR) = nchildfields(typeof(x))
+nchildfields(x::Type{<:AbstractEXPR}) = 0
+hasva(x::AbstractEXPR) = hasva(typeof(x))
+hasva(x::Type{<:AbstractEXPR}) = false
+
+Base.start(it::ChildIterator) = 1
+Base.done(it::ChildIterator, i) = i > length(it)
+Base.next(it::ChildIterator, i) = (it[i], i + 1)
+function Base.getindex(it::ChildIterator, i)
+    node = it.node
+    ncfs = nchildfields(node)
+    if i <= ncfs
+        return getfield(node, i)
+    elseif hasva(node)
+        return getfield(node, ncfs + 1)[i - ncfs]
+    else
+        throw(BoundsError())
+    end
+end
+AbstractTrees.children(x::AbstractEXPR) = ChildIterator(x)
+
 mutable struct UnaryOpCall <: AbstractEXPR
     op::OPERATOR
     arg
@@ -193,7 +225,7 @@ mutable struct UnaryOpCall <: AbstractEXPR
         new(op, arg, fullspan, 1:(fullspan - arg.fullspan + length(arg.span)))
     end
 end
-AbstractTrees.children(x::UnaryOpCall) = vcat(x.op, x.arg)
+nchildfields(::Type{UnaryOpCall}) = 2
 
 mutable struct UnarySyntaxOpCall <: AbstractEXPR
     arg1
@@ -205,7 +237,7 @@ mutable struct UnarySyntaxOpCall <: AbstractEXPR
         new(arg1, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
     end
 end
-AbstractTrees.children(x::UnarySyntaxOpCall) = vcat(x.arg1, x.arg2)
+nchildfields(::Type{UnarySyntaxOpCall}) = 2
 
 mutable struct BinaryOpCall <: AbstractEXPR
     arg1
@@ -218,7 +250,7 @@ mutable struct BinaryOpCall <: AbstractEXPR
         new(arg1, op, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
     end
 end
-AbstractTrees.children(x::T) where T <: Union{BinaryOpCall} = vcat(x.arg1, x.op, x.arg2)
+nchildfields(::Type{BinaryOpCall}) = 3
 
 mutable struct BinarySyntaxOpCall <: AbstractEXPR
     arg1
@@ -231,7 +263,7 @@ mutable struct BinarySyntaxOpCall <: AbstractEXPR
         new(arg1, op, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
     end
 end
-AbstractTrees.children(x::T) where T <: Union{BinarySyntaxOpCall} = vcat(x.arg1, x.op, x.arg2)
+nchildfields(::Type{BinarySyntaxOpCall}) = 3
 
 mutable struct WhereOpCall <: AbstractEXPR
     arg1
@@ -247,7 +279,8 @@ mutable struct WhereOpCall <: AbstractEXPR
         new(arg1, op, args, fullspan, 1:(fullspan - last(args).fullspan + length(last(args).span)))
     end
 end
-AbstractTrees.children(x::T) where T <: Union{WhereOpCall} = vcat(x.arg1, x.op, x.args)
+nchildfields(::Type{WhereOpCall}) = 2
+hasva(::Type{WhereOpCall}) = true
 
 mutable struct ConditionalOpCall <: AbstractEXPR
     cond
@@ -262,8 +295,7 @@ mutable struct ConditionalOpCall <: AbstractEXPR
         new(cond, op1, arg1, op2, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
     end
 end
-
-AbstractTrees.children(x::ConditionalOpCall) = vcat(x.cond, x.op1, x.arg1, x.op2, x.arg2)
+nchildfields(::Type{ConditionalOpCall}) = 5
 
 abstract type ComparisonOpCall <: Head end
 abstract type ChainOpCall <: Head end

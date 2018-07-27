@@ -39,8 +39,8 @@ is_where(x) = x isa OPERATOR && x.kind == Tokens.WHERE
 is_anon_func(x) = x isa OPERATOR && x.kind == Tokens.ANON_FUNC
 
 # PUNCTUATION
-is_punc(x) = x isa PUNCTUATION && 
-    x.kind == Tokens.COMMA && 
+is_punc(x) = x isa PUNCTUATION &&
+    x.kind == Tokens.COMMA &&
     x.kind == Tokens.LPAREN &&
     x.kind == Tokens.RPAREN &&
     x.kind == Tokens.LBRACE &&
@@ -67,7 +67,7 @@ is_importall(x) = x isa KEYWORD && x.kind == Tokens.IMPORTALL
 is_lit_string(x) = x isa LITERAL && (x.kind == Tokens.STRING || x.kind == Tokens.TRIPLE_STRING)
 
 is_valid_iterator(x) = false
-is_valid_iterator(x::BinarySyntaxOpCall) = is_eq(x.op) 
+is_valid_iterator(x::BinarySyntaxOpCall) = is_eq(x.op)
 is_valid_iterator(x::BinaryOpCall) = is_in(x.op) || is_elof(x.op)
 
 _arg_id(x) = x
@@ -236,8 +236,8 @@ end
 defines_struct(x) = x isa EXPR{Struct} || defines_mutable(x)
 defines_mutable(x) = x isa EXPR{Mutable}
 defines_abstract(x) = x isa EXPR{Abstract}
-function defines_primitive(x) 
-    x isa EXPR{Primitive} || 
+function defines_primitive(x)
+    x isa EXPR{Primitive} ||
     x isa EXPR{Bitstype} # NEEDS FIX: v0.6 dep
 end
 
@@ -253,7 +253,7 @@ end
 """
     get_sig(x)
 
-Returns the full signature of function, macro and datatype definitions. 
+Returns the full signature of function, macro and datatype definitions.
 Should only be called when has_sig(x) == true.
 """
 get_sig(x::EXPR{Struct}) = x.args[2]
@@ -307,7 +307,7 @@ end
 
 function get_name(x::BinarySyntaxOpCall)
     sig = x.arg1
-    if sig isa UnaryOpCall 
+    if sig isa UnaryOpCall
         return sig.op
     end
     sig = rem_where(sig)
@@ -349,7 +349,6 @@ function get_args(sig::EXPR{TupleH})
     end
     return args
 end
-
 
 function get_args(x::EXPR{Do})
     args = []
