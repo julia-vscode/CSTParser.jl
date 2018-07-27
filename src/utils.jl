@@ -650,11 +650,11 @@ Base.iterate(x::UnarySyntaxOpCall, s) = s == 1 ? (x.arg2, 2) : nothing
 Base.length(x::UnarySyntaxOpCall) = 2
 
 Base.iterate(x::BinarySyntaxOpCall) = x.arg1, 1
-Base.iterate(x::BinarySyntaxOpCall, s) = s > 2 ? nothing : (getfield(x, s+1), s + 1)
+Base.iterate(x::BinarySyntaxOpCall, s) = s > 2 ? nothing : (getfield(x, s + 1), s + 1)
 Base.length(x::BinarySyntaxOpCall) = 3
 
 Base.iterate(x::BinaryOpCall) = x.arg1, 1
-Base.iterate(x::BinaryOpCall, s) = s > 2 ? nothing : (getfield(x, s+1), s + 1)
+Base.iterate(x::BinaryOpCall, s) = s > 2 ? nothing : (getfield(x, s + 1), s + 1)
 Base.length(x::BinaryOpCall) = 3
 
 Base.iterate(x::WhereOpCall) = x.arg1, 1
@@ -668,7 +668,7 @@ end
 Base.length(x::WhereOpCall) = 2 + length(x.args)
 
 Base.iterate(x::ConditionalOpCall) = x.cond, 1
-Base.iterate(x::ConditionalOpCall, s) = s < length(x) ? (getfield(x, s), s+1) : nothing
+Base.iterate(x::ConditionalOpCall, s) = s < length(x) ? (getfield(x, s + 1), s + 1) : nothing
 Base.length(x::ConditionalOpCall) = 5
 
 for t in (CSTParser.IDENTIFIER, CSTParser.OPERATOR, CSTParser.LITERAL, CSTParser.PUNCTUATION, CSTParser.KEYWORD)
