@@ -208,136 +208,85 @@ function Expr(x::EXPR{MacroName})
 end
 
 # cross compatability for line number insertion in macrocalls
-@static if VERSION < v"0.7.0-DEV.357"
-    Expr_cmd(x) = Expr(:macrocall, Symbol("@cmd"), x.val)
-    Expr_tcmd(x) = Expr(:macrocall, Symbol("@cmd"), x.val)
+Expr_cmd(x) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
+Expr_tcmd(x) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
 
-    function Expr(x::EXPR{x_Str})
-        if x.args[1] isa BinarySyntaxOpCall
-            mname = Expr(x.args[1])
-            mname.args[2] = QuoteNode(Symbol("@", mname.args[2].value, "_str"))
-            ret = Expr(:macrocall, mname)
+function Expr(x::EXPR{x_Str})
+    if x.args[1] isa BinarySyntaxOpCall
+        mname = Expr(x.args[1])
+        mname.args[2] = QuoteNode(Symbol("@", mname.args[2].value, "_str"))
+        ret = Expr(:macrocall, mname, nothing)
+    else
+        ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_str"), nothing)
+    end
+    for i = 2:length(x.args)
+        push!(ret.args, x.args[i].val)
+    end
+    return ret
+end
+
+function Expr(x::EXPR{x_Cmd})
+    ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_cmd"), nothing)
+    for i = 2:length(x.args)
+        push!(ret.args, x.args[i].val)
+    end
+    return ret
+end
+
+function clear_at!(x)
+    if x isa Expr && x.head == :.
+        if x.args[2] isa QuoteNode && string(x.args[2].value)[1] == '@'
+            x.args[2].value = Symbol(string(x.args[2].value)[2:end])
+        end
+        if x.args[1] isa Symbol && string(x.args[1])[1] == '@'
+            x.args[1] = Symbol(string(x.args[1])[2:end])
         else
-            ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_str"))
+            clear_at!(x.args[1])
         end
-        for i = 2:length(x.args)
-            push!(ret.args, x.args[i].val)
-        end
-        return ret
     end
+end
 
-    function Expr(x::EXPR{x_Cmd})
-        ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_cmd"))
-        for i = 2:length(x.args)
-            push!(ret.args, x.args[i].val)
+function Expr(x::EXPR{MacroCall})
+    ret = Expr(:macrocall)
+    for a in x.args
+        if !(a isa PUNCTUATION)
+            push!(ret.args, Expr(a))
         end
-        return ret
     end
-
-    function Expr(x::EXPR{MacroCall})
-        ret = Expr(:macrocall)
-        for a in x.args
-            if !(a isa PUNCTUATION)
-                push!(ret.args, Expr(a))
+    insert!(ret.args, 2, nothing)
+    if ret.args[1] isa Expr && ret.args[1].head == :. && string(ret.args[1].args[2].value)[1] != '@'
+        clear_at!(ret.args[1])
+        ret.args[1].args[2] = QuoteNode(Symbol(string('@', ret.args[1].args[2].value)))
+    end
+    ret
+end
+"""
+    remlineinfo!(x)
+Removes line info expressions. (i.e. Expr(:line, 1))
+"""
+function remlineinfo!(x)
+    if isa(x, Expr)
+        if x.head == :macrocall && x.args[2] != nothing
+            id = findall(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
+            deleteat!(x.args, id)
+            for j in x.args
+                remlineinfo!(j)
             end
-        end
-        ret
-    end
-
-    """
-        remlineinfo!(x)
-    Removes line info expressions. (i.e. Expr(:line, 1))
-    """
-    function remlineinfo!(x)
-        if isa(x, Expr)
+            insert!(x.args, 2, nothing)
+        else
             id = findall(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
             deleteat!(x.args, id)
             for j in x.args
                 remlineinfo!(j)
             end
         end
-        x
-    end
-else
-    Expr_cmd(x) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
-    Expr_tcmd(x) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
-
-    function Expr(x::EXPR{x_Str})
-        if x.args[1] isa BinarySyntaxOpCall
-            mname = Expr(x.args[1])
-            mname.args[2] = QuoteNode(Symbol("@", mname.args[2].value, "_str"))
-            ret = Expr(:macrocall, mname, nothing)
-        else
-            ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_str"), nothing)
-        end
-        for i = 2:length(x.args)
-            push!(ret.args, x.args[i].val)
-        end
-        return ret
-    end
-
-    function Expr(x::EXPR{x_Cmd})
-        ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_cmd"), nothing)
-        for i = 2:length(x.args)
-            push!(ret.args, x.args[i].val)
-        end
-        return ret
-    end
-
-    function clear_at!(x)
-        if x isa Expr && x.head == :.
-            if x.args[2] isa QuoteNode && string(x.args[2].value)[1] == '@'
-                x.args[2].value = Symbol(string(x.args[2].value)[2:end])
-            end
-            if x.args[1] isa Symbol && string(x.args[1])[1] == '@'
-                x.args[1] = Symbol(string(x.args[1])[2:end])
-            else
-                clear_at!(x.args[1])
-            end
+        if x.head == :elseif && x.args[1] isa Expr && x.args[1].head == :block && length(x.args[1].args) == 1
+            x.args[1] = x.args[1].args[1]
         end
     end
-
-    function Expr(x::EXPR{MacroCall})
-        ret = Expr(:macrocall)
-        for a in x.args
-            if !(a isa PUNCTUATION)
-                push!(ret.args, Expr(a))
-            end
-        end
-        insert!(ret.args, 2, nothing)
-        if ret.args[1] isa Expr && ret.args[1].head == :. && string(ret.args[1].args[2].value)[1] != '@'
-            clear_at!(ret.args[1])
-            ret.args[1].args[2] = QuoteNode(Symbol(string('@', ret.args[1].args[2].value)))
-        end
-        ret
-    end
-    """
-        remlineinfo!(x)
-    Removes line info expressions. (i.e. Expr(:line, 1))
-    """
-    function remlineinfo!(x)
-        if isa(x, Expr)
-            if x.head == :macrocall && x.args[2] != nothing
-                id = findall(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
-                deleteat!(x.args, id)
-                for j in x.args
-                    remlineinfo!(j)
-                end
-                insert!(x.args, 2, nothing)
-            else
-                id = findall(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
-                deleteat!(x.args, id)
-                for j in x.args
-                    remlineinfo!(j)
-                end
-            end
-            if x.head == :elseif && x.args[1] isa Expr && x.args[1].head == :block && length(x.args[1].args) == 1
-                x.args[1] = x.args[1].args[1]
-            end
-        end
-        x
-    end
+    x
 end
+
 
 Expr(x::EXPR{Quotenode}) = QuoteNode(Expr(x.args[end]))
 

@@ -1,8 +1,3 @@
-if VERSION < v"0.7.0-DEV.1053"
-    read(io, ::Type{String}) = readstring(io)
-    read(io, ::Type{Char}) = Base.read(io, Char)
-end
-
 function closer(ps::ParseState)
     (ps.closer.newline && ps.ws.kind == NewLineWS && ps.t.kind != Tokens.COMMA) ||
     (ps.closer.semicolon && ps.ws.kind == SemiColonWS) ||
@@ -596,45 +591,6 @@ function trailing_ws_length(x)
 end
 
 
-
-# Unrelated
-function collect_calls(M::Module, calls = [])
-    for n in names(M, true, true)
-        !isdefined(M, n) && continue
-        x = getfield(M, n)
-        if x isa Function
-            t = typeof(x)
-            if t.name.module == M
-                collect_calls(x,calls)
-            end
-        end
-    end
-    calls
-end
-
-function collect_calls(f::Function, calls = [])
-    for m in methods(f)
-        try
-        spec = m.specializations
-        spec == nothing && continue
-        if spec isa TypeMapEntry
-            while true
-                push!(calls, spec.sig)
-                spec = spec.next
-                spec == nothing && break
-            end
-        elseif spec isa TypeMapLevel
-            spec = spec.arg1[1].arg1
-            for s in spec
-                push!(calls, s.sig)
-            end
-        end
-        catch
-            println(m)
-        end
-    end
-    calls
-end
 
 
 Base.iterate(x::EXPR) = length(x) == 0 ? nothing : (x.args[1], 1)
