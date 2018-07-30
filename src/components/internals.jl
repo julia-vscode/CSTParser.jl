@@ -102,7 +102,7 @@ Parses a function call. Expects to start before the opening parentheses and is p
 """
 function parse_call(ps::ParseState, @nospecialize ret)
     if is_minus(ret) || is_not(ret)
-        arg = @closer ps inwhere @precedence ps 13 parse_expression(ps)
+        arg = @closer ps unary @closer ps inwhere @precedence ps 13 parse_expression(ps)
         if arg isa EXPR{TupleH}
             ret = EXPR{Call}(Any[ret; arg.args])
         elseif arg isa WhereOpCall && arg.arg1 isa EXPR{TupleH}

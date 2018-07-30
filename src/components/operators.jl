@@ -161,7 +161,7 @@ function parse_unary(ps::ParseState, op)
         prec = P == DeclarationOp ? DeclarationOp :
                     K == Tokens.AND ? DeclarationOp :
                     K == Tokens.EX_OR ? 20 : PowerOp
-        arg = @precedence ps prec parse_expression(ps)
+        arg = @closer ps unary @precedence ps prec parse_expression(ps)
         if issyntaxunarycall(op)
             ret = UnarySyntaxOpCall(op, arg)
         else

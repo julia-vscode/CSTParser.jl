@@ -36,6 +36,7 @@ function closer(ps::ParseState)
             (isunaryop(ps.t) && ps.ws.kind == WS)
         )) ||
     (ps.nt.startbyte ≥ ps.closer.stop) ||
+    (ps.closer.unary && (ps.t.kind in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE,Tokens.RBRACE) && ps.nt.kind == Tokens.IDENTIFIER)) ||
     ps.errored
 end
 
@@ -134,6 +135,7 @@ struct Closer_TMP
     ifop::Bool
     ws::Bool
     wsop::Bool
+    unary::Bool
     precedence::Int
 end
 
@@ -150,6 +152,7 @@ end
         c.ifop,
         c.ws,
         c.wsop,
+        c.unary,
         c.precedence
     )
 end
@@ -166,6 +169,7 @@ end
     c.ifop = tmp.ifop
     c.ws = tmp.ws
     c.wsop = tmp.wsop
+    c.unary = tmp.unary
     c.precedence = tmp.precedence
 end
 
@@ -182,6 +186,7 @@ end
     c.ifop = false
     c.ws = false
     c.wsop = false
+    c.unary = false
     c.precedence = -1
 end
 
@@ -233,7 +238,7 @@ is_nothing(x) = x isa LITERAL && x.kind == Tokens.NOTHING
 isajuxtaposition(ps::ParseState, ret) = ((is_number(ret) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || 
         ((ret isa UnarySyntaxOpCall && is_prime(ret.arg2) && ps.nt.kind == Tokens.IDENTIFIER) ||
         ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
-        ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING))))
+        ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)))) || ((ps.t.kind in (Tokens.INTEGER, Tokens.FLOAT) || ps.t.kind in (Tokens.RPAREN,Tokens.RSQUARE,Tokens.RBRACE)) && ps.nt.kind == Tokens.IDENTIFIER)
 
 
 # Testing functions

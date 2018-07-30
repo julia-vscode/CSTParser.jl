@@ -24,11 +24,12 @@ mutable struct Closer
     trycatch::Bool
     ws::Bool
     wsop::Bool
+    unary::Bool
     precedence::Int
     stop::Int
     cc::Vector{Symbol}
 end
-Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int), [])
+Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int), [])
 
 struct Error
     loc::UnitRange{Int}
