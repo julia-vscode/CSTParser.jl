@@ -191,7 +191,7 @@ end
 function parse_operator_eq(ps::ParseState, @nospecialize(ret), op)
     nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
 
-    if is_func_call(ret)
+    if is_func_call(ret) && !(nextarg isa EXPR{Begin} || (nextarg isa EXPR{InvisBrackets} && nextarg.args[2] isa EXPR{Block}))
         nextarg = EXPR{Block}(Any[nextarg])
     end
     return BinarySyntaxOpCall(ret, op, nextarg)
@@ -307,7 +307,10 @@ function parse_operator_anon_func(ps::ParseState, @nospecialize(ret), op)
     if ret isa EXPR{TupleH} && length(ret.args) == 3 && ret.args[2] isa UnarySyntaxOpCall && is_dddot(ret.args[2].arg2)
         ret = EXPR{InvisBrackets}(ret.args)
     end
-    return BinarySyntaxOpCall(ret, op, EXPR{Block}(Any[arg]))
+    if !(arg isa EXPR{Begin} || (arg isa EXPR{InvisBrackets} && arg.args[2] isa EXPR{Block}))
+        arg = EXPR{Block}(Any[arg])
+    end
+    return BinarySyntaxOpCall(ret, op, arg)
 end
 
 function parse_operator(ps::ParseState, @nospecialize(ret), op)
