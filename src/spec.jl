@@ -1,23 +1,23 @@
 # Operator hierarchy
 const AssignmentOp  = 1
-const ConditionalOp = 3
-const ArrowOp       = 4
-const LazyOrOp      = 5
-const LazyAndOp     = 6
-const ComparisonOp  = 7
-const PipeOp        = 8
-const ColonOp       = 9
-const PlusOp        = 10
-const BitShiftOp    = 11
-const TimesOp       = 12
-const RationalOp    = 13
-const PowerOp       = 14
-const DeclarationOp = 15
-const WhereOp       = 16
-const DotOp         = 17
-const PrimeOp       = 17
-const DddotOp       = 8
-const AnonFuncOp    = 15
+const ConditionalOp = 2
+const ArrowOp       = 3
+const LazyOrOp      = 4
+const LazyAndOp     = 5
+const ComparisonOp  = 6
+const PipeOp        = 7
+const ColonOp       = 8
+const PlusOp        = 9
+const BitShiftOp    = 10
+const TimesOp       = 11
+const RationalOp    = 12
+const PowerOp       = 13
+const DeclarationOp = 14
+const WhereOp       = 15
+const DotOp         = 16
+const PrimeOp       = 16
+const DddotOp       = 7
+const AnonFuncOp    = 14
 
 abstract type AbstractEXPR end
 
@@ -260,7 +260,6 @@ abstract type ChainOpCall <: Head end
 abstract type ColonOpCall <: Head end
 abstract type Abstract <: Head end
 abstract type Begin <: Head end
-# abstract type Bitstype <: Head end
 abstract type Block <: Head end
 abstract type Braces <: Head end
 abstract type BracesCat <: Head end
@@ -293,7 +292,6 @@ abstract type StringH <: Head end
 abstract type Struct <: Head end
 abstract type Try <: Head end
 abstract type TupleH <: Head end
-# abstract type TypeAlias <: Head end
 abstract type FileH <: Head end
 abstract type Return <: Head end
 abstract type While <: Head end

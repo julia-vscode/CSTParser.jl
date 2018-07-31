@@ -117,7 +117,7 @@ function parse_call(ps::ParseState, @nospecialize ret)
         end
         ret = UnarySyntaxOpCall(ret, arg)
     elseif is_issubt(ret) || is_issupt(ret)
-        arg = @precedence ps 13 parse_expression(ps)
+        arg = @precedence ps PowerOp parse_expression(ps)
         ret = EXPR{Call}(Any[ret; arg.args])
     else
         ismacro = ret isa EXPR{MacroName}
