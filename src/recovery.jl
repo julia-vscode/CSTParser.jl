@@ -30,7 +30,7 @@ function accept_rsquare(ps)
     if ps.nt.kind == Tokens.RSQUARE
         return PUNCTUATION(next(ps))
     else
-        push!(ps.errors, Error((ps.ws.startbyte:ps.ws.endbyte) .+ 1 , "Expected ]."))
+        push!(ps.errors, Error((ps.t.startbyte:ps.t.endbyte) .+ 1 , "Expected ]."))
         return ErrorToken(PUNCTUATION(Tokens.RSQUARE, 0, 1:0))
     end
 end
@@ -40,7 +40,7 @@ function accept_rbrace(ps)
     if ps.nt.kind == Tokens.RBRACE
         return PUNCTUATION(next(ps))
     else
-        push!(ps.errors, Error((ps.ws.startbyte:ps.ws.endbyte) .+ 1 , "Expected }."))
+        push!(ps.errors, Error((ps.t.startbyte:ps.t.endbyte) .+ 1 , "Expected }."))
         return ErrorToken(PUNCTUATION(Tokens.RBRACE, 0, 1:0))
     end
 end
@@ -50,7 +50,7 @@ function accept_end(ps::ParseState)
     if ps.nt.kind == Tokens.END
         return KEYWORD(next(ps))
     else
-        push!(ps.errors, Error((ps.ws.startbyte:ps.ws.endbyte) .+ 1 , "Expected end."))
+        push!(ps.errors, Error((ps.t.startbyte:ps.t.endbyte) .+ 1 , "Expected end."))
         return ErrorToken(KEYWORD(Tokens.END, 0, 1:0))
     end
 end

@@ -3,7 +3,7 @@ module CSTParser
 global debug = true
 
 using Tokenize
-import Base: next, start, done, length, first, last, endof, getindex, setindex!
+import Base: length, first, last, getindex, setindex!
 import Tokenize.Tokens
 import Tokenize.Tokens: RawToken, AbstractToken, iskeyword, isliteral, isoperator, untokenize
 import Tokenize.Lexers: Lexer, peekchar, iswhitespace
@@ -145,7 +145,7 @@ Parses an expression starting with a `(`.
     args = Any[PUNCTUATION(ps)]
     @closeparen ps @default ps @nocloser ps inwhere parse_comma_sep(ps, args, false, true, true)
 
-    if ((length(args) == 2 && !(args[2] isa UnarySyntaxOpCall && is_dddot(args[2].arg2)))) && ((ps.ws.kind != SemiColonWS || (length(args) == 2 && args[2] isa EXPR{Block})) && !(args[2] isa EXPR{Parameters}))
+    if length(args) == 2 && ((ps.ws.kind != SemiColonWS || (length(args) == 2 && args[2] isa EXPR{Block})) && !(args[2] isa EXPR{Parameters}))
         accept_rparen(ps, args)
         ret = EXPR{InvisBrackets}(args)
     else

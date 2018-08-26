@@ -644,6 +644,7 @@ end
 str_value(x) = ""
 str_value(x::T) where T <: Union{IDENTIFIER,LITERAL} = x.val
 str_value(x::OPERATOR) = string(Expr(x))
+str_value(x::EXPR{MacroName}) = string(Expr(x))
 
 _unescape_string(s::AbstractString) = sprint(_unescape_string, s, sizehint=lastindex(s))
 function _unescape_string(io, s::AbstractString)

@@ -466,15 +466,16 @@ get_body(x::EXPR{Macro}) = x.args[3]
 get_body(x::EXPR{Struct}) = x.args[3]
 get_body(x::EXPR{Mutable}) = x.args[4]
 
+
+flatten_tuple(x::EXPR{InvisBrackets}, out = []) = flatten_tuple(x.args[2], out)
 function flatten_tuple(x, out = [])
-    if x isa IDENTIFIER
-        push!(out, x)
-    elseif x isa EXPR{TupleH}
+    if x isa EXPR{TupleH}
         for arg in x
-            if !(x isa PUNCTUATION)
-                flatten_tuple(arg, out)
-            end
+            arg isa PUNCTUATION && continue    
+            flatten_tuple(arg, out)
         end
+    else
+        push!(out, x)
     end
     return out
 end

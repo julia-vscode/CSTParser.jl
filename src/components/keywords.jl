@@ -327,7 +327,7 @@ end
         # catch closing early
         if ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END
             caught = FALSE
-            catchblock = EXPR{Block}(Any[], 0, 1:0)
+            catchblock = EXPR{Block}(Any[])
         else
             if ps.ws.kind == SemiColonWS || ps.ws.kind == NewLineWS
                 caught = FALSE
@@ -344,7 +344,7 @@ end
         end
     else
         caught = FALSE
-        catchblock = EXPR{Block}(Any[], 0, 1:0)
+        catchblock = EXPR{Block}(Any[])
     end
     push!(ret, caught)
     push!(ret, catchblock)

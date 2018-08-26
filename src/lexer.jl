@@ -76,7 +76,12 @@ function next(ps::ParseState)
     ps.ws = ps.nws
     ps.nws = ps.nnws
 
-    ps.nnt, ps.done  = next(ps.l, ps.done)
+    if ps.done
+        ps.nnt = ps.nt
+        ps.done = ps.done
+    else
+        ps.nnt, ps.done  = iterate(ps.l, ps.done)
+    end
     
     # combines whitespace, comments and semicolons
     if iswhitespace(peekchar(ps.l)) || peekchar(ps.l) == '#' || peekchar(ps.l) == ';'

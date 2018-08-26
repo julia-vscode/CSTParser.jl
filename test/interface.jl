@@ -1,5 +1,3 @@
-using Base.Test, CSTParser
-
 
 @testset "function defs" begin
     @test CSTParser.defines_function(CSTParser.parse("function f end"))

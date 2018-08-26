@@ -303,10 +303,7 @@ end
 
 function parse_operator_anon_func(ps::ParseState, @nospecialize(ret), op)
     arg = @closer ps comma @precedence ps 0 parse_expression(ps)
-    #TODO: remove after full deprecation of (x...) => (x...,)
-    if ret isa EXPR{TupleH} && length(ret.args) == 3 && ret.args[2] isa UnarySyntaxOpCall && is_dddot(ret.args[2].arg2)
-        ret = EXPR{InvisBrackets}(ret.args)
-    end
+    
     if !(arg isa EXPR{Begin} || (arg isa EXPR{InvisBrackets} && arg.args[2] isa EXPR{Block}))
         arg = EXPR{Block}(Any[arg])
     end
