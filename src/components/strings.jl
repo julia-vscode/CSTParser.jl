@@ -87,8 +87,12 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             if eof(input)
                 lspan = position(b)
                 str = tostr(b)
-                str = istrip ? str[1:prevind(str, prevind(str, prevind(str, sizeof(str))))] : str[1:prevind(str, sizeof(str))]
-                ex = LITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, 1:(lspan + startbytes), str, Tokens.STRING)
+                if sizeof(str) == 0
+                    ex = ErrorToken()
+                else
+                    str = istrip ? str[1:prevind(str, prevind(str, sizeof(str), 2))] : str[1:prevind(str, sizeof(str))]
+                    ex = LITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, 1:(lspan + startbytes), str, Tokens.STRING)
+                end
                 push!(ret.args, ex)
                 istrip && adjust_lcp(ex, true)
                 break
