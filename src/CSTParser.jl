@@ -1,4 +1,3 @@
-__precompile__()
 module CSTParser
 global debug = true
 
