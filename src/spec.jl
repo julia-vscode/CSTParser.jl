@@ -318,8 +318,8 @@ abstract type TypedVcat <: Head end
 abstract type Vect <: Head end
 
 abstract type ErrorToken <: Head end
-ErrorToken() = EXPR{ErrorToken}([], 0, 1:0)
-ErrorToken(x) = EXPR{ErrorToken}([x])
+ErrorToken() = EXPR{ErrorToken}(Any[], 0, 1:0)
+ErrorToken(x) = EXPR{ErrorToken}(Any[x])
 
 Quotenode(x) = EXPR{Quotenode}(Any[x])
 
