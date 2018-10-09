@@ -48,9 +48,13 @@ function parse_iter(ps::ParseState)
     if ps.nt.kind == Tokens.OUTER && ps.nws.kind != EmptyWS && !Tokens.isoperator(ps.nnt.kind) 
         outer = INSTANCE(next(ps))
         arg = @closer ps range @closer ps ws parse_expression(ps)
-        arg.arg1 = EXPR{Outer}([outer, arg.arg1])
-        arg.fullspan += outer.fullspan
-        arg.span = 1:(outer.fullspan + last(arg.span))
+        if is_range(arg)
+            arg.arg1 = EXPR{Outer}([outer, arg.arg1])
+            arg.fullspan += outer.fullspan
+            arg.span = 1:(outer.fullspan + last(arg.span))
+        else
+            arg = EXPR{ErrorToken}([outer, arg])
+        end
     else
         arg = @closer ps range @closer ps ws parse_expression(ps)
     end
