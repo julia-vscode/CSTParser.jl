@@ -35,6 +35,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     lcp = nothing
     exprs_to_adjust = []
     function adjust_lcp(expr, last = false)
+    end
+    function adjust_lcp(expr::LITERAL, last = false)
         push!(exprs_to_adjust, expr)
         str = expr.val
         (isempty(str) || (lcp != nothing && isempty(lcp))) && return
