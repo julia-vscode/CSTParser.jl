@@ -10,7 +10,7 @@ function skip_to_nl(str, idxend)
     while (idxend < sizeof(str)) && str[idxend] != '\n'
         idxend = nextind(str, idxend)
     end
-    idxend
+    idxend > sizeof(str) ? prevind(str, idxend) : idxend
 end
 
 tostr(buf::IOBuffer) = _unescape_string(String(take!(buf)))
