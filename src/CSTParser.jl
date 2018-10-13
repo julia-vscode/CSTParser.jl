@@ -259,7 +259,4 @@ function parse_directory(path::String, proj = Project(path, []))
     end
     proj
 end
-
-# include("_precompile.jl")
-# _precompile_()
 end

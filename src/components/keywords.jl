@@ -52,7 +52,7 @@ function parse_kw(ps)
         return @default ps parse_primitive(ps)
     elseif k == Tokens.TYPE
         return @default ps @closer ps block parse_struct(ps, true)
-    elseif k == Tokens.IMMUTABLE || k == Tokens.STRUCT
+    elseif k == Tokens.STRUCT
         return @default ps @closer ps block parse_struct(ps, false)
     elseif k == Tokens.MUTABLE
         return @default ps @closer ps block parse_mutable(ps)

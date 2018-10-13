@@ -320,9 +320,7 @@ end
 Expr(x::EXPR{Struct}) = Expr(:struct, false, Expr(x.args[2]), Expr(x.args[3]))
 Expr(x::EXPR{Mutable}) = length(x.args) == 4 ? Expr(:struct, true, Expr(x.args[2]), Expr(x.args[3])) : Expr(:struct, true, Expr(x.args[3]), Expr(x.args[4]))
 Expr(x::EXPR{Abstract}) = length(x.args) == 2 ? Expr(:abstract, Expr(x.args[2])) : Expr(:abstract, Expr(x.args[3]))
-# Expr(x::EXPR{Bitstype}) = Expr(:bitstype, Expr(x.args[2]), Expr(x.args[3]))
 Expr(x::EXPR{Primitive}) = Expr(:primitive, Expr(x.args[3]), Expr(x.args[4]))
-# Expr(x::EXPR{TypeAlias}) = Expr(:typealias, Expr(x.args[2]), Expr(x.args[3]))
 
 function Expr(x::EXPR{FunctionDef})
     ret = Expr(:function)
@@ -341,19 +339,6 @@ Expr(x::EXPR{BareModule}) = Expr(:module, false, Expr(x.args[2]), Expr(x.args[3]
 
 # Control Flow
 
-# function Expr(x::EXPR{If}, iselseif = false)
-#     ret = Expr(iselseif ? :elseif : :if)
-#     iselseif = false
-#     for a in x.args
-#         if a isa KEYWORD && a.kind == Tokens.ELSEIF
-#             iselseif = true
-#         end
-#         if !(a isa PUNCTUATION || a isa KEYWORD)
-#             push!(ret.args, a isa EXPR{If} ? Expr(a, iselseif) : Expr(a))
-#         end
-#     end
-#     ret
-# end
 function Expr(x::EXPR{If})
     ret = Expr(:if)
     iselseif = false

@@ -275,10 +275,6 @@ end
         @test "primitive type Int 4*16 end" |> test_expr
     end
 
-    # @testset "Typealias" begin
-    #     @test "typealias name fsd" |> test_expr
-    # end
-
     @testset "Structs" begin
         @test "struct a end" |> test_expr
         @test "struct a; end" |> test_expr
@@ -600,7 +596,6 @@ end
         (indices(A,n) for n = 1:nd)
     end...]
     """ |> test_expr
-    # @test """Base.@__doc__(bitstype \$(sizeof(basetype) * 8) \$(esc(typename)) <: Enum{\$(basetype)})""" |> test_expr #
     @test """
     @spawnat(p,
         let m = a
