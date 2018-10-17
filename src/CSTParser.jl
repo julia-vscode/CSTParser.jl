@@ -95,11 +95,12 @@ function parse_compound(ps::ParseState, @nospecialize ret)
         head = arg.kind == Tokens.CMD ? x_Cmd : x_Str
         ret = EXPR{head}(Any[ret, arg])
     elseif ps.nt.kind == Tokens.LPAREN
-        if isemptyws(ps.ws)
-            ret = @closeparen ps parse_call(ps, ret)
-        else
-            push!(ps.errors, Error(ps.t.endbyte + 2:ps.nt.startbyte , "White space in function call."))
-            ret = ErrorToken(@closeparen ps parse_call(ps, ret))
+        no_ws = !isemptyws(ps.ws)
+        err_rng = ps.t.endbyte + 2:ps.nt.startbyte 
+        ret = @closeparen ps parse_call(ps, ret)
+        if no_ws && !(ret isa UnaryOpCall || ret isa UnarySyntaxOpCall)
+            push!(ps.errors, Error(err_rng, "White space in function call."))
+            ret = ErrorToken(ret)
         end
     elseif ps.nt.kind == Tokens.LBRACE
         if isemptyws(ps.ws)
