@@ -217,7 +217,7 @@ function defines_function(x::BinarySyntaxOpCall)
                 sig = sig.arg1
             elseif sig isa UnaryOpCall || sig isa UnarySyntaxOpCall# && sig.arg isa BinarySyntaxOpCall && is_decl(sig.arg.op) && sig.arg.arg1 isa EXPR{InvisBrackets}
                 return true
-            elseif sig isa BinaryOpCall || sig isa BinarySyntaxOpCall
+            elseif sig isa BinaryOpCall || (sig isa BinarySyntaxOpCall && !(sig.op.kind == Tokens.DOT))
                 return true
             else
                 return false
