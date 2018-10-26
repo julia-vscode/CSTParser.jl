@@ -125,10 +125,13 @@ function parse_call(ps::ParseState, @nospecialize ret)
         ret = EXPR{Call}(Any[ret; arg.args])
     else
         ismacro = ret isa EXPR{MacroName}
+        sb = ps.nt.startbyte - ret.fullspan
         args = Any[ret, PUNCTUATION(next(ps))]
         @closeparen ps @default ps parse_comma_sep(ps, args, !ismacro)
         accept_rparen(ps, args)
-        ret = EXPR{ismacro ? MacroCall : Call}(args)
+        # ret = EXPR{ismacro ? MacroCall : Call}(args)
+        fullspan = ps.nt.startbyte - sb
+        ret = EXPR{ismacro ? MacroCall : Call}(args, fullspan, 1:(fullspan - last(args).fullspan + last(last(args).span)))
     end
     return ret
 end
@@ -139,7 +142,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = f
         a = parse_expression(ps)
 
         if kw && !ps.closer.brace && a isa BinarySyntaxOpCall && is_eq(a.op)
-            a = EXPR{Kw}(Any[a.arg1, a.op, a.arg2])
+            a = EXPR{Kw}(Any[a.arg1, a.op, a.arg2], a.fullspan, a.span)
         end
         push!(args, a)
         if ps.nt.kind == Tokens.COMMA
@@ -168,11 +171,12 @@ function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = f
 end
 
 function parse_parameters(ps, args::Vector{Any})
+    sb = ps.nt.startbyte
     args1 = Any[]
     @nocloser ps inwhere @nocloser ps newline  @closer ps comma while @nocloser ps semicolon !closer(ps)
         a = parse_expression(ps)
         if !ps.closer.brace && a isa BinarySyntaxOpCall && is_eq(a.op)
-            a = EXPR{Kw}(Any[a.arg1, a.op, a.arg2])
+            a = EXPR{Kw}(Any[a.arg1, a.op, a.arg2], a.fullspan, a.span)
         end
         push!(args1, a)
         if ps.nt.kind == Tokens.COMMA
@@ -183,7 +187,8 @@ function parse_parameters(ps, args::Vector{Any})
         end
     end
     if !isempty(args1)
-        paras = EXPR{Parameters}(args1)
+        fullspan = ps.nt.startbyte - sb
+        paras = EXPR{Parameters}(args1, fullspan, 1:(fullspan - last(args1).fullspan + last(last(args1).span)))
         push!(args, paras)
     end
     return
@@ -195,6 +200,7 @@ end
 Parses a macro call. Expects to start on the `@`.
 """
 function parse_macrocall(ps::ParseState)
+    sb = ps.t.startbyte
     at = PUNCTUATION(ps)
     if !isemptyws(ps.ws)
         push!(ps.errors, Error((ps.ws.startbyte + 1:ps.ws.endbyte) .+ 1 , "Unexpected whitespace in macrocall."))
@@ -213,7 +219,7 @@ function parse_macrocall(ps::ParseState)
     end
 
     if ps.nt.kind == Tokens.COMMA
-        return EXPR{MacroCall}(Any[mname])
+        return EXPR{MacroCall}(Any[mname], mname.fullspan, mname.span)
     elseif isemptyws(ps.ws) && ps.nt.kind == Tokens.LPAREN
         return parse_call(ps, mname)
     else
@@ -226,7 +232,9 @@ function parse_macrocall(ps::ParseState)
                 break
             end
         end
-        return EXPR{MacroCall}(args)
+        # return EXPR{MacroCall}(args)
+        fullspan = ps.nt.startbyte - sb
+        return EXPR{MacroCall}(args, fullspan, 1:(fullspan - last(args).fullspan + last(last(args).span)))
     end
 end
 

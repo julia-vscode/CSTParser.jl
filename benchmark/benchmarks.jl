@@ -13,6 +13,15 @@ suite["datatypes"]["primitive"] = @benchmarkable CSTParser.parse_expression(ps) 
 suite["datatypes"]["struct, no sig"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState("struct end"))
 suite["datatypes"]["m struct, no sig"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState("mutable struct end"))
 suite["datatypes"]["struct"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState("struct Name end"))
+suite["datatypes"]["struct 5 args"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState(
+"""
+struct Name
+    f
+    f
+    f
+    f
+    f
+end"""))
 suite["datatypes"]["m struct"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState("mutable struct Name end"))
 
 suite["kw as id"] = BenchmarkGroup()
@@ -94,17 +103,23 @@ suite["ops"]["cond * 5"] = @benchmarkable CSTParser.parse_expression(ps) setup =
 suite["ops"]["bin syn * 5"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState("""x||x||x||x||x"""))
 suite["ops"]["dot * 5"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState("""x.x.x.x.x"""))
 
+suite["call"] = BenchmarkGroup()
+suite["call"]["no arg"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState("func()"))
+suite["call"]["1 arg"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState("func(arg)"))
+suite["call"]["10 arg"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState("func(arg,arg,arg,arg,arg,arg,arg,arg,arg,arg)"))
+suite["call"]["10 kw"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState("func(arg = arg, arg = arg,arg = arg,arg = arg,arg = arg,arg = arg,arg = arg,arg = arg,arg = arg,arg = arg,)"))
+
 # results = run(suite)
 # BenchmarkTools.save("bench1.ignore.json", results)
 # baseline = BenchmarkTools.load("bench1.ignore.json")
 # [leaves(minimum(baseline)) leaves(minimum(results)) leaves(ratio(minimum(baseline), minimum(results)))]
 
-function compare(suite, baseline_path, save = "")
+function compare(suite, save = "")
     results = run(suite)
     if !isempty(save)
         BenchmarkTools.save(joinpath(@__DIR__, save), results)
     end
-    baseline = BenchmarkTools.load(joinpath(@__DIR__, baseline_path))[1]
+    baseline = BenchmarkTools.load(joinpath(@__DIR__, "baseline.ignore.json"))[1]
     display_comp(baseline, results)
 end
 
