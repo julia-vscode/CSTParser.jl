@@ -84,7 +84,7 @@ function parse_compound(ps::ParseState, @nospecialize ret)
     elseif ps.nt.kind == Tokens.DO
         ret = @default ps @closer ps block parse_do(ps, ret)
     elseif isajuxtaposition(ps, ret)
-        op = OPERATOR(0, 1:0, Tokens.STAR, false)
+        op = OPERATOR(0, 0, Tokens.STAR, false)
         ret = parse_operator(ps, ret, op)
     elseif (ret isa EXPR{x_Str} ||  ret isa EXPR{x_Cmd}) && ps.nt.kind == Tokens.IDENTIFIER
         arg = IDENTIFIER(next(ps))
@@ -121,7 +121,7 @@ function parse_compound(ps::ParseState, @nospecialize ret)
     elseif ret isa UnarySyntaxOpCall && is_prime(ret.arg2)
         # prime operator followed by an identifier has an implicit multiplication
         nextarg = @precedence ps 11 parse_expression(ps)
-        ret = BinaryOpCall(ret, OPERATOR(0, 1:0, Tokens.STAR,false), nextarg)
+        ret = BinaryOpCall(ret, OPERATOR(0, 0, Tokens.STAR,false), nextarg)
 ################################################################################
 # Everything below here is an error
 ################################################################################
@@ -202,7 +202,7 @@ function parse(ps::ParseState, cont = false)
         top = EXPR{FileH}(Any[])
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
-            push!(top, LITERAL(ps.nt.startbyte, 1:ps.nt.startbyte, "", Tokens.NOTHING))
+            push!(top, LITERAL(ps.nt.startbyte, ps.nt.startbyte, "", Tokens.NOTHING))
         end
 
         while !ps.done && !ps.errored
@@ -222,7 +222,7 @@ function parse(ps::ParseState, cont = false)
     else
         if ps.nt.kind == Tokens.WHITESPACE || ps.nt.kind == Tokens.COMMENT
             next(ps)
-            top = LITERAL(ps.nt.startbyte, 1:ps.nt.startbyte, "", Tokens.NOTHING)
+            top = LITERAL(ps.nt.startbyte, ps.nt.startbyte, "", Tokens.NOTHING)
         else
             top = parse_doc(ps)
             last_line = ps.nt.startpos[1]

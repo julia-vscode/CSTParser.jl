@@ -336,8 +336,7 @@ end
     @test "Int[(y,x) for y in X]" |> test_expr
     @test """
     [a
-    for a = 1:2]
-    """ |> test_expr
+    for a = 1:2]""" |> test_expr
     @test "[ V[j][i]::T for i=1:length(V[1]), j=1:length(V) ]" |> test_expr
     @test "all(d ≥ 0 for d in B.dims)" |> test_expr
     @test "(arg for x in X)" |> test_expr

@@ -51,7 +51,7 @@ function parse_iter(ps::ParseState)
         if is_range(arg)
             arg.arg1 = EXPR{Outer}([outer, arg.arg1])
             arg.fullspan += outer.fullspan
-            arg.span = 1:(outer.fullspan + last(arg.span))
+            arg.span = outer.fullspan + arg.span
         else
             arg = EXPR{ErrorToken}([outer, arg])
         end
@@ -104,11 +104,14 @@ end
 
 Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
 """
-function parse_call(ps::ParseState, @nospecialize ret)
+function parse_call(ps::ParseState, ret)
+    sb = ps.nt.startbyte - ret.fullspan
     if is_minus(ret) || is_not(ret)
         arg = @closer ps unary @closer ps inwhere @precedence ps 13 parse_expression(ps)
         if arg isa EXPR{TupleH}
-            ret = EXPR{Call}(Any[ret; arg.args])
+            pushfirst!(arg.args, ret)
+            fullspan = ps.nt.startbyte - sb
+            ret = EXPR{Call}(arg.args, fullspan, fullspan - (last(arg.args).fullspan - last(arg.args).span))
         elseif arg isa WhereOpCall && arg.arg1 isa EXPR{TupleH}
             ret = WhereOpCall(EXPR{Call}(Any[ret; arg.arg1.args]), arg.op, arg.args)
         else
@@ -125,13 +128,11 @@ function parse_call(ps::ParseState, @nospecialize ret)
         ret = EXPR{Call}(Any[ret; arg.args])
     else
         ismacro = ret isa EXPR{MacroName}
-        sb = ps.nt.startbyte - ret.fullspan
         args = Any[ret, PUNCTUATION(next(ps))]
         @closeparen ps @default ps parse_comma_sep(ps, args, !ismacro)
         accept_rparen(ps, args)
-        # ret = EXPR{ismacro ? MacroCall : Call}(args)
         fullspan = ps.nt.startbyte - sb
-        ret = EXPR{ismacro ? MacroCall : Call}(args, fullspan, 1:(fullspan - last(args).fullspan + last(last(args).span)))
+        ret = EXPR{ismacro ? MacroCall : Call}(args, fullspan, fullspan - last(args).fullspan + last(args).span)
     end
     return ret
 end
@@ -188,7 +189,7 @@ function parse_parameters(ps, args::Vector{Any})
     end
     if !isempty(args1)
         fullspan = ps.nt.startbyte - sb
-        paras = EXPR{Parameters}(args1, fullspan, 1:(fullspan - last(args1).fullspan + last(last(args1).span)))
+        paras = EXPR{Parameters}(args1, fullspan, fullspan - last(args1).fullspan + last(args1).span)
         push!(args, paras)
     end
     return
@@ -234,7 +235,7 @@ function parse_macrocall(ps::ParseState)
         end
         # return EXPR{MacroCall}(args)
         fullspan = ps.nt.startbyte - sb
-        return EXPR{MacroCall}(args, fullspan, 1:(fullspan - last(args).fullspan + last(last(args).span)))
+        return EXPR{MacroCall}(args, fullspan, fullspan - last(args).fullspan + last(args).span)
     end
 end
 
@@ -284,14 +285,14 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
     while ps.nt.kind == Tokens.DOT || ps.nt.kind == Tokens.DDOT || ps.nt.kind == Tokens.DDDOT
         d = OPERATOR(next(ps))
         if is_dot(d)
-            push!(args, OPERATOR(1, 1:1, Tokens.DOT, false))
+            push!(args, OPERATOR(1, 1, Tokens.DOT, false))
         elseif is_ddot(d)
-            push!(args, OPERATOR(1, 1:1, Tokens.DOT, false))
-            push!(args, OPERATOR(1, 1:1, Tokens.DOT, false))
+            push!(args, OPERATOR(1, 1, Tokens.DOT, false))
+            push!(args, OPERATOR(1, 1, Tokens.DOT, false))
         elseif is_dddot(d)
-            push!(args, OPERATOR(1, 1:1, Tokens.DOT, false))
-            push!(args, OPERATOR(1, 1:1, Tokens.DOT, false))
-            push!(args, OPERATOR(1, 1:1, Tokens.DOT, false))
+            push!(args, OPERATOR(1, 1, Tokens.DOT, false))
+            push!(args, OPERATOR(1, 1, Tokens.DOT, false))
+            push!(args, OPERATOR(1, 1, Tokens.DOT, false))
         end
     end
 
@@ -317,7 +318,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
             push!(args, a)
         elseif !is_colon && isoperator(ps.nt)
             next(ps)
-            push!(args, OPERATOR(ps.nt.startbyte - ps.t.startbyte - 1, broadcast(+, 1, (0:ps.t.endbyte - ps.t.startbyte)), ps.t.kind, false))
+            push!(args, OPERATOR(ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, ps.t.kind, false))
         else
             push!(args, INSTANCE(next(ps)))
         end
@@ -325,7 +326,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
         if ps.nt.kind == Tokens.DOT
             push!(args, PUNCTUATION(next(ps)))
         elseif isoperator(ps.nt) && (ps.nt.dotop || ps.nt.kind == Tokens.DOT)
-            push!(args, PUNCTUATION(Tokens.DOT, 1, 1:1))
+            push!(args, PUNCTUATION(Tokens.DOT, 1, 1))
             ps.nt = RawToken(ps.nt.kind, ps.nt.startpos, ps.nt.endpos, ps.nt.startbyte + 1, ps.nt.endbyte, ps.nt.token_error, false)
         else
             break

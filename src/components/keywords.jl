@@ -177,15 +177,15 @@ end
     kw = KEYWORD(ps)
     blockargs = parse_block(ps, Any[], (Tokens.END,), true)
     if isempty(blockargs)
-        block = EXPR{Block}(blockargs, 0, 1:0)
+        block = EXPR{Block}(blockargs, 0, 0)
     else
         fullspan = ps.nt.startbyte - sb - kw.fullspan
-        block = EXPR{Block}(blockargs, fullspan, 1:(fullspan - last(blockargs).fullspan + last(last(blockargs).span)))
+        block = EXPR{Block}(blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
     end
     # return EXPR{Begin}(Any[kw, EXPR{Block}(blockargs), accept_end(ps)])
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return EXPR{Begin}(Any[kw, block, ender], fullspan1, 1:(fullspan1 - ender.fullspan + last(ender.span)))
+    return EXPR{Begin}(Any[kw, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
 end
 
 @addctx :quote function parse_quote(ps::ParseState)
@@ -232,7 +232,7 @@ end
 end
 
 @addctx :macro function parse_macro(ps::ParseState)
-    sb  = ps.nt.startbyte
+    sb  = ps.t.startbyte
     kw = KEYWORD(ps)
     sig = @closer ps ws parse_expression(ps)
     sb1  = ps.nt.startbyte
@@ -240,19 +240,19 @@ end
 
     # return EXPR{Macro}(Any[kw, sig, EXPR{Block}(blockargs), accept_end(ps)])
     if isempty(blockargs)
-        block = EXPR{Block}(blockargs, 0, 1:0)
+        block = EXPR{Block}(blockargs, 0, 0)
     else
         fullspan = ps.nt.startbyte - sb1
-        block = EXPR{Block}(blockargs, fullspan, 1:(fullspan - last(blockargs).fullspan + last(last(blockargs).span)))
+        block = EXPR{Block}(blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
     end
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return EXPR{Macro}(Any[kw, sig, block, ender], fullspan1, 1:(fullspan1 - ender.fullspan + last(ender.span)))
+    return EXPR{Macro}(Any[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
 end
 
 # loops
 @addctx :for function parse_for(ps::ParseState)
-    sb  = ps.nt.startbyte
+    sb  = ps.t.startbyte
     kw = KEYWORD(ps)
     ranges = parse_ranges(ps)
     sb1  = ps.nt.startbyte
@@ -260,18 +260,18 @@ end
 
     # return EXPR{For}(Any[kw, ranges, EXPR{Block}(blockargs), accept_end(ps)])
     if isempty(blockargs)
-        block = EXPR{Block}(blockargs, 0, 1:0)
+        block = EXPR{Block}(blockargs, 0, 0)
     else
         fullspan = ps.nt.startbyte - sb1
-        block = EXPR{Block}(blockargs, fullspan, 1:(fullspan - last(blockargs).fullspan + last(last(blockargs).span)))
+        block = EXPR{Block}(blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
     end
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return EXPR{Macro}(Any[kw, ranges, block, ender], fullspan1, 1:(fullspan1 - ender.fullspan + last(ender.span)))
+    return EXPR{For}(Any[kw, ranges, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
 end
 
 @addctx :while function parse_while(ps::ParseState)
-    sb = ps.nt.startbyte
+    sb = ps.t.startbyte
     kw = KEYWORD(ps)
     cond = @closer ps ws parse_expression(ps)
     sb1 = ps.nt.startbyte
@@ -279,14 +279,14 @@ end
 
     # return EXPR{While}(Any[kw, cond, EXPR{Block}(blockargs), accept_end(ps)])
     if isempty(blockargs)
-        block = EXPR{Block}(blockargs, 0, 1:0)
+        block = EXPR{Block}(blockargs, 0, 0)
     else
         fullspan = ps.nt.startbyte - sb1
-        block = EXPR{Block}(blockargs, fullspan, 1:(fullspan - last(blockargs).fullspan + last(last(blockargs).span)))
+        block = EXPR{Block}(blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
     end
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return EXPR{While}(Any[kw, cond, block, ender], fullspan1, 1:(fullspan1 - ender.fullspan + last(ender.span)))
+    return EXPR{While}(Any[kw, cond, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
 end
 
 # control flow
@@ -426,7 +426,7 @@ end
 # modules
 
 @addctx :module function parse_module(ps::ParseState)
-    sb = ps.nt.startbyte
+    sb = ps.t.startbyte
     kw = KEYWORD(ps)
     @assert kw.kind == Tokens.MODULE || kw.kind == Tokens.BAREMODULE # work around julia issue #23766
     if ps.nt.kind == Tokens.IDENTIFIER
@@ -441,14 +441,14 @@ end
 
     # return EXPR{(is_module(kw) ? ModuleH : BareModule)}(Any[kw, arg, block, accept_end(ps)])
     if isempty(blockargs)
-        block = EXPR{Block}(blockargs, 0, 1:0)
+        block = EXPR{Block}(blockargs, 0, 0)
     else
         fullspan = ps.nt.startbyte - sb1
-        block = EXPR{Block}(blockargs, fullspan, 1:(fullspan - last(blockargs).fullspan + last(last(blockargs).span)))
+        block = EXPR{Block}(blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
     end
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return EXPR{(is_module(kw) ? ModuleH : BareModule)}(Any[kw, arg, block, ender], fullspan1, 1:(fullspan1 - ender.fullspan + last(ender.span)))
+    return EXPR{(is_module(kw) ? ModuleH : BareModule)}(Any[kw, arg, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
 end
 
 
@@ -467,7 +467,7 @@ end
 
 
 @addctx :struct function parse_struct(ps::ParseState, mutable)
-    sb = ps.nt.startbyte
+    sb = ps.t.startbyte
     kw = KEYWORD(ps)
     sig = @closer ps ws parse_expression(ps)    
     sb1 = ps.nt.startbyte
@@ -475,12 +475,12 @@ end
     
     # return EXPR{mutable ? Mutable : Struct}(Any[kw, sig, EXPR{Block}(blockargs), accept_end(ps)])
     if isempty(blockargs)
-        block = EXPR{Block}(blockargs, 0, 1:0)
+        block = EXPR{Block}(blockargs, 0, 0)
     else
         fullspan = ps.nt.startbyte - sb1
-        block = EXPR{Block}(blockargs, fullspan, 1:(fullspan - last(blockargs).fullspan + last(last(blockargs).span)))
+        block = EXPR{Block}(blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
     end
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return EXPR{mutable ? Mutable : Struct}(Any[kw, sig, block, ender], fullspan1, 1:(fullspan1 - ender.fullspan + last(ender.span)))
+    return EXPR{mutable ? Mutable : Struct}(Any[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
 end

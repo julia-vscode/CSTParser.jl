@@ -9,7 +9,7 @@ suite["1arg kw"]["return (empty)"] = @benchmarkable CSTParser.parse_expression(p
 
 suite["datatypes"] = BenchmarkGroup()
 suite["datatypes"]["abstract"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState("abstract type T end"))
-suite["datatypes"]["primitive"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState("primitive type T I end"))
+suite["datatypes"]["primitive"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState("primitive type T end"))
 suite["datatypes"]["struct, no sig"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState("struct end"))
 suite["datatypes"]["m struct, no sig"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState("mutable struct end"))
 suite["datatypes"]["struct"] = @benchmarkable CSTParser.parse_expression(ps) setup = (ps = ParseState("struct Name end"))
@@ -114,12 +114,12 @@ suite["call"]["10 kw"] = @benchmarkable CSTParser.parse_expression(ps) setup = (
 # baseline = BenchmarkTools.load("bench1.ignore.json")
 # [leaves(minimum(baseline)) leaves(minimum(results)) leaves(ratio(minimum(baseline), minimum(results)))]
 
-function compare(suite, save = "")
+function compare(suite, against = "baseline.ignore.json", save = "")
     results = run(suite)
     if !isempty(save)
         BenchmarkTools.save(joinpath(@__DIR__, save), results)
     end
-    baseline = BenchmarkTools.load(joinpath(@__DIR__, "baseline.ignore.json"))[1]
+    baseline = BenchmarkTools.load(joinpath(@__DIR__, against))[1]
     display_comp(baseline, results)
 end
 

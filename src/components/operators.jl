@@ -47,10 +47,10 @@ isoperator(kind) = Tokens.begin_ops < kind < Tokens.end_ops
 isoperator(t::AbstractToken) = isoperator(t.kind)
 
 
+isunaryop(op) = false
 isunaryop(op::OPERATOR) = isunaryop(op.kind)
 isunaryop(t::AbstractToken) = isunaryop(t.kind)
-
-isunaryop(kind) = kind == Tokens.ISSUBTYPE ||
+isunaryop(kind::Tokens.Kind) = kind == Tokens.ISSUBTYPE ||
                   kind == Tokens.ISSUPERTYPE ||
                   kind == Tokens.PLUS ||
                   kind == Tokens.MINUS ||
@@ -65,9 +65,9 @@ isunaryop(kind) = kind == Tokens.ISSUBTYPE ||
                   kind == Tokens.EX_OR ||
                   kind == Tokens.COLON
 
-
+isunaryandbinaryop(t) = false
 isunaryandbinaryop(t::AbstractToken) = isunaryandbinaryop(t.kind)
-isunaryandbinaryop(kind) = kind == Tokens.PLUS ||
+isunaryandbinaryop(kind::Tokens.Kind) = kind == Tokens.PLUS ||
                            kind == Tokens.MINUS ||
                            kind == Tokens.EX_OR ||
                            kind == Tokens.ISSUBTYPE ||
@@ -77,9 +77,10 @@ isunaryandbinaryop(kind) = kind == Tokens.PLUS ||
                            kind == Tokens.DECLARATION ||
                            kind == Tokens.COLON
 
+isbinaryop(op) = false
 isbinaryop(op::OPERATOR) = isbinaryop(op.kind)
 isbinaryop(t::AbstractToken) = isbinaryop(t.kind)
-isbinaryop(kind) = isoperator(kind) &&
+isbinaryop(kind::Tokens.Kind) = isoperator(kind) &&
                     !(kind == Tokens.SQUARE_ROOT ||
                     kind == Tokens.CUBE_ROOT ||
                     kind == Tokens.QUAD_ROOT ||
@@ -149,13 +150,13 @@ LtoR(prec::Int) = AssignmentOp ≤ prec ≤ LazyAndOp || prec == PowerOp
 
 Having hit a unary operator at the start of an expression return a call.
 """
-function parse_unary(ps::ParseState, op)
+function parse_unary(ps::ParseState, op::OPERATOR)
     K,dot = op.kind, op.dot
-    if is_colon(op)
+    if op isa OPERATOR && op.kind == Tokens.COLON
         ret = parse_unary_colon(ps, op)
     elseif (is_plus(op) || is_minus(op)) && (ps.nt.kind == Tokens.INTEGER || ps.nt.kind == Tokens.FLOAT) && isemptyws(ps.ws) && ps.nnt.kind!=Tokens.CIRCUMFLEX_ACCENT
         arg = LITERAL(next(ps))
-        ret = LITERAL(op.fullspan + arg.fullspan, first(arg.span):(last(arg.span) + length(op.span)), string(is_plus(op) ? "+" : "-" , val(ps.t, ps)), ps.t.kind)
+        ret = LITERAL(op.fullspan + arg.fullspan, (op.fullspan + arg.span), string(is_plus(op) ? "+" : "-" , val(ps.t, ps)), ps.t.kind)
     else
         P = precedence(K)
         prec = P == DeclarationOp ? DeclarationOp :
@@ -172,12 +173,11 @@ function parse_unary(ps::ParseState, op)
     return ret
 end
 
-function parse_unary_colon(ps::ParseState, op)
+function parse_unary_colon(ps::ParseState, op::OPERATOR)
     if Tokens.begin_keywords < ps.nt.kind < Tokens.end_keywords
         ret = EXPR{Quotenode}(Any[op, IDENTIFIER(next(ps))])
     elseif Tokens.begin_literal < ps.nt.kind < Tokens.end_literal ||
-        isoperator(ps.nt.kind) ||
-        ps.nt.kind == Tokens.IDENTIFIER
+        isoperator(ps.nt.kind) || ps.nt.kind == Tokens.IDENTIFIER
         ret = EXPR{Quotenode}(Any[op, INSTANCE(next(ps))])
     elseif closer(ps)
         ret = op
