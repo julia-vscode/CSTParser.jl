@@ -35,6 +35,7 @@ function test_expr(str, show_data = true)
 end
 
 @testset "All tests" begin
+@test Meta.parse("1,") == Expr(:tuple, 1)
 @testset "Operators" begin
     # @testset "Binary Operators" begin
     #     for iter = 1:25
