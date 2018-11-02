@@ -204,6 +204,8 @@ end
 function Expr(x::EXPR{MacroName})
     if x.args[2] isa IDENTIFIER
         return Symbol("@", x.args[2].val)
+    else
+        return Symbol("@")
     end
 end
 
@@ -815,7 +817,7 @@ function Expr(x::EXPR{StringH})
     ret
 end
 
-UNICODE_OPS_REVERSE = Dict{Tokenize.Tokens.Kind,Symbol}()
+const UNICODE_OPS_REVERSE = Dict{Tokenize.Tokens.Kind,Symbol}()
 for (k, v) in Tokenize.Tokens.UNICODE_OPS
     UNICODE_OPS_REVERSE[v] = Symbol(k)
 end

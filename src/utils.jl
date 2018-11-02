@@ -592,7 +592,7 @@ end
 
 
 function trailing_ws_length(x)
-    x.fullspan - length(x.span)
+    x.fullspan - x.span
 end
 
 

@@ -23,7 +23,7 @@ interpolating opoerators.
 """
 function parse_string_or_cmd(ps::ParseState, prefixed = false)
     sfullspan = ps.nt.startbyte - ps.t.startbyte
-    sspan = broadcast(+, 1, (0:(ps.t.endbyte - ps.t.startbyte)))
+    sspan = 1 + ps.t.endbyte - ps.t.startbyte
 
     istrip = (ps.t.kind == Tokens.TRIPLE_STRING) || (ps.t.kind == Tokens.TRIPLE_CMD)
     iscmd = ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
@@ -88,16 +88,18 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         while true
             if eof(input)
                 lspan = position(b)
-                str = tostr(b)
-                if sizeof(str) == 0
+                # str = tostr(b)
+                if b.size == 0
+                # if sizeof(str) == 0
                     ex = ErrorToken()
                 elseif istrip
+                    str = tostr(b)
                     str = str[1:prevind(str, prevind(str, sizeof(str), 2))]
-                    ex = LITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, 1:(lspan + startbytes), str, Tokens.STRING)
+                    ex = LITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, Tokens.STRING)
                 else
-                    # str = istrip ? str[1:prevind(str, prevind(str, sizeof(str), 2))] : str[1:prevind(str, sizeof(str))]
+                    str = tostr(b)
                     str =  str[1:prevind(str, sizeof(str))]
-                    ex = LITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, 1:(lspan + startbytes), str, Tokens.STRING)
+                    ex = LITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, Tokens.STRING)
                 end
                 push!(ret.args, ex)
                 istrip && adjust_lcp(ex, true)
@@ -110,13 +112,13 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             elseif c == '$'
                 lspan = position(b)
                 str = tostr(b)
-                ex = LITERAL(lspan + startbytes, 1:(lspan + startbytes), str, Tokens.STRING)
+                ex = LITERAL(lspan + startbytes, lspan + startbytes, str, Tokens.STRING)
                 push!(ret.args, ex); istrip && adjust_lcp(ex)
                 startbytes = 0
-                op = OPERATOR(1, 1:1, Tokens.EX_OR, false)
+                op = OPERATOR(1, 1, Tokens.EX_OR, false)
                 if peekchar(input) == '('
-                    lparen = PUNCTUATION(Tokens.LPAREN, 1, 1:1)
-                    rparen = PUNCTUATION(Tokens.RPAREN, 1, 1:1)
+                    lparen = PUNCTUATION(Tokens.LPAREN, 1, 1)
+                    rparen = PUNCTUATION(Tokens.RPAREN, 1, 1)
                     skip(input, 1)
                     ps1 = ParseState(input)
                     
@@ -137,12 +139,11 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     ps1 = ParseState(input)
                     next(ps1)
                     if ps1.t.kind == Tokens.WHITESPACE
-                        t = EXPR{ErrorToken}([], ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
+                        t = EXPR{ErrorToken}([], ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1)
                     else
                         t = INSTANCE(ps1)
                     end
                     # Attribute trailing whitespace to the string
-                    # t.fullspan = length(t.span)
                     t = adjustspan(t)
                     call = UnarySyntaxOpCall(op, t)
                     push!(ret.args, call)
@@ -173,7 +174,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     end
 
     if (length(ret.args) == 1 && ret.args[1] isa LITERAL && ret.args[1].kind in single_string_T)
-        ret = ret.args[1]
+        ret = ret.args[1]::LITERAL
     end
     update_span!(ret)
 
@@ -181,13 +182,13 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
 end
 
 
-adjustspan(x::IDENTIFIER) = IDENTIFIER(length(x.span), x.span, x.val)
-adjustspan(x::KEYWORD)= KEYWORD(x.kind, length(x.span), x.span)
-adjustspan(x::OPERATOR) = OPERATOR(length(x.span), x.span, x.kind, x.dot)
-adjustspan(x::LITERAL) = LITERAL(length(x.span), x.span, x.val, x.kind)
-adjustspan(x::PUNCTUATION) = PUNCTUATION(x.kind, length(x.span), x.span)
+adjustspan(x::IDENTIFIER) = IDENTIFIER(x.span, x.span, x.val)
+adjustspan(x::KEYWORD)= KEYWORD(x.kind, x.span, x.span)
+adjustspan(x::OPERATOR) = OPERATOR(x.span, x.span, x.kind, x.dot)
+adjustspan(x::LITERAL) = LITERAL(x.span, x.span, x.val, x.kind)
+adjustspan(x::PUNCTUATION) = PUNCTUATION(x.kind, x.span, x.span)
 function adjustspan(x::EXPR) 
-    x.fullspan = length(x.span)
+    x.fullspan = x.span
     return x
 end
 

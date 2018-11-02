@@ -20,7 +20,7 @@ function test_expr(str, show_data = true)
     x, ps = CSTParser.parse(ParseState(str))
 
     x0 = Expr(x)
-    x1 = remlineinfo!(flisp_parse(str))
+    x1 = remlineinfo!(Meta.parse(str))
     if ps.errored || x0 != x1
         if show_data
             println("Mismatch between flisp and CSTParser when parsing string $str")
@@ -35,6 +35,7 @@ function test_expr(str, show_data = true)
 end
 
 @testset "All tests" begin
+@test Meta.parse("1,") == Expr(:tuple, 1)
 @testset "Operators" begin
     # @testset "Binary Operators" begin
     #     for iter = 1:25
@@ -336,8 +337,7 @@ end
     @test "Int[(y,x) for y in X]" |> test_expr
     @test """
     [a
-    for a = 1:2]
-    """ |> test_expr
+    for a = 1:2]""" |> test_expr
     @test "[ V[j][i]::T for i=1:length(V[1]), j=1:length(V) ]" |> test_expr
     @test "all(d ≥ 0 for d in B.dims)" |> test_expr
     @test "(arg for x in X)" |> test_expr

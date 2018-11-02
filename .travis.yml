@@ -5,7 +5,6 @@ os:
   - osx
 julia:
   - 1.0
-  - 1.0.1
 notifications:
   email: false
 # uncomment the following lines to override the default test script

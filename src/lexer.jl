@@ -80,7 +80,9 @@ function next(ps::ParseState)
         ps.nnt = ps.nt
         ps.done = ps.done
     else
-        ps.nnt, ps.done  = iterate(ps.l, ps.done)
+        ps.nnt = Tokenize.Lexers.next_token(ps.l)
+        ps.done = ps.nnt == Tokens.ENDMARKER
+        # ps.nnt, ps.done  = iterate(ps.l, ps.done)
     end
     
     # combines whitespace, comments and semicolons

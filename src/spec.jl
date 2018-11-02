@@ -33,7 +33,7 @@ mutable struct EXPR{T} <: AbstractEXPR
     fullspan::Int
     # The range of bytes within the fullspan that constitute the actual expression,
     # excluding any leading/trailing whitespace or other trivia. 1-indexed
-    span::UnitRange{Int}
+    span::Int
 end
 
 
@@ -41,38 +41,38 @@ abstract type LeafNode <: AbstractEXPR end
     
 struct IDENTIFIER <: LeafNode
     fullspan::Int
-    span::UnitRange{Int}
+    span::Int
     val::String
-    IDENTIFIER(fullspan::Int, span::UnitRange{Int}, val::String) = new(fullspan, span, val)
+    IDENTIFIER(fullspan::Int, span::Int, val::String) = new(fullspan, span, val)
 end
-@noinline IDENTIFIER(ps::ParseState) = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), val(ps.t, ps))
+@noinline IDENTIFIER(ps::ParseState) = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps))
 
 struct PUNCTUATION <: LeafNode
     kind::Tokenize.Tokens.Kind
     fullspan::Int
-    span::UnitRange{Int}
+    span::Int
 end
-@noinline PUNCTUATION(ps::ParseState) = PUNCTUATION(ps.t.kind, ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
+@noinline PUNCTUATION(ps::ParseState) = PUNCTUATION(ps.t.kind, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1)
 
 struct OPERATOR <: LeafNode
     fullspan::Int
-    span::UnitRange{Int}
+    span::Int
     kind::Tokenize.Tokens.Kind
     dot::Bool
 end
-@noinline OPERATOR(ps::ParseState) = OPERATOR(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), ps.t.kind, ps.t.dotop)
+@noinline OPERATOR(ps::ParseState) = OPERATOR(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, ps.t.kind, ps.t.dotop)
 
 struct KEYWORD <: LeafNode
     kind::Tokenize.Tokens.Kind
     fullspan::Int
-    span::UnitRange{Int}
+    span::Int
 end
-@noinline KEYWORD(ps::ParseState) = KEYWORD(ps.t.kind, ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1))
+@noinline KEYWORD(ps::ParseState) = KEYWORD(ps.t.kind, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1)
 
 
 struct LITERAL <: LeafNode
     fullspan::Int
-    span::UnitRange{Int}
+    span::Int
     val::String
     kind::Tokenize.Tokens.Kind
 end
@@ -81,13 +81,13 @@ function LITERAL(ps::ParseState)
        ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
         return parse_string_or_cmd(ps)
     else
-        LITERAL(ps.nt.startbyte - ps.t.startbyte, 1:(ps.t.endbyte - ps.t.startbyte + 1), val(ps.t, ps), ps.t.kind)
+        LITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), ps.t.kind)
     end
 end
 
 # AbstractTrees.children(x::EXPR) = x.args
 
-span(x::AbstractEXPR) = length(x.span)
+span(x::AbstractEXPR) = x.span
 
 function update_span!(x) end
 function update_span!(x::EXPR)
@@ -96,25 +96,24 @@ function update_span!(x::EXPR)
     for a in x.args
         x.fullspan += a.fullspan
     end
-    x.span = first(first(x.args).span):(x.fullspan - last(x.args).fullspan + last(last(x.args).span))
+    x.span = x.fullspan - last(x.args).fullspan + last(x.args).span
     return 
 end
 
 function EXPR{T}(args::Vector) where {T}
-    ret = EXPR{T}(args, 0, 1:0)
+    ret = EXPR{T}(args, 0, 0)
     update_span!(ret)
     ret
 end
 
 function Base.push!(e::EXPR, arg)
-    e.span = first(e.span):(e.fullspan + last(arg.span))
+    e.span = e.fullspan + arg.span
     e.fullspan += arg.fullspan
     push!(e.args, arg)
 end
 
 function Base.pushfirst!(e::EXPR, arg)
     e.fullspan += arg.fullspan
-    e.span = first(arg.span):last(e.span)
     pushfirst!(e.args, arg)
 end
 
@@ -122,9 +121,9 @@ function Base.pop!(e::EXPR)
     arg = pop!(e.args)
     e.fullspan -= arg.fullspan
     if isempty(e.args)
-        e.span = 1:0
+        e.span = 0
     else
-        e.span = first(e.span):(e.fullspan - last(e.args).fullspan + last(last(e.args).span))
+        e.span = e.fullspan - last(e.args).fullspan + last(e.args).span
     end
     arg
 end
@@ -137,13 +136,13 @@ end
 function Base.append!(a::EXPR, b::EXPR)
     append!(a.args, b.args)
     a.fullspan += b.fullspan
-    a.span = first(a.span):last(b.span)
+    a.span = a.fullspan + last(b.span)
 end
 
 function Base.append!(a::EXPR, b::KEYWORD)
     append!(a.args, b.args)
     a.fullspan += b.fullspan
-    a.span = first(a.span):last(b.span)
+    a.span = a.fullspan + last(b.span)
 end
 
 function INSTANCE(ps::ParseState)
@@ -184,10 +183,10 @@ mutable struct UnaryOpCall <: AbstractEXPR
     op::OPERATOR
     arg
     fullspan::Int
-    span::UnitRange{Int}
+    span::Int
     function UnaryOpCall(op, arg)
         fullspan = op.fullspan + arg.fullspan
-        new(op, arg, fullspan, 1:(fullspan - arg.fullspan + length(arg.span)))
+        new(op, arg, fullspan, fullspan - arg.fullspan + arg.span)
     end
 end
 
@@ -195,10 +194,10 @@ mutable struct UnarySyntaxOpCall <: AbstractEXPR
     arg1
     arg2
     fullspan::Int
-    span::UnitRange{Int}
+    span::Int
     function UnarySyntaxOpCall(arg1, arg2)
         fullspan = arg1.fullspan + arg2.fullspan
-        new(arg1, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
+        new(arg1, arg2, fullspan, fullspan - arg2.fullspan + arg2.span)
     end
 end
 
@@ -207,10 +206,10 @@ mutable struct BinaryOpCall <: AbstractEXPR
     op::OPERATOR
     arg2
     fullspan::Int
-    span::UnitRange{Int}
+    span::Int
     function BinaryOpCall(arg1, op, arg2)
         fullspan = arg1.fullspan + op.fullspan + arg2.fullspan
-        new(arg1, op, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
+        new(arg1, op, arg2, fullspan, fullspan - arg2.fullspan + arg2.span)
     end
 end
 
@@ -219,10 +218,10 @@ mutable struct BinarySyntaxOpCall <: AbstractEXPR
     op::OPERATOR
     arg2
     fullspan::Int
-    span::UnitRange{Int}
+    span::Int
     function BinarySyntaxOpCall(arg1, op, arg2)
         fullspan = arg1.fullspan + op.fullspan + arg2.fullspan
-        new(arg1, op, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
+        new(arg1, op, arg2, fullspan, fullspan - arg2.fullspan + arg2.span)
     end
 end
 
@@ -231,13 +230,13 @@ mutable struct WhereOpCall <: AbstractEXPR
     op::OPERATOR
     args::Vector
     fullspan::Int
-    span::UnitRange{Int}
+    span::Int
     function WhereOpCall(arg1, op::OPERATOR, args)
         fullspan = arg1.fullspan + op.fullspan
         for a in args
             fullspan += a.fullspan
         end
-        new(arg1, op, args, fullspan, 1:(fullspan - last(args).fullspan + length(last(args).span)))
+        new(arg1, op, args, fullspan, fullspan - last(args).fullspan + last(args).span)
     end
 end
 
@@ -248,10 +247,10 @@ mutable struct ConditionalOpCall <: AbstractEXPR
     op2::OPERATOR
     arg2
     fullspan::Int
-    span::UnitRange{Int}
+    span::Int
     function ConditionalOpCall(cond, op1, arg1, op2, arg2)
         fullspan = cond.fullspan + op1.fullspan + arg1.fullspan + op2.fullspan + arg2.fullspan
-        new(cond, op1, arg1, op2, arg2, fullspan, 1:(fullspan - arg2.fullspan + length(arg2.span)))
+        new(cond, op1, arg1, op2, arg2, fullspan, fullspan - arg2.fullspan + arg2.span)
     end
 end
 
@@ -318,13 +317,13 @@ abstract type TypedVcat <: Head end
 abstract type Vect <: Head end
 
 abstract type ErrorToken <: Head end
-ErrorToken() = EXPR{ErrorToken}(Any[], 0, 1:0)
+ErrorToken() = EXPR{ErrorToken}(Any[], 0, 0)
 ErrorToken(x) = EXPR{ErrorToken}(Any[x])
 
 Quotenode(x) = EXPR{Quotenode}(Any[x])
 
-const TRUE = LITERAL(0, 1:0, "", Tokens.TRUE)
-const FALSE = LITERAL(0, 1:0, "", Tokens.FALSE)
-const NOTHING = LITERAL(0, 1:0, "", Tokens.NOTHING)
+const TRUE = LITERAL(0, 0, "", Tokens.TRUE)
+const FALSE = LITERAL(0, 0, "", Tokens.FALSE)
+const NOTHING = LITERAL(0, 0, "", Tokens.NOTHING)
 
-const GlobalRefDOC = EXPR{GlobalRefDoc}(Any[], 0, 1:0)
+const GlobalRefDOC = EXPR{GlobalRefDoc}(Any[], 0, 0)
