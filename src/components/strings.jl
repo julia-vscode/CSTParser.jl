@@ -69,7 +69,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     # there are interpolations in the string
     if prefixed != false || iscmd
         t_str = val(ps.t, ps)
-        _val = istrip ? t_str[4:end - 3] : t_str[2:end - 1]
+        _val = istrip ? t_str[4:prevind(t_str, sizeof(t_str), 3)] : t_str[2:prevind(t_str, sizeof(t_str))]
         expr = LITERAL(sfullspan, sspan,
             iscmd ? replace(_val, "\\`" => "`") :
                     replace(_val, "\\\"" => "\""), ps.t.kind)
@@ -121,7 +121,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     rparen = PUNCTUATION(Tokens.RPAREN, 1, 1)
                     skip(input, 1)
                     ps1 = ParseState(input)
-                    
+
                     if ps1.nt.kind == Tokens.RPAREN
                         call = UnarySyntaxOpCall(op, EXPR{InvisBrackets}(Any[lparen, rparen]))
                         push!(ret.args, call)
@@ -154,7 +154,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             end
         end
     end
-    
+
     single_string_T = (Tokens.STRING,ps.t.kind)
     if istrip
         if lcp != nothing && !isempty(lcp)
@@ -187,7 +187,7 @@ adjustspan(x::KEYWORD)= KEYWORD(x.kind, x.span, x.span)
 adjustspan(x::OPERATOR) = OPERATOR(x.span, x.span, x.kind, x.dot)
 adjustspan(x::LITERAL) = LITERAL(x.span, x.span, x.val, x.kind)
 adjustspan(x::PUNCTUATION) = PUNCTUATION(x.kind, x.span, x.span)
-function adjustspan(x::EXPR) 
+function adjustspan(x::EXPR)
     x.fullspan = x.span
     return x
 end

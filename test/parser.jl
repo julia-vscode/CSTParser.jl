@@ -730,4 +730,9 @@ end
     CSTParser.parse("primitive = 1").fullspan == 13
 end
 
+@testset "Command or string with unicode" begin
+    @test "```αhelloworldω```" |> test_expr
+    @test "\"αhelloworldω\"" |> test_expr
+end
+
 end
