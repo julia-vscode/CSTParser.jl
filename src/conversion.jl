@@ -116,7 +116,7 @@ function Expr_float(x)
     if 'f' in x.val
         return Base.parse(Float32, replace(x.val, 'f' => 'e'))
     end
-    Base.parse(Float64, x.val)
+    Base.parse(Float64, replace(x.val, "_" => ""))
 end
 function Expr_char(x)
     val = _unescape_string(x.val[2:prevind(x.val, sizeof(x.val))])

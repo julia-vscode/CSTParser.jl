@@ -735,4 +735,8 @@ end
     @test "\"αhelloworldω\"" |> test_expr
 end
 
+@testset "conversion of floats with underscore" begin
+    @test "30.424_876_125_859_513" |> test_expr
+end
+
 end
