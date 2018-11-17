@@ -1,7 +1,8 @@
 is_func_call(x) = false
-is_func_call(x::EXPR) = false
 is_func_call(x::EXPR{Call}) = true
+is_func_call(x::EXPR{InvisBrackets}) = is_func_call(x.args[2])
 is_func_call(x::UnaryOpCall) = true
+is_func_call(x::BinaryOpCall) = true
 function is_func_call(x::BinarySyntaxOpCall)
     if is_decl(x.op)
         return is_func_call(x.arg1)

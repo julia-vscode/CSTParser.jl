@@ -105,11 +105,12 @@ function Expr_int(x)
     is_hex && return sized_uint_literal(val, 4)
     is_oct && return sized_uint_oct_literal(val)
     is_bin && return sized_uint_literal(val, 1)
-    sizeof(val) < sizeof(TYPEMAX_INT64_STR) && return Base.parse(Int64, val)
-    val < TYPEMAX_INT64_STR && return Base.parse(Int64, val)
-    sizeof(val) < sizeof(TYPEMAX_INT128_STR) && return Base.parse(Int128, val)
-    val < TYPEMAX_INT128_STR && return Base.parse(Int128, val)
-    Base.parse(BigInt, val)
+    sizeof(val) <= sizeof(TYPEMAX_INT64_STR) && return Base.parse(Int64, val)
+    return Meta.parse(val)
+    # # val < TYPEMAX_INT64_STR && return Base.parse(Int64, val)
+    # sizeof(val) <= sizeof(TYPEMAX_INTval < TYPEMAX_INT128_STR128_STR) && return Base.parse(Int128, val)
+    # # val < TYPEMAX_INT128_STR && return Base.parse(Int128, val)
+    # Base.parse(BigInt, val)
 end
 
 function Expr_float(x)
@@ -203,7 +204,11 @@ end
 
 function Expr(x::EXPR{MacroName})
     if x.args[2] isa IDENTIFIER
-        return Symbol("@", x.args[2].val)
+        if x.args[2].val == "."
+            return Symbol("@", "__dot__")
+        else
+            return Symbol("@", x.args[2].val)
+        end
     else
         return Symbol("@")
     end
@@ -333,7 +338,13 @@ function Expr(x::EXPR{FunctionDef})
     end
     ret
 end
-Expr(x::EXPR{Macro}) = Expr(:macro, Expr(x.args[2]), Expr(x.args[3]))
+function Expr(x::EXPR{Macro}) 
+    if length(x.args) == 3
+        Expr(:macro, Expr(x.args[2]))
+    else
+        Expr(:macro, Expr(x.args[2]), Expr(x.args[3]))
+    end
+end
 Expr(x::EXPR{ModuleH}) = Expr(:module, true, Expr(x.args[2]), Expr(x.args[3]))
 Expr(x::EXPR{BareModule}) = Expr(:module, false, Expr(x.args[2]), Expr(x.args[3]))
 

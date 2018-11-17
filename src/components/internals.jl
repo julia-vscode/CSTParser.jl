@@ -104,7 +104,7 @@ end
 
 Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
 """
-function parse_call(ps::ParseState, ret)
+function parse_call(ps::ParseState, ret, ismacro = false)
     sb = ps.nt.startbyte - ret.fullspan
     if is_minus(ret) || is_not(ret)
         arg = @closer ps unary @closer ps inwhere @precedence ps 13 parse_expression(ps)
@@ -127,7 +127,7 @@ function parse_call(ps::ParseState, ret)
         arg = @precedence ps PowerOp parse_expression(ps)
         ret = EXPR{Call}(Any[ret; arg.args])
     else
-        ismacro = ret isa EXPR{MacroName}
+        !ismacro && ret isa EXPR{MacroName} && (ismacro = true)
         args = Any[ret, PUNCTUATION(next(ps))]
         @closeparen ps @default ps parse_comma_sep(ps, args, !ismacro)
         accept_rparen(ps, args)
@@ -222,7 +222,7 @@ function parse_macrocall(ps::ParseState)
     if ps.nt.kind == Tokens.COMMA
         return EXPR{MacroCall}(Any[mname], mname.fullspan, mname.span)
     elseif isemptyws(ps.ws) && ps.nt.kind == Tokens.LPAREN
-        return parse_call(ps, mname)
+        return parse_call(ps, mname, true)
     else
         args = Any[mname]
         insquare = ps.closer.insquare

@@ -664,8 +664,10 @@ function _unescape_string(io, s::AbstractString)
                     popfirst!(a)
                 end
                 if k == 1
-                    throw(ArgumentError("invalid $(m == 2 ? "hex (\\x)" :
-                                            "unicode (\\u)") escape sequence used in $(repr(s))"))
+                    # throw(ArgumentError("invalid $(m == 2 ? "hex (\\x)" :
+                    #                         "unicode (\\u)") escape sequence used in $(repr(s))"))
+                    # push error to ParseState?
+                    n = 0
                 end
                 if m == 2 # \x escape sequence
                     write(io, UInt8(n))
@@ -681,7 +683,9 @@ function _unescape_string(io, s::AbstractString)
                     popfirst!(a)
                 end
                 if n > 255
-                    throw(ArgumentError("octal escape sequence out of range"))
+                    # throw(ArgumentError("octal escape sequence out of range"))
+                    # push error to ParseState?
+                    n = 255
                 end
                 write(io, UInt8(n))
             else

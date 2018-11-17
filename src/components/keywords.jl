@@ -238,16 +238,22 @@ end
     sb1  = ps.nt.startbyte
     blockargs = parse_block(ps)
 
-    # return EXPR{Macro}(Any[kw, sig, EXPR{Block}(blockargs), accept_end(ps)])
-    if isempty(blockargs)
-        block = EXPR{Block}(blockargs, 0, 0)
+    if sig isa IDENTIFIER
+        ender = accept_end(ps)
+        fullspan1 = ps.nt.startbyte - sb
+        ret = EXPR{Macro}(Any[kw, sig, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
+    elseif isempty(blockargs)
+        ender = accept_end(ps)
+        fullspan1 = ps.nt.startbyte - sb
+        ret = EXPR{Macro}(Any[kw, sig, EXPR{Block}([]), ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
     else
         fullspan = ps.nt.startbyte - sb1
         block = EXPR{Block}(blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
+        ender = accept_end(ps)
+        fullspan1 = ps.nt.startbyte - sb
+        ret = EXPR{Macro}(Any[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
     end
-    ender = accept_end(ps)
-    fullspan1 = ps.nt.startbyte - sb
-    return EXPR{Macro}(Any[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
+    return ret
 end
 
 # loops
@@ -379,7 +385,7 @@ end
             end
             
             catchblockargs = parse_block(ps, Any[], (Tokens.END, Tokens.FINALLY))
-            if !(caught isa IDENTIFIER || caught == FALSE)
+            if !(caught isa IDENTIFIER || caught == FALSE || (caught isa UnarySyntaxOpCall && caught.arg1 isa OPERATOR && caught.arg1.kind == Tokens.EX_OR))
                 pushfirst!(catchblockargs, caught)
                 caught = FALSE
             end

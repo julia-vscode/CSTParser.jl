@@ -354,6 +354,9 @@ end
 end
 
 @testset "Macros " begin
+    @test "macro m end" |> test_expr
+    @test "macro m() end" |> test_expr
+    @test "macro m() a end" |> test_expr
     @test "@mac" |> test_expr
     @test "@mac a b c" |> test_expr
     @test "@mac f(5)" |> test_expr
@@ -688,6 +691,9 @@ end
 end""" |> test_expr
     @test "-1^a" |> test_expr_broken
     @test "function(f, args...; kw...) end" |> test_expr_broken
+    @test "2a * b" |> test_expr
+    @test "(g1090(x::T)::T) where {T} = x+1.0" |> test_expr
+    @test "(:) = Colon()" |> test_expr
 end
 
 @testset "Broken things" begin

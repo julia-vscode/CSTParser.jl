@@ -319,7 +319,7 @@ function parse_operator(ps::ParseState, @nospecialize(ret), op)
         push!(ret, op)
         push!(ret, nextarg)
         ret = ret
-    elseif ret isa BinaryOpCall && (is_star(op) || is_plus(op)) && op.kind == ret.op.kind && !ret.op.dot
+    elseif ret isa BinaryOpCall && (is_star(op) || is_plus(op)) && op.kind == ret.op.kind && !ret.op.dot && ret.op.span > 0
         nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
         ret = EXPR{ChainOpCall}(Any[ret.arg1, ret.op, ret.arg2, op, nextarg])
     elseif is_eq(op)
