@@ -215,8 +215,13 @@ function Expr(x::EXPR{MacroName})
 end
 
 # cross compatability for line number insertion in macrocalls
+if VERSION > v"1.1-"
+Expr_cmd(x) = Expr(:macrocall, GlobalRef(Core, Symbol("@cmd")), nothing, x.val)
+Expr_tcmd(x) = Expr(:macrocall, GlobalRef(Core, Symbol("@cmd")), nothing, x.val)
+else
 Expr_cmd(x) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
 Expr_tcmd(x) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
+end
 
 function Expr(x::EXPR{x_Str})
     if x.args[1] isa BinarySyntaxOpCall
