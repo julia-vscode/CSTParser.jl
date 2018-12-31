@@ -20,8 +20,10 @@ end
 function parse_tuple(ps::ParseState, ret::EXPR{TupleH})
     op = PUNCTUATION(next(ps))
 
-    if closer(ps) || (isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX)
+    if (isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX)
         push!(ret, op)
+    elseif closer(ps)
+        push!(ret, ErrorToken(op))
     else
         nextarg = @closer ps tuple parse_expression(ps)
         if !(is_lparen(first(ret.args)))
