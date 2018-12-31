@@ -6,9 +6,10 @@ tuple.
 """
 function parse_tuple(ps::ParseState, @nospecialize(ret))
     op = PUNCTUATION(next(ps))
-
-    if closer(ps) || (isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX)
+    if (isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX)
         ret = EXPR{TupleH}(Any[ret, op])
+    elseif closer(ps)
+        ret = ErrorToken(EXPR{TupleH}(Any[ret, op]))
     else
         nextarg = @closer ps tuple parse_expression(ps)
         ret = EXPR{TupleH}(Any[ret, op, nextarg])
