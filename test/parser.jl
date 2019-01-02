@@ -35,7 +35,7 @@ function test_expr(str, show_data = true)
 end
 
 @testset "All tests" begin
-@test Meta.parse("1,") == Expr(:tuple, 1)
+@test Meta.parse("(1,)") == Expr(:tuple, 1)
 @testset "Operators" begin
     # @testset "Binary Operators" begin
     #     for iter = 1:25
@@ -192,7 +192,11 @@ end
 end
 
 @testset "Tuples" begin
-    @test "1," |> test_expr
+    @static if VERSION > v"1.1-"
+        @test CSTParser.parse("1,") isa CSTParser.EXPR{CSTParser.ErrorToken}
+    else
+        @test "1," |> test_expr
+    end
     @test "1,2" |> test_expr
     @test "1,2,3" |> test_expr
     @test "()" |> test_expr
@@ -562,7 +566,11 @@ end
     @test "isa(a,b) != c" |> test_expr
     @test "isa(a,a) != isa(a,a)" |> test_expr
     @test "@mac return x" |> test_expr
-    @test "a,b," |> test_expr
+    @static if VERSION > v"1.1-"
+        @test CSTParser.parse("a,b,") isa CSTParser.EXPR{CSTParser.ErrorToken}
+    else
+        @test "a,b," |> test_expr
+    end
     @test "m!=m" |> test_expr
     @test "+(x...)" |> test_expr
     @test "+(promote(x,y)...)" |> test_expr
