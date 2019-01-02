@@ -12,4 +12,4 @@ matrix:
   allow_failures:
   - julia: nightly
 after_success:
-  - julia -e 'cd(Pkg.dir("CSTParser")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
+  - julia -e 'using Pkg; cd(Pkg.dir("CSTParser")); Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
