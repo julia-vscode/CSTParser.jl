@@ -268,8 +268,17 @@ end
 
 function parse_operator_dot(ps::ParseState, @nospecialize(ret), op)
     if ps.nt.kind == Tokens.LPAREN
-        sig = @default ps parse_call(ps, ret)
-        nextarg = EXPR{TupleH}(sig.args[2:end])
+        @static if VERSION > v"1.1-"
+            iserred = ps.ws.kind != Tokens.EMPTY_WS
+            sig = @default ps parse_call(ps, ret)
+            nextarg = EXPR{TupleH}(sig.args[2:end])
+            if iserred
+                nextarg = ErrorToken(nextarg)
+            end
+        else
+            sig = @default ps parse_call(ps, ret)
+            nextarg = EXPR{TupleH}(sig.args[2:end])
+        end
     elseif iskw(ps.nt) || ps.nt.kind == Tokens.IN || ps.nt.kind == Tokens.ISA || ps.nt.kind == Tokens.WHERE
         nextarg = IDENTIFIER(next(ps))
     elseif ps.nt.kind == Tokens.COLON
