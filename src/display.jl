@@ -1,5 +1,5 @@
 function Base.show(io::IO, x::EXPR{T}, d = 0, er = false) where T
-    printstyled(io, " "^d, T, "  ", x.fullspan, " (", x.span, ")\n", color = er ? :red : :normal)
+    printstyled(io, " "^d, T.name.name, "  ", x.fullspan, " (", x.span, ")\n", color = er ? :red : :normal)
     for a in x.args
         show(io, a, d + 1, er)
     end

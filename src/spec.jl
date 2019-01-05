@@ -254,7 +254,6 @@ mutable struct ConditionalOpCall <: AbstractEXPR
     end
 end
 
-abstract type ComparisonOpCall <: Head end
 abstract type ChainOpCall <: Head end
 abstract type ColonOpCall <: Head end
 abstract type Abstract <: Head end
