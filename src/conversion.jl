@@ -1,8 +1,8 @@
 import Base: Expr
 
 # Terminals
-Expr(x::IDENTIFIER) = Symbol(normalize_julia_identifier(x.val))
-function Expr(x::KEYWORD)
+convert_expr(loc::Location, x::IDENTIFIER) = Symbol(normalize_julia_identifier(x.val))
+function convert_expr(loc::Location, x::KEYWORD)
     if x.kind == Tokens.BREAK
         return Expr(:break)
     elseif x.kind == Tokens.CONTINUE
@@ -11,8 +11,8 @@ function Expr(x::KEYWORD)
         return Symbol(lowercase(string(x.kind)))
     end
 end
-Expr(x::OPERATOR) = x.dot ? Symbol(:., UNICODE_OPS_REVERSE[x.kind]) : UNICODE_OPS_REVERSE[x.kind]
-Expr(x::PUNCTUATION)= string(x.kind)
+convert_expr(loc::Location, x::OPERATOR) = x.dot ? Symbol(:., UNICODE_OPS_REVERSE[x.kind]) : UNICODE_OPS_REVERSE[x.kind]
+convert_expr(loc::Location, x::PUNCTUATION) = string(x.kind)
 
 function julia_normalization_map(c::Int32, x::Ptr{Nothing})::Int32
     return c == 0x00B5 ? 0x03BC : # micro sign -> greek small letter mu
@@ -65,7 +65,7 @@ function sized_uint_oct_literal(s::AbstractString)
     return Base.parse(BigInt, s)
 end
 
-function Expr(x::LITERAL)
+function convert_expr(loc::Location, x::LITERAL)
     if x.kind == Tokens.TRUE
         return true
     elseif x.kind == Tokens.FALSE
@@ -131,78 +131,107 @@ end
 
 # Expressions
 
+struct LocExpr
+  loc::Location
+  expr
+end
+
+function convert_child(loc, x, i...)
+  loc = loc[i...]
+  LocExpr(loc, convert_expr(loc, x[Location([i...])]))
+end
+
+LocExpr(x::AbstractEXPR) = convert_child(Location(), x)
+
+striploc(x) = x
+striploc(x::Expr) = Expr(x.head, striploc.(x.args)...)
+striploc(x::QuoteNode) = QuoteNode(striploc(x.value))
+striploc(x::LocExpr) = striploc(x.expr)
+
+Expr(x::AbstractEXPR) = striploc(LocExpr(x))
+
+exprloc(x::LocExpr, i) = isempty(i) ? x.loc : exprloc(x.expr, i)
+
+exprloc(x::Expr, i) = isempty(i) ? error("No location information") :
+  exprloc(x.args[i[1]], i[2:end])
+
+exprloc(x, i) = isempty(i) ? error("No location information") :
+  error("Can't take index $i of $(repr(x))")
+
+exprloc(x::AbstractEXPR, i) = exprloc(LocExpr(x), i)
+
 # Fallback
-function Expr(x::EXPR)
+function convert_expr(loc::Location, x::EXPR)
     ret = Expr(:call)
-    for a in x.args
-        if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+    for i in 1:length(x.args)
+        if !(x[i] isa PUNCTUATION)
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{ErrorToken})
+function convert_expr(loc::Location, x::EXPR{ErrorToken})
     ret = Expr(:error)
-    for a in x.args
-        if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+    for i in 1:length(x.args)
+        if !(x[i] isa PUNCTUATION)
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
 
 # Op. expressions
-Expr(x::UnaryOpCall) = Expr(:call, Expr(x.op), Expr(x.arg))
-Expr(x::UnarySyntaxOpCall) = x.arg1 isa OPERATOR ? Expr(Expr(x.arg1), Expr(x.arg2)) : Expr(Expr(x.arg2), Expr(x.arg1))
-Expr(x::BinaryOpCall) = Expr(:call, Expr(x.op), Expr(x.arg1), Expr(x.arg2))
-Expr(x::BinarySyntaxOpCall) = Expr(Expr(x.op), Expr(x.arg1), Expr(x.arg2))
-Expr(x::ConditionalOpCall) = Expr(:if, Expr(x.cond), Expr(x.arg1), Expr(x.arg2))
-function Expr(x::EXPR{ChainOpCall})
-    ret = Expr(:call, Expr(x.args[2]))
+convert_expr(loc::Location, x::UnaryOpCall) = Expr(:call, convert_child(loc, x, :op), convert_child(loc, x, :arg))
+convert_expr(loc::Location, x::UnarySyntaxOpCall) = x.arg1 isa OPERATOR ? Expr(Expr(x.arg1), convert_child(loc, x, :arg2)) : Expr(Expr(x.arg2), convert_child(loc, x, :arg1))
+convert_expr(loc::Location, x::BinaryOpCall) = Expr(:call, convert_child(loc, x, :op), convert_child(loc, x, :arg1), convert_child(loc, x, :arg2))
+convert_expr(loc::Location, x::BinarySyntaxOpCall) = Expr(Expr(x.op), convert_child(loc, x, :arg1), convert_child(loc, x, :arg2))
+convert_expr(loc::Location, x::ConditionalOpCall) = Expr(:if, convert_child(loc, x, :cond), convert_child(loc, x, :arg1), convert_child(loc, x, :arg2))
+function convert_expr(loc::Location, x::EXPR{ChainOpCall})
+    ret = Expr(:call, convert_child(loc, x, 2))
     for i = 1:length(x.args)
         if isodd(i)
-            push!(ret.args, Expr(x.args[i]))
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
-function Expr(x::EXPR{Comparison})
+function convert_expr(loc::Location, x::EXPR{Comparison})
     ret = Expr(:comparison)
-    for a in x.args
-        if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+    for i in 1:length(x.args)
+        if !(x[i] isa PUNCTUATION)
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
-Expr(x::EXPR{ColonOpCall}) = Expr(:call, :(:), Expr(x.args[1]), Expr(x.args[3]), Expr(x.args[5]))
+convert_expr(loc::Location, x::EXPR{ColonOpCall}) = Expr(:call, :(:), convert_child(loc, x, 1), convert_child(loc, x, 3), convert_child(loc, x, 5))
 
 
-function Expr(x::WhereOpCall)
-    ret = Expr(:where, Expr(x.arg1))
+function convert_expr(loc::Location, x::WhereOpCall)
+    ret = Expr(:where, convert_child(loc, x, :arg1))
     for i = 1:length(x.args)
         a = x.args[i]
         if a isa EXPR{Parameters}
-            insert!(ret.args, 2, Expr(a))
+            insert!(ret.args, 2, convert_child(loc[i+1], a))
         elseif !(a isa PUNCTUATION || a isa KEYWORD)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc[i+1], a))
         end
     end
     return ret
 end
 
-function Expr(x::EXPR{TopLevel})
+function convert_expr(loc::Location, x::EXPR{TopLevel})
     ret = Expr(:toplevel)
-    for a in x.args
-        if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+    for i in 1:length(x.args)
+        if !(x[i] isa PUNCTUATION)
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{MacroName})
+function convert_expr(loc::Location, x::EXPR{MacroName})
     if x.args[2] isa IDENTIFIER
         if x.args[2].val == "."
             return Symbol("@", "__dot__")
@@ -223,10 +252,10 @@ Expr_cmd(x) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
 Expr_tcmd(x) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
 end
 
-function Expr(x::EXPR{x_Str})
+function convert_expr(loc::Location, x::EXPR{x_Str})
     if x.args[1] isa BinarySyntaxOpCall
-        mname = Expr(x.args[1])
-        mname.args[2] = QuoteNode(Symbol("@", mname.args[2].value, "_str"))
+        mname = convert_child(loc, x, 1)
+        mname.expr.args[2] = QuoteNode(Symbol("@", striploc(mname).args[2].value, "_str"))
         ret = Expr(:macrocall, mname, nothing)
     else
         ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_str"), nothing)
@@ -237,7 +266,7 @@ function Expr(x::EXPR{x_Str})
     return ret
 end
 
-function Expr(x::EXPR{x_Cmd})
+function convert_expr(loc::Location, x::EXPR{x_Cmd})
     ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_cmd"), nothing)
     for i = 2:length(x.args)
         push!(ret.args, x.args[i].val)
@@ -258,11 +287,11 @@ function clear_at!(x)
     end
 end
 
-function Expr(x::EXPR{MacroCall})
+function convert_expr(loc::Location, x::EXPR{MacroCall})
     ret = Expr(:macrocall)
-    for a in x.args
-        if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+    for i in 1:length(x.args)
+        if !(x[i] isa PUNCTUATION)
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     insert!(ret.args, 2, nothing)
@@ -300,28 +329,30 @@ function remlineinfo!(x)
 end
 
 
-Expr(x::EXPR{Quotenode}) = QuoteNode(Expr(x.args[end]))
+convert_expr(loc::Location, x::EXPR{Quotenode}) = QuoteNode(Expr(x.args[end]))
 
-function Expr(x::EXPR{Call})
+function convert_expr(loc::Location, x::EXPR{Call})
     ret = Expr(:call)
-    for a in x.args
+    for i in 1:length(x.args)
+        a = x.args[i]
         if a isa EXPR{Parameters}
-            insert!(ret.args, 2, Expr(a))
+            insert!(ret.args, 2, convert_child(loc, x, i))
         elseif !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
 
 
-function Expr(x::EXPR{Braces})
+function convert_expr(loc::Location, x::EXPR{Braces})
     ret = Expr(:braces)
-    for a in x.args
+    for i in 1:length(x.args)
+        a = x.args[i]
         if a isa EXPR{Parameters}
-            insert!(ret.args, 1, Expr(a))
+            insert!(ret.args, 1, convert_child(loc, x, i))
         elseif !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
@@ -329,35 +360,35 @@ end
 
 
 # Definitiions
-Expr(x::EXPR{Struct}) = Expr(:struct, false, Expr(x.args[2]), Expr(x.args[3]))
-Expr(x::EXPR{Mutable}) = length(x.args) == 4 ? Expr(:struct, true, Expr(x.args[2]), Expr(x.args[3])) : Expr(:struct, true, Expr(x.args[3]), Expr(x.args[4]))
-Expr(x::EXPR{Abstract}) = length(x.args) == 2 ? Expr(:abstract, Expr(x.args[2])) : Expr(:abstract, Expr(x.args[3]))
-Expr(x::EXPR{Primitive}) = Expr(:primitive, Expr(x.args[3]), Expr(x.args[4]))
+convert_expr(loc::Location, x::EXPR{Struct}) = Expr(:struct, false, convert_child(loc, x, 2), convert_child(loc, x, 3))
+convert_expr(loc::Location, x::EXPR{Mutable}) = length(x.args) == 4 ? Expr(:struct, true, convert_child(loc, x, 2), convert_child(loc, x, 3)) : Expr(:struct, true, convert_child(loc, x, 3), convert_child(loc, x, 4))
+convert_expr(loc::Location, x::EXPR{Abstract}) = length(x.args) == 2 ? Expr(:abstract, convert_child(loc, x, 2)) : Expr(:abstract, convert_child(loc, x, 3))
+convert_expr(loc::Location, x::EXPR{Primitive}) = Expr(:primitive, convert_child(loc, x, 3), convert_child(loc, x, 4))
 
-function Expr(x::EXPR{FunctionDef})
+function convert_expr(loc::Location, x::EXPR{FunctionDef})
     ret = Expr(:function)
-    for a in x.args
-        if !(a isa PUNCTUATION || a isa KEYWORD)
-            push!(ret.args, Expr(a))
+    for i in 1:length(x.args)
+        if !(x[i] isa PUNCTUATION || x[i] isa KEYWORD)
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
-function Expr(x::EXPR{Macro}) 
+function convert_expr(loc::Location, x::EXPR{Macro})
     if length(x.args) == 3
-        Expr(:macro, Expr(x.args[2]))
+        Expr(:macro, convert_child(loc, x, 2))
     else
-        Expr(:macro, Expr(x.args[2]), Expr(x.args[3]))
+        Expr(:macro, convert_child(loc, x, 2), convert_child(loc, x, 3))
     end
 end
-Expr(x::EXPR{ModuleH}) = Expr(:module, true, Expr(x.args[2]), Expr(x.args[3]))
-Expr(x::EXPR{BareModule}) = Expr(:module, false, Expr(x.args[2]), Expr(x.args[3]))
+convert_expr(loc::Location, x::EXPR{ModuleH}) = Expr(:module, true, convert_child(loc, x, 2), convert_child(loc, x, 3))
+convert_expr(loc::Location, x::EXPR{BareModule}) = Expr(:module, false, convert_child(loc, x, 2), convert_child(loc, x, 3))
 
 
 
 # Control Flow
 
-function Expr(x::EXPR{If})
+function convert_expr(loc::Location, x::EXPR{If})
     ret = Expr(:if)
     iselseif = false
     n = length(x.args)
@@ -367,88 +398,89 @@ function Expr(x::EXPR{If})
         a = x.args[i]
         if a isa KEYWORD && a.kind == Tokens.ELSEIF
             i += 1
-            r1 = Expr(x.args[i].args[1])
-            push!(ret.args, Expr(:elseif, r1.args...))
+            r1 = convert_child(loc, x, i, 1)
+            r1.expr.head = :elseif
+            push!(ret.args, r1)
         elseif !(a isa PUNCTUATION || a isa KEYWORD)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{Try})
+function convert_expr(loc::Location, x::EXPR{Try})
     ret = Expr(:try)
-    for a in x.args
-        if !(a isa PUNCTUATION || a isa KEYWORD)
-            push!(ret.args, Expr(a))
+    for i in 1:length(x.args)
+        if !(x[i] isa PUNCTUATION || x[i] isa KEYWORD)
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{Let})
+function convert_expr(loc::Location, x::EXPR{Let})
     ret = Expr(:let)
     if length(x.args) == 3
         push!(ret.args, Expr(:block))
-        push!(ret.args, Expr(x.args[2]))
+        push!(ret.args, convert_child(loc, x, 2))
         return ret
     elseif x.args[2] isa EXPR{Block}
         arg = Expr(:block)
-        for a in x.args[2].args
+        for (i, a) in enumerate(x.args[2].args)
             if !(a isa PUNCTUATION)
-                push!(arg.args, fix_range(a))
+                push!(arg.args, fix_range(loc[2, i], a))
             end
         end
         push!(ret.args, arg)
     else
-        push!(ret.args, fix_range(x.args[2]))
+        push!(ret.args, fix_range(loc[2], x.args[2]))
     end
-    push!(ret.args, Expr(x.args[3]))
+    push!(ret.args, convert_child(loc, x, 3))
     ret
 end
 
-function Expr(x::EXPR{Do})
-    Expr(:do, Expr(x.args[1]), Expr(:->, Expr(x.args[3]), Expr(x.args[4])))
+function convert_expr(loc::Location, x::EXPR{Do})
+    Expr(:do, convert_child(loc, x, 1), Expr(:->, convert_child(loc, x, 3), convert_child(loc, x, 4)))
 end
 
 
 # Loops
-Expr(x::EXPR{Outer}) = Expr(:outer, Expr(x.args[2]))
+convert_expr(loc::Location, x::EXPR{Outer}) = Expr(:outer, convert_child(loc, x, 2))
 
-function Expr(x::EXPR{For})
+function convert_expr(loc::Location, x::EXPR{For})
     ret = Expr(:for)
     if x.args[2] isa EXPR{Block}
         arg = Expr(:block)
-        for a in x.args[2].args
+        for (i, a) in enumerate(x.args[2].args)
             if !(a isa PUNCTUATION)
-                push!(arg.args, fix_range(a))
+                push!(arg.args, fix_range(loc[i], a))
             end
         end
         push!(ret.args, arg)
     else
-        push!(ret.args, fix_range(x.args[2]))
+        push!(ret.args, fix_range(loc[2], x.args[2]))
     end
-    push!(ret.args, Expr(x.args[3]))
+    push!(ret.args, convert_child(loc, x, 3))
     ret
 end
 
-function Expr(x::EXPR{While})
+function convert_expr(loc::Location, x::EXPR{While})
     ret = Expr(:while)
-    for a in x.args
-        if !(a isa PUNCTUATION || a isa KEYWORD)
-            push!(ret.args, Expr(a))
+    for i in 1:length(x.args)
+        if !(x[i] isa PUNCTUATION || x[i] isa KEYWORD)
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
 
 
-fix_range(a) = Expr(a)
-function fix_range(a::BinaryOpCall)
+fix_range(loc, a) = convert_child(loc, a)
+function fix_range(loc, a::BinaryOpCall)
     if (is_in(a.op) || is_elof(a.op))
-        Expr(:(=), Expr(a.arg1), Expr(a.arg2))
+        LocExpr(loc, Expr(:(=), convert_child(loc, a, :arg1), convert_child(loc, a, :arg2)))
     else
-        Expr(a)
+        convert_child(loc, a)
     end
 end
 
@@ -457,77 +489,77 @@ end
 
 # Lists
 
-function Expr(x::EXPR{TupleH})
+function convert_expr(loc::Location, x::EXPR{TupleH})
     ret = Expr(:tuple)
-    for a in x.args
+    for (i, a) in enumerate(x.args)
         if a isa EXPR{Parameters}
-            insert!(ret.args, 1, Expr(a))
+            insert!(ret.args, 1, convert_child(loc[i], a))
         elseif !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc[i], a))
         end
     end
     return ret
 end
 
-function Expr(x::EXPR{Curly})
+function convert_expr(loc::Location, x::EXPR{Curly})
     ret = Expr(:curly)
-    for a in x.args
+    for (i, a) in enumerate(x.args)
         if a isa EXPR{Parameters}
-            insert!(ret.args, 2, Expr(a))
+            insert!(ret.args, 2, convert_child(loc[i], a))
         elseif !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc[i], a))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{Vect})
+function convert_expr(loc::Location, x::EXPR{Vect})
     ret = Expr(:vect)
-    for a in x.args
+    for (i, a) in enumerate(x.args)
         if a isa EXPR{Parameters}
-            pushfirst!(ret.args, Expr(a))
+            pushfirst!(ret.args, convert_child(loc[i], a))
         elseif !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc[i], a))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{Row})
+function convert_expr(loc::Location, x::EXPR{Row})
     ret = Expr(:row)
-    for a in x.args
+    for (i, a) in enumerate(x.args)
         if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc[i], a))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{Hcat})
+function convert_expr(loc::Location, x::EXPR{Hcat})
     ret = Expr(:hcat)
-    for a in x.args
+    for (i, a) in enumerate(x.args)
         if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc[i], a))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{Vcat})
+function convert_expr(loc::Location, x::EXPR{Vcat})
     ret = Expr(:vcat)
-    for a in x.args
+    for (i, a) in enumerate(x.args)
         if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc[i], a))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{Block})
+function convert_expr(loc::Location, x::EXPR{Block})
     ret = Expr(:block)
-    for a in x.args
+    for (i, a) in enumerate(x.args)
         if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc[i], a))
         end
     end
     return ret
@@ -538,220 +570,201 @@ end
 
 
 
-Expr(x::EXPR{Kw}) = Expr(:kw, Expr(x.args[1]), Expr(x.args[3]))
+convert_expr(loc::Location, x::EXPR{Kw}) = Expr(:kw, convert_child(loc, x, 1), convert_child(loc, x, 3))
 
-function Expr(x::EXPR{Parameters})
+function convert_expr(loc::Location, x::EXPR{Parameters})
     ret = Expr(:parameters)
-    for a in x.args
+    for (i, a) in enumerate(x.args)
         if a isa EXPR{Parameters}
-            insert!(ret.args, 2, Expr(a))
+            insert!(ret.args, 2, convert_child(loc[i], a))
         elseif !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc[i], a))
         end
     end
     ret
 end
 
 
-function Expr(x::EXPR{Return})
+function convert_expr(loc::Location, x::EXPR{Return})
     ret = Expr(:return)
     for i = 2:length(x.args)
-        a = x.args[i]
-        push!(ret.args, Expr(a))
+        push!(ret.args, convert_child(loc, x, i))
     end
     ret
 end
 
-Expr(x::EXPR{InvisBrackets}) = Expr(x.args[2])
-Expr(x::EXPR{Begin}) = Expr(x.args[2])
+convert_expr(loc::Location, x::EXPR{InvisBrackets}) = convert_child(loc, x, 2)
+convert_expr(loc::Location, x::EXPR{Begin}) = convert_child(loc, x, 2)
 
-function Expr(x::EXPR{Quote})
+function convert_expr(loc::Location, x::EXPR{Quote})
     if x.args[2] isa EXPR{InvisBrackets} && (x.args[2].args[2] isa OPERATOR || x.args[2].args[2] isa LITERAL || x.args[2].args[2] isa IDENTIFIER)
-        return QuoteNode(Expr(x.args[2]))
+        return QuoteNode(convert_child(loc, x, 2))
     else
-        return Expr(:quote, Expr(x.args[2]))
+        return Expr(:quote, convert_child(loc, x, 2))
     end
 end
 
-function Expr(x::EXPR{Global})
+function convert_expr(loc::Location, x::EXPR{Global})
     ret = Expr(:global)
     if x.args[2] isa EXPR{Const}
-        ret = Expr(:const, Expr(:global, Expr(x.args[2].args[2])))
+        ret = Expr(:const, Expr(:global, convert_child(loc, x, 2, 2)))
     elseif length(x.args) == 2 && x.args[2] isa EXPR{TupleH}
-        for a in x.args[2].args
+        for (i, a) in enumerate(x.args[2].args)
             if !(a isa PUNCTUATION)
-                push!(ret.args, Expr(a))
+                push!(ret.args, convert_child(loc[2, i], a))
             end
         end
     else
         for i = 2:length(x.args)
-            a = x.args[i]
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{Local})
+function convert_expr(loc::Location, x::EXPR{Local})
     ret = Expr(:local)
     if x.args[2] isa EXPR{Const}
-        ret = Expr(:const, Expr(:global, Expr(x.args[2].args[2])))
+        ret = Expr(:const, Expr(:global, convert_child(loc, x, 2, 2)))
     elseif length(x.args) == 2 && x.args[2] isa EXPR{TupleH}
-        for a in x.args[2].args
+        for (i, a) in enumerate(x.args[2].args)
             if !(a isa PUNCTUATION)
-                push!(ret.args, Expr(a))
+                push!(ret.args, convert_child(loc[2, i], a))
             end
         end
     else
         for i = 2:length(x.args)
-            a = x.args[i]
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{Const})
+function convert_expr(loc::Location, x::EXPR{Const})
     ret = Expr(:const)
     for i = 2:length(x.args)
-        a = x.args[i]
-        push!(ret.args, Expr(a))
+        push!(ret.args, convert_child(loc, x, i))
     end
     ret
 end
 
 
-Expr(x::EXPR{GlobalRefDoc}) = GlobalRef(Core, Symbol("@doc"))
+convert_expr(loc::Location, x::EXPR{GlobalRefDoc}) = GlobalRef(Core, Symbol("@doc"))
 
 
 
-function Expr(x::EXPR{Ref})
+function convert_expr(loc::Location, x::EXPR{Ref})
     ret = Expr(:ref)
-    for a in x.args
+    for (i, a) in enumerate(x.args)
         if a isa EXPR{Parameters}
-            insert!(ret.args, 2, Expr(a))
+            insert!(ret.args, 2, convert_child(loc, x, i))
         elseif !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{TypedHcat})
+function convert_expr(loc::Location, x::EXPR{TypedHcat})
     ret = Expr(:typed_hcat)
-    for a in x.args
+    for (i, a) in enumerate(x.args)
         if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{TypedVcat})
+function convert_expr(loc::Location, x::EXPR{TypedVcat})
     ret = Expr(:typed_vcat)
 
-    for a in x.args
+    for (i, a) in enumerate(x.args)
         if a isa EXPR{Parameters}
-            insert!(ret.args, 2, Expr(a))
+            insert!(ret.args, 2, convert_child(loc, x, i))
         elseif !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{Comprehension})
+function convert_expr(loc::Location, x::EXPR{Comprehension})
     ret = Expr(:comprehension)
-    for a in x.args
+    for (i, a) in enumerate(x.args)
         if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{Flatten})
-    iters, args = get_inner_gen(x)
-    i = popfirst!(iters)
-    ex = Expr(:generator, Expr(args[1]), convert_iter_assign(i))
-    for i in iters
-        ex = Expr(:generator, ex, convert_iter_assign(i))
+function convert_expr(loc::Location, x::EXPR{Flatten})
+    iters, body = get_inner_gen(loc[1], x[1])
+    (l, i) = popfirst!(iters)
+    ex = Expr(:generator, convert_child(body...), convert_iter_assign(l, i))
+    for (l, i) in iters
+        ex = Expr(:generator, ex, convert_iter_assign(l, i))
         ex = Expr(:flatten, ex)
     end
-    # ret = Expr(:flatten, ex)
-
     return ex
 end
 
-
-function get_inner_gen(x, iters = [], arg = []) iters, arg end
-function get_inner_gen(x::EXPR{Flatten}, iters = [], arg = [])
-    get_inner_gen(x.args[1], iters, arg)
-    iters, arg
-end
-function get_inner_gen(x::EXPR{Generator}, iters = [], arg = [])
-    push!(iters, get_iter(x))
+get_inner_gen(loc, x::EXPR{Flatten}, iters = []) = get_inner_gen(loc[1], x[1], iters)
+function get_inner_gen(loc, x::EXPR{Generator}, iters = [])
+    push!(iters, (loc[3], x.args[3]))
     if x.args[1] isa EXPR{Generator} || x.args[1] isa EXPR{Flatten}
-        get_inner_gen(x.args[1], iters, arg)
+        get_inner_gen(loc[1], x.args[1], iters)
     else
-        push!(arg, x.args[1])
+        iters, (loc[1], x.args[1])
     end
-    iters, arg
 end
 
-
-function get_iter(x) end
-function get_iter(x::EXPR{Generator})
-    return x.args[3]
-end
-
-function Expr(x::EXPR{Generator})
-    ret = Expr(:generator, Expr(x.args[1]))
+function convert_expr(loc::Location, x::EXPR{Generator})
+    ret = Expr(:generator, convert_child(loc, x, 1))
     for i = 3:length(x.args)
         a = x.args[i]
         if !(a isa PUNCTUATION)
-            push!(ret.args, convert_iter_assign(a))
+            push!(ret.args, convert_iter_assign(loc[i], a))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{Filter})
+function convert_expr(loc::Location, x::EXPR{Filter})
     ret = Expr(:filter)
-    for a in x.args
+    for (i, a) in enumerate(x.args)
         if !(is_if(a) || a isa PUNCTUATION)
-            push!(ret.args, convert_iter_assign(a))
+            push!(ret.args, convert_iter_assign(loc[i], a))
         end
     end
     ret
 end
 
-function convert_iter_assign(a)
+function convert_iter_assign(loc, a)
     if a isa BinaryOpCall && (is_in(a.op) || is_elof(a.op))
-        return Expr(:(=), Expr(a.arg1), Expr(a.arg2))
+        return LocExpr(loc, Expr(:(=), convert_child(loc, a, :arg1), convert_child(loc, a, :arg2)))
     else
-        return Expr(a)
+        return convert_child(loc, a)
     end
 end
 
 
-function Expr(x::EXPR{TypedComprehension})
+function convert_expr(loc::Location, x::EXPR{TypedComprehension})
     ret = Expr(:typed_comprehension)
-    for a in x.args
+    for (i, a) in enumerate(x.args)
         if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
 end
 
-
-function Expr(x::EXPR{Export})
+function convert_expr(loc::Location, x::EXPR{Export})
     ret = Expr(:export)
     for i = 2:length(x.args)
         a = x.args[i]
         if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
     ret
@@ -762,7 +775,7 @@ end
 
 
 
-function _get_import_block(x, i, ret)
+function _get_import_block(loc, x, i, ret)
     while is_dot(x.args[i + 1])
         i += 1
         push!(ret.args, :.)
@@ -771,7 +784,7 @@ function _get_import_block(x, i, ret)
         i += 1
         a = x.args[i]
         if !(a isa PUNCTUATION) && !(is_dot(a) || is_colon(a))
-            push!(ret.args, Expr(a))
+            push!(ret.args, convert_child(loc, x, i))
         end
     end
 
@@ -779,14 +792,14 @@ function _get_import_block(x, i, ret)
 end
 
 
-Expr(x::EXPR{Import}) = expr_import(x, :import)
-Expr(x::EXPR{ImportAll}) = expr_import(x, :importall)
-Expr(x::EXPR{Using}) = expr_import(x, :using)
+convert_expr(loc::Location, x::EXPR{Import}) = expr_import(loc, x, :import)
+convert_expr(loc::Location, x::EXPR{ImportAll}) = expr_import(loc, x, :importall)
+convert_expr(loc::Location, x::EXPR{Using}) = expr_import(loc, x, :using)
 
-function expr_import(x, kw)
+function expr_import(loc, x, kw)
     col = findall(a-> a isa OPERATOR && precedence(a) == ColonOp, x.args)
     comma = findall(is_comma, x.args)
-    
+
     header = []
     args = [Expr(:.)]
     i = 1 #skip keyword
@@ -799,7 +812,7 @@ function expr_import(x, kw)
         elseif is_comma(a)
             push!(args, Expr(:.))
         elseif !(a isa PUNCTUATION)
-            push!(last(args).args, Expr(a))
+            push!(last(args).args, convert_child(loc, x, i))
         end
     end
     if isempty(header)
@@ -810,25 +823,27 @@ function expr_import(x, kw)
 end
 
 
-function Expr(x::EXPR{FileH})
+function convert_expr(loc::Location, x::EXPR{FileH})
     ret = Expr(:file)
-    for a in x.args
-        push!(ret.args, Expr(a))
+    for (i, a) in enumerate(x.args)
+        push!(ret.args, convert_child(loc, x, i))
     end
     ret
 end
 
-function Expr(x::EXPR{StringH})
+function convert_expr(loc::Location, x::EXPR{StringH})
     ret = Expr(:string)
     for (i, a) in enumerate(x.args)
         if a isa UnarySyntaxOpCall
             a = a.arg2
+            push!(ret.args, convert_child(loc, x, i, :arg2))
+            continue
         elseif a isa LITERAL && a.kind == Tokens.STRING
             if span(a) == 0 || ((i == 1 || i == length(x.args)) && span(a) == 1) || isempty(a.val)
                 continue
             end
         end
-        push!(ret.args, Expr(a))
+        push!(ret.args, convert_child(loc, x, i))
     end
     ret
 end

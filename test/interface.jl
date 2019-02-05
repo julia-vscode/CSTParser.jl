@@ -87,7 +87,7 @@ end
     @test f("(a::T) -> a") == ["a"]
     @test f("(a,b) -> a") == ["a", "b"]
 
-    @test f("map(1:10) do a 
+    @test f("map(1:10) do a
         a
     end") == ["a"]
     @test f("map(1:10) do a,b
@@ -95,3 +95,17 @@ end
     end") == ["a", "b"]
 end
 
+function cstidx(s, i)
+  x = CSTParser.parse(s)
+  Expr(x[CSTParser.exprloc(x, i)])
+end
+
+@testset "inverse locations" begin
+  @test cstidx("f(a, b, c)", [3]) == :b
+  @test cstidx("\"\$x\"", [1]) == :x
+  @test cstidx("f(x) = 2x", [2, 1]) == :(2x)
+
+  @test cstidx("2x for x in X for y in Y", [1,1,1]) == :(2x)
+  @test cstidx("2x for x in X for y in Y", [1,2]) == :(x in X)
+  @test cstidx("2x for x in X for y in Y", [1,1,2]) == :(y in Y)
+end

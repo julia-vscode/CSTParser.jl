@@ -18,6 +18,7 @@ include("components/keywords.jl")
 include("components/lists.jl")
 include("components/operators.jl")
 include("components/strings.jl")
+include("location.jl")
 include("conversion.jl")
 include("display.jl")
 include("interface.jl")
@@ -96,7 +97,7 @@ function parse_compound(ps::ParseState, @nospecialize ret)
         ret = EXPR{head}(Any[ret, arg])
     elseif ps.nt.kind == Tokens.LPAREN
         no_ws = !isemptyws(ps.ws)
-        err_rng = ps.t.endbyte + 2:ps.nt.startbyte 
+        err_rng = ps.t.endbyte + 2:ps.nt.startbyte
         ret = @closeparen ps parse_call(ps, ret)
         if no_ws && !(ret isa UnaryOpCall || ret isa UnarySyntaxOpCall)
             push!(ps.errors, Error(err_rng, "White space in function call."))
@@ -141,7 +142,7 @@ end
 
 Parses an expression starting with a `(`.
 """
-@addctx :paren function parse_paren(ps::ParseState)  
+@addctx :paren function parse_paren(ps::ParseState)
     args = Any[PUNCTUATION(ps)]
     @closeparen ps @default ps @nocloser ps inwhere parse_comma_sep(ps, args, false, true, true)
 
