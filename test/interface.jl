@@ -108,4 +108,6 @@ end
   @test cstidx("2x for x in X for y in Y", [1,1,1]) == :(2x)
   @test cstidx("2x for x in X for y in Y", [1,2]) == :(x in X)
   @test cstidx("2x for x in X for y in Y", [1,1,2]) == :(y in Y)
+
+  @test cstidx("v\"1.1\"", [1]) == :v
 end

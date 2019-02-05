@@ -258,7 +258,8 @@ function convert_expr(loc::Location, x::EXPR{x_Str})
         mname.expr.args[2] = QuoteNode(Symbol("@", striploc(mname).args[2].value, "_str"))
         ret = Expr(:macrocall, mname, nothing)
     else
-        ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_str"), nothing)
+        name = LocExpr(loc[1], Symbol("@", x.args[1].val, "_str"))
+        ret = Expr(:macrocall, name, nothing)
     end
     for i = 2:length(x.args)
         push!(ret.args, x.args[i].val)
