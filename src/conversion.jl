@@ -262,7 +262,7 @@ function convert_expr(loc::Location, x::EXPR{x_Str})
         ret = Expr(:macrocall, name, nothing)
     end
     for i = 2:length(x.args)
-        push!(ret.args, x.args[i].val)
+        push!(ret.args, LocExpr(loc[i], x.args[i].val))
     end
     return ret
 end
