@@ -152,10 +152,10 @@ Expr(x::AbstractEXPR) = striploc(LocExpr(x))
 
 exprloc(x::LocExpr, i) = isempty(i) ? x.loc : exprloc(x.expr, i)
 
-exprloc(x::Expr, i) = isempty(i) ? error("No location information") :
+exprloc(x::Expr, i) = isempty(i) ? nothing :
   exprloc(x.args[i[1]], i[2:end])
 
-exprloc(x, i) = isempty(i) ? error("No location information") :
+exprloc(x, i) = isempty(i) ? nothing :
   error("Can't take index $i of $(repr(x))")
 
 exprloc(x::AbstractEXPR, i) = exprloc(LocExpr(x), i)
