@@ -111,4 +111,7 @@ end
 
   @test cstidx("v\"1.1\"", [1]) == :v
   @test cstidx("v\"1.1\"", [3]) == "1.1"
+
+  @test cstidx(raw"a where {b}", [2]) == :b
+  @test cstidx(raw"a where b", [2]) == :b
 end

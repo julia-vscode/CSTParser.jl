@@ -213,9 +213,9 @@ function convert_expr(loc::Location, x::WhereOpCall)
     for i = 1:length(x.args)
         a = x.args[i]
         if a isa EXPR{Parameters}
-            insert!(ret.args, 2, convert_child(loc[i+1], a))
+            insert!(ret.args, 2, convert_child(loc[i+2], a))
         elseif !(a isa PUNCTUATION || a isa KEYWORD)
-            push!(ret.args, convert_child(loc[i+1], a))
+            push!(ret.args, convert_child(loc[i+2], a))
         end
     end
     return ret
