@@ -454,7 +454,7 @@ function convert_expr(loc::Location, x::EXPR{For})
         arg = Expr(:block)
         for (i, a) in enumerate(x.args[2].args)
             if !(a isa PUNCTUATION)
-                push!(arg.args, fix_range(loc[i], a))
+                push!(arg.args, fix_range(loc[2, i], a))
             end
         end
         push!(ret.args, arg)

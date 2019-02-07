@@ -114,4 +114,5 @@ end
 
   @test cstidx(raw"a where {b}", [2]) == :b
   @test cstidx(raw"a where b", [2]) == :b
+  cstidx("for x in xs, y in ys end", [1,1]) == :(x in xs)
 end
