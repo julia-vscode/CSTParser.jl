@@ -1,19 +1,6 @@
 import Base: Expr
 
 # Terminals
-Expr(x::IDENTIFIER) = Symbol(normalize_julia_identifier(x.val))
-function Expr(x::KEYWORD)
-    if x.kind == Tokens.BREAK
-        return Expr(:break)
-    elseif x.kind == Tokens.CONTINUE
-        return Expr(:continue)
-    else
-        return Symbol(lowercase(string(x.kind)))
-    end
-end
-Expr(x::OPERATOR) = x.dot ? Symbol(:., UNICODE_OPS_REVERSE[x.kind]) : UNICODE_OPS_REVERSE[x.kind]
-Expr(x::PUNCTUATION)= string(x.kind)
-
 function julia_normalization_map(c::Int32, x::Ptr{Nothing})::Int32
     return c == 0x00B5 ? 0x03BC : # micro sign -> greek small letter mu
            c == 0x025B ? 0x03B5 : # latin small letter open e -> greek small letter
@@ -65,7 +52,7 @@ function sized_uint_oct_literal(s::AbstractString)
     return Base.parse(BigInt, s)
 end
 
-function Expr(x::LITERAL)
+function _literal_expr(x)
     if x.kind == Tokens.TRUE
         return true
     elseif x.kind == Tokens.FALSE
@@ -133,86 +120,473 @@ end
 
 # Fallback
 function Expr(x::EXPR)
-    ret = Expr(:call)
-    for a in x.args
-        if !(a isa PUNCTUATION)
+    if isidentifier(x)
+        return Symbol(normalize_julia_identifier(x.val))
+    elseif iskw(x)
+        if x.kind == Tokens.BREAK
+            return Expr(:break)
+        elseif x.kind == Tokens.CONTINUE
+            return Expr(:continue)
+        else
+            return Symbol(lowercase(string(x.kind)))
+        end
+    elseif isoperator(x)
+        return x.dot ? Symbol(:., UNICODE_OPS_REVERSE[x.kind]) : UNICODE_OPS_REVERSE[x.kind]
+    elseif ispunctuation(x)
+        return string(x.kind)
+    elseif isliteral(x)
+        return _literal_expr(x)
+    elseif x.typ === UnaryOpCall
+        return _unary_expr(x)
+    elseif x.typ === BinaryOpCall
+        return _binary_expr(x)
+    elseif x.typ === WhereOpCall
+        return _where_expr(x)
+    elseif x.typ === ConditionalOpCall
+        return Expr(:if, Expr(x.args[1]), Expr(x.args[3]), Expr(x.args[5]))
+    elseif x.typ === ErrorToken
+        ret = Expr(:error)
+        for a in x.args
+            if !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === ChainOpCall
+        ret = Expr(:call, Expr(x.args[2]))
+        for i = 1:length(x.args)
+            if isodd(i)
+                push!(ret.args, Expr(x.args[i]))
+            end
+        end
+        return ret
+    elseif x.typ === Comparison
+        ret = Expr(:comparison)
+        for a in x.args
+            if !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === ColonOpCall
+        return Expr(:call, :(:), Expr(x.args[1]), Expr(x.args[3]), Expr(x.args[5]))
+    elseif x.typ === TopLevel
+        ret = Expr(:toplevel)
+        for a in x.args
+            if !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === MacroName
+        if isidentifier(x.args[2])
+            if x.args[2].val == "."
+                return Symbol("@", "__dot__")
+            else
+                return Symbol("@", x.args[2].val)
+            end
+        else
+            return Symbol("@")
+        end
+    elseif x.typ === MacroCall
+        ret = Expr(:macrocall)
+        for a in x.args
+            if !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        insert!(ret.args, 2, nothing)
+        if ret.args[1] isa Expr && ret.args[1].head == :. && string(ret.args[1].args[2].value)[1] != '@'
+            clear_at!(ret.args[1])
+            ret.args[1].args[2] = QuoteNode(Symbol(string('@', ret.args[1].args[2].value)))
+        end
+        ret
+    elseif x.typ === x_Str
+        if x.args[1].typ === BinaryOpCall && issyntaxcall(x.args[1].args[2])
+            mname = Expr(x.args[1])
+            mname.args[2] = QuoteNode(Symbol("@", mname.args[2].value, "_str"))
+            ret = Expr(:macrocall, mname, nothing)
+        else
+            ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_str"), nothing)
+        end
+        for i = 2:length(x.args)
+            push!(ret.args, x.args[i].val)
+        end
+        return ret
+    elseif x.typ === x_Cmd
+        ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_cmd"), nothing)
+        for i = 2:length(x.args)
+            push!(ret.args, x.args[i].val)
+        end
+        return ret
+    elseif x.typ === Quotenode
+        return QuoteNode(Expr(x.args[end]))
+    elseif x.typ === Call
+        ret = Expr(:call)
+        for a in x.args
+            if a.typ === Parameters
+                insert!(ret.args, 2, Expr(a))
+            elseif !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret    
+    elseif x.typ === Braces
+        ret = Expr(:braces)
+        for a in x.args
+            if a.typ === Parameters
+                insert!(ret.args, 1, Expr(a))
+            elseif !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === Struct
+        return Expr(:struct, false, Expr(x.args[2]), Expr(x.args[3]))
+    elseif x.typ === Mutable
+        return length(x.args) == 4 ? Expr(:struct, true, Expr(x.args[2]), Expr(x.args[3])) : Expr(:struct, true, Expr(x.args[3]), Expr(x.args[4]))
+    elseif x.typ === Abstract
+        return length(x.args) == 2 ? Expr(:abstract, Expr(x.args[2])) : Expr(:abstract, Expr(x.args[3]))
+    elseif x.typ === Primitive
+        return Expr(:primitive, Expr(x.args[3]), Expr(x.args[4]))
+    elseif x.typ === FunctionDef
+        ret = Expr(:function)
+        for a in x.args
+            if !(ispunctuation(a) || iskw(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === Macro
+        if length(x.args) == 3
+            Expr(:macro, Expr(x.args[2]))
+        else
+            Expr(:macro, Expr(x.args[2]), Expr(x.args[3]))
+        end
+    elseif x.typ === ModuleH
+        return Expr(:module, true, Expr(x.args[2]), Expr(x.args[3]))
+    elseif x.typ === BareModule
+        return Expr(:module, false, Expr(x.args[2]), Expr(x.args[3]))
+    elseif x.typ === If
+        return _if_expr(x)
+    elseif x.typ === Try
+        ret = Expr(:try)
+        for a in x.args
+            if !(ispunctuation(a) || iskw(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === Let
+        return _let_expr(x)
+    elseif x.typ === Do
+        return Expr(:do, Expr(x.args[1]), Expr(:->, Expr(x.args[3]), Expr(x.args[4])))
+    elseif x.typ === Outer
+        return Expr(:outer, Expr(x.args[2]))
+    elseif x.typ === For
+        ret = Expr(:for)
+        if x.args[2].typ === Block
+            arg = Expr(:block)
+            for a in x.args[2].args
+                if !(ispunctuation(a))
+                    push!(arg.args, fix_range(a))
+                end
+            end
+            push!(ret.args, arg)
+        else
+            push!(ret.args, fix_range(x.args[2]))
+        end
+        push!(ret.args, Expr(x.args[3]))
+        return ret
+    elseif x.typ === While
+        ret = Expr(:while)
+        for a in x.args
+            if !(ispunctuation(a) || iskw(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === TupleH
+        ret = Expr(:tuple)
+        for a in x.args
+            if a.typ == Parameters
+                insert!(ret.args, 1, Expr(a))
+            elseif !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === Curly
+        ret = Expr(:curly)
+        for a in x.args
+            if a.typ === Parameters
+                insert!(ret.args, 2, Expr(a))
+            elseif !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === Vect
+        ret = Expr(:vect)
+        for a in x.args
+            if a.typ === Parameters
+                pushfirst!(ret.args, Expr(a))
+            elseif !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === Row
+        ret = Expr(:row)
+        for a in x.args
+            if !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === Hcat
+        ret = Expr(:hcat)
+        for a in x.args
+            if !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === Vcat
+        ret = Expr(:vcat)
+        for a in x.args
+            if !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === Block
+        ret = Expr(:block)
+        for a in x.args
+            if !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === Kw
+        return Expr(:kw, Expr(x.args[1]), Expr(x.args[3]))
+    elseif x.typ === Parameters
+        ret = Expr(:parameters)
+        for a in x.args
+            if a.typ === Parameters
+                insert!(ret.args, 2, Expr(a))
+            elseif !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === Return
+        ret = Expr(:return)
+        for i = 2:length(x.args)
+            a = x.args[i]
             push!(ret.args, Expr(a))
         end
-    end
-    ret
-end
-
-function Expr(x::EXPR{ErrorToken})
-    ret = Expr(:error)
-    for a in x.args
-        if !(a isa PUNCTUATION)
+        return ret
+    elseif x.typ === InvisBrackets
+        return Expr(x.args[2])
+    elseif x.typ === Begin
+        return Expr(x.args[2])
+    elseif x.typ === Quote
+        if x.args[2].typ === InvisBrackets && (isoperator(x.args[2].args[2]) || isliteral(x.args[2].args[2]) || isidentifier(x.args[2].args[2]))
+            return QuoteNode(Expr(x.args[2]))
+        else
+            return Expr(:quote, Expr(x.args[2]))
+        end
+    elseif x.typ === Global
+        ret = Expr(:global)
+        if x.args[2].typ === Const
+            ret = Expr(:const, Expr(:global, Expr(x.args[2].args[2])))
+        elseif length(x.args) == 2 && x.args[2].typ === TupleH
+            for a in x.args[2].args
+                if !(ispunctuation(a))
+                    push!(ret.args, Expr(a))
+                end
+            end
+        else
+            for i = 2:length(x.args)
+                a = x.args[i]
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === Local
+        ret = Expr(:local)
+        if x.args[2].typ === Const
+            ret = Expr(:const, Expr(:global, Expr(x.args[2].args[2])))
+        elseif length(x.args) == 2 && x.args[2].typ === TupleH
+            for a in x.args[2].args
+                if !(ispunctuation(a))
+                    push!(ret.args, Expr(a))
+                end
+            end
+        else
+            for i = 2:length(x.args)
+                a = x.args[i]
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === Const
+        ret = Expr(:const)
+        for i = 2:length(x.args)
+            a = x.args[i]
             push!(ret.args, Expr(a))
         end
+        return ret
+    elseif x.typ === GlobalRefDoc
+        return GlobalRef(Core, Symbol("@doc"))
+    elseif x.typ === Ref
+        ret = Expr(:ref)
+        for a in x.args
+            if a.typ === Parameters
+                insert!(ret.args, 2, Expr(a))
+            elseif !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === TypedHcat
+        ret = Expr(:typed_hcat)
+        for a in x.args
+            if !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === TypedVcat
+        ret = Expr(:typed_vcat)
+        for a in x.args
+            if a.typ === Parameters
+                insert!(ret.args, 2, Expr(a))
+            elseif !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === Comprehension
+        ret = Expr(:comprehension)
+        for a in x.args
+            if !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === Flatten
+        iters, args = get_inner_gen(x)
+        i = popfirst!(iters)
+        ex = Expr(:generator, Expr(args[1]), convert_iter_assign(i))
+        for i in iters
+            ex = Expr(:generator, ex, convert_iter_assign(i))
+            ex = Expr(:flatten, ex)
+        end
+        return ex
+    elseif x.typ === Generator
+        ret = Expr(:generator, Expr(x.args[1]))
+        for i = 3:length(x.args)
+            a = x.args[i]
+            if !(ispunctuation(a))
+                push!(ret.args, convert_iter_assign(a))
+            end
+        end
+        return ret
+    elseif x.typ === Filter
+        ret = Expr(:filter)
+        for a in x.args
+            if !(is_if(a) || ispunctuation(a))
+                push!(ret.args, convert_iter_assign(a))
+            end
+        end
+        return ret
+    elseif x.typ === TypedComprehension
+        ret = Expr(:typed_comprehension)
+        for a in x.args
+            if !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === Import
+        return expr_import(x, :import)
+    elseif x.typ === ImportAll
+        return expr_import(x, :importall)
+    elseif x.typ === Using
+        return expr_import(x, :using)
+    elseif x.typ === Export
+        ret = Expr(:export)
+        for i = 2:length(x.args)
+            a = x.args[i]
+            if !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === FileH
+        ret = Expr(:file)
+        for a in x.args
+            push!(ret.args, Expr(a))
+        end
+        return ret
+    elseif x.typ === StringH
+        ret = Expr(:string)
+        for (i, a) in enumerate(x.args)
+            if a.typ === UnaryOpCall
+                a = a.args[2]
+            elseif isliteral(a) && a.kind == Tokens.STRING
+                if span(a) == 0 || ((i == 1 || i == length(x.args)) && span(a) == 1) || isempty(a.val)
+                    continue
+                end
+            end
+            push!(ret.args, Expr(a))
+        end
+        return ret
+    else
+        ret = Expr(:call)
+        for a in x.args
+            if !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
     end
-    ret
 end
 
 # Op. expressions
-Expr(x::UnaryOpCall) = Expr(:call, Expr(x.op), Expr(x.arg))
-Expr(x::UnarySyntaxOpCall) = x.arg1 isa OPERATOR ? Expr(Expr(x.arg1), Expr(x.arg2)) : Expr(Expr(x.arg2), Expr(x.arg1))
-Expr(x::BinaryOpCall) = Expr(:call, Expr(x.op), Expr(x.arg1), Expr(x.arg2))
-Expr(x::BinarySyntaxOpCall) = Expr(Expr(x.op), Expr(x.arg1), Expr(x.arg2))
-Expr(x::ConditionalOpCall) = Expr(:if, Expr(x.cond), Expr(x.arg1), Expr(x.arg2))
-function Expr(x::EXPR{ChainOpCall})
-    ret = Expr(:call, Expr(x.args[2]))
-    for i = 1:length(x.args)
-        if isodd(i)
-            push!(ret.args, Expr(x.args[i]))
-        end
-    end
-    ret
-end
-function Expr(x::EXPR{Comparison})
-    ret = Expr(:comparison)
-    for a in x.args
-        if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-Expr(x::EXPR{ColonOpCall}) = Expr(:call, :(:), Expr(x.args[1]), Expr(x.args[3]), Expr(x.args[5]))
 
+function _unary_expr(x)
+    if isoperator(x.args[1]) && issyntaxunarycall(x.args[1])
+        Expr(Expr(x.args[1]), Expr(x.args[2]))
+    elseif isoperator(x.args[2]) && issyntaxunarycall(x.args[2])
+        Expr(Expr(x.args[2]), Expr(x.args[1]))
+    else
+        Expr(:call, Expr(x.args[1]), Expr(x.args[2]))
+    end
+end
+function _binary_expr(x)
+    if issyntaxcall(x.args[2]) && !(x.args[2].kind in (Tokens.COLON,))
+        Expr(Expr(x.args[2]), Expr(x.args[1]), Expr(x.args[3]))
+    else
+        Expr(:call, Expr(x.args[2]), Expr(x.args[1]), Expr(x.args[3]))
+    end
+end
 
-function Expr(x::WhereOpCall)
-    ret = Expr(:where, Expr(x.arg1))
-    for i = 1:length(x.args)
+function _where_expr(x)
+    ret = Expr(:where, Expr(x.args[1]))
+    for i = 3:length(x.args)
         a = x.args[i]
-        if a isa EXPR{Parameters}
+        if a.typ === Parameters
             insert!(ret.args, 2, Expr(a))
-        elseif !(a isa PUNCTUATION || a isa KEYWORD)
+        elseif !(ispunctuation(a) || iskw(a))
             push!(ret.args, Expr(a))
         end
     end
     return ret
 end
 
-function Expr(x::EXPR{TopLevel})
-    ret = Expr(:toplevel)
-    for a in x.args
-        if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-function Expr(x::EXPR{MacroName})
-    if x.args[2] isa IDENTIFIER
-        if x.args[2].val == "."
-            return Symbol("@", "__dot__")
-        else
-            return Symbol("@", x.args[2].val)
-        end
-    else
-        return Symbol("@")
-    end
-end
 
 # cross compatability for line number insertion in macrocalls
 if VERSION > v"1.1-"
@@ -223,27 +597,6 @@ Expr_cmd(x) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
 Expr_tcmd(x) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
 end
 
-function Expr(x::EXPR{x_Str})
-    if x.args[1] isa BinarySyntaxOpCall
-        mname = Expr(x.args[1])
-        mname.args[2] = QuoteNode(Symbol("@", mname.args[2].value, "_str"))
-        ret = Expr(:macrocall, mname, nothing)
-    else
-        ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_str"), nothing)
-    end
-    for i = 2:length(x.args)
-        push!(ret.args, x.args[i].val)
-    end
-    return ret
-end
-
-function Expr(x::EXPR{x_Cmd})
-    ret = Expr(:macrocall, Symbol("@", x.args[1].val, "_cmd"), nothing)
-    for i = 2:length(x.args)
-        push!(ret.args, x.args[i].val)
-    end
-    return ret
-end
 
 function clear_at!(x)
     if x isa Expr && x.head == :.
@@ -258,20 +611,7 @@ function clear_at!(x)
     end
 end
 
-function Expr(x::EXPR{MacroCall})
-    ret = Expr(:macrocall)
-    for a in x.args
-        if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    insert!(ret.args, 2, nothing)
-    if ret.args[1] isa Expr && ret.args[1].head == :. && string(ret.args[1].args[2].value)[1] != '@'
-        clear_at!(ret.args[1])
-        ret.args[1].args[2] = QuoteNode(Symbol(string('@', ret.args[1].args[2].value)))
-    end
-    ret
-end
+
 """
     remlineinfo!(x)
 Removes line info expressions. (i.e. Expr(:line, 1))
@@ -299,65 +639,7 @@ function remlineinfo!(x)
     x
 end
 
-
-Expr(x::EXPR{Quotenode}) = QuoteNode(Expr(x.args[end]))
-
-function Expr(x::EXPR{Call})
-    ret = Expr(:call)
-    for a in x.args
-        if a isa EXPR{Parameters}
-            insert!(ret.args, 2, Expr(a))
-        elseif !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-
-function Expr(x::EXPR{Braces})
-    ret = Expr(:braces)
-    for a in x.args
-        if a isa EXPR{Parameters}
-            insert!(ret.args, 1, Expr(a))
-        elseif !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-
-# Definitiions
-Expr(x::EXPR{Struct}) = Expr(:struct, false, Expr(x.args[2]), Expr(x.args[3]))
-Expr(x::EXPR{Mutable}) = length(x.args) == 4 ? Expr(:struct, true, Expr(x.args[2]), Expr(x.args[3])) : Expr(:struct, true, Expr(x.args[3]), Expr(x.args[4]))
-Expr(x::EXPR{Abstract}) = length(x.args) == 2 ? Expr(:abstract, Expr(x.args[2])) : Expr(:abstract, Expr(x.args[3]))
-Expr(x::EXPR{Primitive}) = Expr(:primitive, Expr(x.args[3]), Expr(x.args[4]))
-
-function Expr(x::EXPR{FunctionDef})
-    ret = Expr(:function)
-    for a in x.args
-        if !(a isa PUNCTUATION || a isa KEYWORD)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-function Expr(x::EXPR{Macro}) 
-    if length(x.args) == 3
-        Expr(:macro, Expr(x.args[2]))
-    else
-        Expr(:macro, Expr(x.args[2]), Expr(x.args[3]))
-    end
-end
-Expr(x::EXPR{ModuleH}) = Expr(:module, true, Expr(x.args[2]), Expr(x.args[3]))
-Expr(x::EXPR{BareModule}) = Expr(:module, false, Expr(x.args[2]), Expr(x.args[3]))
-
-
-
-# Control Flow
-
-function Expr(x::EXPR{If})
+function _if_expr(x)
     ret = Expr(:if)
     iselseif = false
     n = length(x.args)
@@ -365,37 +647,27 @@ function Expr(x::EXPR{If})
     while i < n
         i += 1
         a = x.args[i]
-        if a isa KEYWORD && a.kind == Tokens.ELSEIF
+        if iskw(a) && a.kind == Tokens.ELSEIF
             i += 1
             r1 = Expr(x.args[i].args[1])
             push!(ret.args, Expr(:elseif, r1.args...))
-        elseif !(a isa PUNCTUATION || a isa KEYWORD)
+        elseif !(ispunctuation(a) || iskw(a))
             push!(ret.args, Expr(a))
         end
     end
     ret
 end
 
-function Expr(x::EXPR{Try})
-    ret = Expr(:try)
-    for a in x.args
-        if !(a isa PUNCTUATION || a isa KEYWORD)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-function Expr(x::EXPR{Let})
+function _let_expr(x)
     ret = Expr(:let)
     if length(x.args) == 3
         push!(ret.args, Expr(:block))
         push!(ret.args, Expr(x.args[2]))
         return ret
-    elseif x.args[2] isa EXPR{Block}
+    elseif x.args[2].typ === Block
         arg = Expr(:block)
         for a in x.args[2].args
-            if !(a isa PUNCTUATION)
+            if !(ispunctuation(a))
                 push!(arg.args, fix_range(a))
             end
         end
@@ -407,360 +679,41 @@ function Expr(x::EXPR{Let})
     ret
 end
 
-function Expr(x::EXPR{Do})
-    Expr(:do, Expr(x.args[1]), Expr(:->, Expr(x.args[3]), Expr(x.args[4])))
-end
-
-
-# Loops
-Expr(x::EXPR{Outer}) = Expr(:outer, Expr(x.args[2]))
-
-function Expr(x::EXPR{For})
-    ret = Expr(:for)
-    if x.args[2] isa EXPR{Block}
-        arg = Expr(:block)
-        for a in x.args[2].args
-            if !(a isa PUNCTUATION)
-                push!(arg.args, fix_range(a))
-            end
-        end
-        push!(ret.args, arg)
-    else
-        push!(ret.args, fix_range(x.args[2]))
-    end
-    push!(ret.args, Expr(x.args[3]))
-    ret
-end
-
-function Expr(x::EXPR{While})
-    ret = Expr(:while)
-    for a in x.args
-        if !(a isa PUNCTUATION || a isa KEYWORD)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-
-fix_range(a) = Expr(a)
-function fix_range(a::BinaryOpCall)
-    if (is_in(a.op) || is_elof(a.op))
-        Expr(:(=), Expr(a.arg1), Expr(a.arg2))
+function fix_range(a)
+    if a.typ === BinaryOpCall && (is_in(a.args[2]) || is_elof(a.args[2]))
+        Expr(:(=), Expr(a.args[1]), Expr(a.args[3]))
     else
         Expr(a)
     end
 end
 
-
-
-
-# Lists
-
-function Expr(x::EXPR{TupleH})
-    ret = Expr(:tuple)
-    for a in x.args
-        if a isa EXPR{Parameters}
-            insert!(ret.args, 1, Expr(a))
-        elseif !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    return ret
-end
-
-function Expr(x::EXPR{Curly})
-    ret = Expr(:curly)
-    for a in x.args
-        if a isa EXPR{Parameters}
-            insert!(ret.args, 2, Expr(a))
-        elseif !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-function Expr(x::EXPR{Vect})
-    ret = Expr(:vect)
-    for a in x.args
-        if a isa EXPR{Parameters}
-            pushfirst!(ret.args, Expr(a))
-        elseif !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-function Expr(x::EXPR{Row})
-    ret = Expr(:row)
-    for a in x.args
-        if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-function Expr(x::EXPR{Hcat})
-    ret = Expr(:hcat)
-    for a in x.args
-        if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-function Expr(x::EXPR{Vcat})
-    ret = Expr(:vcat)
-    for a in x.args
-        if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-function Expr(x::EXPR{Block})
-    ret = Expr(:block)
-    for a in x.args
-        if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    return ret
-end
-
-
-
-
-
-
-Expr(x::EXPR{Kw}) = Expr(:kw, Expr(x.args[1]), Expr(x.args[3]))
-
-function Expr(x::EXPR{Parameters})
-    ret = Expr(:parameters)
-    for a in x.args
-        if a isa EXPR{Parameters}
-            insert!(ret.args, 2, Expr(a))
-        elseif !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-
-function Expr(x::EXPR{Return})
-    ret = Expr(:return)
-    for i = 2:length(x.args)
-        a = x.args[i]
-        push!(ret.args, Expr(a))
-    end
-    ret
-end
-
-Expr(x::EXPR{InvisBrackets}) = Expr(x.args[2])
-Expr(x::EXPR{Begin}) = Expr(x.args[2])
-
-function Expr(x::EXPR{Quote})
-    if x.args[2] isa EXPR{InvisBrackets} && (x.args[2].args[2] isa OPERATOR || x.args[2].args[2] isa LITERAL || x.args[2].args[2] isa IDENTIFIER)
-        return QuoteNode(Expr(x.args[2]))
-    else
-        return Expr(:quote, Expr(x.args[2]))
-    end
-end
-
-function Expr(x::EXPR{Global})
-    ret = Expr(:global)
-    if x.args[2] isa EXPR{Const}
-        ret = Expr(:const, Expr(:global, Expr(x.args[2].args[2])))
-    elseif length(x.args) == 2 && x.args[2] isa EXPR{TupleH}
-        for a in x.args[2].args
-            if !(a isa PUNCTUATION)
-                push!(ret.args, Expr(a))
-            end
-        end
-    else
-        for i = 2:length(x.args)
-            a = x.args[i]
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-function Expr(x::EXPR{Local})
-    ret = Expr(:local)
-    if x.args[2] isa EXPR{Const}
-        ret = Expr(:const, Expr(:global, Expr(x.args[2].args[2])))
-    elseif length(x.args) == 2 && x.args[2] isa EXPR{TupleH}
-        for a in x.args[2].args
-            if !(a isa PUNCTUATION)
-                push!(ret.args, Expr(a))
-            end
-        end
-    else
-        for i = 2:length(x.args)
-            a = x.args[i]
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-function Expr(x::EXPR{Const})
-    ret = Expr(:const)
-    for i = 2:length(x.args)
-        a = x.args[i]
-        push!(ret.args, Expr(a))
-    end
-    ret
-end
-
-
-Expr(x::EXPR{GlobalRefDoc}) = GlobalRef(Core, Symbol("@doc"))
-
-
-
-function Expr(x::EXPR{Ref})
-    ret = Expr(:ref)
-    for a in x.args
-        if a isa EXPR{Parameters}
-            insert!(ret.args, 2, Expr(a))
-        elseif !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-function Expr(x::EXPR{TypedHcat})
-    ret = Expr(:typed_hcat)
-    for a in x.args
-        if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-function Expr(x::EXPR{TypedVcat})
-    ret = Expr(:typed_vcat)
-
-    for a in x.args
-        if a isa EXPR{Parameters}
-            insert!(ret.args, 2, Expr(a))
-        elseif !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-function Expr(x::EXPR{Comprehension})
-    ret = Expr(:comprehension)
-    for a in x.args
-        if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-function Expr(x::EXPR{Flatten})
-    iters, args = get_inner_gen(x)
-    i = popfirst!(iters)
-    ex = Expr(:generator, Expr(args[1]), convert_iter_assign(i))
-    for i in iters
-        ex = Expr(:generator, ex, convert_iter_assign(i))
-        ex = Expr(:flatten, ex)
-    end
-    # ret = Expr(:flatten, ex)
-
-    return ex
-end
-
-
-function get_inner_gen(x, iters = [], arg = []) iters, arg end
-function get_inner_gen(x::EXPR{Flatten}, iters = [], arg = [])
-    get_inner_gen(x.args[1], iters, arg)
-    iters, arg
-end
-function get_inner_gen(x::EXPR{Generator}, iters = [], arg = [])
-    push!(iters, get_iter(x))
-    if x.args[1] isa EXPR{Generator} || x.args[1] isa EXPR{Flatten}
+function get_inner_gen(x, iters = [], arg = []) 
+    if x.typ == Flatten
         get_inner_gen(x.args[1], iters, arg)
-    else
-        push!(arg, x.args[1])
-    end
-    iters, arg
-end
-
-
-function get_iter(x) end
-function get_iter(x::EXPR{Generator})
-    return x.args[3]
-end
-
-function Expr(x::EXPR{Generator})
-    ret = Expr(:generator, Expr(x.args[1]))
-    for i = 3:length(x.args)
-        a = x.args[i]
-        if !(a isa PUNCTUATION)
-            push!(ret.args, convert_iter_assign(a))
+    elseif x.typ === Generator
+        push!(iters, get_iter(x))
+        if x.args[1].typ === Generator || x.args[1].typ === Flatten
+            get_inner_gen(x.args[1], iters, arg)
+        else
+            push!(arg, x.args[1])
         end
     end
-    ret
+    return iters, arg 
 end
 
-function Expr(x::EXPR{Filter})
-    ret = Expr(:filter)
-    for a in x.args
-        if !(is_if(a) || a isa PUNCTUATION)
-            push!(ret.args, convert_iter_assign(a))
-        end
+function get_iter(x) 
+    if x.typ === Generator
+        return x.args[3]
     end
-    ret
 end
 
 function convert_iter_assign(a)
-    if a isa BinaryOpCall && (is_in(a.op) || is_elof(a.op))
-        return Expr(:(=), Expr(a.arg1), Expr(a.arg2))
+    if a.typ === BinaryOpCall && (is_in(a.args[2]) || is_elof(a.args[2]))
+        return Expr(:(=), Expr(a.args[1]), Expr(a.args[3]))
     else
         return Expr(a)
     end
 end
-
-
-function Expr(x::EXPR{TypedComprehension})
-    ret = Expr(:typed_comprehension)
-    for a in x.args
-        if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-
-function Expr(x::EXPR{Export})
-    ret = Expr(:export)
-    for i = 2:length(x.args)
-        a = x.args[i]
-        if !(a isa PUNCTUATION)
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
-
-
-
-
-
 
 function _get_import_block(x, i, ret)
     while is_dot(x.args[i + 1])
@@ -770,7 +723,7 @@ function _get_import_block(x, i, ret)
     while i < length(x.args) && !(is_comma(x.args[i + 1]))
         i += 1
         a = x.args[i]
-        if !(a isa PUNCTUATION) && !(is_dot(a) || is_colon(a))
+        if !(ispunctuation(a)) && !(is_dot(a) || is_colon(a))
             push!(ret.args, Expr(a))
         end
     end
@@ -778,13 +731,8 @@ function _get_import_block(x, i, ret)
     return i
 end
 
-
-Expr(x::EXPR{Import}) = expr_import(x, :import)
-Expr(x::EXPR{ImportAll}) = expr_import(x, :importall)
-Expr(x::EXPR{Using}) = expr_import(x, :using)
-
 function expr_import(x, kw)
-    col = findall(a-> a isa OPERATOR && precedence(a) == ColonOp, x.args)
+    col = findall(a -> isoperator(a) && precedence(a) == ColonOp, x.args)
     comma = findall(is_comma, x.args)
     
     header = []
@@ -798,7 +746,7 @@ function expr_import(x, kw)
             push!(args, Expr(:.))
         elseif is_comma(a)
             push!(args, Expr(:.))
-        elseif !(a isa PUNCTUATION)
+        elseif !(ispunctuation(a))
             push!(last(args).args, Expr(a))
         end
     end
@@ -810,28 +758,6 @@ function expr_import(x, kw)
 end
 
 
-function Expr(x::EXPR{FileH})
-    ret = Expr(:file)
-    for a in x.args
-        push!(ret.args, Expr(a))
-    end
-    ret
-end
-
-function Expr(x::EXPR{StringH})
-    ret = Expr(:string)
-    for (i, a) in enumerate(x.args)
-        if a isa UnarySyntaxOpCall
-            a = a.arg2
-        elseif a isa LITERAL && a.kind == Tokens.STRING
-            if span(a) == 0 || ((i == 1 || i == length(x.args)) && span(a) == 1) || isempty(a.val)
-                continue
-            end
-        end
-        push!(ret.args, Expr(a))
-    end
-    ret
-end
 
 const UNICODE_OPS_REVERSE = Dict{Tokenize.Tokens.Kind,Symbol}()
 for (k, v) in Tokenize.Tokens.UNICODE_OPS

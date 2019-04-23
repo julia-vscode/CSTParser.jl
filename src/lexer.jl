@@ -49,7 +49,7 @@ mutable struct ParseState
     nnws::RawToken
     closer::Closer
     errored::Bool
-    errors::Vector
+    errors::Vector{Error}
 end
 function ParseState(str::Union{IO,String})
     ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), Closer(), false, Error[])

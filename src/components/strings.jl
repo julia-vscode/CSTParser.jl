@@ -35,34 +35,34 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     lcp = nothing
     exprs_to_adjust = []
     function adjust_lcp(expr, last = false)
-    end
-    function adjust_lcp(expr::LITERAL, last = false)
-        push!(exprs_to_adjust, expr)
-        str = expr.val
-        (isempty(str) || (lcp != nothing && isempty(lcp))) && return
-        (last && str[end] == '\n') && return (lcp = "")
-        idxstart, idxend = 2, 1
-        while nextind(str, idxend) - 1 < sizeof(str) && (lcp == nothing || !isempty(lcp))
-            idxend = skip_to_nl(str, idxend)
-            idxstart = nextind(str, idxend)
-            while nextind(str, idxend) - 1 < sizeof(str)
-                c = str[nextind(str, idxend)]
-                if c == ' ' || c == '\t'
-                    idxend += 1
-                elseif c == '\n'
-                    # All whitespace lines in the middle are ignored
-                    idxend += 1
-                    idxstart = idxend + 1
-                else
-                    prefix = str[idxstart:idxend]
-                    lcp = lcp === nothing ? prefix : longest_common_prefix(lcp, prefix)
-                    break
+        if isliteral(expr)
+            push!(exprs_to_adjust, expr)
+            str = expr.val
+            (isempty(str) || (lcp != nothing && isempty(lcp))) && return
+            (last && str[end] == '\n') && return (lcp = "")
+            idxstart, idxend = 2, 1
+            while nextind(str, idxend) - 1 < sizeof(str) && (lcp == nothing || !isempty(lcp))
+                idxend = skip_to_nl(str, idxend)
+                idxstart = nextind(str, idxend)
+                while nextind(str, idxend) - 1 < sizeof(str)
+                    c = str[nextind(str, idxend)]
+                    if c == ' ' || c == '\t'
+                        idxend += 1
+                    elseif c == '\n'
+                        # All whitespace lines in the middle are ignored
+                        idxend += 1
+                        idxstart = idxend + 1
+                    else
+                        prefix = str[idxstart:idxend]
+                        lcp = lcp === nothing ? prefix : longest_common_prefix(lcp, prefix)
+                        break
+                    end
                 end
             end
-        end
-        if idxstart != nextind(str, idxend)
-            prefix = str[idxstart:idxend]
-            lcp = lcp === nothing ? prefix : longest_common_prefix(lcp, prefix)
+            if idxstart != nextind(str, idxend)
+                prefix = str[idxstart:idxend]
+                lcp = lcp === nothing ? prefix : longest_common_prefix(lcp, prefix)
+            end
         end
     end
 
@@ -75,12 +75,12 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     replace(_val, "\\\"" => "\""), ps.t.kind)
         if istrip
             adjust_lcp(expr)
-            ret = EXPR{StringH}(Any[expr], sfullspan, sspan)
+            ret = EXPR(StringH, EXPR[expr], sfullspan, sspan)
         else
             return expr
         end
     else
-        ret = EXPR{StringH}(Any[], sfullspan, sspan)
+        ret = EXPR(StringH, EXPR[], sfullspan, sspan)
         input = IOBuffer(val(ps.t, ps))
         startbytes = istrip ? 3 : 1
         seek(input, startbytes)
@@ -101,7 +101,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     str =  str[1:prevind(str, sizeof(str))]
                     ex = LITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, Tokens.STRING)
                 end
-                push!(ret.args, ex)
+                push!(ret, ex)
                 istrip && adjust_lcp(ex, true)
                 break
             end
@@ -113,7 +113,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 lspan = position(b)
                 str = tostr(b)
                 ex = LITERAL(lspan + startbytes, lspan + startbytes, str, Tokens.STRING)
-                push!(ret.args, ex); istrip && adjust_lcp(ex)
+                push!(ret, ex); istrip && adjust_lcp(ex)
                 startbytes = 0
                 op = OPERATOR(1, 1, Tokens.EX_OR, false)
                 if peekchar(input) == '('
@@ -123,13 +123,13 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     ps1 = ParseState(input)
 
                     if ps1.nt.kind == Tokens.RPAREN
-                        call = UnarySyntaxOpCall(op, EXPR{InvisBrackets}(Any[lparen, rparen]))
-                        push!(ret.args, call)
+                        call = UnaryOpCall(op, EXPR(InvisBrackets, EXPR[lparen, rparen]))
+                        push!(ret, call)
                         skip(input, 1)
                     else
                         interp = @closer ps1 paren parse_expression(ps1)
-                        call = UnarySyntaxOpCall(op, EXPR{InvisBrackets}(Any[lparen, interp, rparen]))
-                        push!(ret.args, call)
+                        call = UnaryOpCall(op, EXPR(InvisBrackets, EXPR[lparen, interp, rparen]))
+                        push!(ret, call)
                         seek(input, ps1.nt.startbyte + 1)
                     end
                     # Compared to flisp/JuliaParser, we have an extra lookahead token,
@@ -139,14 +139,14 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     ps1 = ParseState(input)
                     next(ps1)
                     if ps1.t.kind == Tokens.WHITESPACE
-                        t = EXPR{ErrorToken}([], ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1)
+                        t = EXPR(ErrorToken, EXPR[], ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1)
                     else
                         t = INSTANCE(ps1)
                     end
                     # Attribute trailing whitespace to the string
                     t = adjustspan(t)
-                    call = UnarySyntaxOpCall(op, t)
-                    push!(ret.args, call)
+                    call = UnaryOpCall(op, t)
+                    push!(ret, call)
                     seek(input, pos + t.fullspan)
                 end
             else
@@ -161,35 +161,29 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             for expr in exprs_to_adjust
                 for (i, a) in enumerate(ret.args)
                     if expr == a
-                        ret.args[i] = typeof(a)(expr.fullspan, expr.span, replace(expr.val, "\n$lcp" => "\n"), expr.kind)
+                        ret.args[i] = EXPR(expr.typ, nothing, expr.fullspan, expr.span, replace(expr.val, "\n$lcp" => "\n"), expr.kind, false, expr.parent)
                     end
                 end
             end
         end
         # Drop leading newline
-        if ret.args[1] isa LITERAL && ret.args[1].kind in single_string_T &&
+        if isliteral(ret.args[1]) && ret.args[1].kind in single_string_T &&
                 !isempty(ret.args[1].val) && ret.args[1].val[1] == '\n'
             ret.args[1] = dropleadlingnewline(ret.args[1])
         end
     end
 
-    if (length(ret.args) == 1 && ret.args[1] isa LITERAL && ret.args[1].kind in single_string_T)
-        ret = ret.args[1]::LITERAL
+    if (length(ret.args) == 1 && isliteral(ret.args[1]) && ret.args[1].kind in single_string_T)
+        ret = ret.args[1]
     end
     update_span!(ret)
 
     return ret
 end
 
-
-adjustspan(x::IDENTIFIER) = IDENTIFIER(x.span, x.span, x.val)
-adjustspan(x::KEYWORD)= KEYWORD(x.kind, x.span, x.span)
-adjustspan(x::OPERATOR) = OPERATOR(x.span, x.span, x.kind, x.dot)
-adjustspan(x::LITERAL) = LITERAL(x.span, x.span, x.val, x.kind)
-adjustspan(x::PUNCTUATION) = PUNCTUATION(x.kind, x.span, x.span)
 function adjustspan(x::EXPR)
     x.fullspan = x.span
     return x
 end
 
-dropleadlingnewline(x::LITERAL) = LITERAL(x.fullspan, x.span, x.val[2:end], x.kind)
+dropleadlingnewline(x) = LITERAL(x.fullspan, x.span, x.val[2:end], x.kind)

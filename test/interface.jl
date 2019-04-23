@@ -39,10 +39,10 @@ end
     @test CSTParser.get_name(CSTParser.parse("abstract type T <: T end")).val == "T"
     @test CSTParser.get_name(CSTParser.parse("abstract type T{T} <: T end")).val == "T"
     # NEEDS FIX: v0.6 dep
-    @test CSTParser.get_name(CSTParser.parse("abstract T")).val == "T"
-    @test CSTParser.get_name(CSTParser.parse("abstract T{T}")).val == "T"
-    @test CSTParser.get_name(CSTParser.parse("abstract T <: T")).val == "T"
-    @test CSTParser.get_name(CSTParser.parse("abstract T{T} <: T")).val == "T"
+    # @test CSTParser.get_name(CSTParser.parse("abstract T")).val == "T"
+    # @test CSTParser.get_name(CSTParser.parse("abstract T{T}")).val == "T"
+    # @test CSTParser.get_name(CSTParser.parse("abstract T <: T")).val == "T"
+    # @test CSTParser.get_name(CSTParser.parse("abstract T{T} <: T")).val == "T"
 
     @test CSTParser.get_name(CSTParser.parse("function f end")).val == "f"
     @test CSTParser.get_name(CSTParser.parse("function f() end")).val == "f"

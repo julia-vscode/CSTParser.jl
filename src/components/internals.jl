@@ -1,6 +1,6 @@
 const term_c = (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE, Tokens.END, Tokens.ELSE, Tokens.ELSEIF, Tokens.CATCH, Tokens.FINALLY, Tokens.ENDMARKER)
 
-function parse_block(ps::ParseState, ret::Vector{Any} = Any[], closers = (Tokens.END,), docable = false)
+function parse_block(ps::ParseState, ret::Vector{EXPR} = EXPR[], closers = (Tokens.END,), docable = false)
     while ps.nt.kind ∉ closers && !ps.errored
         if ps.nt.kind ∈ term_c
             if ps.nt.kind == Tokens.ENDMARKER
@@ -49,11 +49,11 @@ function parse_iter(ps::ParseState)
         outer = INSTANCE(next(ps))
         arg = @closer ps range @closer ps ws parse_expression(ps)
         if is_range(arg)
-            arg.arg1 = EXPR{Outer}([outer, arg.arg1])
+            arg.args[1] = setparent!(EXPR(Outer, EXPR[outer, arg.args[1]]), arg)
             arg.fullspan += outer.fullspan
             arg.span = outer.fullspan + arg.span
         else
-            arg = EXPR{ErrorToken}([outer, arg])
+            arg = EXPR(ErrorToken, EXPR[outer, arg])
         end
     else
         arg = @closer ps range @closer ps ws parse_expression(ps)
@@ -65,15 +65,15 @@ function parse_ranges(ps::ParseState)
     startbyte = ps.nt.startbyte
     arg = parse_iter(ps)
 
-    if (arg isa EXPR{Outer} && !is_range(arg.args[2])) || !is_range(arg)
+    if (arg.typ === Outer && !is_range(arg.args[2])) || !is_range(arg)
         push!(ps.errors, Error(ps.nt.startbyte - arg.fullspan:ps.nt.startbyte , "Incorrect iteration specification."))
         arg = ErrorToken(arg)
     elseif ps.nt.kind == Tokens.COMMA
-        arg = EXPR{Block}(Any[arg])
+        arg = EXPR(Block, EXPR[arg])
         while ps.nt.kind == Tokens.COMMA
             accept_comma(ps, arg)
             nextarg = parse_iter(ps)
-            if (nextarg isa EXPR{Outer} && !is_range(nextarg.args[2])) || !is_range(nextarg)
+            if (nextarg.typ === Outer && !is_range(nextarg.args[2])) || !is_range(nextarg)
                 push!(ps.errors, Error(ps.nt.startbyte - nextarg.fullspan:ps.nt.startbyte , "Incorrect iteration specification."))
                 arg = ErrorToken(arg)
             end
@@ -83,10 +83,9 @@ function parse_ranges(ps::ParseState)
     return arg
 end
 
-
-function is_range(x) false end
-function is_range(x::BinarySyntaxOpCall) is_eq(x.op) end
-function is_range(x::BinaryOpCall) is_in(x.op) || is_elof(x.op) end
+function is_range(x)
+    x.typ === BinaryOpCall && (is_eq(x.args[2]) || is_in(x.args[2]) || is_elof(x.args[2]))
+end
 
 function parse_end(ps::ParseState)
     if ps.closer.square
@@ -108,42 +107,42 @@ function parse_call(ps::ParseState, ret, ismacro = false)
     sb = ps.nt.startbyte - ret.fullspan
     if is_minus(ret) || is_not(ret)
         arg = @closer ps unary @closer ps inwhere @precedence ps 13 parse_expression(ps)
-        if arg isa EXPR{TupleH}
+        if arg.typ === TupleH
             pushfirst!(arg.args, ret)
             fullspan = ps.nt.startbyte - sb
-            ret = EXPR{Call}(arg.args, fullspan, fullspan - (last(arg.args).fullspan - last(arg.args).span))
-        elseif arg isa WhereOpCall && arg.arg1 isa EXPR{TupleH}
-            ret = WhereOpCall(EXPR{Call}(Any[ret; arg.arg1.args]), arg.op, arg.args)
+            ret = EXPR(Call, arg.args, fullspan, fullspan - (last(arg.args).fullspan - last(arg.args).span))
+        elseif arg.typ === WhereOpCall && arg.args[1].typ === TupleH
+            ret = WhereOpCall(EXPR(Call, EXPR[ret; arg.args[1].args]), arg.args[2], arg.args[3:end])
         else
             ret = UnaryOpCall(ret, arg)
         end
     elseif is_and(ret) || is_decl(ret) || is_exor(ret) 
         arg = @precedence ps 20 parse_expression(ps)
-        if is_exor(ret) && arg isa EXPR{TupleH} && length(arg.args) == 3 && arg.args[2] isa UnarySyntaxOpCall && is_dddot(arg.args[2].arg2)
-            arg = EXPR{InvisBrackets}(arg.args)
+        if is_exor(ret) && arg.typ === TupleH && length(arg.args) == 3 && arg.args[2].typ === UnaryOpCall && is_dddot(arg.args[2].arg2)
+            arg = EXPR(InvisBrackets, arg.args)
         end
-        ret = UnarySyntaxOpCall(ret, arg)
+        ret = UnaryOpCall(ret, arg)
     elseif is_issubt(ret) || is_issupt(ret)
         arg = @precedence ps PowerOp parse_expression(ps)
-        ret = EXPR{Call}(Any[ret; arg.args])
+        ret = EXPR(Call, EXPR[ret; arg.args])
     else
-        !ismacro && ret isa EXPR{MacroName} && (ismacro = true)
-        args = Any[ret, PUNCTUATION(next(ps))]
+        !ismacro && ret.typ === MacroName && (ismacro = true)
+        args = EXPR[ret, PUNCTUATION(next(ps))]
         @closeparen ps @default ps parse_comma_sep(ps, args, !ismacro)
         accept_rparen(ps, args)
         fullspan = ps.nt.startbyte - sb
-        ret = EXPR{ismacro ? MacroCall : Call}(args, fullspan, fullspan - last(args).fullspan + last(args).span)
+        ret = EXPR(ismacro ? MacroCall : Call, args, fullspan, fullspan - last(args).fullspan + last(args).span)
     end
     return ret
 end
 
 
-function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = false, istuple = false)
+function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw = true, block = false, istuple = false)
     @nocloser ps inwhere @nocloser ps newline @closer ps comma while !closer(ps)
         a = parse_expression(ps)
 
-        if kw && !ps.closer.brace && a isa BinarySyntaxOpCall && is_eq(a.op)
-            a = EXPR{Kw}(Any[a.arg1, a.op, a.arg2], a.fullspan, a.span)
+        if kw && !ps.closer.brace && a.typ === BinaryOpCall && is_eq(a.args[2])
+            a = EXPR(Kw, EXPR[a.args[1], a.args[2], a.args[3]], a.fullspan, a.span)
         end
         push!(args, a)
         if ps.nt.kind == Tokens.COMMA
@@ -155,29 +154,29 @@ function parse_comma_sep(ps::ParseState, args::Vector{Any}, kw = true, block = f
     end
 
     if ps.ws.kind == SemiColonWS
-        if block && !(istuple && length(args) > 2) && !(length(args) == 1 && args[1] isa PUNCTUATION) && !(last(args) isa UnarySyntaxOpCall && is_dddot(last(args).arg2))
-            args1 = Any[pop!(args)]
+        if block && !(istuple && length(args) > 2) && !(length(args) == 1 && ispunctuation(args[1])) && !(last(args).typ === UnaryOpCall && is_dddot(last(args).args[2]))
+            args1 = EXPR[pop!(args)]
             @nocloser ps newline @closer ps comma while @nocloser ps semicolon !closer(ps)
                 a = parse_expression(ps)
                 push!(args1, a)
             end
-            body = EXPR{Block}(args1)
+            body = EXPR(Block, args1)
             push!(args, body)
             args = body
         else
             parse_parameters(ps, args)
         end
     end
-    return args
+    return #args
 end
 
-function parse_parameters(ps, args::Vector{Any})
+function parse_parameters(ps, args::Vector{EXPR})
     sb = ps.nt.startbyte
-    args1 = Any[]
+    args1 = EXPR[]
     @nocloser ps inwhere @nocloser ps newline  @closer ps comma while @nocloser ps semicolon !closer(ps)
         a = parse_expression(ps)
-        if !ps.closer.brace && a isa BinarySyntaxOpCall && is_eq(a.op)
-            a = EXPR{Kw}(Any[a.arg1, a.op, a.arg2], a.fullspan, a.span)
+        if !ps.closer.brace && a.typ === BinaryOpCall && is_eq(a.args[2])
+            a = EXPR(Kw, EXPR[a.args[1], a.args[2], a.args[3]], a.fullspan, a.span)
         end
         push!(args1, a)
         if ps.nt.kind == Tokens.COMMA
@@ -189,7 +188,7 @@ function parse_parameters(ps, args::Vector{Any})
     end
     if !isempty(args1)
         fullspan = ps.nt.startbyte - sb
-        paras = EXPR{Parameters}(args1, fullspan, fullspan - last(args1).fullspan + last(args1).span)
+        paras = EXPR(Parameters, args1, fullspan, fullspan - last(args1).fullspan + last(args1).span)
         push!(args, paras)
     end
     return
@@ -207,7 +206,7 @@ function parse_macrocall(ps::ParseState)
         push!(ps.errors, Error((ps.ws.startbyte + 1:ps.ws.endbyte) .+ 1 , "Unexpected whitespace in macrocall."))
         mname = ErrorToken(INSTANCE(next(ps)))
     else
-        mname = EXPR{MacroName}(Any[at, IDENTIFIER(next(ps))])
+        mname = EXPR(MacroName, EXPR[at, IDENTIFIER(next(ps))])
     end
 
     # Handle cases with @ at start of dotted expressions
@@ -215,16 +214,16 @@ function parse_macrocall(ps::ParseState)
         while ps.nt.kind == Tokens.DOT
             op = OPERATOR(next(ps))
             nextarg = IDENTIFIER(next(ps))
-            mname = BinarySyntaxOpCall(mname, op, Quotenode(nextarg))
+            mname = BinaryOpCall(mname, op, EXPR(Quotenode, EXPR[nextarg]))
         end
     end
 
     if ps.nt.kind == Tokens.COMMA
-        return EXPR{MacroCall}(Any[mname], mname.fullspan, mname.span)
+        return EXPR(MacroCall, EXPR[mname], mname.fullspan, mname.span)
     elseif isemptyws(ps.ws) && ps.nt.kind == Tokens.LPAREN
         return parse_call(ps, mname, true)
     else
-        args = Any[mname]
+        args = EXPR[mname]
         insquare = ps.closer.insquare
         @default ps while !closer(ps)
             a = @closer ps inmacro @closer ps ws @closer ps wsop parse_expression(ps)
@@ -233,9 +232,8 @@ function parse_macrocall(ps::ParseState)
                 break
             end
         end
-        # return EXPR{MacroCall}(args)
         fullspan = ps.nt.startbyte - sb
-        return EXPR{MacroCall}(args, fullspan, fullspan - last(args).fullspan + last(args).span)
+        return EXPR(MacroCall, args, fullspan, fullspan - last(args).fullspan + last(args).span)
     end
 end
 
@@ -250,28 +248,28 @@ Comprehensions are parsed as SQUAREs containing a generator.
 """
 function parse_generator(ps::ParseState, @nospecialize ret)
     kw = KEYWORD(next(ps))
-    ret = EXPR{Generator}(Any[ret, kw])
+    ret = EXPR(Generator, EXPR[ret, kw])
     ranges = @closesquare ps parse_ranges(ps)
 
     if ps.nt.kind == Tokens.IF
-        if ranges isa EXPR{Block}
-            ranges = EXPR{Filter}(ranges.args)
+        if ranges.typ === Block
+            ranges = EXPR(Filter, ranges.args)
         else
-            ranges = EXPR{Filter}(Any[ranges])
+            ranges = EXPR(Filter, EXPR[ranges])
         end
         pushfirst!(ranges, KEYWORD(next(ps)))
         cond = @closer ps range parse_expression(ps)
         pushfirst!(ranges, cond)
         push!(ret, ranges)
-    elseif ranges isa EXPR{Block}
+    elseif ranges.typ === Block
         append!(ret, ranges)
     else
         push!(ret, ranges)
     end
     
 
-    if ret.args[1] isa EXPR{Generator} || ret.args[1] isa EXPR{Flatten}
-        ret = EXPR{Flatten}(Any[ret])
+    if ret.args[1].typ === Generator || ret.args[1].typ === Flatten
+        ret = EXPR(Flatten, EXPR[ret])
     end
 
     return ret
@@ -280,7 +278,7 @@ end
 
 
 function parse_dot_mod(ps::ParseState, is_colon = false)
-    args = Any[]
+    args = EXPR[]
 
     while ps.nt.kind == Tokens.DOT || ps.nt.kind == Tokens.DDOT || ps.nt.kind == Tokens.DDDOT
         d = OPERATOR(next(ps))
@@ -299,7 +297,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
     # import/export ..
     if ps.nt.kind == Tokens.COMMA || ps.ws.kind == NewLineWS || ps.nt.kind == Tokens.ENDMARKER
         if length(args) == 2
-            return Any[INSTANCE(ps)]
+            return EXPR[INSTANCE(ps)]
         end
     end
 
@@ -307,9 +305,9 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
         if ps.nt.kind == Tokens.AT_SIGN
             at = PUNCTUATION(next(ps))
             a = INSTANCE(next(ps))
-            push!(args, EXPR{MacroName}(Any[at, a]))
+            push!(args, EXPR(MacroName, EXPR[at, a]))
         elseif ps.nt.kind == Tokens.LPAREN
-            a = EXPR{InvisBrackets}(Any[PUNCTUATION(next(ps))])
+            a = EXPR(InvisBrackets,EXPR[PUNCTUATION(next(ps))])
             push!(a, @closeparen ps parse_expression(ps))
             accept_rparen(ps, a)
             push!(args, a)

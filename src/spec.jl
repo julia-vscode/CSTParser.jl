@@ -19,79 +19,74 @@ const PrimeOp       = 16
 const DddotOp       = 7
 const AnonFuncOp    = 14
 
-abstract type AbstractEXPR end
 
-# Invariants:
-# if !isempty(e.args)
-#   e.fullspan == sum(x->x.fullspan, e.args)
-#   first(e.span) == first(first(e.args).span)
-#   last(e.span) == sum(x->x.fullspan, e.args[1:end-1]) + last(last(e.args).span)
-# end
-mutable struct EXPR{T} <: AbstractEXPR
-    args::Vector
-    # The full width of this expression including any whitespace
-    fullspan::Int
-    # The range of bytes within the fullspan that constitute the actual expression,
-    # excluding any leading/trailing whitespace or other trivia. 1-indexed
-    span::Int
-end
+abstract type LeafNode end
+abstract type Head end
+abstract type IDENTIFIER <: Head end
+abstract type PUNCTUATION <: Head end
+abstract type OPERATOR <: Head end
+abstract type KEYWORD <: Head end
+abstract type LITERAL <: Head end
+abstract type NoHead <: Head end
 
+const NoKind = Tokenize.Tokens.begin_keywords
 
-abstract type LeafNode <: AbstractEXPR end
-    
-struct IDENTIFIER <: LeafNode
+mutable struct EXPR
+    typ::DataType
+    args::Union{Nothing,Vector{EXPR}}
     fullspan::Int
     span::Int
-    val::String
-    IDENTIFIER(fullspan::Int, span::Int, val::String) = new(fullspan, span, val)
-end
-@noinline IDENTIFIER(ps::ParseState) = IDENTIFIER(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps))
-
-struct PUNCTUATION <: LeafNode
-    kind::Tokenize.Tokens.Kind
-    fullspan::Int
-    span::Int
-end
-@noinline PUNCTUATION(ps::ParseState) = PUNCTUATION(ps.t.kind, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1)
-
-struct OPERATOR <: LeafNode
-    fullspan::Int
-    span::Int
+    val::Union{Nothing,String}
     kind::Tokenize.Tokens.Kind
     dot::Bool
+    parent::Union{Nothing,EXPR}
 end
-@noinline OPERATOR(ps::ParseState) = OPERATOR(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, ps.t.kind, ps.t.dotop)
 
-struct KEYWORD <: LeafNode
-    kind::Tokenize.Tokens.Kind
-    fullspan::Int
-    span::Int
-end
-@noinline KEYWORD(ps::ParseState) = KEYWORD(ps.t.kind, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1)
-
-
-struct LITERAL <: LeafNode
-    fullspan::Int
-    span::Int
-    val::String
-    kind::Tokenize.Tokens.Kind
-end
-function LITERAL(ps::ParseState)
-    if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING ||
-       ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
-        return parse_string_or_cmd(ps)
-    else
-        LITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), ps.t.kind)
+function EXPR(T::DataType, args::Vector{EXPR}, fullspan, span)
+    ex = EXPR(T, args, fullspan, span, nothing, NoKind, false, nothing)
+    for c in args
+        setparent!(c, ex)
     end
+    ex
 end
 
-# AbstractTrees.children(x::EXPR) = x.args
+function EXPR(T::DataType, args::Vector{EXPR})
+    ret = EXPR(T, args, 0, 0)
+    update_span!(ret)
+    ret
+end
 
-span(x::AbstractEXPR) = x.span
+
+
+
+@noinline IDENTIFIER(ps::ParseState) = EXPR(IDENTIFIER, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), NoKind, false, nothing)
+
+PUNCTUATION(kind, fullspan, span) = EXPR(PUNCTUATION, nothing, fullspan, span, nothing, kind, false, nothing)
+@noinline PUNCTUATION(ps::ParseState) = EXPR(PUNCTUATION, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, ps.t.kind, false, nothing)
+
+OPERATOR(fullspan, span, kind, dotop) = EXPR(OPERATOR, nothing, fullspan, span, nothing, kind, dotop, nothing)
+@noinline OPERATOR(ps::ParseState) = EXPR(OPERATOR, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, ps.t.kind, ps.t.dotop, nothing)
+
+KEYWORD(kind, fullspan, span) = EXPR(KEYWORD, nothing, fullspan, span, nothing, kind, false, nothing)
+@noinline KEYWORD(ps::ParseState) = EXPR(KEYWORD, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, ps.t.kind, false, nothing)
+
+LITERAL(fullspan::Int, span::Int, val::String, kind) = EXPR(LITERAL, nothing, fullspan, span, val, kind, false, nothing)
+@noinline function LITERAL(ps::ParseState) 
+    if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING ||
+        ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
+         return parse_string_or_cmd(ps)
+     else
+         LITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), ps.t.kind)
+     end
+end
+
+
+
+span(x::EXPR) = x.span
 
 function update_span!(x) end
 function update_span!(x::EXPR)
-    isempty(x.args) && return
+    (x.args isa Nothing || isempty(x.args)) && return
     x.fullspan = 0
     for a in x.args
         x.fullspan += a.fullspan
@@ -99,21 +94,17 @@ function update_span!(x::EXPR)
     x.span = x.fullspan - last(x.args).fullspan + last(x.args).span
     return 
 end
-
-function EXPR{T}(args::Vector) where {T}
-    ret = EXPR{T}(args, 0, 0)
-    update_span!(ret)
-    ret
-end
-
+    
 function Base.push!(e::EXPR, arg)
     e.span = e.fullspan + arg.span
     e.fullspan += arg.fullspan
+    setparent!(arg, e)
     push!(e.args, arg)
 end
 
 function Base.pushfirst!(e::EXPR, arg)
     e.fullspan += arg.fullspan
+    setparent!(arg, e)
     pushfirst!(e.args, arg)
 end
 
@@ -130,20 +121,21 @@ end
 
 function Base.append!(e::EXPR, args::Vector)
     append!(e.args, args)
+    for arg in args
+        setparent!(arg, e)
+    end
     update_span!(e)
 end
 
 function Base.append!(a::EXPR, b::EXPR)
     append!(a.args, b.args)
+    for arg in b.args
+        setparent!(arg, a)
+    end
     a.fullspan += b.fullspan
     a.span = a.fullspan + last(b.span)
 end
 
-function Base.append!(a::EXPR, b::KEYWORD)
-    append!(a.args, b.args)
-    a.fullspan += b.fullspan
-    a.span = a.fullspan + last(b.span)
-end
 
 function INSTANCE(ps::ParseState)
     if isidentifier(ps.t)
@@ -169,90 +161,48 @@ mutable struct File
     ast::EXPR
     errors
 end
-File(path::String) = File([], [], path, EXPR{FileH}(Any[]), [])
+File(path::String) = File([], [], path, EXPR(FileH, EXPR[]), [])
 
 mutable struct Project
     path::String
     files::Vector{File}
 end
 
-abstract type Head end
 abstract type Call <: Head end
+abstract type UnaryOpCall <: Head end
+abstract type BinaryOpCall <: Head end
+abstract type WhereOpCall <: Head end
+abstract type ConditionalOpCall <: Head end
 
-mutable struct UnaryOpCall <: AbstractEXPR
-    op::OPERATOR
-    arg
-    fullspan::Int
-    span::Int
-    function UnaryOpCall(op, arg)
-        fullspan = op.fullspan + arg.fullspan
-        new(op, arg, fullspan, fullspan - arg.fullspan + arg.span)
+
+function UnaryOpCall(op, arg) 
+    fullspan = op.fullspan + arg.fullspan
+    ex = EXPR(UnaryOpCall, EXPR[op, arg], fullspan, fullspan - arg.fullspan + arg.span)
+    setparent!(op, ex)
+    setparent!(op, arg)
+    return ex
+end
+function BinaryOpCall(arg1, op, arg2) 
+    fullspan = arg1.fullspan + op.fullspan + arg2.fullspan
+    ex = EXPR(BinaryOpCall, EXPR[arg1, op, arg2], fullspan, fullspan - arg2.fullspan + arg2.span)
+    setparent!(arg1, ex)
+    setparent!(op, ex)
+    setparent!(arg2, ex)
+    return ex
+end
+function WhereOpCall(arg1, op, args)
+    ex = EXPR(WhereOpCall, EXPR[arg1; op; args], arg1.fullspan + op.fullspan, 0)
+    setparent!(arg1, ex)
+    setparent!(op, ex)
+    for a in args
+        ex.fullspan += a.fullspan
+        setparent!(a, ex)
     end
+    ex.span = ex.fullspan - last(args).fullspan + last(args).span
+    return ex
 end
 
-mutable struct UnarySyntaxOpCall <: AbstractEXPR
-    arg1
-    arg2
-    fullspan::Int
-    span::Int
-    function UnarySyntaxOpCall(arg1, arg2)
-        fullspan = arg1.fullspan + arg2.fullspan
-        new(arg1, arg2, fullspan, fullspan - arg2.fullspan + arg2.span)
-    end
-end
 
-mutable struct BinaryOpCall <: AbstractEXPR
-    arg1
-    op::OPERATOR
-    arg2
-    fullspan::Int
-    span::Int
-    function BinaryOpCall(arg1, op, arg2)
-        fullspan = arg1.fullspan + op.fullspan + arg2.fullspan
-        new(arg1, op, arg2, fullspan, fullspan - arg2.fullspan + arg2.span)
-    end
-end
-
-mutable struct BinarySyntaxOpCall <: AbstractEXPR
-    arg1
-    op::OPERATOR
-    arg2
-    fullspan::Int
-    span::Int
-    function BinarySyntaxOpCall(arg1, op, arg2)
-        fullspan = arg1.fullspan + op.fullspan + arg2.fullspan
-        new(arg1, op, arg2, fullspan, fullspan - arg2.fullspan + arg2.span)
-    end
-end
-
-mutable struct WhereOpCall <: AbstractEXPR
-    arg1
-    op::OPERATOR
-    args::Vector
-    fullspan::Int
-    span::Int
-    function WhereOpCall(arg1, op::OPERATOR, args)
-        fullspan = arg1.fullspan + op.fullspan
-        for a in args
-            fullspan += a.fullspan
-        end
-        new(arg1, op, args, fullspan, fullspan - last(args).fullspan + last(args).span)
-    end
-end
-
-mutable struct ConditionalOpCall <: AbstractEXPR
-    cond
-    op1::OPERATOR
-    arg1
-    op2::OPERATOR
-    arg2
-    fullspan::Int
-    span::Int
-    function ConditionalOpCall(cond, op1, arg1, op2, arg2)
-        fullspan = cond.fullspan + op1.fullspan + arg1.fullspan + op2.fullspan + arg2.fullspan
-        new(cond, op1, arg1, op2, arg2, fullspan, fullspan - arg2.fullspan + arg2.span)
-    end
-end
 
 abstract type ChainOpCall <: Head end
 abstract type ColonOpCall <: Head end
@@ -316,13 +266,15 @@ abstract type TypedVcat <: Head end
 abstract type Vect <: Head end
 
 abstract type ErrorToken <: Head end
-ErrorToken() = EXPR{ErrorToken}(Any[], 0, 0)
-ErrorToken(x) = EXPR{ErrorToken}(Any[x])
+ErrorToken() = EXPR(ErrorToken, EXPR[])
+ErrorToken(x) = EXPR(ErrorToken, EXPR[x])
 
-Quotenode(x) = EXPR{Quotenode}(Any[x])
+TRUE() = LITERAL(0, 0, "", Tokens.TRUE)
+FALSE() = LITERAL(0, 0, "", Tokens.FALSE)
+NOTHING() = LITERAL(0, 0, "", Tokens.NOTHING)
+GlobalRefDOC() = EXPR(GlobalRefDoc, EXPR[])
 
-const TRUE = LITERAL(0, 0, "", Tokens.TRUE)
-const FALSE = LITERAL(0, 0, "", Tokens.FALSE)
-const NOTHING = LITERAL(0, 0, "", Tokens.NOTHING)
-
-const GlobalRefDOC = EXPR{GlobalRefDoc}(Any[], 0, 0)
+function setparent!(c, p)
+    c.parent = p
+    return c
+end

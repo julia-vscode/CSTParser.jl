@@ -58,6 +58,8 @@ function parse_kw(ps)
         return @default ps @closer ps block parse_mutable(ps)
     elseif k == Tokens.OUTER
         return IDENTIFIER(ps)
+    else
+        return ErrorToken()
     end
 end
 # Prefix 
@@ -66,28 +68,28 @@ function parse_const(ps::ParseState)
     kw = KEYWORD(ps)
     arg = parse_expression(ps)
 
-    return EXPR{Const}(Any[kw, arg])
+    return EXPR(Const, EXPR[kw, arg])
 end
 
 function parse_global(ps::ParseState)
     kw = KEYWORD(ps)
     arg = parse_expression(ps)
 
-    return EXPR{Global}(Any[kw, arg])
+    return EXPR(Global, EXPR[kw, arg])
 end
 
 function parse_local(ps::ParseState)
     kw = KEYWORD(ps)
     arg = parse_expression(ps)
 
-    return EXPR{Local}(Any[kw, arg])
+    return EXPR(Local, EXPR[kw, arg])
 end
 
 function parse_return(ps::ParseState)
     kw = KEYWORD(ps)
-    args = closer(ps) ? NOTHING : parse_expression(ps)
+    args = closer(ps) ? NOTHING() : parse_expression(ps)
 
-    return EXPR{Return}(Any[kw, args])
+    return EXPR(Return, EXPR[kw, args])
 end
 
 
@@ -99,11 +101,11 @@ end
         kw1 = KEYWORD(ps)
         kw2 = KEYWORD(next(ps))
         sig = @closer ps block parse_expression(ps)
-        ret = EXPR{Abstract}(Any[kw1, kw2, sig, accept_end(ps)])
+        ret = EXPR(Abstract, EXPR[kw1, kw2, sig, accept_end(ps)])
     else
         kw = KEYWORD(ps)
         sig = parse_expression(ps)
-        ret = EXPR{Abstract}(Any[kw, sig])
+        ret = EXPR(Abstract, EXPR[kw, sig])
     end
     return ret
 end
@@ -115,7 +117,7 @@ end
         sig = @closer ps ws @closer ps wsop parse_expression(ps)
         arg = @closer ps block parse_expression(ps)
 
-        ret = EXPR{Primitive}(Any[kw1, kw2, sig, arg, accept_end(ps)])
+        ret = EXPR(Primitive, EXPR[kw1, kw2, sig, arg, accept_end(ps)])
     else
         ret = IDENTIFIER(ps)
     end
@@ -132,9 +134,9 @@ function parse_imports(ps::ParseState)
     arg = parse_dot_mod(ps)
 
     if ps.nt.kind != Tokens.COMMA && ps.nt.kind != Tokens.COLON
-        ret = EXPR{kwt}(vcat(kw, arg))
+        ret = EXPR(kwt, vcat(kw, arg))
     elseif ps.nt.kind == Tokens.COLON
-        ret = EXPR{kwt}(vcat(kw, arg))
+        ret = EXPR(kwt, vcat(kw, arg))
         push!(ret, OPERATOR(next(ps)))
 
         arg = parse_dot_mod(ps, true)
@@ -145,7 +147,7 @@ function parse_imports(ps::ParseState)
             append!(ret, arg)
         end
     else
-        ret = EXPR{kwt}(vcat(kw, arg))
+        ret = EXPR(kwt, vcat(kw, arg))
         while ps.nt.kind == Tokens.COMMA
             accept_comma(ps, ret)
             arg = parse_dot_mod(ps)
@@ -157,7 +159,7 @@ function parse_imports(ps::ParseState)
 end
 
 function parse_export(ps::ParseState)
-    args = Any[KEYWORD(ps)]
+    args = EXPR[KEYWORD(ps)]
     append!(args, parse_dot_mod(ps))
 
     while ps.nt.kind == Tokens.COMMA
@@ -166,7 +168,7 @@ function parse_export(ps::ParseState)
         push!(args, arg)
     end
 
-    return EXPR{Export}(args)
+    return EXPR(Export, args)
 end
 
 
@@ -175,33 +177,32 @@ end
 @addctx :begin function parse_begin(ps::ParseState)
     sb = ps.t.startbyte
     kw = KEYWORD(ps)
-    blockargs = parse_block(ps, Any[], (Tokens.END,), true)
+    blockargs = parse_block(ps, EXPR[], (Tokens.END,), true)
     if isempty(blockargs)
-        block = EXPR{Block}(blockargs, 0, 0)
+        block = EXPR(Block, blockargs, 0, 0)
     else
         fullspan = ps.nt.startbyte - sb - kw.fullspan
-        block = EXPR{Block}(blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
+        block = EXPR(Block, blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
     end
-    # return EXPR{Begin}(Any[kw, EXPR{Block}(blockargs), accept_end(ps)])
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return EXPR{Begin}(Any[kw, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
+    return EXPR(Begin, EXPR[kw, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
 end
 
 @addctx :quote function parse_quote(ps::ParseState)
     kw = KEYWORD(ps)
     blockargs = parse_block(ps)
-    return EXPR{Quote}(Any[kw, EXPR{Block}(blockargs), accept_end(ps)])
+    return EXPR(Quote, EXPR[kw, EXPR(Block, blockargs), accept_end(ps)])
 end
 
 @addctx :function function parse_function(ps::ParseState)
     kw = KEYWORD(ps)
     sig = @closer ps inwhere @closer ps ws parse_expression(ps)
 
-    if sig isa EXPR{InvisBrackets} && !(sig.args[2] isa EXPR{TupleH})
+    if sig.typ === InvisBrackets && !(sig.args[2].typ === TupleH)
         istuple = true
-        sig = EXPR{TupleH}(sig.args)
-    elseif sig isa EXPR{TupleH}
+        sig = EXPR(TupleH, sig.args)
+    elseif sig.typ === TupleH
         istuple = true
     else
         istuple = false
@@ -214,16 +215,16 @@ end
     blockargs = parse_block(ps)
 
     if isempty(blockargs)
-        if sig isa EXPR{Call} || sig isa WhereOpCall || (sig isa BinarySyntaxOpCall && !(is_exor(sig.arg1))) || istuple
-            args = Any[sig, EXPR{Block}(blockargs)]
+        if sig.typ === Call || sig.typ === WhereOpCall || (sig.typ === BinaryOpCall && !is_exor(sig.args[1])) || istuple
+            args = EXPR[sig, EXPR(Block, blockargs)]
         else
-            args = Any[sig]
+            args = EXPR[sig]
         end
     else
-        args = Any[sig, EXPR{Block}(blockargs)]
+        args = EXPR[sig, EXPR(Block, blockargs)]
     end
 
-    ret = EXPR{FunctionDef}(Any[kw])
+    ret = EXPR(FunctionDef, EXPR[kw])
     for a in args
         push!(ret, a)
     end
@@ -238,20 +239,20 @@ end
     sb1  = ps.nt.startbyte
     blockargs = parse_block(ps)
 
-    if sig isa IDENTIFIER
+    if isidentifier(sig)
         ender = accept_end(ps)
         fullspan1 = ps.nt.startbyte - sb
-        ret = EXPR{Macro}(Any[kw, sig, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
+        ret = EXPR(Macro, EXPR[kw, sig, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
     elseif isempty(blockargs)
         ender = accept_end(ps)
         fullspan1 = ps.nt.startbyte - sb
-        ret = EXPR{Macro}(Any[kw, sig, EXPR{Block}([]), ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
+        ret = EXPR(Macro, EXPR[kw, sig, EXPR(Block, EXPR[]), ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
     else
         fullspan = ps.nt.startbyte - sb1
-        block = EXPR{Block}(blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
+        block = EXPR(Block, blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
         ender = accept_end(ps)
         fullspan1 = ps.nt.startbyte - sb
-        ret = EXPR{Macro}(Any[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
+        ret = EXPR(Macro, EXPR[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
     end
     return ret
 end
@@ -264,16 +265,15 @@ end
     sb1  = ps.nt.startbyte
     blockargs = parse_block(ps)
 
-    # return EXPR{For}(Any[kw, ranges, EXPR{Block}(blockargs), accept_end(ps)])
     if isempty(blockargs)
-        block = EXPR{Block}(blockargs, 0, 0)
+        block = EXPR(Block, blockargs, 0, 0)
     else
         fullspan = ps.nt.startbyte - sb1
-        block = EXPR{Block}(blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
+        block = EXPR(Block, blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
     end
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return EXPR{For}(Any[kw, ranges, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
+    return EXPR(For, EXPR[kw, ranges, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
 end
 
 @addctx :while function parse_while(ps::ParseState)
@@ -283,16 +283,15 @@ end
     sb1 = ps.nt.startbyte
     blockargs = parse_block(ps)
 
-    # return EXPR{While}(Any[kw, cond, EXPR{Block}(blockargs), accept_end(ps)])
     if isempty(blockargs)
-        block = EXPR{Block}(blockargs, 0, 0)
+        block = EXPR(Block, blockargs, 0, 0)
     else
         fullspan = ps.nt.startbyte - sb1
-        block = EXPR{Block}(blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
+        block = EXPR(Block, blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
     end
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return EXPR{While}(Any[kw, cond, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
+    return EXPR(While, EXPR[kw, cond, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
 end
 
 # control flow
@@ -311,15 +310,15 @@ Parse an `if` block.
     else
         cond = @closer ps ws parse_expression(ps)
     end
-    ifblockargs = parse_block(ps, Any[], (Tokens.END, Tokens.ELSE, Tokens.ELSEIF))
+    ifblockargs = parse_block(ps, EXPR[], (Tokens.END, Tokens.ELSE, Tokens.ELSEIF))
 
     if nested
-        ret = EXPR{If}(Any[cond, EXPR{Block}(ifblockargs)])
+        ret = EXPR(If, EXPR[cond, EXPR(Block, ifblockargs)])
     else
-        ret = EXPR{If}(Any[kw, cond, EXPR{Block}(ifblockargs)])
+        ret = EXPR(If, EXPR[kw, cond, EXPR(Block, ifblockargs)])
     end
 
-    elseblockargs = Any[]
+    elseblockargs = EXPR[]
     if ps.nt.kind == Tokens.ELSEIF
         push!(ret, KEYWORD(next(ps)))
         push!(elseblockargs, parse_if(ps, true))
@@ -332,7 +331,7 @@ Parse an `if` block.
 
     # Construction
     if !(isempty(elseblockargs) && !elsekw)
-        push!(ret, EXPR{Block}(elseblockargs))
+        push!(ret, EXPR(Block, elseblockargs))
     end
     !nested && accept_end(ps, ret)
 
@@ -340,11 +339,11 @@ Parse an `if` block.
 end
 
 @addctx :let function parse_let(ps::ParseState)
-    args = Any[KEYWORD(ps)]
+    args = EXPR[KEYWORD(ps)]
     if !(ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS)
         arg = @closer ps range @closer ps ws  parse_expression(ps)
         if ps.nt.kind == Tokens.COMMA
-            arg = EXPR{Block}(Any[arg])
+            arg = EXPR(Block, EXPR[arg])
             while ps.nt.kind == Tokens.COMMA
                 accept_comma(ps, arg)
                 startbyte = ps.nt.startbyte
@@ -356,18 +355,18 @@ end
     end
     
     blockargs = parse_block(ps)
-    push!(args, EXPR{Block}(blockargs))
+    push!(args, EXPR(Block, blockargs))
     accept_end(ps, args)
 
-    return EXPR{Let}(args)
+    return EXPR(Let, args)
 end
 
 @addctx :try function parse_try(ps::ParseState)
     kw = KEYWORD(ps)
-    ret = EXPR{Try}(Any[kw])
+    ret = EXPR(Try, EXPR[kw])
 
-    tryblockargs = parse_block(ps, Any[], (Tokens.END, Tokens.CATCH, Tokens.FINALLY))
-    push!(ret, EXPR{Block}(tryblockargs))
+    tryblockargs = parse_block(ps, EXPR[], (Tokens.END, Tokens.CATCH, Tokens.FINALLY))
+    push!(ret, EXPR(Block, tryblockargs))
 
     #  catch block
     if ps.nt.kind == Tokens.CATCH
@@ -375,25 +374,25 @@ end
         push!(ret, KEYWORD(ps))
         # catch closing early
         if ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END
-            caught = FALSE
-            catchblock = EXPR{Block}(Any[])
+            caught = FALSE()
+            catchblock = EXPR(Block, EXPR[])
         else
             if ps.ws.kind == SemiColonWS || ps.ws.kind == NewLineWS
-                caught = FALSE
+                caught = FALSE()
             else
                 caught = @closer ps ws parse_expression(ps)
             end
             
-            catchblockargs = parse_block(ps, Any[], (Tokens.END, Tokens.FINALLY))
-            if !(caught isa IDENTIFIER || caught == FALSE || (caught isa UnarySyntaxOpCall && caught.arg1 isa OPERATOR && caught.arg1.kind == Tokens.EX_OR))
+            catchblockargs = parse_block(ps, EXPR[], (Tokens.END, Tokens.FINALLY))
+            if !(isidentifier(caught) || caught.kind == Tokens.FALSE || (caught.typ === UnaryOpCall && isoperator(caught.args[1]) && caught.args[1].kind == Tokens.EX_OR))
                 pushfirst!(catchblockargs, caught)
-                caught = FALSE
+                caught = FALSE()
             end
-            catchblock = EXPR{Block}(catchblockargs)
+            catchblock = EXPR(Block, catchblockargs)
         end
     else
-        caught = FALSE
-        catchblock = EXPR{Block}(Any[])
+        caught = FALSE()
+        catchblock = EXPR(Block, EXPR[])
     end
     push!(ret, caught)
     push!(ret, catchblock)
@@ -401,11 +400,11 @@ end
     # finally block
     if ps.nt.kind == Tokens.FINALLY
         if isempty(catchblock.args)
-            ret.args[4] = FALSE
+            ret.args[4] = setparent!(FALSE(), ret)
         end
         push!(ret, KEYWORD(next(ps)))
         finallyblockargs = parse_block(ps)
-        push!(ret, EXPR{Block}(finallyblockargs))
+        push!(ret, EXPR(Block, finallyblockargs))
     end
 
     push!(ret, accept_end(ps))
@@ -415,7 +414,7 @@ end
 @addctx :do function parse_do(ps::ParseState, @nospecialize(ret))
     kw = KEYWORD(next(ps))
 
-    args = EXPR{TupleH}(Any[])
+    args = EXPR(TupleH, EXPR[])
     @closer ps comma @closer ps block while !closer(ps)
         a = parse_expression(ps)
         push!(args, a)
@@ -426,7 +425,7 @@ end
 
     blockargs = parse_block(ps)
 
-    return EXPR{Do}(Any[ret, kw, args, EXPR{Block}(blockargs), accept_end(ps)])
+    return EXPR(Do, EXPR[ret, kw, args, EXPR(Block, blockargs), accept_end(ps)])
 end
 
 # modules
@@ -442,19 +441,17 @@ end
     end
     sb1 = ps.nt.startbyte
 
-    blockargs = parse_block(ps, Any[], (Tokens.END,), true)
-    # block = EXPR{Block}(blockargs)
+    blockargs = parse_block(ps, EXPR[], (Tokens.END,), true)
 
-    # return EXPR{(is_module(kw) ? ModuleH : BareModule)}(Any[kw, arg, block, accept_end(ps)])
     if isempty(blockargs)
-        block = EXPR{Block}(blockargs, 0, 0)
+        block = EXPR(Block, blockargs, 0, 0)
     else
         fullspan = ps.nt.startbyte - sb1
-        block = EXPR{Block}(blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
+        block = EXPR(Block, blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
     end
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return EXPR{(is_module(kw) ? ModuleH : BareModule)}(Any[kw, arg, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
+    return EXPR(is_module(kw) ? ModuleH : BareModule, EXPR[kw, arg, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
 end
 
 
@@ -479,14 +476,13 @@ end
     sb1 = ps.nt.startbyte
     blockargs = parse_block(ps)
     
-    # return EXPR{mutable ? Mutable : Struct}(Any[kw, sig, EXPR{Block}(blockargs), accept_end(ps)])
     if isempty(blockargs)
-        block = EXPR{Block}(blockargs, 0, 0)
+        block = EXPR(Block, blockargs, 0, 0)
     else
         fullspan = ps.nt.startbyte - sb1
-        block = EXPR{Block}(blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
+        block = EXPR(Block, blockargs, fullspan, fullspan - last(blockargs).fullspan + last(blockargs).span)
     end
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return EXPR{mutable ? Mutable : Struct}(Any[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
+    return EXPR(mutable ? Mutable : Struct, EXPR[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
 end
