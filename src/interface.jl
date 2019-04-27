@@ -6,7 +6,7 @@ function is_func_call(x)
     elseif x.typ === InvisBrackets
         return is_func_call(x.args[2])
     elseif x.typ === UnaryOpCall
-        return !(isoperator(x.args[1]) && x.args[1].kind in (Tokens.EX_OR, Tokens.DECLARATION))
+        return !(isoperator(x.args[1]) && (x.args[1].kind === Tokens.EX_OR || x.args[1].kind === Tokens.DECLARATION))
     elseif x.typ === BinaryOpCall
         if issyntaxcall(x.args[2])
             if is_decl(x.args[2])
@@ -22,7 +22,7 @@ function is_func_call(x)
     end
 end
 
-is_assignment(x) = x.typ === BinaryOpCall && is_eq(x.args[2])
+is_assignment(x) = x.typ === BinaryOpCall && x.args[2].kind === Tokens.EQ
 
 # OPERATOR
 is_exor(x) = isoperator(x) && x.kind == Tokens.EX_OR && x.dot == false
@@ -48,7 +48,7 @@ is_where(x) = isoperator(x) && x.kind == Tokens.WHERE
 is_anon_func(x) = isoperator(x) && x.kind == Tokens.ANON_FUNC
 
 # PUNCTUATION
-is_punc(x) = x.typ === PUNC && 
+is_punc(x) = x.typ === PUNCTUATION && 
     x.kind == Tokens.COMMA && 
     x.kind == Tokens.LPAREN &&
     x.kind == Tokens.RPAREN &&
@@ -174,6 +174,22 @@ function rem_where(x)
     end
 end
 
+function rem_where_subtype(x)
+    if x.typ === WhereOpCall || x.typ === BinaryOpCall && x.args[2].kind === Tokens.ISSUBTYPE
+        return rem_where_subtype(x.args[1])
+    else
+        return x
+    end
+end
+
+function rem_where_decl(x)
+    if x.typ === WhereOpCall || x.typ === BinaryOpCall && x.args[2].kind === Tokens.DECLARATION
+        return rem_where_decl(x.args[1])
+    else
+        return x
+    end
+end
+
 function rem_invis(x)
     if x.typ === InvisBrackets
         return x.args[2]
@@ -257,15 +273,15 @@ function get_sig(x)
 end
 
 function get_name(x)
-    if x.typ in (Struct, Mutable, Abstract, Primitive)
+    if x.typ === Struct || x.typ === Mutable || x.typ === Abstract || x.typ === Primitive
         sig = get_sig(x)
         sig = rem_subtype(sig)
         sig = rem_where(sig)
         sig = rem_subtype(sig)
         sig = rem_curly(sig)
-    elseif x.typ in (ModuleH,BareModule)
+    elseif x.typ === ModuleH || x.typ === BareModule
         sig = x.args[2] 
-    elseif x.typ in (FunctionDef, Macro)
+    elseif x.typ === FunctionDef || x.typ === Macro
         sig = get_sig(x)
         sig = rem_where(sig)
         sig = rem_decl(sig)
@@ -283,6 +299,10 @@ function get_name(x)
         sig = rem_curly(sig)
         sig = rem_invis(sig)
     else
+        sig = x
+        if sig.typ === UnaryOpCall 
+            sig = sig.args[1]
+        end
         sig = rem_where(sig)
         sig = rem_decl(sig)
         sig = rem_call(sig)

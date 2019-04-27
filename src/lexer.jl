@@ -28,8 +28,9 @@ mutable struct Closer
     precedence::Int
     stop::Int
     cc::Vector{Symbol}
+    blocknewscope::Bool
 end
-Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int), [])
+Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int), [], false)
 
 struct Error
     loc::UnitRange{Int}

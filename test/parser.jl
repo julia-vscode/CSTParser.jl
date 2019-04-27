@@ -567,7 +567,7 @@ end
     @test "isa(a,a) != isa(a,a)" |> test_expr
     @test "@mac return x" |> test_expr
     @static if VERSION > v"1.1-"
-        @test CSTParser.parse("a,b,").typ === CSTParser.ErrorToken
+        @test CSTParser.parse("a,b,").args[4].typ === CSTParser.ErrorToken
     else
         @test "a,b," |> test_expr
     end

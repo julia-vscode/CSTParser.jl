@@ -64,7 +64,7 @@ end
 function parse_ranges(ps::ParseState)
     startbyte = ps.nt.startbyte
     arg = parse_iter(ps)
-
+    setiterbinding!(arg)
     if (arg.typ === Outer && !is_range(arg.args[2])) || !is_range(arg)
         push!(ps.errors, Error(ps.nt.startbyte - arg.fullspan:ps.nt.startbyte , "Incorrect iteration specification."))
         arg = ErrorToken(arg)
@@ -73,6 +73,7 @@ function parse_ranges(ps::ParseState)
         while ps.nt.kind == Tokens.COMMA
             accept_comma(ps, arg)
             nextarg = parse_iter(ps)
+            setiterbinding!(nextarg)
             if (nextarg.typ === Outer && !is_range(nextarg.args[2])) || !is_range(nextarg)
                 push!(ps.errors, Error(ps.nt.startbyte - nextarg.fullspan:ps.nt.startbyte , "Incorrect iteration specification."))
                 arg = ErrorToken(arg)
@@ -89,7 +90,7 @@ end
 
 function parse_end(ps::ParseState)
     if ps.closer.square
-        ret = IDENTIFIER(ps)
+        ret = KEYWORD(ps)
     else
         push!(ps.errors, Error((ps.t.startbyte:ps.t.endbyte) .+ 1 , "Unexpected end."))
         ret = ErrorToken(IDENTIFIER(ps))
@@ -105,6 +106,11 @@ Parses a function call. Expects to start before the opening parentheses and is p
 """
 function parse_call(ps::ParseState, ret, ismacro = false)
     sb = ps.nt.startbyte - ret.fullspan
+    if ret.typ === IDENTIFIER && ret.val == "new" && :struct in ps.closer.cc
+        ret = KEYWORD(Tokens.NEW, ret.fullspan, ret.span)
+    elseif ret.typ === Curly && ret.args[1].val == "new" && :struct in ps.closer.cc
+        ret.args[1] = setparent!(KEYWORD(Tokens.NEW, ret.args[1].fullspan, ret.args[1].span), ret)
+    end
     if is_minus(ret) || is_not(ret)
         arg = @closer ps unary @closer ps inwhere @precedence ps 13 parse_expression(ps)
         if arg.typ === TupleH
@@ -272,7 +278,7 @@ function parse_generator(ps::ParseState, @nospecialize ret)
         ret = EXPR(Flatten, EXPR[ret])
     end
 
-    return ret
+    return newscope!(ret)
 end
 
 

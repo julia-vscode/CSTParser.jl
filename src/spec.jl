@@ -31,6 +31,26 @@ abstract type NoHead <: Head end
 
 const NoKind = Tokenize.Tokens.begin_keywords
 
+mutable struct Binding
+    name::String
+    val
+    t
+    refs::Vector
+    overwrites::Union{Nothing,Binding}
+end
+function Binding(x)
+    Binding(str_value(get_name(x)), x, nothing, [], nothing)
+end
+
+
+mutable struct Scope
+    parent::Union{Nothing,Scope}
+    names::Dict{String,Binding}
+    modules::Union{Nothing,Dict}
+end
+
+Scope() = Scope(nothing, Dict{String,Binding}(), nothing)
+
 mutable struct EXPR
     typ::DataType
     args::Union{Nothing,Vector{EXPR}}
@@ -40,10 +60,13 @@ mutable struct EXPR
     kind::Tokenize.Tokens.Kind
     dot::Bool
     parent::Union{Nothing,EXPR}
+    scope::Union{Nothing,Scope}
+    binding::Union{Nothing,Binding}
+    ref
 end
 
 function EXPR(T::DataType, args::Vector{EXPR}, fullspan, span)
-    ex = EXPR(T, args, fullspan, span, nothing, NoKind, false, nothing)
+    ex = EXPR(T, args, fullspan, span, nothing, NoKind, false, nothing, nothing, nothing, nothing)
     for c in args
         setparent!(c, ex)
     end
@@ -59,18 +82,18 @@ end
 
 
 
-@noinline IDENTIFIER(ps::ParseState) = EXPR(IDENTIFIER, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), NoKind, false, nothing)
+@noinline IDENTIFIER(ps::ParseState) = EXPR(IDENTIFIER, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), NoKind, false, nothing, nothing, nothing, nothing)
 
-PUNCTUATION(kind, fullspan, span) = EXPR(PUNCTUATION, nothing, fullspan, span, nothing, kind, false, nothing)
-@noinline PUNCTUATION(ps::ParseState) = EXPR(PUNCTUATION, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, ps.t.kind, false, nothing)
+PUNCTUATION(kind, fullspan, span) = EXPR(PUNCTUATION, nothing, fullspan, span, nothing, kind, false, nothing, nothing, nothing, nothing)
+@noinline PUNCTUATION(ps::ParseState) = EXPR(PUNCTUATION, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, ps.t.kind, false, nothing, nothing, nothing, nothing)
 
-OPERATOR(fullspan, span, kind, dotop) = EXPR(OPERATOR, nothing, fullspan, span, nothing, kind, dotop, nothing)
-@noinline OPERATOR(ps::ParseState) = EXPR(OPERATOR, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, ps.t.kind, ps.t.dotop, nothing)
+OPERATOR(fullspan, span, kind, dotop) = EXPR(OPERATOR, nothing, fullspan, span, nothing, kind, dotop, nothing, nothing, nothing, nothing)
+@noinline OPERATOR(ps::ParseState) = EXPR(OPERATOR, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, ps.t.kind, ps.t.dotop, nothing, nothing, nothing, nothing)
 
-KEYWORD(kind, fullspan, span) = EXPR(KEYWORD, nothing, fullspan, span, nothing, kind, false, nothing)
-@noinline KEYWORD(ps::ParseState) = EXPR(KEYWORD, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, ps.t.kind, false, nothing)
+KEYWORD(kind, fullspan, span) = EXPR(KEYWORD, nothing, fullspan, span, nothing, kind, false, nothing, nothing, nothing, nothing)
+@noinline KEYWORD(ps::ParseState) = EXPR(KEYWORD, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, ps.t.kind, false, nothing, nothing, nothing, nothing)
 
-LITERAL(fullspan::Int, span::Int, val::String, kind) = EXPR(LITERAL, nothing, fullspan, span, val, kind, false, nothing)
+LITERAL(fullspan::Int, span::Int, val::String, kind) = EXPR(LITERAL, nothing, fullspan, span, val, kind, false, nothing, nothing, nothing, nothing)
 @noinline function LITERAL(ps::ParseState) 
     if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING ||
         ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
@@ -179,7 +202,7 @@ function UnaryOpCall(op, arg)
     fullspan = op.fullspan + arg.fullspan
     ex = EXPR(UnaryOpCall, EXPR[op, arg], fullspan, fullspan - arg.fullspan + arg.span)
     setparent!(op, ex)
-    setparent!(op, arg)
+    setparent!(op, ex)
     return ex
 end
 function BinaryOpCall(arg1, op, arg2) 
@@ -277,4 +300,84 @@ GlobalRefDOC() = EXPR(GlobalRefDoc, EXPR[])
 function setparent!(c, p)
     c.parent = p
     return c
+end
+
+function newscope!(x)
+    x.scope = Scope()
+    return x
+end
+
+
+function setbinding!(x)
+    if x.typ === TupleH
+        for arg in x.args
+            arg.typ === PUNCTUATION && continue    
+            setbinding!(arg)
+        end
+    elseif x.typ === Kw
+        setbinding!(x.args[1], x)
+    elseif x.typ === InvisBrackets
+        setbinding!(rem_invis(x))
+    else
+        x.binding = Binding(x)
+    end
+    return x
+end
+
+function setbinding!(x, binding)
+    if x.typ === TupleH
+        for arg in x.args
+            arg.typ === PUNCTUATION && continue    
+            setbinding!(arg, binding)
+        end
+    elseif x.typ === InvisBrackets
+        setbinding!(rem_invis(x), binding)
+    else
+        x.binding = Binding(str_value(get_name(x)), binding, nothing, [], nothing)
+    end
+    return x
+end
+
+
+
+function setiterbinding!(iter)
+    if iter.typ === BinaryOpCall && iter.args[2].kind in (Tokens.EQ, Tokens.IN, Tokens.ELEMENT_OF)
+        setbinding!(iter.args[1], iter)
+    end
+    return iter
+end
+
+function mark_sig_args!(x)
+    if x.typ === Call
+        for i = 3:length(x.args)-1
+            a = x.args[i]
+            if a.typ === Parameters
+                for j = 1:length(a.args)
+                    aa = a.args[j]
+                    if !(aa.typ === PUNCTUATION)
+                        setbinding!(aa)
+                    end
+                end
+            elseif !(a.typ === PUNCTUATION)
+                setbinding!(a)
+            end
+        end
+    elseif x.typ === WhereOpCall
+        for i in 3:length(x.args)
+            if !(x.args[i].typ === PUNCTUATION)
+                setbinding!(x.args[i])
+            end
+        end
+        mark_sig_args!(x.args[1])
+    elseif x.typ === BinaryOpCall && x.args[2].kind == Tokens.DECLARATION
+        mark_sig_args!(x.args[1])
+    end
+end
+Base.getindex(x::EXPR, i) = x.args[i]
+
+function strip_where_scopes(sig)
+    if sig.typ === WhereOpCall
+        sig.scope = nothing
+        strip_where_scopes(sig.args[1])
+    end
 end

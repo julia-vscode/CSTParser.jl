@@ -190,10 +190,19 @@ end
 function parse_operator_eq(ps::ParseState, @nospecialize(ret), op)
     nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
 
-    if is_func_call(ret) && !(nextarg.typ === Begin || (nextarg.typ === InvisBrackets && nextarg.args[2].typ === Block))
-        nextarg = EXPR(Block, EXPR[nextarg])
+    if is_func_call(ret)
+        if !(nextarg.typ === Begin || (nextarg.typ === InvisBrackets && nextarg.args[2].typ === Block))
+            nextarg = EXPR(Block, EXPR[nextarg])
+        end
+        strip_where_scopes(ret)
+        mark_sig_args!(ret)
+        ret = newscope!(BinaryOpCall(ret, op, nextarg))
+        setbinding!(ret)
+    else
+        ret = BinaryOpCall(ret, op, nextarg)
+        setbinding!(ret.args[1], ret)
     end
-    return BinaryOpCall(ret, op, nextarg)
+    return ret
 end
 
 # Parse conditionals
@@ -253,7 +262,7 @@ end
 
 
 # parse where
-function parse_operator_where(ps::ParseState, @nospecialize(ret), op)
+function parse_operator_where(ps::ParseState, @nospecialize(ret), op, newscope = true)
     nextarg = @precedence ps LazyAndOp @closer ps inwhere parse_expression(ps)
     
     if nextarg.typ === Braces
@@ -261,7 +270,16 @@ function parse_operator_where(ps::ParseState, @nospecialize(ret), op)
     else
         args = EXPR[nextarg]
     end
-    return WhereOpCall(ret, op, args)
+    for a in args 
+        if a.typ !== PUNCTUATION
+            setbinding!(a)
+        end
+    end
+    ret = WhereOpCall(ret, op, args)
+    if newscope
+        newscope!(ret)
+    end
+    return ret
 end
 
 function parse_operator_dot(ps::ParseState, @nospecialize(ret), op)
@@ -314,6 +332,7 @@ function parse_operator_anon_func(ps::ParseState, @nospecialize(ret), op)
     if !(arg.typ === Begin || (arg.typ === InvisBrackets && arg.args[2].typ === Block))
         arg = EXPR(Block, EXPR[arg])
     end
+    setbinding!(ret)
     return BinaryOpCall(ret, op, arg)
 end
 

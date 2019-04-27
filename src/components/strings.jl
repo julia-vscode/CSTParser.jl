@@ -161,7 +161,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             for expr in exprs_to_adjust
                 for (i, a) in enumerate(ret.args)
                     if expr == a
-                        ret.args[i] = EXPR(expr.typ, nothing, expr.fullspan, expr.span, replace(expr.val, "\n$lcp" => "\n"), expr.kind, false, expr.parent)
+                        ret.args[i] = EXPR(expr.typ, nothing, expr.fullspan, expr.span, replace(expr.val, "\n$lcp" => "\n"), expr.kind, false, expr.parent, expr.scope, expr.binding, expr.ref)
                     end
                 end
             end
