@@ -10,25 +10,25 @@ function parse_block(ps::ParseState, ret::Vector{EXPR} = EXPR[], closers = (Toke
                     break
                 else
                     push!(ps.errors, Error((ps.nt.startbyte:ps.nt.endbyte) .+ 1 , "Unexpected )."))
-                    push!(ret, ErrorToken(INSTANCE(next(ps))))
+                    push!(ret, mErrorToken(INSTANCE(next(ps))))
                 end
             elseif ps.nt.kind == Tokens.RBRACE
                 if length(ps.closer.cc) > 1 && :brace == ps.closer.cc[end-1]
                     break
                 else
                     push!(ps.errors, Error((ps.nt.startbyte:ps.nt.endbyte) .+ 1 , "Unexpected }."))
-                    push!(ret, ErrorToken(INSTANCE(next(ps))))
+                    push!(ret, mErrorToken(INSTANCE(next(ps))))
                 end
             elseif ps.nt.kind == Tokens.RSQUARE
                 if length(ps.closer.cc) > 1 && :square == ps.closer.cc[end-1]
                     break
                 else
                     push!(ps.errors, Error((ps.nt.startbyte:ps.nt.endbyte) .+ 1 , "Unexpected ]."))
-                    push!(ret, ErrorToken(INSTANCE(next(ps))))
+                    push!(ret, mErrorToken(INSTANCE(next(ps))))
                 end
             else
                 push!(ps.errors, Error((ps.nt.startbyte:ps.nt.endbyte) .+ 1 , "Unexpected $(ps.nt.kind)."))
-                push!(ret, ErrorToken(INSTANCE(next(ps))))
+                push!(ret, mErrorToken(INSTANCE(next(ps))))
             end
         else
             if docable
@@ -67,7 +67,7 @@ function parse_ranges(ps::ParseState)
     setiterbinding!(arg)
     if (arg.typ === Outer && !is_range(arg.args[2])) || !is_range(arg)
         push!(ps.errors, Error(ps.nt.startbyte - arg.fullspan:ps.nt.startbyte , "Incorrect iteration specification."))
-        arg = ErrorToken(arg)
+        arg = mErrorToken(arg)
     elseif ps.nt.kind == Tokens.COMMA
         arg = EXPR(Block, EXPR[arg])
         while ps.nt.kind == Tokens.COMMA
@@ -76,7 +76,7 @@ function parse_ranges(ps::ParseState)
             setiterbinding!(nextarg)
             if (nextarg.typ === Outer && !is_range(nextarg.args[2])) || !is_range(nextarg)
                 push!(ps.errors, Error(ps.nt.startbyte - nextarg.fullspan:ps.nt.startbyte , "Incorrect iteration specification."))
-                arg = ErrorToken(arg)
+                arg = mErrorToken(arg)
             end
             push!(arg, nextarg)
         end
@@ -90,10 +90,10 @@ end
 
 function parse_end(ps::ParseState)
     if ps.closer.square
-        ret = KEYWORD(ps)
+        ret = mKEYWORD(ps)
     else
         push!(ps.errors, Error((ps.t.startbyte:ps.t.endbyte) .+ 1 , "Unexpected end."))
-        ret = ErrorToken(IDENTIFIER(ps))
+        ret = mErrorToken(mIDENTIFIER(ps))
     end
     
     return ret
@@ -107,9 +107,9 @@ Parses a function call. Expects to start before the opening parentheses and is p
 function parse_call(ps::ParseState, ret, ismacro = false)
     sb = ps.nt.startbyte - ret.fullspan
     if ret.typ === IDENTIFIER && ret.val == "new" && :struct in ps.closer.cc
-        ret = KEYWORD(Tokens.NEW, ret.fullspan, ret.span)
+        ret = mKEYWORD(Tokens.NEW, ret.fullspan, ret.span)
     elseif ret.typ === Curly && ret.args[1].val == "new" && :struct in ps.closer.cc
-        ret.args[1] = setparent!(KEYWORD(Tokens.NEW, ret.args[1].fullspan, ret.args[1].span), ret)
+        ret.args[1] = setparent!(mKEYWORD(Tokens.NEW, ret.args[1].fullspan, ret.args[1].span), ret)
     end
     if is_minus(ret) || is_not(ret)
         arg = @closer ps unary @closer ps inwhere @precedence ps 13 parse_expression(ps)
@@ -118,22 +118,22 @@ function parse_call(ps::ParseState, ret, ismacro = false)
             fullspan = ps.nt.startbyte - sb
             ret = EXPR(Call, arg.args, fullspan, fullspan - (last(arg.args).fullspan - last(arg.args).span))
         elseif arg.typ === WhereOpCall && arg.args[1].typ === TupleH
-            ret = WhereOpCall(EXPR(Call, EXPR[ret; arg.args[1].args]), arg.args[2], arg.args[3:end])
+            ret = mWhereOpCall(EXPR(Call, EXPR[ret; arg.args[1].args]), arg.args[2], arg.args[3:end])
         else
-            ret = UnaryOpCall(ret, arg)
+            ret = mUnaryOpCall(ret, arg)
         end
     elseif is_and(ret) || is_decl(ret) || is_exor(ret) 
         arg = @precedence ps 20 parse_expression(ps)
         if is_exor(ret) && arg.typ === TupleH && length(arg.args) == 3 && arg.args[2].typ === UnaryOpCall && is_dddot(arg.args[2].arg2)
             arg = EXPR(InvisBrackets, arg.args)
         end
-        ret = UnaryOpCall(ret, arg)
+        ret = mUnaryOpCall(ret, arg)
     elseif is_issubt(ret) || is_issupt(ret)
         arg = @precedence ps PowerOp parse_expression(ps)
         ret = EXPR(Call, EXPR[ret; arg.args])
     else
         !ismacro && ret.typ === MacroName && (ismacro = true)
-        args = EXPR[ret, PUNCTUATION(next(ps))]
+        args = EXPR[ret, mPUNCTUATION(next(ps))]
         @closeparen ps @default ps parse_comma_sep(ps, args, !ismacro)
         accept_rparen(ps, args)
         fullspan = ps.nt.startbyte - sb
@@ -207,20 +207,20 @@ Parses a macro call. Expects to start on the `@`.
 """
 function parse_macrocall(ps::ParseState)
     sb = ps.t.startbyte
-    at = PUNCTUATION(ps)
+    at = mPUNCTUATION(ps)
     if !isemptyws(ps.ws)
         push!(ps.errors, Error((ps.ws.startbyte + 1:ps.ws.endbyte) .+ 1 , "Unexpected whitespace in macrocall."))
-        mname = ErrorToken(INSTANCE(next(ps)))
+        mname = mErrorToken(INSTANCE(next(ps)))
     else
-        mname = EXPR(MacroName, EXPR[at, IDENTIFIER(next(ps))])
+        mname = EXPR(MacroName, EXPR[at, mIDENTIFIER(next(ps))])
     end
 
     # Handle cases with @ at start of dotted expressions
     if ps.nt.kind == Tokens.DOT && isemptyws(ps.ws)
         while ps.nt.kind == Tokens.DOT
-            op = OPERATOR(next(ps))
-            nextarg = IDENTIFIER(next(ps))
-            mname = BinaryOpCall(mname, op, EXPR(Quotenode, EXPR[nextarg]))
+            op = mOPERATOR(next(ps))
+            nextarg = mIDENTIFIER(next(ps))
+            mname = mBinaryOpCall(mname, op, EXPR(Quotenode, EXPR[nextarg]))
         end
     end
 
@@ -253,7 +253,7 @@ Having hit `for` not at the beginning of an expression return a generator.
 Comprehensions are parsed as SQUAREs containing a generator.
 """
 function parse_generator(ps::ParseState, @nospecialize ret)
-    kw = KEYWORD(next(ps))
+    kw = mKEYWORD(next(ps))
     ret = EXPR(Generator, EXPR[ret, kw])
     ranges = @closesquare ps parse_ranges(ps)
 
@@ -263,7 +263,7 @@ function parse_generator(ps::ParseState, @nospecialize ret)
         else
             ranges = EXPR(Filter, EXPR[ranges])
         end
-        pushfirst!(ranges, KEYWORD(next(ps)))
+        pushfirst!(ranges, mKEYWORD(next(ps)))
         cond = @closer ps range parse_expression(ps)
         pushfirst!(ranges, cond)
         push!(ret, ranges)
@@ -287,16 +287,16 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
     args = EXPR[]
 
     while ps.nt.kind == Tokens.DOT || ps.nt.kind == Tokens.DDOT || ps.nt.kind == Tokens.DDDOT
-        d = OPERATOR(next(ps))
+        d = mOPERATOR(next(ps))
         if is_dot(d)
-            push!(args, OPERATOR(1, 1, Tokens.DOT, false))
+            push!(args, mOPERATOR(1, 1, Tokens.DOT, false))
         elseif is_ddot(d)
-            push!(args, OPERATOR(1, 1, Tokens.DOT, false))
-            push!(args, OPERATOR(1, 1, Tokens.DOT, false))
+            push!(args, mOPERATOR(1, 1, Tokens.DOT, false))
+            push!(args, mOPERATOR(1, 1, Tokens.DOT, false))
         elseif is_dddot(d)
-            push!(args, OPERATOR(1, 1, Tokens.DOT, false))
-            push!(args, OPERATOR(1, 1, Tokens.DOT, false))
-            push!(args, OPERATOR(1, 1, Tokens.DOT, false))
+            push!(args, mOPERATOR(1, 1, Tokens.DOT, false))
+            push!(args, mOPERATOR(1, 1, Tokens.DOT, false))
+            push!(args, mOPERATOR(1, 1, Tokens.DOT, false))
         end
     end
 
@@ -309,11 +309,11 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
 
     while true
         if ps.nt.kind == Tokens.AT_SIGN
-            at = PUNCTUATION(next(ps))
+            at = mPUNCTUATION(next(ps))
             a = INSTANCE(next(ps))
             push!(args, EXPR(MacroName, EXPR[at, a]))
         elseif ps.nt.kind == Tokens.LPAREN
-            a = EXPR(InvisBrackets,EXPR[PUNCTUATION(next(ps))])
+            a = EXPR(InvisBrackets,EXPR[mPUNCTUATION(next(ps))])
             push!(a, @closeparen ps parse_expression(ps))
             accept_rparen(ps, a)
             push!(args, a)
@@ -322,15 +322,15 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
             push!(args, a)
         elseif !is_colon && isoperator(ps.nt)
             next(ps)
-            push!(args, OPERATOR(ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, ps.t.kind, false))
+            push!(args, mOPERATOR(ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, ps.t.kind, false))
         else
             push!(args, INSTANCE(next(ps)))
         end
 
         if ps.nt.kind == Tokens.DOT
-            push!(args, PUNCTUATION(next(ps)))
+            push!(args, mPUNCTUATION(next(ps)))
         elseif isoperator(ps.nt) && (ps.nt.dotop || ps.nt.kind == Tokens.DOT)
-            push!(args, PUNCTUATION(Tokens.DOT, 1, 1))
+            push!(args, mPUNCTUATION(Tokens.DOT, 1, 1))
             ps.nt = RawToken(ps.nt.kind, ps.nt.startpos, ps.nt.endpos, ps.nt.startbyte + 1, ps.nt.endbyte, ps.nt.token_error, false)
         else
             break

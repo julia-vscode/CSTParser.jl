@@ -29,7 +29,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     iscmd = ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
 
     if ps.errored
-        return ErrorToken()
+        return mErrorToken()
     end
 
     lcp = nothing
@@ -70,7 +70,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     if prefixed != false || iscmd
         t_str = val(ps.t, ps)
         _val = istrip ? t_str[4:prevind(t_str, sizeof(t_str), 3)] : t_str[2:prevind(t_str, sizeof(t_str))]
-        expr = LITERAL(sfullspan, sspan,
+        expr = mLITERAL(sfullspan, sspan,
             iscmd ? replace(_val, "\\`" => "`") :
                     replace(_val, "\\\"" => "\""), ps.t.kind)
         if istrip
@@ -91,15 +91,15 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 # str = tostr(b)
                 if b.size == 0
                 # if sizeof(str) == 0
-                    ex = ErrorToken()
+                    ex = mErrorToken()
                 elseif istrip
                     str = tostr(b)
                     str = str[1:prevind(str, prevind(str, sizeof(str), 2))]
-                    ex = LITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, Tokens.STRING)
+                    ex = mLITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, Tokens.STRING)
                 else
                     str = tostr(b)
                     str =  str[1:prevind(str, sizeof(str))]
-                    ex = LITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, Tokens.STRING)
+                    ex = mLITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, Tokens.STRING)
                 end
                 push!(ret, ex)
                 istrip && adjust_lcp(ex, true)
@@ -112,23 +112,23 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             elseif c == '$'
                 lspan = position(b)
                 str = tostr(b)
-                ex = LITERAL(lspan + startbytes, lspan + startbytes, str, Tokens.STRING)
+                ex = mLITERAL(lspan + startbytes, lspan + startbytes, str, Tokens.STRING)
                 push!(ret, ex); istrip && adjust_lcp(ex)
                 startbytes = 0
-                op = OPERATOR(1, 1, Tokens.EX_OR, false)
+                op = mOPERATOR(1, 1, Tokens.EX_OR, false)
                 if peekchar(input) == '('
-                    lparen = PUNCTUATION(Tokens.LPAREN, 1, 1)
-                    rparen = PUNCTUATION(Tokens.RPAREN, 1, 1)
+                    lparen = mPUNCTUATION(Tokens.LPAREN, 1, 1)
+                    rparen = mPUNCTUATION(Tokens.RPAREN, 1, 1)
                     skip(input, 1)
                     ps1 = ParseState(input)
 
                     if ps1.nt.kind == Tokens.RPAREN
-                        call = UnaryOpCall(op, EXPR(InvisBrackets, EXPR[lparen, rparen]))
+                        call = mUnaryOpCall(op, EXPR(InvisBrackets, EXPR[lparen, rparen]))
                         push!(ret, call)
                         skip(input, 1)
                     else
                         interp = @closer ps1 paren parse_expression(ps1)
-                        call = UnaryOpCall(op, EXPR(InvisBrackets, EXPR[lparen, interp, rparen]))
+                        call = mUnaryOpCall(op, EXPR(InvisBrackets, EXPR[lparen, interp, rparen]))
                         push!(ret, call)
                         seek(input, ps1.nt.startbyte + 1)
                     end
@@ -145,7 +145,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     end
                     # Attribute trailing whitespace to the string
                     t = adjustspan(t)
-                    call = UnaryOpCall(op, t)
+                    call = mUnaryOpCall(op, t)
                     push!(ret, call)
                     seek(input, pos + t.fullspan)
                 end
@@ -161,7 +161,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             for expr in exprs_to_adjust
                 for (i, a) in enumerate(ret.args)
                     if expr == a
-                        ret.args[i] = EXPR(expr.typ, nothing, expr.fullspan, expr.span, replace(expr.val, "\n$lcp" => "\n"), expr.kind, false, expr.parent, expr.scope, expr.binding, expr.ref)
+                        ret.args[i].val = replace(expr.val, "\n$lcp" => "\n")
+                        break
                     end
                 end
             end
@@ -186,4 +187,4 @@ function adjustspan(x::EXPR)
     return x
 end
 
-dropleadlingnewline(x) = LITERAL(x.fullspan, x.span, x.val[2:end], x.kind)
+dropleadlingnewline(x) = mLITERAL(x.fullspan, x.span, x.val[2:end], x.kind)

@@ -8,12 +8,12 @@ function parse_tuple end
 
 @static if VERSION > v"1.1-"
     function parse_tuple(ps::ParseState, @nospecialize(ret))
-        op = PUNCTUATION(next(ps))
+        op = mPUNCTUATION(next(ps))
         if ret.typ == TupleH
             if (isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX)
                 push!(ret, op)
             elseif closer(ps)
-                push!(ret, ErrorToken(op))
+                push!(ret, mErrorToken(op))
             else
                 nextarg = @closer ps tuple parse_expression(ps)
                 if !(is_lparen(first(ret.args)))
@@ -27,7 +27,7 @@ function parse_tuple end
             if (isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX)
                 ret = EXPR(TupleH, EXPR[ret, op])
             elseif closer(ps)
-                ret = ErrorToken(EXPR(TupleH, EXPR[ret, op]))
+                ret = mErrorToken(EXPR(TupleH, EXPR[ret, op]))
             else
                 nextarg = @closer ps tuple parse_expression(ps)
                 ret = EXPR(TupleH, EXPR[ret, op, nextarg])
@@ -37,7 +37,7 @@ function parse_tuple end
     end
 else
     function parse_tuple(ps::ParseState, @nospecialize(ret))
-        op = PUNCTUATION(next(ps))
+        op = mPUNCTUATION(next(ps))
         if x.typ === TupleH
             if closer(ps) || (isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX)
                 push!(ret, op)
@@ -72,7 +72,7 @@ Having hit '[' return either:
 + An array (vcat of hcats)
 """
 function parse_array(ps::ParseState)
-    args = EXPR[PUNCTUATION(ps)]
+    args = EXPR[mPUNCTUATION(ps)]
 
     if ps.nt.kind == Tokens.RSQUARE
         accept_rsquare(ps, args)
@@ -221,14 +221,14 @@ Parses the juxtaposition of `ret` with an opening brace. Parses a comma
 seperated list.
 """
 function parse_curly(ps::ParseState, ret)
-    args = EXPR[ret, PUNCTUATION(next(ps))]
+    args = EXPR[ret, mPUNCTUATION(next(ps))]
     parse_comma_sep(ps, args, true)
     accept_rbrace(ps, args)
     return EXPR(Curly, args)
 end
 
 function parse_braces(ps::ParseState)
-    args = EXPR[PUNCTUATION(ps)]
+    args = EXPR[mPUNCTUATION(ps)]
     parse_comma_sep(ps, args, true)
     accept_rbrace(ps, args)
     return EXPR(Braces, args)

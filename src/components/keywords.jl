@@ -45,48 +45,48 @@ function parse_kw(ps)
         return parse_end(ps)
     elseif k == Tokens.ELSE || k == Tokens.ELSEIF || k == Tokens.CATCH || k == Tokens.FINALLY
         push!(ps.errors, Error((ps.t.startbyte:ps.t.endbyte) .+ 1 , "Unexpected end."))
-        return ErrorToken(IDENTIFIER(ps))
+        return mErrorToken(mIDENTIFIER(ps))
     elseif k == Tokens.ABSTRACT
         return setbinding!(@default ps parse_abstract(ps))
     elseif k == Tokens.PRIMITIVE
         return setbinding!(@default ps parse_primitive(ps))
     elseif k == Tokens.TYPE
-        return IDENTIFIER(ps)
+        return mIDENTIFIER(ps)
     elseif k == Tokens.STRUCT
         return setbinding!(@default ps @closer ps block parse_struct(ps, false))
     elseif k == Tokens.MUTABLE
         return setbinding!(@default ps @closer ps block parse_mutable(ps))
     elseif k == Tokens.OUTER
-        return IDENTIFIER(ps)
+        return mIDENTIFIER(ps)
     else
-        return ErrorToken()
+        return mErrorToken()
     end
 end
 # Prefix 
 
 function parse_const(ps::ParseState)
-    kw = KEYWORD(ps)
+    kw = mKEYWORD(ps)
     arg = parse_expression(ps)
 
     return EXPR(Const, EXPR[kw, arg])
 end
 
 function parse_global(ps::ParseState)
-    kw = KEYWORD(ps)
+    kw = mKEYWORD(ps)
     arg = parse_expression(ps)
 
     return EXPR(Global, EXPR[kw, arg])
 end
 
 function parse_local(ps::ParseState)
-    kw = KEYWORD(ps)
+    kw = mKEYWORD(ps)
     arg = parse_expression(ps)
 
     return EXPR(Local, EXPR[kw, arg])
 end
 
 function parse_return(ps::ParseState)
-    kw = KEYWORD(ps)
+    kw = mKEYWORD(ps)
     args = closer(ps) ? NOTHING() : parse_expression(ps)
 
     return EXPR(Return, EXPR[kw, args])
@@ -98,13 +98,13 @@ end
 @addctx :abstract function parse_abstract(ps::ParseState)
     # Switch for v0.6 compatability
     if ps.nt.kind == Tokens.TYPE
-        kw1 = KEYWORD(ps)
-        kw2 = KEYWORD(next(ps))
+        kw1 = mKEYWORD(ps)
+        kw2 = mKEYWORD(next(ps))
         sig = @closer ps block parse_expression(ps)
         markparameters!(sig)
         ret = EXPR(Abstract, EXPR[kw1, kw2, sig, accept_end(ps)])
     else
-        kw = KEYWORD(ps)
+        kw = mKEYWORD(ps)
         sig = parse_expression(ps)
         ret = EXPR(Abstract, EXPR[kw, sig])
     end
@@ -113,21 +113,21 @@ end
 
 @addctx :primitive function parse_primitive(ps::ParseState)
     if ps.nt.kind == Tokens.TYPE
-        kw1 = KEYWORD(ps)
-        kw2 = KEYWORD(next(ps))
+        kw1 = mKEYWORD(ps)
+        kw2 = mKEYWORD(next(ps))
         sig = @closer ps ws @closer ps wsop parse_expression(ps)
         markparameters!(sig)
         arg = @closer ps block parse_expression(ps)
 
         ret = EXPR(Primitive, EXPR[kw1, kw2, sig, arg, accept_end(ps)])
     else
-        ret = IDENTIFIER(ps)
+        ret = mIDENTIFIER(ps)
     end
     return newscope!(ret)
 end
 
 function parse_imports(ps::ParseState)
-    kw = KEYWORD(ps)
+    kw = mKEYWORD(ps)
     kwt = is_import(kw) ? Import :
           is_importall(kw) ? ImportAll :
           Using
@@ -139,7 +139,7 @@ function parse_imports(ps::ParseState)
         ret = EXPR(kwt, vcat(kw, arg))
     elseif ps.nt.kind == Tokens.COLON
         ret = EXPR(kwt, vcat(kw, arg))
-        push!(ret, OPERATOR(next(ps)))
+        push!(ret, mOPERATOR(next(ps)))
 
         arg = parse_dot_mod(ps, true)
         append!(ret, arg)
@@ -161,11 +161,11 @@ function parse_imports(ps::ParseState)
 end
 
 function parse_export(ps::ParseState)
-    args = EXPR[KEYWORD(ps)]
+    args = EXPR[mKEYWORD(ps)]
     append!(args, parse_dot_mod(ps))
 
     while ps.nt.kind == Tokens.COMMA
-        push!(args, PUNCTUATION(next(ps)))
+        push!(args, mPUNCTUATION(next(ps)))
         arg = parse_dot_mod(ps)[1]
         push!(args, arg)
     end
@@ -178,7 +178,7 @@ end
 
 @addctx :begin function parse_begin(ps::ParseState)
     sb = ps.t.startbyte
-    kw = KEYWORD(ps)
+    kw = mKEYWORD(ps)
     blockargs = parse_block(ps, EXPR[], (Tokens.END,), true)
     if isempty(blockargs)
         block = EXPR(Block, blockargs, 0, 0)
@@ -192,13 +192,13 @@ end
 end
 
 @addctx :quote function parse_quote(ps::ParseState)
-    kw = KEYWORD(ps)
+    kw = mKEYWORD(ps)
     blockargs = parse_block(ps)
     return EXPR(Quote, EXPR[kw, EXPR(Block, blockargs), accept_end(ps)])
 end
 
 @addctx :function function parse_function(ps::ParseState)
-    kw = KEYWORD(ps)
+    kw = mKEYWORD(ps)
     sig = @closer ps inwhere @closer ps ws parse_expression(ps)
 
     if sig.typ === InvisBrackets && !(sig.args[2].typ === TupleH)
@@ -237,7 +237,7 @@ end
 
 @addctx :macro function parse_macro(ps::ParseState)
     sb  = ps.t.startbyte
-    kw = KEYWORD(ps)
+    kw = mKEYWORD(ps)
     sig = @closer ps ws parse_expression(ps)
     mark_sig_args!(sig)
     sb1  = ps.nt.startbyte
@@ -264,7 +264,7 @@ end
 # loops
 @addctx :for function parse_for(ps::ParseState)
     sb  = ps.t.startbyte
-    kw = KEYWORD(ps)
+    kw = mKEYWORD(ps)
     ranges = parse_ranges(ps)
     sb1  = ps.nt.startbyte
     blockargs = parse_block(ps)
@@ -282,7 +282,7 @@ end
 
 @addctx :while function parse_while(ps::ParseState)
     sb = ps.t.startbyte
-    kw = KEYWORD(ps)
+    kw = mKEYWORD(ps)
     cond = @closer ps ws parse_expression(ps)
     sb1 = ps.nt.startbyte
     blockargs = parse_block(ps)
@@ -307,10 +307,10 @@ Parse an `if` block.
 """
 @addctx :if function parse_if(ps::ParseState, nested = false)
     # Parsing
-    kw = KEYWORD(ps)
+    kw = mKEYWORD(ps)
     if ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS
         push!(ps.errors, Error((ps.ws.startbyte:ps.ws.endbyte) .+ 1 , "Missing conditional in if statement."))
-        cond = ErrorToken()
+        cond = mErrorToken()
     else
         cond = @closer ps ws parse_expression(ps)
     end
@@ -324,12 +324,12 @@ Parse an `if` block.
 
     elseblockargs = EXPR[]
     if ps.nt.kind == Tokens.ELSEIF
-        push!(ret, KEYWORD(next(ps)))
+        push!(ret, mKEYWORD(next(ps)))
         push!(elseblockargs, parse_if(ps, true))
     end
     elsekw = ps.nt.kind == Tokens.ELSE
     if ps.nt.kind == Tokens.ELSE
-        push!(ret, KEYWORD(next(ps)))
+        push!(ret, mKEYWORD(next(ps)))
         parse_block(ps, elseblockargs)
     end
 
@@ -343,7 +343,7 @@ Parse an `if` block.
 end
 
 @addctx :let function parse_let(ps::ParseState)
-    args = EXPR[KEYWORD(ps)]
+    args = EXPR[mKEYWORD(ps)]
     if !(ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS)
         arg = @closer ps range @closer ps ws  parse_expression(ps)
         if ps.nt.kind == Tokens.COMMA
@@ -366,7 +366,7 @@ end
 end
 
 @addctx :try function parse_try(ps::ParseState)
-    kw = KEYWORD(ps)
+    kw = mKEYWORD(ps)
     ret = EXPR(Try, EXPR[kw])
 
     tryblockargs = parse_block(ps, EXPR[], (Tokens.END, Tokens.CATCH, Tokens.FINALLY))
@@ -375,7 +375,7 @@ end
     #  catch block
     if ps.nt.kind == Tokens.CATCH
         next(ps)
-        push!(ret, KEYWORD(ps))
+        push!(ret, mKEYWORD(ps))
         # catch closing early
         if ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END
             caught = FALSE()
@@ -407,7 +407,7 @@ end
         if isempty(catchblock.args)
             ret.args[4] = setparent!(FALSE(), ret)
         end
-        push!(ret, KEYWORD(next(ps)))
+        push!(ret, mKEYWORD(next(ps)))
         finallyblockargs = parse_block(ps)
         push!(ret, EXPR(Block, finallyblockargs))
     end
@@ -417,7 +417,7 @@ end
 end
 
 @addctx :do function parse_do(ps::ParseState, @nospecialize(ret))
-    kw = KEYWORD(next(ps))
+    kw = mKEYWORD(next(ps))
 
     args = EXPR(TupleH, EXPR[])
     @closer ps comma @closer ps block while !closer(ps)
@@ -438,10 +438,10 @@ end
 
 @addctx :module function parse_module(ps::ParseState)
     sb = ps.t.startbyte
-    kw = KEYWORD(ps)
+    kw = mKEYWORD(ps)
     @assert kw.kind == Tokens.MODULE || kw.kind == Tokens.BAREMODULE # work around julia issue #23766
     if ps.nt.kind == Tokens.IDENTIFIER
-        arg = IDENTIFIER(next(ps))
+        arg = mIDENTIFIER(next(ps))
     else
         arg = @precedence ps 15 @closer ps ws parse_expression(ps)
     end
@@ -463,13 +463,13 @@ end
 
 function parse_mutable(ps::ParseState)
     if ps.nt.kind == Tokens.STRUCT
-        kw = KEYWORD(ps)
+        kw = mKEYWORD(ps)
         next(ps)
         ret = parse_struct(ps, true)
         pushfirst!(ret, kw)
         update_span!(ret)
     else
-        ret = IDENTIFIER(ps)
+        ret = mIDENTIFIER(ps)
     end
     return newscope!(ret)
 end
@@ -488,7 +488,7 @@ end
 
 @addctx :struct function parse_struct(ps::ParseState, mutable)
     sb = ps.t.startbyte
-    kw = KEYWORD(ps)
+    kw = mKEYWORD(ps)
     sig = @closer ps ws parse_expression(ps)    
     markparameters!(sig)
 

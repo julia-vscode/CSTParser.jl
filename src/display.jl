@@ -34,7 +34,7 @@ function Base.show(io::IO, x::EXPR, d = 0, er = false)
             end
         end
     else
-        printstyled(io, " "^d, T.name.name, "  ", x.fullspan, "(", x.span, ")", color = c)
+        printstyled(io, " "^d, T, "  ", x.fullspan, "(", x.span, ")", color = c)
         x.scope != nothing && printstyled(" new scope", color = :green)
         x.binding != nothing && printstyled(" $(x.binding.name)", color = :blue)
         println()
