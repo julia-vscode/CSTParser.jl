@@ -61,7 +61,7 @@ function parse_iter(ps::ParseState)
     return arg
 end
 
-function parse_ranges(ps::ParseState)
+function parse_ranges(ps::ParseState, allowfilter = false)
     startbyte = ps.nt.startbyte
     arg = parse_iter(ps)
     setiterbinding!(arg)
@@ -80,6 +80,17 @@ function parse_ranges(ps::ParseState)
             end
             push!(arg, nextarg)
         end
+    end
+
+    if allowfilter && ps.nt.kind === Tokens.IF
+        if arg.typ === Block
+            arg = EXPR(Filter, arg.args)
+        else
+            arg = EXPR(Filter, EXPR[arg])
+        end
+        push!(arg, mKEYWORD(next(ps)))
+        cond = @closer ps range parse_expression(ps)
+        push!(arg, cond)
     end
     return arg
 end
@@ -255,19 +266,9 @@ Comprehensions are parsed as SQUAREs containing a generator.
 function parse_generator(ps::ParseState, @nospecialize ret)
     kw = mKEYWORD(next(ps))
     ret = EXPR(Generator, EXPR[ret, kw])
-    ranges = @closesquare ps parse_ranges(ps)
+    ranges = @closesquare ps parse_ranges(ps, true)
 
-    if ps.nt.kind == Tokens.IF
-        if ranges.typ === Block
-            ranges = EXPR(Filter, ranges.args)
-        else
-            ranges = EXPR(Filter, EXPR[ranges])
-        end
-        pushfirst!(ranges, mKEYWORD(next(ps)))
-        cond = @closer ps range parse_expression(ps)
-        pushfirst!(ranges, cond)
-        push!(ret, ranges)
-    elseif ranges.typ === Block
+    if ranges.typ === Block
         append!(ret, ranges)
     else
         push!(ret, ranges)

@@ -496,7 +496,9 @@ function Expr(x::EXPR)
         return ret
     elseif x.typ === Filter
         ret = Expr(:filter)
-        for a in x.args
+        push!(ret.args, convert_iter_assign(last(x.args)))
+        for i in 1:length(x.args)-1
+            a = x.args[i]
             if !(is_if(a) || ispunctuation(a))
                 push!(ret.args, convert_iter_assign(a))
             end
