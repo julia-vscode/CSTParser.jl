@@ -222,6 +222,18 @@ function Expr(x::EXPR)
     elseif x.typ === Quotenode
         return QuoteNode(Expr(x.args[end]))
     elseif x.typ === Call
+        if x.args[1].kind === Tokens.ISSUBTYPE || x.args[1].kind === Tokens.ISSUPERTYPE
+            ret = Expr(Expr(x.args[1]))
+            for i in 2:length(x.args)
+                a = x.args[i]
+                if a.typ === Parameters
+                    insert!(ret.args, 2, Expr(a))
+                elseif !(ispunctuation(a))
+                    push!(ret.args, Expr(a))
+                end
+            end
+            return ret
+        end
         ret = Expr(:call)
         for a in x.args
             if a.typ === Parameters
@@ -479,10 +491,18 @@ function Expr(x::EXPR)
     elseif x.typ === Flatten
         iters, args = get_inner_gen(x)
         i = popfirst!(iters)
-        ex = Expr(:generator, Expr(args[1]), convert_iter_assign(i))
+        ex = Expr(:generator, Expr(args[1]), convert_iter_assign(i[1]))
         for i in iters
-            ex = Expr(:generator, ex, convert_iter_assign(i))
-            ex = Expr(:flatten, ex)
+            if length(i) == 1
+                ex = Expr(:generator, ex, convert_iter_assign(i[1]))
+                ex = Expr(:flatten, ex)
+            else
+                ex = Expr(:generator, ex)
+                for j in i
+                    push!(ex.args, convert_iter_assign(j))
+                end
+                ex = Expr(:flatten, ex)
+            end
         end
         return ex
     elseif x.typ === Generator
@@ -693,7 +713,8 @@ function get_inner_gen(x, iters = [], arg = [])
     if x.typ == Flatten
         get_inner_gen(x.args[1], iters, arg)
     elseif x.typ === Generator
-        push!(iters, get_iter(x))
+        # push!(iters, get_iter(x))
+        get_iters(x, iters)
         if x.args[1].typ === Generator || x.args[1].typ === Flatten
             get_inner_gen(x.args[1], iters, arg)
         else
@@ -707,6 +728,19 @@ function get_iter(x)
     if x.typ === Generator
         return x.args[3]
     end
+end
+
+function get_iters(x, iters)
+    iters1 = []
+    if x.typ === Generator
+        # return x.args[3]
+        for i = 3:length(x.args)
+            if x.args[i].typ !== PUNCTUATION
+                push!(iters1, x.args[i])
+            end
+        end
+    end
+    push!(iters, iters1)
 end
 
 function convert_iter_assign(a)

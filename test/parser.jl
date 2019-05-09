@@ -102,7 +102,7 @@ end
         @test "!(a,b)" |> test_expr
         @test "¬(a,b)" |> test_expr
         @test "~(a,b)" |> test_expr
-        @test_broken "<:(a,b)" |> test_expr_broken
+        @test "<:(a,b)" |> test_expr
         @test "√(a,b)" |> test_expr
         @test "\$(a,b)" |> test_expr
         @test ":(a,b)" |> test_expr
@@ -353,7 +353,7 @@ end
     @test "(arg for x in X if A for y in Y for z in Z)" |> test_expr
     @test "(arg for x in X if A for y in Y if B for z in Z)" |> test_expr
     @test "(arg for x in X if A for y in Y if B for z in Z if C)" |> test_expr
-    @test_broken "(arg for x in X, y in Y for z in Z)" |> test_expr_broken
+    @test "(arg for x in X, y in Y for z in Z)" |> test_expr
     @test "(arg for x in X, y in Y if A for z in Z)" |> test_expr
 end
 
@@ -697,8 +697,8 @@ end
     m = first(methods(f))
     @test DSE.keywords(f, m) == [:a, :b]
 end""" |> test_expr
-    @test "-1^a" |> test_expr_broken
-    @test "function(f, args...; kw...) end" |> test_expr_broken
+    @test "-1^a" |> test_expr
+    @test "function(f, args...; kw...) end" |> test_expr
     @test "2a * b" |> test_expr
     @test "(g1090(x::T)::T) where {T} = x+1.0" |> test_expr
     @test "(:) = Colon()" |> test_expr
