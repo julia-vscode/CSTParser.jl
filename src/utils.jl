@@ -619,3 +619,13 @@ function _unescape_string(io, s::AbstractString)
 end
 
 
+function match_closer(ps::ParseState)
+    length(ps.closer.cc) == 0 && return false
+    kind = ps.nt.kind
+    lc = last(ps.closer.cc)
+    return (kind === Tokens.RPAREN && lc == :paren) ||
+           (kind === Tokens.RSQUARE && lc == :square) ||
+           (kind === Tokens.RBRACE && lc == :braces) ||
+           (kind === Tokens.END && (lc == :begin || lc == :if)) 
+
+end

@@ -99,17 +99,6 @@ function is_range(x)
     x.typ === BinaryOpCall && (is_eq(x.args[2]) || is_in(x.args[2]) || is_elof(x.args[2]))
 end
 
-function parse_end(ps::ParseState)
-    if ps.closer.square
-        ret = mKEYWORD(ps)
-    else
-        push!(ps.errors, Error((ps.t.startbyte:ps.t.endbyte) .+ 1 , "Unexpected end."))
-        ret = mErrorToken(mIDENTIFIER(ps))
-    end
-    
-    return ret
-end
-
 """
     parse_call(ps, ret)
 

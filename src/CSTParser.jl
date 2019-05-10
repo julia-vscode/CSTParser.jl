@@ -38,13 +38,18 @@ Acceptable starting tokens are:
 + An `@`.
 
 """
-@addctx :expr function parse_expression(ps::ParseState)
+function parse_expression(ps::ParseState)
     if ps.nt.kind == Tokens.COMMA
         push!(ps.errors, Error((ps.nt.startbyte:ps.nws.endbyte) .+ 1, "Expression began with a comma."))
         ret = mErrorToken(mPUNCTUATION(next(ps)))
-    elseif ps.nt.kind ∈ term_c && ps.nt.kind != Tokens.END
-        push!(ps.errors, Error((ps.nt.startbyte:ps.nws.endbyte) .+ 1, "Expression began with a terminal token: $(ps.nt.kind)."))
-        ret = mErrorToken(INSTANCE(next(ps)))
+    elseif ps.nt.kind ∈ term_c && !(ps.nt.kind === Tokens.END && ps.closer.square)
+        if match_closer(ps)
+            #trying to parse an expression but we've hit a token that closes a parent expression
+            ret = mErrorToken()
+        else
+            push!(ps.errors, Error((ps.nt.startbyte:ps.nws.endbyte) .+ 1, "Expression began with a closer token: $(ps.nt.kind)."))
+            ret = mErrorToken(INSTANCE(next(ps)))
+        end
     else
         next(ps)
         if iskeyword(ps.t.kind) && ps.t.kind != Tokens.DO

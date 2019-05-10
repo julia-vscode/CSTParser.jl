@@ -42,7 +42,14 @@ function parse_kw(ps)
     elseif k == Tokens.RETURN
         return @default ps parse_return(ps)
     elseif k == Tokens.END
-        return parse_end(ps)
+        if ps.closer.square
+            ret = mKEYWORD(ps)
+        else
+            push!(ps.errors, Error((ps.t.startbyte:ps.t.endbyte) .+ 1 , "Unexpected end."))
+            ret = mErrorToken(mIDENTIFIER(ps))
+        end
+        
+        return ret
     elseif k == Tokens.ELSE || k == Tokens.ELSEIF || k == Tokens.CATCH || k == Tokens.FINALLY
         push!(ps.errors, Error((ps.t.startbyte:ps.t.endbyte) .+ 1 , "Unexpected end."))
         return mErrorToken(mIDENTIFIER(ps))
