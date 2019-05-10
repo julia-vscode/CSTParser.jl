@@ -81,3 +81,19 @@ function recover_endmarker(ps)
         end
     end
 end
+
+function requires_ws(x)
+    if x.span == x.fullspan
+        return mErrorToken(x)
+    else
+        return x
+    end
+end
+
+function requires_no_ws(x)
+    if x.span != x.fullspan
+        return mErrorToken(x)
+    else
+        return x
+    end
+end

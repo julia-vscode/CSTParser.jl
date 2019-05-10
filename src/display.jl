@@ -1,6 +1,6 @@
 function Base.show(io::IO, x::EXPR, d = 0, er = false)
     T = x.typ
-    c =  er ? :red : :normal
+    c =  T === ErrorToken || er ? :red : :normal
     if isidentifier(x)
         printstyled(io, " "^d, x.val, "  ", x.fullspan, "(", x.span, ")", color = :yellow)
         x.binding != nothing && printstyled(" $(x.binding.name)", color = :blue)
@@ -25,14 +25,6 @@ function Base.show(io::IO, x::EXPR, d = 0, er = false)
         end
     elseif isliteral(x)
         printstyled(io, " "^d, "$(x.kind): ", x.val, "  ", x.fullspan, "(", x.span, ")\n", color = c)
-    elseif x.typ === ErrorToken
-        if isempty(x.args)
-            printstyled(io, " "^d, "ErrorToken\n", color = :red )
-        else
-            for a in x.args
-                show(io, a, d, true)
-            end
-        end
     else
         printstyled(io, " "^d, T, "  ", x.fullspan, "(", x.span, ")", color = c)
         x.scope != nothing && printstyled(" new scope", color = :green)

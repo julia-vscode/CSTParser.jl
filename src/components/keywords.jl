@@ -67,7 +67,9 @@ end
 function parse_const(ps::ParseState)
     kw = mKEYWORD(ps)
     arg = parse_expression(ps)
-
+    if arg.typ !== BinaryOpCall || arg.args[2].kind !== Tokens.EQ
+        arg = mErrorToken(arg)
+    end
     return EXPR(Const, EXPR[kw, arg])
 end
 

@@ -84,6 +84,9 @@ function parse_compound(ps::ParseState, @nospecialize ret)
     elseif ps.nt.kind == Tokens.DO
         ret = @default ps @closer ps block parse_do(ps, ret)
     elseif isajuxtaposition(ps, ret)
+        if is_number(ret) && last(ret.val) == '.'
+            ret = mErrorToken(ret)
+        end
         op = mOPERATOR(0, 0, Tokens.STAR, false)
         ret = parse_operator(ps, ret, op)
     elseif (ret.typ === x_Str ||  ret.typ === x_Cmd) && ps.nt.kind == Tokens.IDENTIFIER

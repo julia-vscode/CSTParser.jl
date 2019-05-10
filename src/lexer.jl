@@ -175,3 +175,4 @@ function read_comment(l::Lexer)
 end
 
 isemptyws(t::AbstractToken) = t.kind == EmptyWS
+isnewlinews(t::AbstractToken) = t.kind === NewLineWS

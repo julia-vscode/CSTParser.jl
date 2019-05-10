@@ -46,12 +46,10 @@ end
     #     end
     # end
     @testset "Conditional Operator" begin
-        strs = ["a ? b : c"
-                "a ? b : c : d"
-                "a ? b : c : d :e"]
-        for str in strs
-            @test test_expr(str)
-        end
+        @test test_expr("a ? b : c")
+        @test test_expr("a ? b : c : d")
+        @test test_expr("a ? b : c : d : e")
+        @test test_expr("a ? b : c : d : e")
     end
 
 
@@ -751,6 +749,19 @@ end
 
 @testset "conversion of floats with underscore" begin
     @test "30.424_876_125_859_513" |> test_expr
+end
+
+@testset "errors" begin
+    @test CSTParser.parse("1? b : c ")[1].typ === CSTParser.ErrorToken
+    @test CSTParser.parse("1 ?b : c ")[2].typ === CSTParser.ErrorToken
+    @test CSTParser.parse("1 ? b :c ")[4].typ === CSTParser.ErrorToken
+    @test CSTParser.parse("1:\n2")[2].typ === CSTParser.ErrorToken
+    @test CSTParser.parse("1.a")[1].typ === CSTParser.ErrorToken
+    @test CSTParser.parse("f ()").typ === CSTParser.ErrorToken
+    @test CSTParser.parse("f{t} ()").typ === CSTParser.ErrorToken
+    @test CSTParser.parse(": a")[1].typ === CSTParser.ErrorToken
+    @test CSTParser.parse("const a")[2].typ === CSTParser.ErrorToken
+    @test CSTParser.parse("const a = 1")[2].typ === CSTParser.BinaryOpCall
 end
 
 end
