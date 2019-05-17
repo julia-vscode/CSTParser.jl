@@ -125,7 +125,7 @@ function parse_call(ps::ParseState, ret, ismacro = false)
         end
     elseif is_and(ret) || is_decl(ret) || is_exor(ret) 
         arg = @precedence ps 20 parse_expression(ps)
-        if is_exor(ret) && arg.typ === TupleH && length(arg.args) == 3 && arg.args[2].typ === UnaryOpCall && is_dddot(arg.args[2].arg2)
+        if is_exor(ret) && arg.typ === TupleH && length(arg.args) == 3 && arg.args[2].typ === UnaryOpCall && is_dddot(arg.args[2].arg[2])
             arg = EXPR(InvisBrackets, arg.args)
         end
         ret = mUnaryOpCall(ret, arg)
@@ -269,7 +269,7 @@ function parse_generator(ps::ParseState, @nospecialize ret)
         ret = EXPR(Flatten, EXPR[ret])
     end
 
-    return newscope!(ret)
+    return setscope!(ret)
 end
 
 

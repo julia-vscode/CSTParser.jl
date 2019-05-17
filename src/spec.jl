@@ -108,7 +108,7 @@ end
 mutable struct Scope
     parent::Union{Nothing,Scope}
     names::Dict{String,Binding}
-    modules::Union{Nothing,Dict}
+    modules::Union{Nothing,Dict{String,Any}}
 end
 
 Scope() = Scope(nothing, Dict{String,Binding}(), nothing)
@@ -173,8 +173,8 @@ function update_span!(x) end
 function update_span!(x::EXPR)
     (x.args isa Nothing || isempty(x.args)) && return
     x.fullspan = 0
-    for a in x.args
-        x.fullspan += a.fullspan
+    for i = 1:length(x.args)
+        x.fullspan += x.args[i].fullspan
     end
     x.span = x.fullspan - last(x.args).fullspan + last(x.args).span
     return 
@@ -299,8 +299,8 @@ function setparent!(c, p)
     return c
 end
 
-function newscope!(x)
-    x.scope = Scope()
+function setscope!(x, s = Scope())
+    x.scope = s
     return x
 end
 
@@ -329,7 +329,7 @@ function setbinding!(x, binding)
         end
     elseif x.typ === InvisBrackets
         setbinding!(rem_invis(x), binding)
-    else
+    elseif x.typ === IDENTIFIER || (x.typ === BinaryOpCall && x.args[2].kind === Tokens.DECLARATION)
         x.binding = Binding(str_value(get_name(x)), binding, nothing, [], nothing)
     end
     return x
@@ -374,7 +374,7 @@ Base.getindex(x::EXPR, i) = x.args[i]
 
 function strip_where_scopes(sig)
     if sig.typ === WhereOpCall
-        sig.scope = nothing
+        setscope!(sig, nothing)
         strip_where_scopes(sig.args[1])
     end
 end

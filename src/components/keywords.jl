@@ -74,7 +74,7 @@ end
 function parse_const(ps::ParseState)
     kw = mKEYWORD(ps)
     arg = parse_expression(ps)
-    if arg.typ !== BinaryOpCall || arg.args[2].kind !== Tokens.EQ
+    if !((arg.typ === BinaryOpCall && arg.args[2].kind === Tokens.EQ) || (arg.typ === Global && arg.args[2].typ === BinaryOpCall && arg.args[2].args[2].kind === Tokens.EQ))
         arg = mErrorToken(arg)
     end
     return EXPR(Const, EXPR[kw, arg])
@@ -117,7 +117,7 @@ end
         sig = parse_expression(ps)
         ret = EXPR(Abstract, EXPR[kw, sig])
     end
-    return newscope!(ret)
+    return setscope!(ret)
 end
 
 @addctx :primitive function parse_primitive(ps::ParseState)
@@ -132,7 +132,7 @@ end
     else
         ret = mIDENTIFIER(ps)
     end
-    return newscope!(ret)
+    return setscope!(ret)
 end
 
 function parse_imports(ps::ParseState)
@@ -241,7 +241,7 @@ end
         push!(ret, a)
     end
     accept_end(ps, ret)
-    return newscope!(ret)
+    return setscope!(ret)
 end
 
 @addctx :macro function parse_macro(ps::ParseState)
@@ -267,7 +267,7 @@ end
         fullspan1 = ps.nt.startbyte - sb
         ret = EXPR(Macro, EXPR[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
     end
-    return newscope!(ret)
+    return setscope!(ret)
 end
 
 # loops
@@ -286,7 +286,7 @@ end
     end
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return newscope!(EXPR(For, EXPR[kw, ranges, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span))
+    return setscope!(EXPR(For, EXPR[kw, ranges, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span))
 end
 
 @addctx :while function parse_while(ps::ParseState)
@@ -304,7 +304,7 @@ end
     end
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return newscope!(EXPR(While, EXPR[kw, cond, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span))
+    return setscope!(EXPR(While, EXPR[kw, cond, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span))
 end
 
 # control flow
@@ -371,7 +371,7 @@ end
     push!(args, EXPR(Block, blockargs))
     accept_end(ps, args)
 
-    return newscope!(EXPR(Let, args))
+    return setscope!(EXPR(Let, args))
 end
 
 @addctx :try function parse_try(ps::ParseState)
@@ -422,7 +422,7 @@ end
     end
 
     push!(ret, accept_end(ps))
-    return newscope!(ret)
+    return setscope!(ret)
 end
 
 @addctx :do function parse_do(ps::ParseState, @nospecialize(ret))
@@ -440,7 +440,7 @@ end
 
     blockargs = parse_block(ps)
 
-    return newscope!(EXPR(Do, EXPR[ret, kw, args, EXPR(Block, blockargs), accept_end(ps)]))
+    return setscope!(EXPR(Do, EXPR[ret, kw, args, EXPR(Block, blockargs), accept_end(ps)]))
 end
 
 # modules
@@ -466,7 +466,7 @@ end
     end
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return newscope!(EXPR(is_module(kw) ? ModuleH : BareModule, EXPR[kw, arg, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span))
+    return setscope!(EXPR(is_module(kw) ? ModuleH : BareModule, EXPR[kw, arg, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span))
 end
 
 
@@ -480,7 +480,7 @@ function parse_mutable(ps::ParseState)
     else
         ret = mIDENTIFIER(ps)
     end
-    return newscope!(ret)
+    return setscope!(ret)
 end
 
 function markparameters!(sig)
@@ -517,7 +517,7 @@ end
     if mutable
         ret = EXPR(Mutable, EXPR[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
     else
-        ret = newscope!(EXPR(Struct, EXPR[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span))
+        ret = setscope!(EXPR(Struct, EXPR[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span))
     end
     return ret
 end

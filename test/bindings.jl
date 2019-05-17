@@ -71,3 +71,4 @@ collect_bindings(CSTParser.parse("f(x::T) where {T <: S} where R = x")) == ["f",
 @test collect_bindings(CSTParser.parse("map() do x end")) == ["x"]
 
 @test collect_bindings(CSTParser.parse("(a,b)->x")) == ["a", "b"]
+collect_bindings(CSTParser.parse("function f(a::T = 1) end")) == ["f", "a"]

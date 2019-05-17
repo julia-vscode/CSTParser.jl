@@ -28,9 +28,8 @@ mutable struct Closer
     precedence::Int
     stop::Int
     cc::Vector{Symbol}
-    blocknewscope::Bool
 end
-Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int), [], false)
+Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int), [])
 
 struct Error
     loc::UnitRange{Int}
@@ -83,7 +82,6 @@ function next(ps::ParseState)
     else
         ps.nnt = Tokenize.Lexers.next_token(ps.l)
         ps.done = ps.nnt == Tokens.ENDMARKER
-        # ps.nnt, ps.done  = iterate(ps.l, ps.done)
     end
     
     # combines whitespace, comments and semicolons

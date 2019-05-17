@@ -762,6 +762,8 @@ end
     @test CSTParser.parse(": a")[1].typ === CSTParser.ErrorToken
     @test CSTParser.parse("const a")[2].typ === CSTParser.ErrorToken
     @test CSTParser.parse("const a = 1")[2].typ === CSTParser.BinaryOpCall
+    @test CSTParser.parse("const global a")[2].typ === CSTParser.ErrorToken
+    @test CSTParser.parse("const global a = 1")[2].typ === CSTParser.Global
 end
 
 end

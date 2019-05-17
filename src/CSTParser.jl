@@ -126,7 +126,7 @@ function parse_compound(ps::ParseState, @nospecialize ret)
     elseif isoperator(ps.nt)
         op = mOPERATOR(next(ps))
         ret = parse_operator(ps, ret, op)
-    elseif ret.typ === UnaryOpCall && is_prime(ret.arg2)
+    elseif ret.typ === UnaryOpCall && is_prime(ret.args[2])
         # prime operator followed by an identifier has an implicit multiplication
         nextarg = @precedence ps 11 parse_expression(ps)
         ret = mBinaryOpCall(ret, mOPERATOR(0, 0, Tokens.STAR,false), nextarg)

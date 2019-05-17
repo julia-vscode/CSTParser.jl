@@ -197,7 +197,7 @@ function parse_operator_eq(ps::ParseState, @nospecialize(ret), op)
         end
         strip_where_scopes(ret)
         mark_sig_args!(ret)
-        ret = newscope!(mBinaryOpCall(ret, op, nextarg))
+        ret = setscope!(mBinaryOpCall(ret, op, nextarg))
         setbinding!(ret)
     else
         ret = mBinaryOpCall(ret, op, nextarg)
@@ -268,7 +268,7 @@ end
 
 
 # parse where
-function parse_operator_where(ps::ParseState, @nospecialize(ret), op, newscope = true)
+function parse_operator_where(ps::ParseState, @nospecialize(ret), op, setscope = true)
     nextarg = @precedence ps LazyAndOp @closer ps inwhere parse_expression(ps)
     
     if nextarg.typ === Braces
@@ -282,8 +282,8 @@ function parse_operator_where(ps::ParseState, @nospecialize(ret), op, newscope =
         end
     end
     ret = mWhereOpCall(ret, op, args)
-    if newscope
-        newscope!(ret)
+    if setscope
+        setscope!(ret)
     end
     return ret
 end
