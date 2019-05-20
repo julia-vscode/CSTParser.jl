@@ -31,11 +31,6 @@ mutable struct Closer
 end
 Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int), [])
 
-struct Error
-    loc::UnitRange{Int}
-    description::String
-end
-
 mutable struct ParseState
     l::Lexer{Base.GenericIOBuffer{Array{UInt8, 1}},RawToken}
     done::Bool
@@ -49,10 +44,9 @@ mutable struct ParseState
     nnws::RawToken
     closer::Closer
     errored::Bool
-    errors::Vector{Error}
 end
 function ParseState(str::Union{IO,String})
-    ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), Closer(), false, Error[])
+    ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), Closer(), false)
     return next(next(ps))
 end
 

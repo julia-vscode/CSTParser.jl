@@ -29,7 +29,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     iscmd = ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
 
     if ps.errored
-        return mErrorToken()
+        return mErrorToken(Unknown)
     end
 
     lcp = nothing
@@ -88,10 +88,9 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         while true
             if eof(input)
                 lspan = position(b)
-                # str = tostr(b)
                 if b.size == 0
-                # if sizeof(str) == 0
-                    ex = mErrorToken()
+                    ps.errored = true
+                    ex = mErrorToken(Unknown)
                 elseif istrip
                     str = tostr(b)
                     str = str[1:prevind(str, prevind(str, sizeof(str), 2))]

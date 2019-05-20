@@ -21,7 +21,7 @@ include("components/strings.jl")
 include("conversion.jl")
 include("display.jl")
 include("interface.jl")
-
+include("reparse.jl")
 
 """
     parse_expression(ps)
@@ -40,15 +40,16 @@ Acceptable starting tokens are:
 """
 function parse_expression(ps::ParseState)
     if ps.nt.kind == Tokens.COMMA
-        push!(ps.errors, Error((ps.nt.startbyte:ps.nws.endbyte) .+ 1, "Expression began with a comma."))
-        ret = mErrorToken(mPUNCTUATION(next(ps)))
+        ps.errored = true
+        ret = mErrorToken(mPUNCTUATION(next(ps)), UnexpectedToken)
     elseif ps.nt.kind ∈ term_c && !(ps.nt.kind === Tokens.END && ps.closer.square)
         if match_closer(ps)
             #trying to parse an expression but we've hit a token that closes a parent expression
-            ret = mErrorToken()
+            ps.errored = true
+            ret = mErrorToken(MissingCloser)
         else
-            push!(ps.errors, Error((ps.nt.startbyte:ps.nws.endbyte) .+ 1, "Expression began with a closer token: $(ps.nt.kind)."))
-            ret = mErrorToken(INSTANCE(next(ps)))
+            ps.errored = true
+            ret = mErrorToken(INSTANCE(next(ps)), UnexpectedToken)
         end
     else
         next(ps)
@@ -72,8 +73,8 @@ function parse_expression(ps::ParseState)
         elseif ps.t.kind == Tokens.AT_SIGN
             ret = parse_macrocall(ps)
         else
-            ret = mErrorToken(INSTANCE(ps))
-            push!(ps.errors, Error((ps.nt.startbyte:ps.nws.endbyte) .+ 1, "Expression began with a : $(ps.nt.kind)."))
+            ps.errored = true
+            ret = mErrorToken(INSTANCE(ps), UnexpectedToken)
         end
 
         while !closer(ps)
@@ -90,6 +91,7 @@ function parse_compound(ps::ParseState, @nospecialize ret)
         ret = @default ps @closer ps block parse_do(ps, ret)
     elseif isajuxtaposition(ps, ret)
         if is_number(ret) && last(ret.val) == '.'
+            ps.errored = true
             ret = mErrorToken(ret)
         end
         op = mOPERATOR(0, 0, Tokens.STAR, false)
@@ -107,15 +109,16 @@ function parse_compound(ps::ParseState, @nospecialize ret)
         err_rng = ps.t.endbyte + 2:ps.nt.startbyte 
         ret = @closeparen ps parse_call(ps, ret)
         if no_ws && !(ret.typ === UnaryOpCall)
-            push!(ps.errors, Error(err_rng, "White space in function call."))
-            ret = mErrorToken(ret)
+            ps.errored = true
+            ret = mErrorToken(ret, UnexpectedWhiteSpace)
         end
     elseif ps.nt.kind == Tokens.LBRACE
         if isemptyws(ps.ws)
             ret = @default ps @nocloser ps inwhere @closebrace ps parse_curly(ps, ret)
         else
-            push!(ps.errors, Error(ps.t.endbyte + 2:ps.nt.startbyte , "White space in brace call."))
-            ret = mErrorToken(@default ps @nocloser ps inwhere @closebrace ps parse_curly(ps, ret))
+            ps.errored = true
+            ret = mErrorToken(@default ps @nocloser ps inwhere @closebrace ps parse_curly(ps, ret), UnexpectedWhiteSpace)
+
         end
     elseif ps.nt.kind == Tokens.LSQUARE && isemptyws(ps.ws) && !isoperator(ret)
         ret = @default ps @nocloser ps block parse_ref(ps, ret)
@@ -134,11 +137,11 @@ function parse_compound(ps::ParseState, @nospecialize ret)
 # Everything below here is an error
 ################################################################################
     elseif ps.nt.kind in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)
-        push!(ps.errors, Error((ps.t.startbyte:ps.nt.endbyte) .+ 1 , "Disallowed compound expression."))
+        ps.errored = true
         ret = EXPR(ErrorToken, EXPR[ret, mErrorToken(mPUNCTUATION(next(ps)))])
     else
-        push!(ps.errors, Error((ps.t.startbyte:ps.nt.endbyte) .+ 1 , "Disallowed compound expression."))
         nextarg = parse_expression(ps)
+        ps.errored = true
         ret = EXPR(ErrorToken, EXPR[ret, nextarg])
     end
     return ret

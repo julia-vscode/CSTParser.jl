@@ -90,6 +90,16 @@ TypedVcat,
 Vect,
 ErrorToken)
 
+@enum(ErrorKind,
+    UnexpectedToken,
+    CannotJuxtapose,
+    UnexpectedWhiteSpace, 
+    UnexpectedNewLine,
+    ExpectedAssignment,
+    MissingConditional,
+    MissingCloser,
+    InvalidIterator,
+    Unknown)
 
 const NoKind = Tokenize.Tokens.begin_keywords
 
@@ -234,7 +244,8 @@ function INSTANCE(ps::ParseState)
     elseif ispunctuation(ps.t)
         return mPUNCTUATION(ps)
     else
-        return mErrorToken()
+        ps.errored = true
+        return mErrorToken(Unknown)
     end
 end
 
@@ -285,9 +296,8 @@ end
 
 
 
-
-mErrorToken() = EXPR(ErrorToken, EXPR[])
-mErrorToken(x) = EXPR(ErrorToken, EXPR[x])
+mErrorToken(k::ErrorKind) = EXPR(ErrorToken, EXPR[], 0, 0, nothing, NoKind, false, nothing, nothing, nothing, k)
+mErrorToken(x::EXPR, k) = EXPR(ErrorToken, EXPR[x], 0, 0, nothing, NoKind, false, nothing, nothing, nothing, k)
 
 TRUE() = mLITERAL(0, 0, "", Tokens.TRUE)
 FALSE() = mLITERAL(0, 0, "", Tokens.FALSE)
@@ -346,6 +356,9 @@ end
 
 function mark_sig_args!(x)
     if x.typ === Call
+        if x.args[1].typ === InvisBrackets && x.args[1].args[2].typ === BinaryOpCall && x.args[1].args[2].args[2].kind === Tokens.DECLARATION
+            setbinding!(x.args[1].args[2])
+        end
         for i = 3:length(x.args)-1
             a = x.args[i]
             if a.typ === Parameters

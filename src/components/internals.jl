@@ -9,26 +9,26 @@ function parse_block(ps::ParseState, ret::Vector{EXPR} = EXPR[], closers = (Toke
                 if length(ps.closer.cc) > 1 && :paren == ps.closer.cc[end-1]
                     break
                 else
-                    push!(ps.errors, Error((ps.nt.startbyte:ps.nt.endbyte) .+ 1 , "Unexpected )."))
-                    push!(ret, mErrorToken(INSTANCE(next(ps))))
+                    push!(ret, mErrorToken(INSTANCE(next(ps)), UnexpectedToken))
+                    ps.errored = true
                 end
             elseif ps.nt.kind == Tokens.RBRACE
                 if length(ps.closer.cc) > 1 && :brace == ps.closer.cc[end-1]
                     break
                 else
-                    push!(ps.errors, Error((ps.nt.startbyte:ps.nt.endbyte) .+ 1 , "Unexpected }."))
-                    push!(ret, mErrorToken(INSTANCE(next(ps))))
+                    push!(ret, mErrorToken(INSTANCE(next(ps)), UnexpectedToken))
+                    ps.errored = true
                 end
             elseif ps.nt.kind == Tokens.RSQUARE
                 if length(ps.closer.cc) > 1 && :square == ps.closer.cc[end-1]
                     break
                 else
-                    push!(ps.errors, Error((ps.nt.startbyte:ps.nt.endbyte) .+ 1 , "Unexpected ]."))
-                    push!(ret, mErrorToken(INSTANCE(next(ps))))
+                    push!(ret, mErrorToken(INSTANCE(next(ps)), UnexpectedToken))
+                    ps.errored = true
                 end
             else
-                push!(ps.errors, Error((ps.nt.startbyte:ps.nt.endbyte) .+ 1 , "Unexpected $(ps.nt.kind)."))
-                push!(ret, mErrorToken(INSTANCE(next(ps))))
+                push!(ret, mErrorToken(INSTANCE(next(ps)), UnexpectedToken))
+                ps.errored = true
             end
         else
             if docable
@@ -66,8 +66,8 @@ function parse_ranges(ps::ParseState, allowfilter = false)
     arg = parse_iter(ps)
     setiterbinding!(arg)
     if (arg.typ === Outer && !is_range(arg.args[2])) || !is_range(arg)
-        push!(ps.errors, Error(ps.nt.startbyte - arg.fullspan:ps.nt.startbyte , "Incorrect iteration specification."))
-        arg = mErrorToken(arg)
+        arg = mErrorToken(arg, InvalidIterator)
+        ps.errored = true
     elseif ps.nt.kind == Tokens.COMMA
         arg = EXPR(Block, EXPR[arg])
         while ps.nt.kind == Tokens.COMMA
@@ -75,8 +75,8 @@ function parse_ranges(ps::ParseState, allowfilter = false)
             nextarg = parse_iter(ps)
             setiterbinding!(nextarg)
             if (nextarg.typ === Outer && !is_range(nextarg.args[2])) || !is_range(nextarg)
-                push!(ps.errors, Error(ps.nt.startbyte - nextarg.fullspan:ps.nt.startbyte , "Incorrect iteration specification."))
-                arg = mErrorToken(arg)
+                arg = mErrorToken(arg, InvalidIterator)
+                ps.errored = true
             end
             push!(arg, nextarg)
         end
@@ -210,8 +210,8 @@ function parse_macrocall(ps::ParseState)
     sb = ps.t.startbyte
     at = mPUNCTUATION(ps)
     if !isemptyws(ps.ws)
-        push!(ps.errors, Error((ps.ws.startbyte + 1:ps.ws.endbyte) .+ 1 , "Unexpected whitespace in macrocall."))
-        mname = mErrorToken(INSTANCE(next(ps)))
+        mname = mErrorToken(INSTANCE(next(ps)), UnexpectedWhiteSpace)
+        ps.errored = true
     else
         mname = EXPR(MacroName, EXPR[at, mIDENTIFIER(next(ps))])
     end

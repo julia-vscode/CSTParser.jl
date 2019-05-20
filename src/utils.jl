@@ -243,27 +243,6 @@ isajuxtaposition(ps::ParseState, ret) = ((is_number(ret) && (ps.nt.kind == Token
         ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)))) || ((ps.t.kind in (Tokens.INTEGER, Tokens.FLOAT) || ps.t.kind in (Tokens.RPAREN,Tokens.RSQUARE,Tokens.RBRACE)) && ps.nt.kind == Tokens.IDENTIFIER)
 
 
-# Testing functions
-
-
-
-function test_order(x, out = [])
-    if x isa EXPR
-        for y in x
-            test_order(y, out)
-        end
-    else
-        push!(out, x)
-    end
-    out
-end
-
-function test_find(str)
-    x = parse(str, true)
-    for i = 1:sizeof(str)
-        _find(x, i)
-    end
-end
 
 # When using the FancyDiagnostics package, Base.parse, is the
 # same as CSTParser.parse. Manually call the flisp parser here
@@ -627,5 +606,4 @@ function match_closer(ps::ParseState)
            (kind === Tokens.RSQUARE && lc == :square) ||
            (kind === Tokens.RBRACE && lc == :braces) ||
            (kind === Tokens.END && (lc == :begin || lc == :if)) 
-
 end

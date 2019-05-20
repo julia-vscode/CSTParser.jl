@@ -45,14 +45,14 @@ function parse_kw(ps)
         if ps.closer.square
             ret = mKEYWORD(ps)
         else
-            push!(ps.errors, Error((ps.t.startbyte:ps.t.endbyte) .+ 1 , "Unexpected end."))
-            ret = mErrorToken(mIDENTIFIER(ps))
+            ret = mErrorToken(mIDENTIFIER(ps), UnexpectedToken)
+            ps.errored = true
         end
         
         return ret
     elseif k == Tokens.ELSE || k == Tokens.ELSEIF || k == Tokens.CATCH || k == Tokens.FINALLY
-        push!(ps.errors, Error((ps.t.startbyte:ps.t.endbyte) .+ 1 , "Unexpected end."))
-        return mErrorToken(mIDENTIFIER(ps))
+        ps.errored = true
+        return mErrorToken(mIDENTIFIER(ps), UnexpectedToken)
     elseif k == Tokens.ABSTRACT
         return setbinding!(@default ps parse_abstract(ps))
     elseif k == Tokens.PRIMITIVE
@@ -66,7 +66,8 @@ function parse_kw(ps)
     elseif k == Tokens.OUTER
         return mIDENTIFIER(ps)
     else
-        return mErrorToken()
+        ps.errored = true
+        return mErrorToken(Unknown)
     end
 end
 # Prefix 
@@ -75,7 +76,8 @@ function parse_const(ps::ParseState)
     kw = mKEYWORD(ps)
     arg = parse_expression(ps)
     if !((arg.typ === BinaryOpCall && arg.args[2].kind === Tokens.EQ) || (arg.typ === Global && arg.args[2].typ === BinaryOpCall && arg.args[2].args[2].kind === Tokens.EQ))
-        arg = mErrorToken(arg)
+        ps.errored = true
+        arg = mErrorToken(arg, ExpectedAssignment)
     end
     return EXPR(Const, EXPR[kw, arg])
 end
@@ -318,8 +320,8 @@ Parse an `if` block.
     # Parsing
     kw = mKEYWORD(ps)
     if ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS
-        push!(ps.errors, Error((ps.ws.startbyte:ps.ws.endbyte) .+ 1 , "Missing conditional in if statement."))
-        cond = mErrorToken()
+        ps.errored = true
+        cond = mErrorToken(MissingConditional)
     else
         cond = @closer ps ws parse_expression(ps)
     end

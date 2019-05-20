@@ -238,7 +238,8 @@ end
 # Parse ranges
 function parse_operator_colon(ps::ParseState, @nospecialize(ret), op)  
     if isnewlinews(ps.ws)
-        op = mErrorToken(op)
+        ps.errored = true
+        op = mErrorToken(op, UnexpectedNewLine)
     end
     nextarg = @precedence ps ColonOp - LtoR(ColonOp) parse_expression(ps)
 
@@ -295,7 +296,8 @@ function parse_operator_dot(ps::ParseState, @nospecialize(ret), op)
             sig = @default ps parse_call(ps, ret)
             nextarg = EXPR(TupleH, sig.args[2:end])
             if iserred
-                nextarg = mErrorToken(nextarg)
+                ps.errored = true
+                nextarg = mErrorToken(nextarg, UnexpectedWhiteSpace)
             end
         else
             sig = @default ps parse_call(ps, ret)

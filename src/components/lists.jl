@@ -13,7 +13,8 @@ function parse_tuple end
             if (isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX)
                 push!(ret, op)
             elseif closer(ps)
-                push!(ret, mErrorToken(op))
+                ps.errored = true
+                push!(ret, mErrorToken(op, Unknown))
             else
                 nextarg = @closer ps tuple parse_expression(ps)
                 if !(is_lparen(first(ret.args)))
@@ -27,7 +28,8 @@ function parse_tuple end
             if (isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX)
                 ret = EXPR(TupleH, EXPR[ret, op])
             elseif closer(ps)
-                ret = mErrorToken(EXPR(TupleH, EXPR[ret, op]))
+                ps.errored = true
+                ret = mErrorToken(EXPR(TupleH, EXPR[ret, op]), Unknown)
             else
                 nextarg = @closer ps tuple parse_expression(ps)
                 ret = EXPR(TupleH, EXPR[ret, op, nextarg])
