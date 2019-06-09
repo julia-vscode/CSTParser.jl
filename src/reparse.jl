@@ -128,11 +128,14 @@ spanequiv(a::EXPR,b::EXPR) = a.span == b.span && a.fullspan == b.fullspan
 isequiv(a,b; span = true) = false
 
 function isequiv(a::EXPR,b::EXPR; span = true)
-    t = a.typ === b.typ 
-    length(a.args) != length(b.args) && return false
-    for i = 1:length(a.args)
-        t = t && isequiv(a.args[i], b.args[i], span = span) 
-        t || return false
+    t = a.typ === b.typ
+    typeof(a.args) != typeof(b.args) && return false
+    if a.args isa Vector
+        length(a.args) != length(b.args) && return false
+        for i = 1:length(a.args)
+            t = t && isequiv(a.args[i], b.args[i], span = span) 
+            t || return false
+        end
     end
     return (!span || spanequiv(a,b))
 end

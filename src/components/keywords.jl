@@ -79,7 +79,12 @@ function parse_const(ps::ParseState)
         ps.errored = true
         arg = mErrorToken(arg, ExpectedAssignment)
     end
-    return EXPR(Const, EXPR[kw, arg])
+    ret = EXPR(Const, EXPR[kw, arg])
+    if arg.typ === BinaryOpCall && arg.args[2].kind === Tokens.EQ && arg.args[1].typ === Curly
+        #setbinding!
+        mark_typealias_bindings!(arg)
+    end
+    return ret
 end
 
 function parse_global(ps::ParseState)

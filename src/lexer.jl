@@ -50,6 +50,14 @@ function ParseState(str::Union{IO,String})
     return next(next(ps))
 end
 
+function ParseState(str::Union{IO,String}, loc::Int)
+    ps = ParseState(str)
+    while ps.nt.startbyte < loc
+        next(ps)
+    end
+    return ps
+end
+
 function Base.show(io::IO, ps::ParseState)
     println(io, "ParseState $(ps.done ? "finished " : "")at $(position(ps.l.io))")
     println(io, "last    : ", ps.lt.kind, " ($(ps.lt))", "    ($(wstype(ps.lws)))")

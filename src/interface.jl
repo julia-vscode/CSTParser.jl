@@ -76,7 +76,7 @@ is_lit_string(x) = isliteral(x) && (x.kind == Tokens.STRING || x.kind == Tokens.
 
 
 function _arg_id(x)
-    if x.typ === ID
+    if x.typ === IDENTIFIER
         return x
     elseif x.typ === Quotenode
         return x.args[1]
@@ -288,16 +288,21 @@ function get_name(x)
         sig = rem_call(sig)
         sig = rem_curly(sig)
         sig = rem_invis(sig)
+        return get_name(sig)
     elseif x.typ === BinaryOpCall
+        if x.args[2].kind == Tokens.DOT
+            return get_name(x.args[3].args[1])
+        end
         sig = x.args[1]
         if sig.typ === UnaryOpCall 
-            return sig.args[1]
+            return get_name(sig.args[1])
         end
         sig = rem_where(sig)
         sig = rem_decl(sig)
         sig = rem_call(sig)
         sig = rem_curly(sig)
         sig = rem_invis(sig)
+        return get_name(sig)
     else
         sig = x
         if sig.typ === UnaryOpCall 

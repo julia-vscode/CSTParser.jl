@@ -173,7 +173,7 @@ function parse_unary(ps::ParseState, op)
 end
 
 function parse_unary_colon(ps::ParseState, op)
-    op = requires_no_ws(op)
+    op = requires_no_ws(op, ps)
     if Tokens.begin_keywords < ps.nt.kind < Tokens.end_keywords
         ret = EXPR(Quotenode, EXPR[op, mIDENTIFIER(next(ps))])
     elseif Tokens.begin_literal < ps.nt.kind < Tokens.end_literal ||
@@ -208,10 +208,10 @@ end
 
 # Parse conditionals
 function parse_operator_cond(ps::ParseState, @nospecialize(ret), op)
-    ret = requires_ws(ret)
-    op = requires_ws(op)
+    ret = requires_ws(ret, ps)
+    op = requires_ws(op, ps)
     nextarg = @closer ps ifop parse_expression(ps)
-    op2 = requires_ws(mOPERATOR(next(ps)))
+    op2 = requires_ws(mOPERATOR(next(ps)), ps)
     nextarg2 = @closer ps comma @precedence ps 0 parse_expression(ps)
 
     fullspan = ret.fullspan + op.fullspan + nextarg.fullspan + op2.fullspan + nextarg2.fullspan

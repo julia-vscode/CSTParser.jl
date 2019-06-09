@@ -1,7 +1,7 @@
 const term_c = (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE, Tokens.END, Tokens.ELSE, Tokens.ELSEIF, Tokens.CATCH, Tokens.FINALLY, Tokens.ENDMARKER)
 
 function parse_block(ps::ParseState, ret::Vector{EXPR} = EXPR[], closers = (Tokens.END,), docable = false)
-    while ps.nt.kind ∉ closers && !ps.errored
+    while ps.nt.kind ∉ closers
         if ps.nt.kind ∈ term_c
             if ps.nt.kind == Tokens.ENDMARKER
                 break
@@ -111,7 +111,6 @@ function parse_call(ps::ParseState, ret, ismacro = false)
     elseif ret.typ === Curly && ret.args[1].val == "new" && :struct in ps.closer.cc
         ret.args[1] = setparent!(mKEYWORD(Tokens.NEW, ret.args[1].fullspan, ret.args[1].span), ret)
     end
-    # ret = requires_no_ws(ret)
     if is_minus(ret) || is_not(ret)
         arg = @closer ps unary @closer ps inwhere @precedence ps 13 parse_expression(ps)
         if arg.typ === TupleH

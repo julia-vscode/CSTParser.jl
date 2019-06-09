@@ -40,7 +40,7 @@ function parse_tuple end
 else
     function parse_tuple(ps::ParseState, @nospecialize(ret))
         op = mPUNCTUATION(next(ps))
-        if x.typ === TupleH
+        if ret.typ === TupleH
             if closer(ps) || (isassignment(ps.nt) && ps.nt.kind != Tokens.APPROX)
                 push!(ret, op)
             else

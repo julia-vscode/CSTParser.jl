@@ -243,6 +243,8 @@ function INSTANCE(ps::ParseState)
         return mOPERATOR(ps)
     elseif ispunctuation(ps.t)
         return mPUNCTUATION(ps)
+    elseif ps.t.kind == Tokens.ERROR
+        return EXPR(ErrorToken, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), NoKind, false, nothing, nothing, nothing, Unknown)
     else
         ps.errored = true
         return mErrorToken(Unknown)
@@ -297,7 +299,7 @@ end
 
 
 mErrorToken(k::ErrorKind) = EXPR(ErrorToken, EXPR[], 0, 0, nothing, NoKind, false, nothing, nothing, nothing, k)
-mErrorToken(x::EXPR, k) = EXPR(ErrorToken, EXPR[x], 0, 0, nothing, NoKind, false, nothing, nothing, nothing, k)
+mErrorToken(x::EXPR, k) = EXPR(ErrorToken, EXPR[x], x.fullspan, x.span, nothing, NoKind, false, nothing, nothing, nothing, k)
 
 TRUE() = mLITERAL(0, 0, "", Tokens.TRUE)
 FALSE() = mLITERAL(0, 0, "", Tokens.FALSE)
@@ -325,6 +327,8 @@ function setbinding!(x)
         setbinding!(x.args[1], x)
     elseif x.typ === InvisBrackets
         setbinding!(rem_invis(x))
+    elseif x.typ == UnaryOpCall && x.args[1].kind === Tokens.DECLARATION
+        return x
     else
         x.binding = Binding(x)
     end
@@ -390,4 +394,15 @@ function strip_where_scopes(sig)
         setscope!(sig, nothing)
         strip_where_scopes(sig.args[1])
     end
+end
+
+function mark_typealias_bindings!(x)
+    x.binding = Binding(str_value(get_name(x.args[1])), x, nothing, [], nothing)
+    setscope!(x)
+    for i = 2:length(x.args[1].args)
+        if x.args[1].args[i].typ === IDENTIFIER
+            setbinding!(x.args[1].args[i])
+        end
+    end
+    return x
 end

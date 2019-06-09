@@ -28,9 +28,9 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     istrip = (ps.t.kind == Tokens.TRIPLE_STRING) || (ps.t.kind == Tokens.TRIPLE_CMD)
     iscmd = ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
 
-    if ps.errored
-        return mErrorToken(Unknown)
-    end
+    # if ps.errored
+    #     return mErrorToken(Unknown)
+    # end
 
     lcp = nothing
     exprs_to_adjust = []
@@ -89,7 +89,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             if eof(input)
                 lspan = position(b)
                 if b.size == 0
-                    ps.errored = true
+                    # ps.errored = true
                     ex = mErrorToken(Unknown)
                 elseif istrip
                     str = tostr(b)

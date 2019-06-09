@@ -86,7 +86,7 @@ function recover_endmarker(ps)
     end
 end
 
-function requires_ws(x)
+function requires_ws(x, ps)
     if x.span == x.fullspan
         ps.errored = true
         return mErrorToken(x, Unknown)
@@ -95,7 +95,7 @@ function requires_ws(x)
     end
 end
 
-function requires_no_ws(x)
+function requires_no_ws(x, ps)
     if x.span != x.fullspan
         ps.errored = true
         return mErrorToken(x, UnexpectedWhiteSpace)

@@ -76,7 +76,6 @@ function parse_expression(ps::ParseState)
             ps.errored = true
             ret = mErrorToken(INSTANCE(ps), UnexpectedToken)
         end
-
         while !closer(ps)
             ret = parse_compound(ps, ret)
         end
@@ -92,7 +91,7 @@ function parse_compound(ps::ParseState, @nospecialize ret)
     elseif isajuxtaposition(ps, ret)
         if is_number(ret) && last(ret.val) == '.'
             ps.errored = true
-            ret = mErrorToken(ret)
+            ret = mErrorToken(ret, CannotJuxtapose)
         end
         op = mOPERATOR(0, 0, Tokens.STAR, false)
         ret = parse_operator(ps, ret, op)
@@ -138,7 +137,7 @@ function parse_compound(ps::ParseState, @nospecialize ret)
 ################################################################################
     elseif ps.nt.kind in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)
         ps.errored = true
-        ret = EXPR(ErrorToken, EXPR[ret, mErrorToken(mPUNCTUATION(next(ps)))])
+        ret = EXPR(ErrorToken, EXPR[ret, mErrorToken(mPUNCTUATION(next(ps)), Unknown)])
     else
         nextarg = parse_expression(ps)
         ps.errored = true
@@ -216,7 +215,7 @@ function parse(ps::ParseState, cont = false)
             push!(top, mLITERAL(ps.nt.startbyte, ps.nt.startbyte, "", Tokens.NOTHING))
         end
 
-        while !ps.done && !ps.errored
+        while !ps.done
             curr_line = ps.nt.startpos[1]
             ret = parse_doc(ps)
 
