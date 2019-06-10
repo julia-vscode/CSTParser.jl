@@ -46,12 +46,10 @@ end
     #     end
     # end
     @testset "Conditional Operator" begin
-        strs = ["a ? b : c"
-                "a ? b : c : d"
-                "a ? b : c : d :e"]
-        for str in strs
-            @test test_expr(str)
-        end
+        @test test_expr("a ? b : c")
+        @test test_expr("a ? b : c : d")
+        @test test_expr("a ? b : c : d : e")
+        @test test_expr("a ? b : c : d : e")
     end
 
 
@@ -102,7 +100,7 @@ end
         @test "!(a,b)" |> test_expr
         @test "¬(a,b)" |> test_expr
         @test "~(a,b)" |> test_expr
-        @test_broken "<:(a,b)" |> test_expr_broken
+        @test "<:(a,b)" |> test_expr
         @test "√(a,b)" |> test_expr
         @test "\$(a,b)" |> test_expr
         @test ":(a,b)" |> test_expr
@@ -193,7 +191,7 @@ end
 
 @testset "Tuples" begin
     @static if VERSION > v"1.1-"
-        @test CSTParser.parse("1,") isa CSTParser.EXPR{CSTParser.ErrorToken}
+        @test CSTParser.parse("1,").typ === CSTParser.ErrorToken
     else
         @test "1," |> test_expr
     end
@@ -353,7 +351,7 @@ end
     @test "(arg for x in X if A for y in Y for z in Z)" |> test_expr
     @test "(arg for x in X if A for y in Y if B for z in Z)" |> test_expr
     @test "(arg for x in X if A for y in Y if B for z in Z if C)" |> test_expr
-    @test_broken "(arg for x in X, y in Y for z in Z)" |> test_expr_broken
+    @test "(arg for x in X, y in Y for z in Z)" |> test_expr
     @test "(arg for x in X, y in Y if A for z in Z)" |> test_expr
 end
 
@@ -567,7 +565,7 @@ end
     @test "isa(a,a) != isa(a,a)" |> test_expr
     @test "@mac return x" |> test_expr
     @static if VERSION > v"1.1-"
-        @test CSTParser.parse("a,b,") isa CSTParser.EXPR{CSTParser.ErrorToken}
+        @test CSTParser.parse("a,b,").args[4].typ === CSTParser.ErrorToken
     else
         @test "a,b," |> test_expr
     end
@@ -697,8 +695,8 @@ end
     m = first(methods(f))
     @test DSE.keywords(f, m) == [:a, :b]
 end""" |> test_expr
-    @test "-1^a" |> test_expr_broken
-    @test "function(f, args...; kw...) end" |> test_expr_broken
+    @test "-1^a" |> test_expr
+    @test "function(f, args...; kw...) end" |> test_expr
     @test "2a * b" |> test_expr
     @test "(g1090(x::T)::T) where {T} = x+1.0" |> test_expr
     @test "(:) = Colon()" |> test_expr
@@ -751,6 +749,21 @@ end
 
 @testset "conversion of floats with underscore" begin
     @test "30.424_876_125_859_513" |> test_expr
+end
+
+@testset "errors" begin
+    @test CSTParser.parse("1? b : c ")[1].typ === CSTParser.ErrorToken
+    @test CSTParser.parse("1 ?b : c ")[2].typ === CSTParser.ErrorToken
+    @test CSTParser.parse("1 ? b :c ")[4].typ === CSTParser.ErrorToken
+    @test CSTParser.parse("1:\n2")[2].typ === CSTParser.ErrorToken
+    @test CSTParser.parse("1.a")[1].typ === CSTParser.ErrorToken
+    @test CSTParser.parse("f ()").typ === CSTParser.ErrorToken
+    @test CSTParser.parse("f{t} ()").typ === CSTParser.ErrorToken
+    @test CSTParser.parse(": a")[1].typ === CSTParser.ErrorToken
+    @test CSTParser.parse("const a")[2].typ === CSTParser.ErrorToken
+    @test CSTParser.parse("const a = 1")[2].typ === CSTParser.BinaryOpCall
+    @test CSTParser.parse("const global a")[2].typ === CSTParser.ErrorToken
+    @test CSTParser.parse("const global a = 1")[2].typ === CSTParser.Global
 end
 
 end

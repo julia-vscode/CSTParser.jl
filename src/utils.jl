@@ -36,8 +36,7 @@ function closer(ps::ParseState)
             (isunaryop(ps.t) && ps.ws.kind == WS)
         )) ||
     (ps.nt.startbyte ≥ ps.closer.stop) ||
-    (ps.closer.unary && (ps.t.kind in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE,Tokens.RBRACE) && ps.nt.kind == Tokens.IDENTIFIER)) ||
-    ps.errored
+    (ps.closer.unary && (ps.t.kind in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE,Tokens.RBRACE) && ps.nt.kind == Tokens.IDENTIFIER))
 end
 
 """
@@ -208,13 +207,16 @@ end
 
 
 isidentifier(t::AbstractToken) = t.kind == Tokens.IDENTIFIER
+isidentifier(x::EXPR) = x.typ === IDENTIFIER
 
 isliteral(t::AbstractToken) = Tokens.begin_literal < t.kind < Tokens.end_literal
+isliteral(x::EXPR) = x.typ === LITERAL
 
 isbool(t::AbstractToken) =  Tokens.TRUE ≤ t.kind ≤ Tokens.FALSE
 iscomma(t::AbstractToken) =  t.kind == Tokens.COMMA
 
 iskw(t::AbstractToken) = Tokens.iskeyword(t.kind)
+iskw(x::EXPR) = x.typ === KEYWORD
 
 isinstance(t::AbstractToken) = isidentifier(t) ||
                        isliteral(t) ||
@@ -226,42 +228,20 @@ ispunctuation(t::AbstractToken) = t.kind == Tokens.COMMA ||
                           t.kind == Tokens.END ||
                           Tokens.LSQUARE ≤ t.kind ≤ Tokens.RPAREN || 
                           t.kind == Tokens.AT_SIGN
+ispunctuation(x::EXPR) = x.typ === PUNCTUATION
 
-isstring(x) = false
-isstring(x::EXPR{StringH}) = true
-isstring(x::LITERAL) = x.kind == Tokens.STRING || x.kind == Tokens.TRIPLE_STRING
-is_integer(x) = x isa LITERAL && x.kind == Tokens.INTEGER
-is_float(x) = x isa LITERAL && x.kind == Tokens.FLOAT
-is_number(x) = x isa LITERAL && (x.kind == Tokens.INTEGER || x.kind == Tokens.FLOAT)
-is_nothing(x) = x isa LITERAL && x.kind == Tokens.NOTHING
+isstring(x) = x.typ === StringH || (isliteral(x) && (x.kind == Tokens.STRING || x.kind == Tokens.TRIPLE_STRING))
+is_integer(x) = isliteral(x) && x.kind == Tokens.INTEGER
+is_float(x) = isliteral(x) && x.kind == Tokens.FLOAT
+is_number(x) = isliteral(x) && (x.kind == Tokens.INTEGER || x.kind == Tokens.FLOAT)
+is_nothing(x) = isliteral(x) && x.kind == Tokens.NOTHING
 
 isajuxtaposition(ps::ParseState, ret) = ((is_number(ret) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || 
-        ((ret isa UnarySyntaxOpCall && is_prime(ret.arg2) && ps.nt.kind == Tokens.IDENTIFIER) ||
+        ((ret.typ === UnaryOpCall && is_prime(ret.args[2]) && ps.nt.kind == Tokens.IDENTIFIER) ||
         ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
         ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)))) || ((ps.t.kind in (Tokens.INTEGER, Tokens.FLOAT) || ps.t.kind in (Tokens.RPAREN,Tokens.RSQUARE,Tokens.RBRACE)) && ps.nt.kind == Tokens.IDENTIFIER)
 
 
-# Testing functions
-
-
-
-function test_order(x, out = [])
-    if x isa EXPR
-        for y in x
-            test_order(y, out)
-        end
-    else
-        push!(out, x)
-    end
-    out
-end
-
-function test_find(str)
-    x = parse(str, true)
-    for i = 1:sizeof(str)
-        _find(x, i)
-    end
-end
 
 # When using the FancyDiagnostics package, Base.parse, is the
 # same as CSTParser.parse. Manually call the flisp parser here
@@ -492,62 +472,9 @@ check_span(x, neq = [])
 Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
-function check_span(x::EXPR{StringH}, neq = []) end
-function check_span(x::T, neq = []) where T <: Union{IDENTIFIER,LITERAL,OPERATOR,KEYWORD,PUNCTUATION} neq end
-
-function check_span(x::UnaryOpCall, neq = []) 
-    check_span(x.op)
-    check_span(x.arg)
-    if x.op.fullspan + x.arg.fullspan != x.fullspan
-        push!(neq, x)
-    end
-    neq
-end
-function check_span(x::UnarySyntaxOpCall, neq = []) 
-    check_span(x.arg1)
-    check_span(x.arg2)
-    if x.arg1.fullspan + x.arg2.fullspan != x.fullspan
-        push!(neq, x)
-    end
-    neq
-end
-
-function check_span(x::T, neq = []) where T <: Union{BinaryOpCall,BinarySyntaxOpCall}
-    check_span(x.arg1)
-    check_span(x.op)
-    check_span(x.arg2)
-    if x.arg1.fullspan + x.op.fullspan + x.arg2.fullspan != x.fullspan
-        push!(neq, x)
-    end
-    neq
-end
-
-function check_span(x::WhereOpCall, neq = [])
-    check_span(x.arg1)
-    check_span(x.op)
-    for a in x.args
-        check_span(a)
-    end
-    if x.arg1.fullspan + x.op.fullspan + sum(a.fullspan for a in x.args) != x.fullspan
-        push!(neq, x)
-    end
-    neq
-end
-
-function check_span(x::ConditionalOpCall, neq = [])
-    check_span(x.cond)
-    check_span(x.op1)
-    check_span(x.arg1)
-    check_span(x.op2)
-    check_span(x.arg2)
-    if x.cond.fullspan + x.op1.fullspan + x.arg1.fullspan + x.op2.fullspan + x.arg2.fullspan != x.fullspan
-        push!(neq, x)
-    end
-    neq
-end
-
-
 function check_span(x::EXPR, neq = [])
+    (ispunctuation(x) || isidentifier(x) || iskw(x) || isoperator(x) || isliteral(x) || x.typ == StringH) && return neq
+    
     s = 0
     for a in x.args
         check_span(a, neq)
@@ -590,61 +517,26 @@ function check_reformat()
     end
 end
 
-
 function trailing_ws_length(x)
     x.fullspan - x.span
 end
 
-
-
-
 Base.iterate(x::EXPR) = length(x) == 0 ? nothing : (x.args[1], 1)
 Base.iterate(x::EXPR, s) = s < length(x) ? (x.args[s + 1], s + 1) : nothing
-Base.length(x::EXPR) = length(x.args)
+Base.length(x::EXPR) = x.args isa Nothing ? 0 : length(x.args)
 
-Base.iterate(x::UnaryOpCall) = x.op, 1
-Base.iterate(x::UnaryOpCall, s) = s == 1 ? (x.arg, 2) : nothing
-Base.length(x::UnaryOpCall) = 2
-
-Base.iterate(x::UnarySyntaxOpCall) = x.arg1, 1
-Base.iterate(x::UnarySyntaxOpCall, s) = s == 1 ? (x.arg2, 2) : nothing
-Base.length(x::UnarySyntaxOpCall) = 2
-
-Base.iterate(x::BinarySyntaxOpCall) = x.arg1, 1
-Base.iterate(x::BinarySyntaxOpCall, s) = s > 2 ? nothing : (getfield(x, s + 1), s + 1)
-Base.length(x::BinarySyntaxOpCall) = 3
-
-Base.iterate(x::BinaryOpCall) = x.arg1, 1
-Base.iterate(x::BinaryOpCall, s) = s > 2 ? nothing : (getfield(x, s + 1), s + 1)
-Base.length(x::BinaryOpCall) = 3
-
-Base.iterate(x::WhereOpCall) = x.arg1, 1
-function Base.iterate(x::WhereOpCall, s) 
-    if s == 1
-        return x.op, 2
-    elseif s < length(x)
-        return x.args[s - 1] , s + 1
-    end
-end
-Base.length(x::WhereOpCall) = 2 + length(x.args)
-
-Base.iterate(x::ConditionalOpCall) = x.cond, 1
-Base.iterate(x::ConditionalOpCall, s) = s < length(x) ? (getfield(x, s + 1), s + 1) : nothing
-Base.length(x::ConditionalOpCall) = 5
-
-for t in (CSTParser.IDENTIFIER, CSTParser.OPERATOR, CSTParser.LITERAL, CSTParser.PUNCTUATION, CSTParser.KEYWORD)
-    Base.iterate(x::t) = nothing
-    Base.iterate(x::t, s) = nothing
-    Base.length(x::t) = 0
-    Base.isiterable(x::t) = false
-end
 
 @inline val(token::RawToken, ps::ParseState) = String(ps.l.io.data[token.startbyte+1:token.endbyte+1])
 
-str_value(x) = ""
-str_value(x::T) where T <: Union{IDENTIFIER,LITERAL} = x.val
-str_value(x::OPERATOR) = string(Expr(x))
-str_value(x::EXPR{MacroName}) = string(Expr(x))
+function str_value(x)
+    if isidentifier(x) || x.typ === LITERAL
+        return x.val
+    elseif x.typ === OPERATOR || x.typ === MacroName
+        return string(Expr(x))
+    else
+        return ""
+    end
+end
 
 _unescape_string(s::AbstractString) = sprint(_unescape_string, s, sizehint=lastindex(s))
 function _unescape_string(io, s::AbstractString)
@@ -705,3 +597,12 @@ function _unescape_string(io, s::AbstractString)
 end
 
 
+function match_closer(ps::ParseState)
+    length(ps.closer.cc) == 0 && return false
+    kind = ps.nt.kind
+    lc = last(ps.closer.cc)
+    return (kind === Tokens.RPAREN && lc == :paren) ||
+           (kind === Tokens.RSQUARE && lc == :square) ||
+           (kind === Tokens.RBRACE && lc == :braces) ||
+           (kind === Tokens.END && (lc == :begin || lc == :if)) 
+end

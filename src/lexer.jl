@@ -31,11 +31,6 @@ mutable struct Closer
 end
 Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int), [])
 
-struct Error
-    loc::UnitRange{Int}
-    description::String
-end
-
 mutable struct ParseState
     l::Lexer{Base.GenericIOBuffer{Array{UInt8, 1}},RawToken}
     done::Bool
@@ -49,11 +44,18 @@ mutable struct ParseState
     nnws::RawToken
     closer::Closer
     errored::Bool
-    errors::Vector
 end
 function ParseState(str::Union{IO,String})
-    ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), Closer(), false, Error[])
+    ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), Closer(), false)
     return next(next(ps))
+end
+
+function ParseState(str::Union{IO,String}, loc::Int)
+    ps = ParseState(str)
+    while ps.nt.startbyte < loc
+        next(ps)
+    end
+    return ps
 end
 
 function Base.show(io::IO, ps::ParseState)
@@ -82,7 +84,6 @@ function next(ps::ParseState)
     else
         ps.nnt = Tokenize.Lexers.next_token(ps.l)
         ps.done = ps.nnt == Tokens.ENDMARKER
-        # ps.nnt, ps.done  = iterate(ps.l, ps.done)
     end
     
     # combines whitespace, comments and semicolons
@@ -174,3 +175,4 @@ function read_comment(l::Lexer)
 end
 
 isemptyws(t::AbstractToken) = t.kind == EmptyWS
+isnewlinews(t::AbstractToken) = t.kind === NewLineWS
