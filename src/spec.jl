@@ -119,9 +119,10 @@ mutable struct Scope
     parent::Union{Nothing,Scope}
     names::Dict{String,Binding}
     modules::Union{Nothing,Dict{String,Any}}
+    ismodule::Bool
 end
 
-Scope() = Scope(nothing, Dict{String,Binding}(), nothing)
+Scope() = Scope(nothing, Dict{String,Binding}(), nothing, false)
 
 mutable struct EXPR
     typ::Head

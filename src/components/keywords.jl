@@ -473,7 +473,7 @@ end
     end
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return setscope!(EXPR(is_module(kw) ? ModuleH : BareModule, EXPR[kw, arg, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span))
+    return setscope!(EXPR(is_module(kw) ? ModuleH : BareModule, EXPR[kw, arg, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span), Scope(nothing, Dict{String,Binding}(), nothing, true))
 end
 
 
