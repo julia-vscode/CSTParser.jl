@@ -517,7 +517,7 @@ function Expr(x::EXPR)
     elseif x.typ === Filter
         ret = Expr(:filter)
         push!(ret.args, convert_iter_assign(last(x.args)))
-        for i in 1:length(x.args)-1
+        for i in 1:length(x.args) - 1
             a = x.args[i]
             if !(is_if(a) || ispunctuation(a))
                 push!(ret.args, convert_iter_assign(a))
@@ -611,11 +611,11 @@ end
 
 # cross compatability for line number insertion in macrocalls
 if VERSION > v"1.1-"
-Expr_cmd(x) = Expr(:macrocall, GlobalRef(Core, Symbol("@cmd")), nothing, x.val)
-Expr_tcmd(x) = Expr(:macrocall, GlobalRef(Core, Symbol("@cmd")), nothing, x.val)
+    Expr_cmd(x) = Expr(:macrocall, GlobalRef(Core, Symbol("@cmd")), nothing, x.val)
+    Expr_tcmd(x) = Expr(:macrocall, GlobalRef(Core, Symbol("@cmd")), nothing, x.val)
 else
-Expr_cmd(x) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
-Expr_tcmd(x) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
+    Expr_cmd(x) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
+    Expr_tcmd(x) = Expr(:macrocall, Symbol("@cmd"), nothing, x.val)
 end
 
 
@@ -640,14 +640,14 @@ Removes line info expressions. (i.e. Expr(:line, 1))
 function remlineinfo!(x)
     if isa(x, Expr)
         if x.head == :macrocall && x.args[2] != nothing
-            id = findall(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
+            id = findall(map(x->(isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
             deleteat!(x.args, id)
             for j in x.args
                 remlineinfo!(j)
             end
             insert!(x.args, 2, nothing)
         else
-            id = findall(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
+            id = findall(map(x->(isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
             deleteat!(x.args, id)
             for j in x.args
                 remlineinfo!(j)
@@ -767,14 +767,14 @@ function _get_import_block(x, i, ret)
 end
 
 function expr_import(x, kw)
-    col = findall(a -> isoperator(a) && precedence(a) == ColonOp, x.args)
+    col = findall(a->isoperator(a) && precedence(a) == ColonOp, x.args)
     comma = findall(is_comma, x.args)
     
     header = []
     args = [Expr(:.)]
     i = 1 #skip keyword
     while i < length(x.args)
-        i+=1
+        i += 1
         a = x.args[i]
         if is_colon(a)
             push!(header, popfirst!(args))

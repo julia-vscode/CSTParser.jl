@@ -116,7 +116,7 @@ function parse_compound(ps::ParseState, @nospecialize ret)
             ret = @default ps @nocloser ps inwhere @closebrace ps parse_curly(ps, ret)
         else
             ps.errored = true
-            ret = mErrorToken(@default ps @nocloser ps inwhere @closebrace ps parse_curly(ps, ret), UnexpectedWhiteSpace)
+            ret = mErrorToken((@default ps @nocloser ps inwhere @closebrace ps parse_curly(ps, ret)), UnexpectedWhiteSpace)
 
         end
     elseif ps.nt.kind == Tokens.LSQUARE && isemptyws(ps.ws) && !isoperator(ret)

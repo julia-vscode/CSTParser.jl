@@ -36,7 +36,7 @@ function closer(ps::ParseState)
             (isunaryop(ps.t) && ps.ws.kind == WS)
         )) ||
     (ps.nt.startbyte ≥ ps.closer.stop) ||
-    (ps.closer.unary && (ps.t.kind in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE,Tokens.RBRACE) && ps.nt.kind == Tokens.IDENTIFIER))
+    (ps.closer.unary && (ps.t.kind in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE) && ps.nt.kind == Tokens.IDENTIFIER))
 end
 
 """
@@ -139,8 +139,7 @@ struct Closer_TMP
 end
 
 @noinline function create_tmp(c::Closer)
-    Closer_TMP(
-        c.newline,
+    Closer_TMP(c.newline,
         c.semicolon,
         c.inmacro,
         c.tuple,
@@ -152,8 +151,7 @@ end
         c.ws,
         c.wsop,
         c.unary,
-        c.precedence
-    )
+        c.precedence)
 end
 
 @noinline function update_from_tmp!(c::Closer, tmp::Closer_TMP)
@@ -239,7 +237,7 @@ is_nothing(x) = isliteral(x) && x.kind == Tokens.NOTHING
 isajuxtaposition(ps::ParseState, ret) = ((is_number(ret) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || 
         ((ret.typ === UnaryOpCall && is_prime(ret.args[2]) && ps.nt.kind == Tokens.IDENTIFIER) ||
         ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
-        ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)))) || ((ps.t.kind in (Tokens.INTEGER, Tokens.FLOAT) || ps.t.kind in (Tokens.RPAREN,Tokens.RSQUARE,Tokens.RBRACE)) && ps.nt.kind == Tokens.IDENTIFIER)
+        ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)))) || ((ps.t.kind in (Tokens.INTEGER, Tokens.FLOAT) || ps.t.kind in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && ps.nt.kind == Tokens.IDENTIFIER)
 
 
 
@@ -247,26 +245,26 @@ isajuxtaposition(ps::ParseState, ret) = ((is_number(ret) && (ps.nt.kind == Token
 # same as CSTParser.parse. Manually call the flisp parser here
 # to make sure we test what we want, even when people load the
 # FancyDiagnostics package.
-function flisp_parse(str::AbstractString, pos::Int; greedy::Bool=true, raise::Bool=true)
+function flisp_parse(str::AbstractString, pos::Int; greedy::Bool = true, raise::Bool = true)
     # pos is one based byte offset.
     # returns (expr, end_pos). expr is () in case of parse error.
     bstr = String(str)
     ex, pos = ccall(:jl_parse_string, Any,
                     (Ptr{UInt8}, Csize_t, Int32, Int32),
-                    bstr, sizeof(bstr), pos-1, greedy ? 1 : 0)
-    if raise && isa(ex,Expr) && ex.head === :error
+                    bstr, sizeof(bstr), pos - 1, greedy ? 1 : 0)
+    if raise && isa(ex, Expr) && ex.head === :error
         throw(Meta.ParseError(ex.args[1]))
     end
     if ex === ()
         raise && throw(Meta.ParseError("end of input"))
         ex = Expr(:error, "end of input")
     end
-    return ex, pos+1 # C is zero-based, Julia is 1-based
+    return ex, pos + 1 # C is zero-based, Julia is 1-based
 end
 
-function flisp_parse(str::AbstractString; raise::Bool=true)
-    ex, pos = flisp_parse(str, 1, greedy=true, raise=raise)
-    if isa(ex,Expr) && ex.head === :error
+function flisp_parse(str::AbstractString; raise::Bool = true)
+    ex, pos = flisp_parse(str, 1, greedy = true, raise = raise)
+    if isa(ex, Expr) && ex.head === :error
         return ex
     end
     if !(pos > ncodeunits(str))
@@ -295,18 +293,18 @@ norm_ast(a::Any) = begin
         if a.head === :macrocall
             fa = a.args[1]
             if fa === Symbol("@int128_str")
-                return Base.parse(Int128,a.args[3])
+                return Base.parse(Int128, a.args[3])
             elseif fa === Symbol("@uint128_str")
-                return Base.parse(UInt128,a.args[3])
+                return Base.parse(UInt128, a.args[3])
             elseif fa === Symbol("@bigint_str")
-                return  Base.parse(BigInt,a.args[3])
+                return  Base.parse(BigInt, a.args[3])
             elseif fa == Symbol("@big_str")
                 s = a.args[2]
-                n = tryparse(BigInt,s)
+                n = tryparse(BigInt, s)
                 if !(n == nothing)
                     return get(n)
                 end
-                n = tryparse(BigFloat,s)
+                n = tryparse(BigFloat, s)
                 if !(n == nothing)
                     return isnan(get(n)) ? :NaN : get(n)
                 end
@@ -428,13 +426,13 @@ function check_base(dir = dirname(Base.find_source_file("essentials.jl")), displ
     if bfail + fail + err + neq > 0
         println("\r$N files")
         printstyled("failed", color = :red)
-        println(" : $fail    $(100*fail/N)%")
+        println(" : $fail    $(100 * fail / N)%")
         printstyled("errored", color = :yellow)
-        println(" : $err     $(100*err/N)%")
+        println(" : $err     $(100 * err / N)%")
         printstyled("not eq.", color = :green)
-        println(" : $neq    $(100*neq/N)%", "  -  $aerr     $(100*aerr/N)%")
+        println(" : $neq    $(100 * neq / N)%", "  -  $aerr     $(100 * aerr / N)%")
         printstyled("base failed", color = :magenta)
-        println(" : $bfail    $(100*bfail/N)%")
+        println(" : $bfail    $(100 * bfail / N)%")
     end
     ret
 end
@@ -489,9 +487,9 @@ end
 function speed_test()
     dir = dirname(Base.find_source_file("essentials.jl"))
     println("speed test : ", @timed(for i = 1:5
-    parse(read(joinpath(dir, "essentials.jl"), String), true);
-    parse(read(joinpath(dir, "abstractarray.jl"), String), true);
-end)[2])
+        parse(read(joinpath(dir, "essentials.jl"), String), true);
+        parse(read(joinpath(dir, "abstractarray.jl"), String), true);
+    end)[2])
 end
 
 """
@@ -500,7 +498,7 @@ end
 Reads and parses all files in current directory, applys formatting fixes and checks that the output AST remains the same.
 """
 function check_reformat()
-    fs = filter(f -> endswith(f, ".jl"), readdir())
+    fs = filter(f->endswith(f, ".jl"), readdir())
     for (i, f) in enumerate(fs)
         f == "deprecated.jl" && continue
         str = read(f, String)
@@ -526,7 +524,7 @@ Base.iterate(x::EXPR, s) = s < length(x) ? (x.args[s + 1], s + 1) : nothing
 Base.length(x::EXPR) = x.args isa Nothing ? 0 : length(x.args)
 
 
-@inline val(token::RawToken, ps::ParseState) = String(ps.l.io.data[token.startbyte+1:token.endbyte+1])
+@inline val(token::RawToken, ps::ParseState) = String(ps.l.io.data[token.startbyte + 1:token.endbyte + 1])
 
 function str_value(x)
     if isidentifier(x) || x.typ === LITERAL
@@ -538,7 +536,7 @@ function str_value(x)
     end
 end
 
-_unescape_string(s::AbstractString) = sprint(_unescape_string, s, sizehint=lastindex(s))
+_unescape_string(s::AbstractString) = sprint(_unescape_string, s, sizehint = lastindex(s))
 function _unescape_string(io, s::AbstractString)
     a = Iterators.Stateful(s)
     for c in a
@@ -548,11 +546,11 @@ function _unescape_string(io, s::AbstractString)
                 n = k = 0
                 m = c == 'x' ? 2 :
                     c == 'u' ? 4 : 8
-                while (k+=1) <= m && !isempty(a)
+                while (k += 1) <= m && !isempty(a)
                     nc = Base.peek(a)
-                    n = '0' <= nc <= '9' ? n<<4 + nc-'0' :
-                        'a' <= nc <= 'f' ? n<<4 + nc-'a'+10 :
-                        'A' <= nc <= 'F' ? n<<4 + nc-'A'+10 : break
+                    n = '0' <= nc <= '9' ? n << 4 + nc - '0' :
+                        'a' <= nc <= 'f' ? n << 4 + nc - 'a' + 10 :
+                        'A' <= nc <= 'F' ? n << 4 + nc - 'A' + 10 : break
                     popfirst!(a)
                 end
                 if k == 1
@@ -568,10 +566,10 @@ function _unescape_string(io, s::AbstractString)
                 end
             elseif '0' <= c <= '7'
                 k = 1
-                n = c-'0'
-                while (k+=1) <= 3 && !isempty(a)
+                n = c - '0'
+                while (k += 1) <= 3 && !isempty(a)
                     c  = Base.peek(a)
-                    n = ('0' <= c <= '7') ? n<<3 + c-'0' : break
+                    n = ('0' <= c <= '7') ? n << 3 + c - '0' : break
                     popfirst!(a)
                 end
                 if n > 255

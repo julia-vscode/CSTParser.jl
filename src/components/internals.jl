@@ -6,21 +6,21 @@ function parse_block(ps::ParseState, ret::Vector{EXPR} = EXPR[], closers = (Toke
             if ps.nt.kind == Tokens.ENDMARKER
                 break
             elseif ps.nt.kind == Tokens.RPAREN
-                if length(ps.closer.cc) > 1 && :paren == ps.closer.cc[end-1]
+                if length(ps.closer.cc) > 1 && :paren == ps.closer.cc[end - 1]
                     break
                 else
                     push!(ret, mErrorToken(INSTANCE(next(ps)), UnexpectedToken))
                     ps.errored = true
                 end
             elseif ps.nt.kind == Tokens.RBRACE
-                if length(ps.closer.cc) > 1 && :brace == ps.closer.cc[end-1]
+                if length(ps.closer.cc) > 1 && :brace == ps.closer.cc[end - 1]
                     break
                 else
                     push!(ret, mErrorToken(INSTANCE(next(ps)), UnexpectedToken))
                     ps.errored = true
                 end
             elseif ps.nt.kind == Tokens.RSQUARE
-                if length(ps.closer.cc) > 1 && :square == ps.closer.cc[end-1]
+                if length(ps.closer.cc) > 1 && :square == ps.closer.cc[end - 1]
                     break
                 else
                     push!(ret, mErrorToken(INSTANCE(next(ps)), UnexpectedToken))
@@ -303,7 +303,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
             a = INSTANCE(next(ps))
             push!(args, EXPR(MacroName, EXPR[at, a]))
         elseif ps.nt.kind == Tokens.LPAREN
-            a = EXPR(InvisBrackets,EXPR[mPUNCTUATION(next(ps))])
+            a = EXPR(InvisBrackets, EXPR[mPUNCTUATION(next(ps))])
             push!(a, @closeparen ps parse_expression(ps))
             accept_rparen(ps, a)
             push!(args, a)

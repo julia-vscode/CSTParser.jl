@@ -493,7 +493,7 @@ end
 function markparameters!(sig)
     signame = rem_where_subtype(sig)
     if signame.typ === Curly
-        for i = 3:length(signame.args)-1
+        for i = 3:length(signame.args) - 1
             if !(signame.args[i].typ === PUNCTUATION)
                 setbinding!(signame.args[i])
             end

@@ -32,7 +32,7 @@ end
 Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int), [])
 
 mutable struct ParseState
-    l::Lexer{Base.GenericIOBuffer{Array{UInt8, 1}},RawToken}
+    l::Lexer{Base.GenericIOBuffer{Array{UInt8,1}},RawToken}
     done::Bool
     lt::RawToken
     t::RawToken

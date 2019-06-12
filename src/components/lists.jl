@@ -87,7 +87,7 @@ function parse_array(ps::ParseState)
                 accept_rsquare(ps, args)
 
                 if first_arg.args[1].typ === BinaryOpCall && is_pairarrow(first_arg.args[1].args[2])
-                    return EXPR(DictComprehension,EXPR[args[1], first_arg, INSTANCE(ps)])
+                    return EXPR(DictComprehension, EXPR[args[1], first_arg, INSTANCE(ps)])
                 else
                     return EXPR(Comprehension, EXPR[args[1], first_arg, INSTANCE(ps)])
                 end
@@ -197,7 +197,7 @@ function parse_ref(ps::ParseState, @nospecialize(ret))
         for a in ref.args
             push!(args, a)
         end
-        return EXPR(TypedHcat ,args)
+        return EXPR(TypedHcat, args)
     elseif ref.typ === Vcat
         args = EXPR[ret]
         for a in ref.args

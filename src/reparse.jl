@@ -3,7 +3,7 @@ const EXPRStack = Tuple{EXPR,Int,Int}
 
 function find_enclosing_expr(cst, offset, pos = 0, stack = EXPRStack[])
     pos1 = pos
-    for (i,a) in enumerate(cst)
+    for (i, a) in enumerate(cst)
         if pos < first(offset) < pos + a.span && pos < last(offset) < pos + a.span
             push!(stack, (cst, pos1, i))
             return find_enclosing_expr(a, offset, pos, stack)
@@ -16,7 +16,7 @@ function find_enclosing_expr(cst, offset, pos = 0, stack = EXPRStack[])
 end
 
 containing_expr(stack) = first(last(stack))
-parent_expr(stack) = first(stack[end-1])
+parent_expr(stack) = first(stack[end - 1])
 insert_size(inserttext, insertrange) = sizeof(inserttext) - max(last(insertrange) - first(insertrange), 0)
 enclosing_expr_range(stack, insertsize) = last(stack)[2] .+ (1:first(last(stack)).fullspan + insertsize)
 
@@ -30,11 +30,11 @@ end
 
 
 function replace_args!(replacement_args, stack)
-    pexpr, ppos, pi = stack[end-1]
+    pexpr, ppos, pi = stack[end - 1]
     oldspan, oldfullspan = pexpr.args[pi].span, pexpr.args[pi].fullspan
     if length(replacement_args) > 1
         deleteat!(pexpr.args, pi)
-        for i = 0:length(replacement_args)-1
+        for i = 0:length(replacement_args) - 1
             insert!(pexpr.args, pi + i, replacement_args[1 + i])
         end
     else
@@ -53,7 +53,7 @@ function reparse(stack::Array{EXPRStack}, edittedtext::String, insertsize::Int, 
     else
         if parent_expr(stack) isa EXPR{FileH} 
             replacement_args = parse(edittedtext[enclosing_expr_range(stack, insertsize)], true).args
-        elseif parent_expr(stack) isa EXPR{Block} && !(length(stack) > 2 && stack[end-2] isa EXPR{If})
+        elseif parent_expr(stack) isa EXPR{Block} && !(length(stack) > 2 && stack[end - 2] isa EXPR{If})
             replacement_args = let 
                 ps = ParseState(edittedtext[enclosing_expr_range(stack, insertsize)])
                 newblockargs = Any[]
@@ -75,7 +75,7 @@ function fixlastchild(x, pi, dspan)
         x[pi] = x.fullspan - dspan
         return true
     elseif x[nx].fullspan == 0 
-        for i = nx-1:-1:1
+        for i = nx - 1:-1:1
             if x[i].fullspan > 0
                 x[pi] = x.fullspan - dspan
                 return true
@@ -87,7 +87,7 @@ end
 
 function fix_stack_span(stack::Array{EXPRStack}, dfullspan, dspan)
     islast = true
-    for i = length(stack)-1:-1:1
+    for i = length(stack) - 1:-1:1
         stack[i][1].fullspan += dfullspan
         if islast && stack[i][3] == length(stack[i][1])
             stack[i][1].span = stack[i][1].fullspan + dspan
@@ -123,11 +123,11 @@ function edit_string(text, insertrange, inserttext)
     end    
 end
 
-spanequiv(a::EXPR,b::EXPR) = a.span == b.span && a.fullspan == b.fullspan
+spanequiv(a::EXPR, b::EXPR) = a.span == b.span && a.fullspan == b.fullspan
  
-isequiv(a,b; span = true) = false
+isequiv(a, b; span = true) = false
 
-function isequiv(a::EXPR,b::EXPR; span = true)
+function isequiv(a::EXPR, b::EXPR; span = true)
     t = a.typ === b.typ
     typeof(a.args) != typeof(b.args) && return false
     if a.args isa Vector
@@ -137,5 +137,5 @@ function isequiv(a::EXPR,b::EXPR; span = true)
             t || return false
         end
     end
-    return (!span || spanequiv(a,b))
+    return (!span || spanequiv(a, b))
 end

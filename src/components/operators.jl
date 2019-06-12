@@ -127,7 +127,7 @@ function issyntaxcall(op::EXPR)
     K == Tokens.DOT ||
     K == Tokens.DDDOT ||
     K == Tokens.PRIME ||
-    K == Tokens.WHERE||
+    K == Tokens.WHERE ||
     K == Tokens.ANON_FUNC
 end
 
@@ -155,12 +155,12 @@ LtoR(prec::Int) = AssignmentOp ≤ prec ≤ LazyAndOp || prec == PowerOp
 Having hit a unary operator at the start of an expression return a call.
 """
 function parse_unary(ps::ParseState, op)
-    K,dot = op.kind, op.dot
+    K, dot = op.kind, op.dot
     if isoperator(op) && op.kind == Tokens.COLON
         ret = parse_unary_colon(ps, op)
-    elseif (is_plus(op) || is_minus(op)) && (ps.nt.kind == Tokens.INTEGER || ps.nt.kind == Tokens.FLOAT) && isemptyws(ps.ws) && ps.nnt.kind!=Tokens.CIRCUMFLEX_ACCENT
+    elseif (is_plus(op) || is_minus(op)) && (ps.nt.kind == Tokens.INTEGER || ps.nt.kind == Tokens.FLOAT) && isemptyws(ps.ws) && ps.nnt.kind != Tokens.CIRCUMFLEX_ACCENT
         arg = mLITERAL(next(ps))
-        ret = mLITERAL(op.fullspan + arg.fullspan, (op.fullspan + arg.span), string(is_plus(op) ? "+" : "-" , val(ps.t, ps)), ps.t.kind)
+        ret = mLITERAL(op.fullspan + arg.fullspan, (op.fullspan + arg.span), string(is_plus(op) ? "+" : "-", val(ps.t, ps)), ps.t.kind)
     else
         P = precedence(K)
         prec = P == DeclarationOp ? DeclarationOp :
@@ -345,7 +345,7 @@ function parse_operator_anon_func(ps::ParseState, @nospecialize(ret), op)
 end
 
 function parse_operator(ps::ParseState, @nospecialize(ret), op)
-    K,dot = op.kind, op.dot
+    K, dot = op.kind, op.dot
     P = precedence(K)
 
     if ret.typ === ChainOpCall && (is_star(op) || is_plus(op)) && op.kind == ret.args[2].kind

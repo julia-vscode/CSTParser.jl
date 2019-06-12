@@ -170,10 +170,10 @@ mLITERAL(fullspan::Int, span::Int, val::String, kind) = EXPR(LITERAL, nothing, f
 @noinline function mLITERAL(ps::ParseState) 
     if ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING ||
         ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
-         return parse_string_or_cmd(ps)
-     else
-         mLITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), ps.t.kind)
-     end
+        return parse_string_or_cmd(ps)
+    else
+        mLITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), ps.t.kind)
+    end
 end
 
 
@@ -364,7 +364,7 @@ function mark_sig_args!(x)
         if x.args[1].typ === InvisBrackets && x.args[1].args[2].typ === BinaryOpCall && x.args[1].args[2].args[2].kind === Tokens.DECLARATION
             setbinding!(x.args[1].args[2])
         end
-        for i = 3:length(x.args)-1
+        for i = 3:length(x.args) - 1
             a = x.args[i]
             if a.typ === Parameters
                 for j = 1:length(a.args)

@@ -388,7 +388,7 @@ function get_args(x)
         return args
     elseif x.typ === Flatten
         return get_args(x.args[1])
-    elseif x.typ in (Generator,Flatten)
+    elseif x.typ === Generator || x.typ === Flatten
         args = []
         if x.args[1].typ === Flatten || x.args[1].typ === Generator
             append!(args, get_args(x.args[1]))
