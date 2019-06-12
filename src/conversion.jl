@@ -558,10 +558,9 @@ function Expr(x::EXPR)
         for (i, a) in enumerate(x.args)
             if a.typ === UnaryOpCall
                 a = a.args[2]
-            elseif isliteral(a) && a.kind == Tokens.STRING
-                if span(a) == 0 || ((i == 1 || i == length(x.args)) && span(a) == 1) || isempty(a.val)
-                    continue
-                end
+            elseif isliteral(a) && a.kind == Tokens.STRING && span(a) == 0 || ((i == 1 || i == length(x.args)) && span(a) == 1) || isempty(a.val)
+                continue
+            else isliteral(a) && a.kind == Tokens.TRIPLE_STRING && span(a) == 0 || ((i == 1 || i == length(x.args)) && span(a) == 3) || isempty(a.val)
             end
             push!(ret.args, Expr(a))
         end

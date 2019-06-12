@@ -94,7 +94,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 elseif istrip
                     str = tostr(b)
                     str = str[1:prevind(str, prevind(str, sizeof(str), 2))]
-                    ex = mLITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, Tokens.STRING)
+                    # only mark non-interpolated triple strings
+                    ex = mLITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, length(ret) == 0 ? Tokens.TRIPLE_STRING : Tokens.STRING)
                 else
                     str = tostr(b)
                     str =  str[1:prevind(str, sizeof(str))]

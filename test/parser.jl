@@ -552,6 +552,9 @@ end
     "\"\"\"\n$(ws1)a\n$(ws1)b\n$(ws2)c\n$(ws2)d\n$(ws2)\"\"\"" |> test_expr
     "\"\"\"\n$(ws1)a\n\n$(ws1)b\n\n$(ws2)c\n\n$(ws2)d\n\n$(ws2)\"\"\"" |> test_expr
     @test "\"\"\"\n$(ws1)α\n$(ws1)β\n$(ws2)γ\n$(ws2)δ\n$(ws2)\"\"\"" |> test_expr
+    @test "\"\"\"Float\$(bit)\"\"\"" |> test_expr
+    @test CSTParser.parse("\"\"\"abc\$(de)fg\"\"\"")[3].kind == CSTParser.Tokens.STRING
+    @test CSTParser.parse("\"\"\"abc(de)fg\"\"\"").kind == CSTParser.Tokens.TRIPLE_STRING
 end
 
 @testset "No longer broken things" begin
@@ -681,7 +684,6 @@ end
     @test """
         "\\\\\$ch"
         """ |> test_expr
-    @test "begin\n\"\"\"Float\$(bit)\"\"\"\n\$(Symbol(\"Float\",bit))\nend" |> test_expr
     @test "µs" |> test_expr # normalize unicode
     @test """(x, o; p = 1) -> begin
     return o, p
