@@ -360,11 +360,11 @@ function setiterbinding!(iter)
 end
 
 function mark_sig_args!(x)
-    if x.typ === Call
+    if x.typ === Call || x.typ === TupleH
         if x.args[1].typ === InvisBrackets && x.args[1].args[2].typ === BinaryOpCall && x.args[1].args[2].args[2].kind === Tokens.DECLARATION
             setbinding!(x.args[1].args[2])
         end
-        for i = 3:length(x.args) - 1
+        for i = 2:length(x.args) - 1
             a = x.args[i]
             if a.typ === Parameters
                 for j = 1:length(a.args)
