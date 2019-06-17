@@ -72,3 +72,8 @@ collect_bindings(CSTParser.parse("f(x::T) where {T <: S} where R = x")) == ["f",
 
 @test collect_bindings(CSTParser.parse("(a,b)->x")) == ["a", "b"]
 collect_bindings(CSTParser.parse("function f(a::T = 1) end")) == ["f", "a"]
+
+let cst = CSTParser.parse("function a::T * b::T end")
+    @test cst[2][1].binding !== nothing
+    @test cst[2][3].binding !== nothing
+end

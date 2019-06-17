@@ -288,7 +288,11 @@ function get_name(x)
         sig = rem_call(sig)
         sig = rem_curly(sig)
         sig = rem_invis(sig)
-        return get_name(sig)
+        if sig.typ === BinaryOpCall && sig.args[2].kind == Tokens.DOT
+            sig = sig.args[3].args[1]
+        end
+        return sig
+        # return get_name(sig)
     elseif x.typ === BinaryOpCall
         if x.args[2].kind == Tokens.DOT
             return get_name(x.args[3].args[1])

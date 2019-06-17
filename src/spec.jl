@@ -384,8 +384,13 @@ function mark_sig_args!(x)
             end
         end
         mark_sig_args!(x.args[1])
-    elseif x.typ === BinaryOpCall && x.args[2].kind == Tokens.DECLARATION
-        mark_sig_args!(x.args[1])
+    elseif x.typ === BinaryOpCall
+        if x.args[2].kind == Tokens.DECLARATION
+            mark_sig_args!(x.args[1])
+        else
+            setbinding!(x.args[1])
+            setbinding!(x.args[3])
+        end
     end
 end
 Base.getindex(x::EXPR, i) = x.args[i]
