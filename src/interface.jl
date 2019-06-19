@@ -289,13 +289,19 @@ function get_name(x)
         sig = rem_curly(sig)
         sig = rem_invis(sig)
         if sig.typ === BinaryOpCall && sig.args[2].kind == Tokens.DOT
-            sig = sig.args[3].args[1]
+            if length(sig.args) > 2 && sig.args[3].args isa Vector{EXPR} && length(sig.args[3].args) > 0
+                sig = sig.args[3].args[1]
+            end
         end
         return sig
         # return get_name(sig)
     elseif x.typ === BinaryOpCall
         if x.args[2].kind == Tokens.DOT
-            return get_name(x.args[3].args[1])
+            if length(x.args) > 2 && x.args[3].typ === Quotenode && x.args[3].args isa Vector{EXPR} && length(x.args[3].args) > 0
+                return get_name(x.args[3].args[1])
+            else
+                return x
+            end
         end
         sig = x.args[1]
         if sig.typ === UnaryOpCall 
