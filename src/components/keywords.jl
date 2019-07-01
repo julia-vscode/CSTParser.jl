@@ -54,7 +54,7 @@ function parse_kw(ps)
         ps.errored = true
         return mErrorToken(mIDENTIFIER(ps), UnexpectedToken)
     elseif k == Tokens.ABSTRACT
-        return setbinding!(@default ps parse_abstract(ps))
+        return @default ps parse_abstract(ps)
     elseif k == Tokens.PRIMITIVE
         return setbinding!(@default ps parse_primitive(ps))
     elseif k == Tokens.TYPE
@@ -118,13 +118,11 @@ end
         kw2 = mKEYWORD(next(ps))
         sig = @closer ps block parse_expression(ps)
         markparameters!(sig)
-        ret = EXPR(Abstract, EXPR[kw1, kw2, sig, accept_end(ps)])
+        ret = setbinding!(setscope!(EXPR(Abstract, EXPR[kw1, kw2, sig, accept_end(ps)])))
     else
-        kw = mKEYWORD(ps)
-        sig = parse_expression(ps)
-        ret = EXPR(Abstract, EXPR[kw, sig])
+        ret = mIDENTIFIER(ps)
     end
-    return setscope!(ret)
+    return ret
 end
 
 @addctx :primitive function parse_primitive(ps::ParseState)
