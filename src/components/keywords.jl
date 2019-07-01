@@ -56,7 +56,7 @@ function parse_kw(ps)
     elseif k == Tokens.ABSTRACT
         return @default ps parse_abstract(ps)
     elseif k == Tokens.PRIMITIVE
-        return setbinding!(@default ps parse_primitive(ps))
+        return @default ps parse_primitive(ps)
     elseif k == Tokens.TYPE
         return mIDENTIFIER(ps)
     elseif k == Tokens.STRUCT
@@ -133,11 +133,11 @@ end
         markparameters!(sig)
         arg = @closer ps block parse_expression(ps)
 
-        ret = EXPR(Primitive, EXPR[kw1, kw2, sig, arg, accept_end(ps)])
+        ret = setbinding!(setscope!(EXPR(Primitive, EXPR[kw1, kw2, sig, arg, accept_end(ps)])))
     else
         ret = mIDENTIFIER(ps)
     end
-    return setscope!(ret)
+    return ret
 end
 
 function parse_imports(ps::ParseState)
