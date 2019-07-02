@@ -296,7 +296,7 @@ function get_name(x)
         return sig
         # return get_name(sig)
     elseif x.typ === BinaryOpCall
-        x.args !== nothing && return x
+        x.args === nothing && return x
         length(x.args) < 2 && return x
         if x.args[2].kind == Tokens.DOT
             if length(x.args) > 2 && x.args[3].typ === Quotenode && x.args[3].args isa Vector{EXPR} && length(x.args[3].args) > 0
