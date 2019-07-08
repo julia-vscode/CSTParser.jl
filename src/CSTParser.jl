@@ -98,10 +98,10 @@ function parse_compound(ps::ParseState, @nospecialize ret)
     elseif (ret.typ === x_Str ||  ret.typ === x_Cmd) && ps.nt.kind == Tokens.IDENTIFIER
         arg = mIDENTIFIER(next(ps))
         push!(ret, mLITERAL(arg.fullspan, arg.span, val(ps.t, ps), Tokens.STRING))
-    elseif (isidentifier(ret) || (ret.typ === BinaryOpCall && is_dot(ret.args[2]))) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING || ps.nt.kind == Tokens.CMD)
+    elseif (isidentifier(ret) || (ret.typ === BinaryOpCall && is_dot(ret.args[2]))) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.TRIPLE_CMD)
         next(ps)
         arg = parse_string_or_cmd(ps, ret)
-        head = arg.kind == Tokens.CMD ? x_Cmd : x_Str
+        head = arg.kind == Tokens.CMD || arg.kind == Tokens.TRIPLE_CMD ? x_Cmd : x_Str
         ret = EXPR(head, EXPR[ret, arg])
     elseif ps.nt.kind == Tokens.LPAREN
         no_ws = !isemptyws(ps.ws)
@@ -222,6 +222,8 @@ function parse(ps::ParseState, cont = false)
             # join semicolon sep items
             if curr_line == last_line && last(top.args).typ === TopLevel
                 push!(last(top.args), ret)
+                top.fullspan += ret.fullspan
+                top.span = top.fullspan - (ret.fullspan-ret.span)
             elseif ps.ws.kind == SemiColonWS
                 push!(top, EXPR(TopLevel, EXPR[ret]))
             else

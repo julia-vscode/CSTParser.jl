@@ -242,15 +242,9 @@ end
         @test "function f(x) x; end" |> test_expr
         @test "function f(x); x end" |> test_expr
         @test "function f(x) x;y end" |> test_expr
-        @test """function f(x)
-            x
-        end""" |> test_expr
-        @test """function f(x,y =1)
-            x
-        end""" |> test_expr
-        @test """function f(x,y =1;z =2)
-            x
-        end""" |> test_expr
+        @test """function f(x) x end""" |> test_expr
+        @test """function f(x,y =1) x end""" |> test_expr
+        @test """function f(x,y =1;z =2) x end""" |> test_expr
     end
     @testset "Anonymous" begin
         @test "x->y" |> test_expr
@@ -768,4 +762,15 @@ end
     @test CSTParser.parse("const global a = 1")[2].typ === CSTParser.Global
 end
 
+@testset "tuple params" begin
+    @test "1,2,3" |> test_expr
+    @test "1;2,3" |> test_expr
+    @test "1,2;3" |> test_expr
+    @test "(1,2,3)" |> test_expr
+    @test "(1;2,3)" |> test_expr
+    @test "(1,2;3)" |> test_expr
+    @test "f(;)" |> test_expr
 end
+end
+
+

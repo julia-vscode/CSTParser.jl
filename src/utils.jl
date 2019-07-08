@@ -299,14 +299,14 @@ norm_ast(a::Any) = begin
             elseif fa === Symbol("@bigint_str")
                 return  Base.parse(BigInt, a.args[3])
             elseif fa == Symbol("@big_str")
-                s = a.args[2]
+                s = a.args[3]
                 n = tryparse(BigInt, s)
                 if !(n == nothing)
-                    return get(n)
+                    return (n)
                 end
                 n = tryparse(BigFloat, s)
                 if !(n == nothing)
-                    return isnan(get(n)) ? :NaN : get(n)
+                    return isnan((n)) ? :NaN : (n)
                 end
                 return s
             end

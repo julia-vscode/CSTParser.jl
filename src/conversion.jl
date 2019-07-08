@@ -480,7 +480,7 @@ function Expr(x::EXPR)
             end
         end
         return ret
-    elseif x.typ === Comprehension
+    elseif x.typ === Comprehension || x.typ === DictComprehension
         ret = Expr(:comprehension)
         for a in x.args
             if !(ispunctuation(a))

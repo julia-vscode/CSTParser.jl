@@ -158,39 +158,66 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw = true, block = 
             break
         end
     end
+    if istuple && length(args) > 2 
+        block = false
+    end
 
     if ps.ws.kind == SemiColonWS
-        if block && !(istuple && length(args) > 2) && !(length(args) == 1 && ispunctuation(args[1])) && !(last(args).typ === UnaryOpCall && is_dddot(last(args).args[2]))
-            args1 = EXPR[pop!(args)]
-            @nocloser ps newline @closer ps comma while @nocloser ps semicolon !closer(ps)
-                a = parse_expression(ps)
-                push!(args1, a)
+        if @nocloser ps newline @closer ps comma @nocloser ps semicolon closer(ps)
+            if block && !(length(args) == 1 && ispunctuation(args[1])) && !(last(args).typ === UnaryOpCall && is_dddot(last(args).args[2]))
+                push!(args, EXPR(Block, EXPR[pop!(args)]))
+            elseif kw && ps.nt.kind === Tokens.RPAREN
+                push!(args, EXPR(Parameters, EXPR[], 0, 0))
             end
-            body = EXPR(Block, args1)
-            push!(args, body)
-            args = body
         else
-            parse_parameters(ps, args)
+            a = @nocloser ps newline @closer ps comma @nocloser ps inwhere parse_expression(ps)
+            if block && !(length(args) == 1 && ispunctuation(args[1])) && !(last(args).typ === UnaryOpCall && is_dddot(last(args).args[2])) && !(istuple && ps.nt.kind === Tokens.COMMA)
+                args1 = EXPR[pop!(args), a]
+                @nocloser ps newline @closer ps comma while @nocloser ps semicolon !closer(ps)
+                    a = parse_expression(ps)
+                    push!(args1, a)
+                end
+                body = EXPR(Block, args1)
+                push!(args, body)
+                args = body
+            else
+                parse_parameters(ps, args, EXPR[a])
+            end
         end
     end
     return #args
 end
 
-function parse_parameters(ps, args::Vector{EXPR})
-    sb = ps.nt.startbyte
-    args1 = EXPR[]
-    @nocloser ps inwhere @nocloser ps newline  @closer ps comma while @nocloser ps semicolon !closer(ps)
-        a = parse_expression(ps)
+function parse_parameters(ps, args::Vector{EXPR}, args1::Vector{EXPR} = EXPR[])
+    if isempty(args1)
+        sb = ps.nt.startbyte
+        isfirst = true
+    else
+        sb = ps.nt.startbyte - args1[1].fullspan
+        isfirst = false
+    end
+    @nocloser ps inwhere @nocloser ps newline  @closer ps comma while !isfirst || (@nocloser ps semicolon !closer(ps))
+        if isfirst
+            a = parse_expression(ps)
+        else
+            a = first(args1)
+        end
         if !ps.closer.brace && a.typ === BinaryOpCall && is_eq(a.args[2])
             a = EXPR(Kw, EXPR[a.args[1], a.args[2], a.args[3]], a.fullspan, a.span)
         end
-        push!(args1, a)
+        if isfirst
+            push!(args1, a)
+        else
+            pop!(args1)
+            push!(args1, a)
+        end
         if ps.nt.kind == Tokens.COMMA
             accept_comma(ps, args1)
         end
         if ps.ws.kind == SemiColonWS
             parse_parameters(ps, args1)
         end
+        isfirst = true
     end
     if !isempty(args1)
         fullspan = ps.nt.startbyte - sb

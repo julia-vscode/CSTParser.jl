@@ -356,11 +356,20 @@ Parse an `if` block.
     return ret
 end
 
+function is_wrapped_assignment(x)
+    if is_assignment(x)
+        return true
+    elseif x.typ === CSTParser.InvisBrackets && x.args isa Vector{EXPR} && length(x.args) == 3
+        return is_wrapped_assignment(x.args[2])
+    end
+    return false
+end
+
 @addctx :let function parse_let(ps::ParseState)
     args = EXPR[mKEYWORD(ps)]
     if !(ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS)
         arg = @closer ps range @closer ps ws  parse_expression(ps)
-        if ps.nt.kind == Tokens.COMMA
+        if ps.nt.kind == Tokens.COMMA || !(is_wrapped_assignment(arg) || arg.typ === IDENTIFIER)
             arg = EXPR(Block, EXPR[arg])
             while ps.nt.kind == Tokens.COMMA
                 accept_comma(ps, arg)
