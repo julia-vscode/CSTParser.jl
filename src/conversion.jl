@@ -111,7 +111,7 @@ function Expr_char(x)
     # one byte e.g. '\xff' maybe not valid UTF-8
     # but we want to use the raw value as a codepoint in this case
     sizeof(val) == 1 && return Char(codeunit(val, 1))
-    length(val) == 1 || error("Invalid character literal: $(Vector{UInt8}(val))")
+    length(val) == 1 || error("Invalid character literal: $(Vector{UInt8}(x.val))")
     val[1]
 end
 
