@@ -268,6 +268,7 @@ function get_sig(x)
     elseif x.typ === Mutable ||
            x.typ === Abstract ||
            x.typ === Primitive
+        length(x.args) < 3 && error(x)
         return x.args[3]
     end
 end
