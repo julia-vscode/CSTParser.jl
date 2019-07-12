@@ -7,8 +7,16 @@ Location() = Location([])
 parent(l::Location) = Location(l.ii[1:end-1])
 Base.getindex(l::Location, i...) = Location([l.ii..., i...])
 
+Base.getindex(ex::AbstractEXPR) = ex
 Base.getindex(ex::EXPR, i::Integer) = ex.args[i]
 Base.getindex(ex::AbstractEXPR, i) = collect(ex)[i]
+Base.getindex(ex::AbstractEXPR, i::Symbol) = getproperty(ex, i)
+
+Base.getindex(ex::AbstractEXPR, i, j...) = ex[i][j...]
+
+struct NoLoc end
+
+Base.getindex(l::NoLoc, i...) = l
 
 function Base.getindex(ex::AbstractEXPR, l::Location)
   for i in l.ii

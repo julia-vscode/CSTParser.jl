@@ -136,19 +136,25 @@ struct LocExpr
   expr
 end
 
+unwrap(x::LocExpr) = x.expr
+unwrap(x) = x
+LocExpr(::NoLoc, x) = x
+
 function convert_child(loc, x, i...)
   loc = loc[i...]
-  LocExpr(loc, convert_expr(loc, x[Location([i...])]))
+  LocExpr(loc, convert_expr(loc, x[i...]))
 end
+
+convert_child(::NoLoc, x, i...) = convert_expr(NoLoc(), x[i...])
 
 LocExpr(x::AbstractEXPR) = convert_child(Location(), x)
 
 striploc(x) = x
-striploc(x::Expr) = Expr(x.head, striploc.(x.args)...)
+striploc(x::Expr) = Expr(x.head, map(striploc, x.args)...)
 striploc(x::QuoteNode) = QuoteNode(striploc(x.value))
 striploc(x::LocExpr) = striploc(x.expr)
 
-Expr(x::AbstractEXPR) = striploc(LocExpr(x))
+Expr(x::AbstractEXPR) = convert_expr(NoLoc(), x)
 
 exprloc(x::LocExpr, i) = isempty(i) ? x.loc : exprloc(x.expr, i)
 
@@ -255,7 +261,7 @@ end
 function convert_expr(loc, x::EXPR{x_Str})
     if x.args[1] isa BinarySyntaxOpCall
         mname = convert_child(loc, x, 1)
-        mname.expr.args[2] = QuoteNode(Symbol("@", striploc(mname).args[2].value, "_str"))
+        unwrap(mname).args[2] = QuoteNode(Symbol("@", striploc(mname).args[2].value, "_str"))
         ret = Expr(:macrocall, mname, nothing)
     else
         name = LocExpr(loc[1], Symbol("@", x.args[1].val, "_str"))
@@ -400,7 +406,7 @@ function convert_expr(loc, x::EXPR{If})
         if a isa KEYWORD && a.kind == Tokens.ELSEIF
             i += 1
             r1 = convert_child(loc, x, i, 1)
-            r1.expr.head = :elseif
+            unwrap(r1).head = :elseif
             push!(ret.args, r1)
         elseif !(a isa PUNCTUATION || a isa KEYWORD)
             push!(ret.args, convert_child(loc, x, i))
