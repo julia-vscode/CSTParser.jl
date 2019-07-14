@@ -179,7 +179,7 @@ end
 function parse_doc(ps::ParseState)
     if (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING) && !isemptyws(ps.nws)
         doc = mLITERAL(next(ps))
-        if (ps.nt.kind == Tokens.ENDMARKER || ps.nt.kind == Tokens.END)
+        if ps.nt.kind == Tokens.ENDMARKER || ps.nt.kind == Tokens.END || ps.t.endpos[1] + 1 < ps.nt.startpos[1]
             return doc
         elseif isbinaryop(ps.nt) && !closer(ps)
             ret = parse_compound(ps, doc)
