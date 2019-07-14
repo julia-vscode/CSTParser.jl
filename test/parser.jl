@@ -634,7 +634,7 @@ end
     @test "[a, b; c]" |> test_expr
     @test "t{a; b} " |> test_expr
     @test "a ~ b + c -d" |> test_expr
-    @test_broken "y[j=1:10,k=3:2:9; isodd(j+k) && k <= 8]" |> test_expr
+    @test "y[j=1:10,k=3:2:9; isodd(j+k) && k <= 8]" |> test_expr
     @test "(8=>32.0, 12=>33.1, 6=>18.2)" |> test_expr
     @test "(a,b = c,d)" |> test_expr
     @test "[ -1 -2;]" |> test_expr
@@ -702,6 +702,7 @@ end""" |> test_expr
     @test "x`\\\\`" |> test_expr
     @test "x\"\\\\\"" |> test_expr
     @test "x\"\\\\ \"" |> test_expr
+    @test "a.{1}" |> test_expr
 end
 
 @testset "Broken things" begin

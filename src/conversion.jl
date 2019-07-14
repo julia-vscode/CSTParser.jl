@@ -591,6 +591,14 @@ function _unary_expr(x)
 end
 function _binary_expr(x)
     if issyntaxcall(x.args[2]) && !(x.args[2].kind in (Tokens.COLON,))
+        if x.args[2].kind === Tokens.DOT
+            arg1, arg2 = Expr(x.args[1]), Expr(x.args[3])
+            if arg2 isa Expr && arg2.head === :macrocall && endswith(string(arg2.args[1]), "_cmd")
+                return Expr(:macrocall, Expr(:., arg1, QuoteNode(arg2.args[1])), nothing, arg2.args[3])
+            elseif arg2 isa Expr && arg2.head === :braces
+                return Expr(:., arg1, Expr(:quote, arg2))
+            end
+        end
         Expr(Expr(x.args[2]), Expr(x.args[1]), Expr(x.args[3]))
     else
         Expr(:call, Expr(x.args[2]), Expr(x.args[1]), Expr(x.args[3]))

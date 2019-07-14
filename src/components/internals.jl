@@ -142,13 +142,16 @@ function parse_call(ps::ParseState, ret, ismacro = false)
     return ret
 end
 
+_do_kw_convert(ps, a) = !ps.closer.brace && a.typ === BinaryOpCall && is_eq(a.args[2])
+_kw_convert(a) = EXPR(Kw, EXPR[a.args[1], a.args[2], a.args[3]], a.fullspan, a.span)
+
 
 function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw = true, block = false, istuple = false)
     @nocloser ps inwhere @nocloser ps newline @closer ps comma while !closer(ps)
         a = parse_expression(ps)
 
-        if kw && !ps.closer.brace && a.typ === BinaryOpCall && is_eq(a.args[2])
-            a = EXPR(Kw, EXPR[a.args[1], a.args[2], a.args[3]], a.fullspan, a.span)
+        if kw && _do_kw_convert(ps, a)
+            a = _kw_convert(a)
         end
         push!(args, a)
         if ps.nt.kind == Tokens.COMMA
@@ -188,7 +191,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw = true, block = 
     return #args
 end
 
-function parse_parameters(ps, args::Vector{EXPR}, args1::Vector{EXPR} = EXPR[])
+function parse_parameters(ps, args::Vector{EXPR}, args1::Vector{EXPR} = EXPR[]; usekw = true)
     if isempty(args1)
         sb = ps.nt.startbyte
         isfirst = true
@@ -202,8 +205,8 @@ function parse_parameters(ps, args::Vector{EXPR}, args1::Vector{EXPR} = EXPR[])
         else
             a = first(args1)
         end
-        if !ps.closer.brace && a.typ === BinaryOpCall && is_eq(a.args[2])
-            a = EXPR(Kw, EXPR[a.args[1], a.args[2], a.args[3]], a.fullspan, a.span)
+        if usekw && _do_kw_convert(ps, a)
+            a = _kw_convert(a)
         end
         if isfirst
             push!(args1, a)
@@ -215,7 +218,7 @@ function parse_parameters(ps, args::Vector{EXPR}, args1::Vector{EXPR} = EXPR[])
             accept_comma(ps, args1)
         end
         if ps.ws.kind == SemiColonWS
-            parse_parameters(ps, args1)
+            parse_parameters(ps, args1; usekw = usekw)
         end
         isfirst = true
     end

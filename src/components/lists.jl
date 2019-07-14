@@ -73,7 +73,7 @@ Having hit '[' return either:
 + A comprehension
 + An array (vcat of hcats)
 """
-function parse_array(ps::ParseState)
+function parse_array(ps::ParseState, isref = false)
     args = EXPR[mPUNCTUATION(ps)]
 
     if ps.nt.kind == Tokens.RSQUARE
@@ -81,6 +81,9 @@ function parse_array(ps::ParseState)
         ret = EXPR(Vect, args)
     else
         first_arg = @nocloser ps newline @closesquare ps  @closer ps insquare @closer ps ws @closer ps wsop @closer ps comma parse_expression(ps)
+        if isref && _do_kw_convert(ps, first_arg)
+            first_arg = _kw_convert(first_arg)
+        end
 
         if ps.nt.kind == Tokens.RSQUARE
             if first_arg.typ === Generator || first_arg.typ === Flatten
@@ -104,7 +107,7 @@ function parse_array(ps::ParseState)
             etype = Vect
             push!(args, first_arg)
             accept_comma(ps, args)
-            @closesquare ps parse_comma_sep(ps, args, false)
+            @closesquare ps parse_comma_sep(ps, args, isref)
             accept_rsquare(ps, args)
             return EXPR(etype, args)
         elseif ps.ws.kind == NewLineWS
@@ -185,7 +188,7 @@ Handles cases where an expression - `ret` - is followed by
 """
 function parse_ref(ps::ParseState, @nospecialize(ret))
     next(ps)
-    ref = parse_array(ps)
+    ref = parse_array(ps, true)
     if ref.typ === Vect
         args = EXPR[ret]
         for a in ref.args

@@ -214,8 +214,7 @@ end
 @addctx :function function parse_function(ps::ParseState)
     kw = mKEYWORD(ps)
     sig = @closer ps inwhere @closer ps ws parse_expression(ps)
-    
-    if sig.typ === InvisBrackets && !(sig.args[2].typ === TupleH || (sig.args[2].typ === UnaryOpCall && sig.args[2].args[2].kind === Tokens.DDDOT))
+    if sig.typ === InvisBrackets && !(sig.args[2].typ === TupleH || (sig.args[2].typ === Block) || (sig.args[2].typ === UnaryOpCall && sig.args[2].args[2].kind === Tokens.DDDOT))
         istuple = true
         sig = EXPR(TupleH, sig.args)
     elseif sig.typ === TupleH
@@ -232,7 +231,7 @@ end
     blockargs = parse_block(ps)
 
     if isempty(blockargs)
-        if sig.typ === Call || sig.typ === WhereOpCall || (sig.typ === BinaryOpCall && !is_exor(sig.args[1])) || istuple
+        if sig.typ === Call || sig.typ === WhereOpCall || (sig.typ === BinaryOpCall && !is_exor(sig.args[1])) || istuple || (sig.typ === InvisBrackets && sig.args[2].typ === Block)
             args = EXPR[sig, EXPR(Block, blockargs)]
         else
             args = EXPR[sig]
