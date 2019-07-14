@@ -4,6 +4,7 @@ function closer(ps::ParseState)
     (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence) ||
     (ps.nt.kind == Tokens.WHERE && ps.closer.precedence == LazyAndOp) ||
     (ps.closer.inwhere && ps.nt.kind == Tokens.WHERE) ||
+    (ps.closer.inwhere && ps.closer.ws && ps.t.kind == Tokens.RPAREN && isoperator(ps.nt) && precedence(ps.nt) < DeclarationOp) ||
     (ps.closer.precedence > WhereOp && (
         ps.nt.kind == Tokens.LPAREN ||
         ps.nt.kind == Tokens.LBRACE ||

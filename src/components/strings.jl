@@ -2,7 +2,7 @@ function longest_common_prefix(prefixa, prefixb)
     maxplength = min(sizeof(prefixa), sizeof(prefixb))
     maxplength == 0 && return ""
     idx = findfirst(i -> (prefixa[i] != prefixb[i]), 1:maxplength)
-    idx = idx == nothing ? maxplength : idx - 1
+    idx = idx === nothing ? maxplength : idx - 1
     prefixa[1:idx]
 end
 
@@ -28,10 +28,6 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     istrip = (ps.t.kind == Tokens.TRIPLE_STRING) || (ps.t.kind == Tokens.TRIPLE_CMD)
     iscmd = ps.t.kind == Tokens.CMD || ps.t.kind == Tokens.TRIPLE_CMD
 
-    # if ps.errored
-    #     return mErrorToken(Unknown)
-    # end
-
     lcp = nothing
     exprs_to_adjust = []
     function adjust_lcp(expr, last = false)
@@ -41,7 +37,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             (isempty(str) || (lcp != nothing && isempty(lcp))) && return
             (last && str[end] == '\n') && return (lcp = "")
             idxstart, idxend = 2, 1
-            while nextind(str, idxend) - 1 < sizeof(str) && (lcp == nothing || !isempty(lcp))
+            while nextind(str, idxend) - 1 < sizeof(str) && (lcp === nothing || !isempty(lcp))
                 idxend = skip_to_nl(str, idxend)
                 idxstart = nextind(str, idxend)
                 while nextind(str, idxend) - 1 < sizeof(str)
@@ -70,9 +66,16 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     if prefixed != false || iscmd
         t_str = val(ps.t, ps)
         _val = istrip ? t_str[4:prevind(t_str, sizeof(t_str), 3)] : t_str[2:prevind(t_str, sizeof(t_str))]
-        expr = mLITERAL(sfullspan, sspan,
-            iscmd ? replace(_val, "\\`" => "`") :
-                    replace(_val, "\\\"" => "\""), ps.t.kind)
+        if iscmd
+            _val = replace(_val, "\\\\" => "\\")
+            _val = replace(_val, "\\`" => "`")
+        else
+            if endswith(_val, "\\\\")
+                _val = _val[1:end-1]
+            end
+            _val = replace(_val, "\\\"" => "\"")
+        end
+        expr = mLITERAL(sfullspan, sspan, _val, ps.t.kind)
         if istrip
             adjust_lcp(expr)
             ret = EXPR(StringH, EXPR[expr], sfullspan, sspan)
@@ -85,26 +88,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         startbytes = istrip ? 3 : 1
         seek(input, startbytes)
         b = IOBuffer()
-        while true
-            if eof(input)
-                lspan = position(b)
-                if b.size == 0
-                    # ps.errored = true
-                    ex = mErrorToken(Unknown)
-                elseif istrip
-                    str = tostr(b)
-                    str = str[1:prevind(str, prevind(str, sizeof(str), 2))]
-                    # only mark non-interpolated triple strings
-                    ex = mLITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, length(ret) == 0 ? Tokens.TRIPLE_STRING : Tokens.STRING)
-                else
-                    str = tostr(b)
-                    str =  str[1:prevind(str, sizeof(str))]
-                    ex = mLITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, Tokens.STRING)
-                end
-                push!(ret, ex)
-                istrip && adjust_lcp(ex, true)
-                break
-            end
+        while !eof(input)
             c = read(input, Char)
             if c == '\\'
                 write(b, c)
@@ -113,7 +97,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 lspan = position(b)
                 str = tostr(b)
                 ex = mLITERAL(lspan + startbytes, lspan + startbytes, str, Tokens.STRING)
-                push!(ret, ex); istrip && adjust_lcp(ex)
+                push!(ret, ex)
+                istrip && adjust_lcp(ex)
                 startbytes = 0
                 op = mOPERATOR(1, 1, Tokens.EX_OR, false)
                 if peekchar(input) == '('
@@ -153,6 +138,25 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 write(b, c)
             end
         end
+
+        # handle last String section
+        lspan = position(b)
+        if b.size == 0
+            ex = mErrorToken(Unknown)
+        else
+            str = tostr(b)
+            if istrip
+                str = str[1:prevind(str, prevind(str, sizeof(str), 2))]
+                # only mark non-interpolated triple strings
+                ex = mLITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, length(ret) == 0 ? Tokens.TRIPLE_STRING : Tokens.STRING)
+                adjust_lcp(ex, true)
+            else
+                str =  str[1:prevind(str, sizeof(str))]
+                ex = mLITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, Tokens.STRING)
+            end
+        end
+        push!(ret, ex)
+        
     end
 
     single_string_T = (Tokens.STRING,ps.t.kind)

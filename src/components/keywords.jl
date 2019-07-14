@@ -214,8 +214,8 @@ end
 @addctx :function function parse_function(ps::ParseState)
     kw = mKEYWORD(ps)
     sig = @closer ps inwhere @closer ps ws parse_expression(ps)
-
-    if sig.typ === InvisBrackets && !(sig.args[2].typ === TupleH)
+    
+    if sig.typ === InvisBrackets && !(sig.args[2].typ === TupleH || (sig.args[2].typ === UnaryOpCall && sig.args[2].args[2].kind === Tokens.DDDOT))
         istuple = true
         sig = EXPR(TupleH, sig.args)
     elseif sig.typ === TupleH
@@ -252,7 +252,7 @@ end
 @addctx :macro function parse_macro(ps::ParseState)
     sb  = ps.t.startbyte
     kw = mKEYWORD(ps)
-    sig = @closer ps ws parse_expression(ps)
+    sig = @closer ps inwhere @closer ps ws parse_expression(ps)
     mark_sig_args!(sig)
     sb1  = ps.nt.startbyte
     blockargs = parse_block(ps)

@@ -48,8 +48,10 @@ function sized_uint_oct_literal(s::AbstractString)
     (len < 8  || (len == 8  && s <= "0o177777")) && return Base.parse(UInt16, s)
     (len < 13 || (len == 13 && s <= "0o37777777777")) && return Base.parse(UInt32, s)
     (len < 24 || (len == 24 && s <= "0o1777777777777777777777")) && return Base.parse(UInt64, s)
-    (len < 45 || (len == 45 && s <= "0o3777777777777777777777777777777777777777777")) && return Base.parse(UInt128, s)
-    return Base.parse(BigInt, s)
+    # (len < 45 || (len == 45 && s <= "0o3777777777777777777777777777777777777777777")) && return Base.parse(UInt128, s)
+    # return Base.parse(BigInt, s)
+    (len < 45 || (len == 45 && s <= "0o3777777777777777777777777777777777777777777")) && return Expr(:macrocall, GlobalRef(Core, Symbol("@uint128_str")), nothing, s)
+    return Meta.parse(s)
 end
 
 function _literal_expr(x)
@@ -101,7 +103,7 @@ function Expr_int(x)
 end
 
 function Expr_float(x)
-    if 'f' in x.val
+    if !startswith(x.val, "0x") && 'f' in x.val
         return Base.parse(Float32, replace(x.val, 'f' => 'e'))
     end
     Base.parse(Float64, replace(x.val, "_" => ""))
@@ -516,7 +518,7 @@ function Expr(x::EXPR)
         return ret
     elseif x.typ === Filter
         ret = Expr(:filter)
-        push!(ret.args, convert_iter_assign(last(x.args)))
+        push!(ret.args, Expr(last(x.args)))
         for i in 1:length(x.args) - 1
             a = x.args[i]
             if !(is_if(a) || ispunctuation(a))

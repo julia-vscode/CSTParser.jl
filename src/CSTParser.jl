@@ -62,7 +62,7 @@ function parse_expression(ps::ParseState)
         elseif ps.t.kind == Tokens.LBRACE
             ret = @default ps @closebrace ps parse_braces(ps)
         elseif isinstance(ps.t) || isoperator(ps.t)
-            if ps.t.kind == Tokens.WHERE
+            if ps.t.kind == Tokens.WHERE || ps.t.kind == Tokens.IN || ps.t.kind == Tokens.ISA
                 ret = mIDENTIFIER(ps)
             else
                 ret = INSTANCE(ps)
@@ -218,7 +218,9 @@ function parse(ps::ParseState, cont = false)
         while !ps.done
             curr_line = ps.nt.startpos[1]
             ret = parse_doc(ps)
-
+            if _continue_doc_parse(ret, ps)
+                push!(ret, parse_expression(ps))
+            end
             # join semicolon sep items
             if curr_line == last_line && last(top.args).typ === TopLevel
                 push!(last(top.args), ret)
@@ -236,7 +238,11 @@ function parse(ps::ParseState, cont = false)
             next(ps)
             top = mLITERAL(ps.nt.startbyte, ps.nt.startbyte, "", Tokens.NOTHING)
         else
+            curr_line = ps.nt.startpos[1]
             top = parse_doc(ps)
+            if _continue_doc_parse(top, ps)
+                push!(top, parse_expression(ps))
+            end
             last_line = ps.nt.startpos[1]
             if ps.ws.kind == SemiColonWS
                 top = EXPR(TopLevel, EXPR[top])
@@ -252,6 +258,14 @@ function parse(ps::ParseState, cont = false)
     return top, ps
 end
 
+function _continue_doc_parse(x, ps)
+    x.typ === MacroCall &&
+    x.args[1].typ === MacroName &&
+    length(x.args[1]) == 2 &&
+    x.args[1].args[2].val === "doc" &&
+    length(x.args) < 3 && 
+    ps.t.endpos[1] +1 <= ps.nt.startpos[1]
+end
 
 function parse_file(path::String)
     x = parse(read(path, String), true)

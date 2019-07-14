@@ -259,7 +259,11 @@ function parse_macrocall(ps::ParseState)
         args = EXPR[mname]
         insquare = ps.closer.insquare
         @default ps while !closer(ps)
-            a = @closer ps inmacro @closer ps ws @closer ps wsop parse_expression(ps)
+            if insquare
+                a = @closer ps insquare @closer ps inmacro @closer ps ws @closer ps wsop parse_expression(ps)
+            else
+                a = @closer ps inmacro @closer ps ws @closer ps wsop parse_expression(ps)
+            end
             push!(args, a)
             if insquare && ps.nt.kind == Tokens.FOR
                 break

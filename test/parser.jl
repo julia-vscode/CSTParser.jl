@@ -362,6 +362,7 @@ end
     @test "@inline get_chunks_id(i::Integer) = _div64(Int(i)-1)+1, _mod64(Int(i) -1)" |> test_expr
     @test "@inline f() = (), ()" |> test_expr
     @test "@sprintf(\"%08d\", id)" |> test_expr
+    @test "[@m @n a for a in A]" |> test_expr # ensure closer.insquare propogates
 end
 
 @testset "Square " begin
@@ -696,6 +697,11 @@ end""" |> test_expr
     @test "2a * b" |> test_expr
     @test "(g1090(x::T)::T) where {T} = x+1.0" |> test_expr
     @test "(:) = Colon()" |> test_expr
+    @test "a + in[1]" |> test_expr
+    @test "function f(ex) +a end" |> test_expr
+    @test "x`\\\\`" |> test_expr
+    @test "x\"\\\\\"" |> test_expr
+    @test "x\"\\\\ \"" |> test_expr
 end
 
 @testset "Broken things" begin
@@ -771,6 +777,16 @@ end
     @test "(1,2;3)" |> test_expr
     @test "f(;)" |> test_expr
 end
+
+@testset "docs" begin
+    @test "\"doc\"\nT" |> test_expr
+    @test "@doc \"doc\" T" |> test_expr
+    @test "@doc \"doc\"\nT" |> test_expr
+    @test "@doc \"doc\n\n\n\"\nT" |> test_expr
+    @test "begin\n@doc \"doc\"\n\nT\nend" |> test_expr
+    @test "@doc \"I am a module\" ModuleMacroDoc" |> test_expr
+end
+
 end
 
 
