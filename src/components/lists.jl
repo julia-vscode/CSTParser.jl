@@ -233,10 +233,99 @@ function parse_curly(ps::ParseState, ret)
 end
 
 function parse_braces(ps::ParseState)
-    args = EXPR[mPUNCTUATION(ps)]
-    parse_comma_sep(ps, args, true)
-    accept_rbrace(ps, args)
-    return EXPR(Braces, args)
+    # args = EXPR[mPUNCTUATION(ps)]
+    # parse_comma_sep(ps, args, true)
+    # accept_rbrace(ps, args)
+    # return EXPR(Braces, args)
+    return @default ps @nocloser ps inwhere parse_barray(ps)
 end
 
 
+function parse_barray(ps::ParseState)
+    args = EXPR[mPUNCTUATION(ps)]
+
+    if ps.nt.kind == Tokens.RBRACE
+        accept_rbrace(ps, args)
+        ret = EXPR(Braces, args)
+    else
+        first_arg = @nocloser ps newline @closebrace ps  @closer ps ws @closer ps wsop @closer ps comma parse_expression(ps)
+        if ps.nt.kind == Tokens.RBRACE
+            push!(args, first_arg)
+            if ps.ws.kind == SemiColonWS
+                push!(args, EXPR(Parameters, EXPR[]))
+            end
+            accept_rbrace(ps, args)
+            ret = EXPR(Braces, args)
+        elseif ps.nt.kind == Tokens.COMMA
+            push!(args, first_arg)
+            accept_comma(ps, args)
+            @closebrace ps parse_comma_sep(ps, args, true)
+            accept_rbrace(ps, args)
+            return EXPR(Braces, args)
+        elseif ps.ws.kind == NewLineWS
+            ret = EXPR(BracesCat, args)
+            push!(ret, first_arg)
+            while ps.nt.kind != Tokens.RBRACE
+                if ps.nt.kind == Tokens.ENDMARKER
+                    break
+                end
+                a = @closebrace ps  parse_expression(ps)
+                push!(ret, a)
+            end
+            accept_rsquare(ps, ret)
+            update_span!(ret)
+            return ret
+        elseif ps.ws.kind == WS || ps.ws.kind == SemiColonWS
+            first_row = EXPR(Row, EXPR[first_arg])
+            while ps.nt.kind != Tokens.RBRACE && ps.ws.kind != NewLineWS && ps.ws.kind != SemiColonWS
+                if ps.nt.kind == Tokens.ENDMARKER
+                    break
+                end
+                a = @closebrace ps @closer ps ws @closer ps wsop parse_expression(ps)
+                push!(first_row, a)
+            end
+            if ps.nt.kind == Tokens.RBRACE && ps.ws.kind != SemiColonWS
+                if length(first_row.args) == 1
+                    first_row = EXPR(BracesCat, first_row.args)
+                end
+                push!(args, first_row)
+                push!(args, INSTANCE(next(ps)))
+                return EXPR(BracesCat, args)
+            else
+                if length(first_row.args) == 1
+                    first_row = first_row.args[1]
+                else
+                    first_row = EXPR(Row, first_row.args)
+                end
+                ret = EXPR(BracesCat, EXPR[args[1], first_row])
+                while ps.nt.kind != Tokens.RBRACE
+                    if ps.nt.kind == Tokens.ENDMARKER
+                        break
+                    end
+                    first_arg = @closebrace ps @closer ps ws @closer ps wsop parse_expression(ps)
+                    push!(ret, EXPR(Row, EXPR[first_arg]))
+                    while ps.nt.kind != Tokens.RBRACE && ps.ws.kind != NewLineWS && ps.ws.kind != SemiColonWS
+                        if ps.nt.kind == Tokens.ENDMARKER
+                            break
+                        end
+                        a = @closebrace ps @closer ps ws @closer ps wsop parse_expression(ps)
+                        push!(last(ret.args), a)
+                    end
+                    # if only one entry dont use :row
+                    if length(last(ret.args).args) == 1
+                        ret.args[end] = setparent!(ret.args[end].args[1], ret)
+                    end
+                    update_span!(ret)
+                end
+                accept_rbrace(ps, ret)
+                update_span!(ret)
+                return ret
+            end
+        else
+            ret = EXPR(Braces, args)
+            push!(ret, first_arg)
+            push!(ret, accept_rbrace(ps))
+        end
+    end
+    return ret
+end

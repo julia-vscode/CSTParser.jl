@@ -187,6 +187,9 @@ function Expr(x::EXPR)
             else
                 return Symbol("@", x.args[2].val)
             end
+        elseif isoperator(x.args[2])
+            return Symbol("@", Expr(x.args[2]))
+            
         else
             return Symbol("@")
         end
@@ -247,6 +250,16 @@ function Expr(x::EXPR)
         return ret    
     elseif x.typ === Braces
         ret = Expr(:braces)
+        for a in x.args
+            if a.typ === Parameters
+                insert!(ret.args, 1, Expr(a))
+            elseif !(ispunctuation(a))
+                push!(ret.args, Expr(a))
+            end
+        end
+        return ret
+    elseif x.typ === BracesCat
+        ret = Expr(:bracescat)
         for a in x.args
             if a.typ === Parameters
                 insert!(ret.args, 1, Expr(a))

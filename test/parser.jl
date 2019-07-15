@@ -703,6 +703,7 @@ end""" |> test_expr
     @test "x\"\\\\\"" |> test_expr
     @test "x\"\\\\ \"" |> test_expr
     @test "a.{1}" |> test_expr
+    @test "@~" |> test_expr
 end
 
 @testset "Broken things" begin
@@ -788,6 +789,18 @@ end
     @test "@doc \"I am a module\" ModuleMacroDoc" |> test_expr
 end
 
+@testset "braces" begin
+    @test "{a}" |> test_expr
+    @test "{a, b}" |> test_expr
+    @test "{a, b; c}" |> test_expr
+    @test "{a, b; c = 1}" |> test_expr
+    @test "{a b}" |> test_expr
+    @test "{a b; c}" |> test_expr
+    @test "{a b; c = 1}" |> test_expr
 end
+
+
+end
+
 
 
