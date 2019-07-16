@@ -1,20 +1,20 @@
 using CSTParser
-
+using CSTParser: bindingof, typof
 function collect_bindings(x, out = String[])
-    if x.binding != nothing
-        push!(out, x.binding.name)
+    if bindingof(x) != nothing
+        push!(out, bindingof(x).name)
     end
-    if (x.typ === CSTParser.BinaryOpCall && CSTParser.is_assignment(x) && !CSTParser.is_func_call(x)) || x.typ === CSTParser.Filter
+    if (typof(x) === CSTParser.BinaryOpCall && CSTParser.is_assignment(x) && !CSTParser.is_func_call(x)) || typof(x) === CSTParser.Filter
         collect_bindings(x.args[3], out)
         collect_bindings(x.args[2], out)
         collect_bindings(x.args[1], out)
-    elseif x.typ === CSTParser.WhereOpCall
+    elseif typof(x) === CSTParser.WhereOpCall
         @inbounds for i = 3:length(x.args)
             collect_bindings(x.args[i], out)
         end
         collect_bindings(x.args[1], out)
         collect_bindings(x.args[2], out)
-    elseif x.typ === CSTParser.Generator
+    elseif typof(x) === CSTParser.Generator
         @inbounds for i = 2:length(x.args)
             collect_bindings(x.args[i], out)
         end
@@ -74,6 +74,6 @@ collect_bindings(CSTParser.parse("f(x::T) where {T <: S} where R = x")) == ["f",
 collect_bindings(CSTParser.parse("function f(a::T = 1) end")) == ["f", "a"]
 
 let cst = CSTParser.parse("function a::T * b::T end")
-    @test cst[2][1].binding !== nothing
-    @test cst[2][3].binding !== nothing
+    @test bindingof(cst[2][1]) !== nothing
+    @test bindingof(cst[2][3]) !== nothing
 end

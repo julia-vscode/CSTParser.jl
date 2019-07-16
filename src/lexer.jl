@@ -60,14 +60,14 @@ end
 
 function Base.show(io::IO, ps::ParseState)
     println(io, "ParseState $(ps.done ? "finished " : "")at $(position(ps.l.io))")
-    println(io, "last    : ", ps.lt.kind, " ($(ps.lt))", "    ($(wstype(ps.lws)))")
-    println(io, "current : ", ps.t.kind, " ($(ps.t))", "    ($(wstype(ps.ws)))")
-    println(io, "next    : ", ps.nt.kind, " ($(ps.nt))", "    ($(wstype(ps.nws)))")
+    println(io, "last    : ", kindof(ps.lt), " ($(ps.lt))", "    ($(wstype(ps.lws)))")
+    println(io, "current : ", kindof(ps.t), " ($(ps.t))", "    ($(wstype(ps.ws)))")
+    println(io, "next    : ", kindof(ps.nt), " ($(ps.nt))", "    ($(wstype(ps.nws)))")
 end
 peekchar(ps::ParseState) = peekchar(ps.l)
-wstype(t::AbstractToken) = t.kind == EmptyWS ? "empty" :
-                   t.kind == NewLineWS ? "ws w/ newline" :
-                   t.kind == SemiColonWS ? "ws w/ semicolon" : "ws"
+wstype(t::AbstractToken) = kindof(t) == EmptyWS ? "empty" :
+                    kindof(t) == NewLineWS ? "ws w/ newline" :
+                    kindof(t) == SemiColonWS ? "ws w/ semicolon" : "ws"
 
 function next(ps::ParseState)
     #  shift old tokens
@@ -92,7 +92,7 @@ function next(ps::ParseState)
     else
         ps.nnws = EmptyWSToken
     end
-    ps.done = ps.nt.kind == Tokens.ENDMARKER
+    ps.done = kindof(ps.nt) == Tokens.ENDMARKER
     return ps
 end
 
@@ -174,5 +174,5 @@ function read_comment(l::Lexer)
     end
 end
 
-isemptyws(t::AbstractToken) = t.kind == EmptyWS
-isnewlinews(t::AbstractToken) = t.kind === NewLineWS
+isemptyws(t::AbstractToken) = kindof(t) == EmptyWS
+isnewlinews(t::AbstractToken) = kindof(t) === NewLineWS

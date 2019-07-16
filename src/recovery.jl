@@ -17,7 +17,7 @@ macro exitctx(ps, ret)
 end
 
 function accept_rparen(ps)
-    if ps.nt.kind == Tokens.RPAREN
+    if kindof(ps.nt) == Tokens.RPAREN
         return mPUNCTUATION(next(ps))
     else
         ps.errored = true
@@ -27,7 +27,7 @@ end
 accept_rparen(ps::ParseState, args) = push!(args, accept_rparen(ps))
 
 function accept_rsquare(ps)
-    if ps.nt.kind == Tokens.RSQUARE
+    if kindof(ps.nt) == Tokens.RSQUARE
         return mPUNCTUATION(next(ps))
     else
         ps.errored = true
@@ -37,7 +37,7 @@ end
 accept_rsquare(ps::ParseState, args) = push!(args, accept_rsquare(ps))
 
 function accept_rbrace(ps)
-    if ps.nt.kind == Tokens.RBRACE
+    if kindof(ps.nt) == Tokens.RBRACE
         return mPUNCTUATION(next(ps))
     else
         ps.errored = true
@@ -47,7 +47,7 @@ end
 accept_rbrace(ps::ParseState, args) = push!(args, accept_rbrace(ps))
 
 function accept_end(ps::ParseState)
-    if ps.nt.kind == Tokens.END
+    if kindof(ps.nt) == Tokens.END
         return mKEYWORD(next(ps))
     else
         ps.errored = true
@@ -57,7 +57,7 @@ end
 accept_end(ps::ParseState, args) = push!(args, accept_end(ps))
 
 function accept_comma(ps)
-    if ps.nt.kind == Tokens.COMMA
+    if kindof(ps.nt) == Tokens.COMMA
         return mPUNCTUATION(next(ps))
     else
         return mPUNCTUATION(Tokens.RPAREN, 0, 0)
@@ -66,7 +66,7 @@ end
 accept_comma(ps::ParseState, args) = push!(args, accept_comma(ps))
 
 function recover_endmarker(ps)
-    if ps.nt.kind == Tokens.ENDMARKER
+    if kindof(ps.nt) == Tokens.ENDMARKER
         if !isempty(ps.closer.cc)
             closert = last(ps.closer.cc)
             if closert == :block

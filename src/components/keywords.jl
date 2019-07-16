@@ -1,6 +1,6 @@
 
 function parse_kw(ps)
-    k = ps.t.kind
+    k = kindof(ps.t)
     if k == Tokens.IF
         return @default ps @closer ps block parse_if(ps)
     elseif k == Tokens.LET
@@ -75,12 +75,12 @@ end
 function parse_const(ps::ParseState)
     kw = mKEYWORD(ps)
     arg = parse_expression(ps)
-    if !((arg.typ === BinaryOpCall && arg.args[2].kind === Tokens.EQ) || (arg.typ === Global && arg.args[2].typ === BinaryOpCall && arg.args[2].args[2].kind === Tokens.EQ))
+    if !((typof(arg) === BinaryOpCall && kindof(arg.args[2]) === Tokens.EQ) || (typof(arg) === Global && typof(arg.args[2]) === BinaryOpCall && kindof(arg.args[2].args[2]) === Tokens.EQ))
         ps.errored = true
         arg = mErrorToken(arg, ExpectedAssignment)
     end
     ret = EXPR(Const, EXPR[kw, arg])
-    if arg.typ === BinaryOpCall && arg.args[2].kind === Tokens.EQ && arg.args[1].typ === Curly
+    if typof(arg) === BinaryOpCall && kindof(arg.args[2]) === Tokens.EQ && typof(arg.args[1]) === Curly
         #setbinding!
         mark_typealias_bindings!(arg)
     end
@@ -113,7 +113,7 @@ end
 
 @addctx :abstract function parse_abstract(ps::ParseState)
     # Switch for v0.6 compatability
-    if ps.nt.kind == Tokens.TYPE
+    if kindof(ps.nt) == Tokens.TYPE
         kw1 = mKEYWORD(ps)
         kw2 = mKEYWORD(next(ps))
         sig = @closer ps block parse_expression(ps)
@@ -126,7 +126,7 @@ end
 end
 
 @addctx :primitive function parse_primitive(ps::ParseState)
-    if ps.nt.kind == Tokens.TYPE
+    if kindof(ps.nt) == Tokens.TYPE
         kw1 = mKEYWORD(ps)
         kw2 = mKEYWORD(next(ps))
         sig = @closer ps ws @closer ps wsop parse_expression(ps)
@@ -145,26 +145,26 @@ function parse_imports(ps::ParseState)
     kwt = is_import(kw) ? Import :
           is_importall(kw) ? ImportAll :
           Using
-    tk = ps.t.kind
+    tk = kindof(ps.t)
 
     arg = parse_dot_mod(ps)
 
-    if ps.nt.kind != Tokens.COMMA && ps.nt.kind != Tokens.COLON
+    if kindof(ps.nt) != Tokens.COMMA && kindof(ps.nt) != Tokens.COLON
         ret = EXPR(kwt, vcat(kw, arg))
-    elseif ps.nt.kind == Tokens.COLON
+    elseif kindof(ps.nt) == Tokens.COLON
         ret = EXPR(kwt, vcat(kw, arg))
         push!(ret, mOPERATOR(next(ps)))
 
         arg = parse_dot_mod(ps, true)
         append!(ret, arg)
-        while ps.nt.kind == Tokens.COMMA
+        while kindof(ps.nt) == Tokens.COMMA
             accept_comma(ps, ret)
             arg = parse_dot_mod(ps, true)
             append!(ret, arg)
         end
     else
         ret = EXPR(kwt, vcat(kw, arg))
-        while ps.nt.kind == Tokens.COMMA
+        while kindof(ps.nt) == Tokens.COMMA
             accept_comma(ps, ret)
             arg = parse_dot_mod(ps)
             append!(ret, arg)
@@ -178,7 +178,7 @@ function parse_export(ps::ParseState)
     args = EXPR[mKEYWORD(ps)]
     append!(args, parse_dot_mod(ps))
 
-    while ps.nt.kind == Tokens.COMMA
+    while kindof(ps.nt) == Tokens.COMMA
         push!(args, mPUNCTUATION(next(ps)))
         arg = parse_dot_mod(ps)[1]
         push!(args, arg)
@@ -214,16 +214,16 @@ end
 @addctx :function function parse_function(ps::ParseState)
     kw = mKEYWORD(ps)
     sig = @closer ps inwhere @closer ps ws parse_expression(ps)
-    if sig.typ === InvisBrackets && !(sig.args[2].typ === TupleH || (sig.args[2].typ === Block) || (sig.args[2].typ === UnaryOpCall && sig.args[2].args[2].kind === Tokens.DDDOT))
+    if typof(sig) === InvisBrackets && !(typof(sig.args[2]) === TupleH || (typof(sig.args[2]) === Block) || (typof(sig.args[2]) === UnaryOpCall && kindof(sig.args[2].args[2]) === Tokens.DDDOT))
         istuple = true
         sig = EXPR(TupleH, sig.args)
-    elseif sig.typ === TupleH
+    elseif typof(sig) === TupleH
         istuple = true
     else
         istuple = false
     end
 
-    while ps.nt.kind == Tokens.WHERE && ps.ws.kind != Tokens.NEWLINE_WS
+    while kindof(ps.nt) == Tokens.WHERE && kindof(ps.ws) != Tokens.NEWLINE_WS
         # sig = @closer ps inwhere @closer ps ws parse_compound(ps, sig)
         sig = @closer ps inwhere @closer ps ws parse_operator_where(ps, sig, INSTANCE(next(ps)), false)
     end
@@ -231,7 +231,7 @@ end
     blockargs = parse_block(ps)
 
     if isempty(blockargs)
-        if sig.typ === Call || sig.typ === WhereOpCall || (sig.typ === BinaryOpCall && !is_exor(sig.args[1])) || istuple || (sig.typ === InvisBrackets && sig.args[2].typ === Block)
+        if typof(sig) === Call || typof(sig) === WhereOpCall || (typof(sig) === BinaryOpCall && !is_exor(sig.args[1])) || istuple || (typof(sig) === InvisBrackets && typof(sig.args[2]) === Block)
             args = EXPR[sig, EXPR(Block, blockargs)]
         else
             args = EXPR[sig]
@@ -321,7 +321,7 @@ Parse an `if` block.
 @addctx :if function parse_if(ps::ParseState, nested = false)
     # Parsing
     kw = mKEYWORD(ps)
-    if ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS
+    if kindof(ps.ws) == NewLineWS || kindof(ps.ws) == SemiColonWS
         ps.errored = true
         cond = mErrorToken(MissingConditional)
     else
@@ -336,12 +336,12 @@ Parse an `if` block.
     end
 
     elseblockargs = EXPR[]
-    if ps.nt.kind == Tokens.ELSEIF
+    if kindof(ps.nt) == Tokens.ELSEIF
         push!(ret, mKEYWORD(next(ps)))
         push!(elseblockargs, parse_if(ps, true))
     end
-    elsekw = ps.nt.kind == Tokens.ELSE
-    if ps.nt.kind == Tokens.ELSE
+    elsekw = kindof(ps.nt) == Tokens.ELSE
+    if kindof(ps.nt) == Tokens.ELSE
         push!(ret, mKEYWORD(next(ps)))
         parse_block(ps, elseblockargs)
     end
@@ -358,7 +358,7 @@ end
 function is_wrapped_assignment(x)
     if is_assignment(x)
         return true
-    elseif x.typ === CSTParser.InvisBrackets && x.args isa Vector{EXPR} && length(x.args) == 3
+    elseif typof(x) === CSTParser.InvisBrackets && x.args isa Vector{EXPR} && length(x.args) == 3
         return is_wrapped_assignment(x.args[2])
     end
     return false
@@ -366,11 +366,11 @@ end
 
 @addctx :let function parse_let(ps::ParseState)
     args = EXPR[mKEYWORD(ps)]
-    if !(ps.ws.kind == NewLineWS || ps.ws.kind == SemiColonWS)
+    if !(kindof(ps.ws) == NewLineWS || kindof(ps.ws) == SemiColonWS)
         arg = @closer ps range @closer ps ws  parse_expression(ps)
-        if ps.nt.kind == Tokens.COMMA || !(is_wrapped_assignment(arg) || arg.typ === IDENTIFIER)
+        if kindof(ps.nt) == Tokens.COMMA || !(is_wrapped_assignment(arg) || typof(arg) === IDENTIFIER)
             arg = EXPR(Block, EXPR[arg])
-            while ps.nt.kind == Tokens.COMMA
+            while kindof(ps.nt) == Tokens.COMMA
                 accept_comma(ps, arg)
                 startbyte = ps.nt.startbyte
                 nextarg = @closer ps comma @closer ps ws parse_expression(ps)
@@ -395,15 +395,15 @@ end
     push!(ret, EXPR(Block, tryblockargs))
 
     #  catch block
-    if ps.nt.kind == Tokens.CATCH
+    if kindof(ps.nt) == Tokens.CATCH
         next(ps)
         push!(ret, mKEYWORD(ps))
         # catch closing early
-        if ps.nt.kind == Tokens.FINALLY || ps.nt.kind == Tokens.END
+        if kindof(ps.nt) == Tokens.FINALLY || kindof(ps.nt) == Tokens.END
             caught = FALSE()
             catchblock = EXPR(Block, EXPR[])
         else
-            if ps.ws.kind == SemiColonWS || ps.ws.kind == NewLineWS
+            if kindof(ps.ws) == SemiColonWS || kindof(ps.ws) == NewLineWS
                 caught = FALSE()
             else
                 caught = @closer ps ws parse_expression(ps)
@@ -411,7 +411,7 @@ end
             end
             
             catchblockargs = parse_block(ps, EXPR[], (Tokens.END, Tokens.FINALLY))
-            if !(isidentifier(caught) || caught.kind == Tokens.FALSE || (caught.typ === UnaryOpCall && isoperator(caught.args[1]) && caught.args[1].kind == Tokens.EX_OR))
+            if !(isidentifier(caught) || kindof(caught) == Tokens.FALSE || (typof(caught) === UnaryOpCall && isoperator(caught.args[1]) && kindof(caught.args[1]) == Tokens.EX_OR))
                 pushfirst!(catchblockargs, caught)
                 caught = FALSE()
             end
@@ -425,7 +425,7 @@ end
     push!(ret, catchblock)
 
     # finally block
-    if ps.nt.kind == Tokens.FINALLY
+    if kindof(ps.nt) == Tokens.FINALLY
         if isempty(catchblock.args)
             ret.args[4] = setparent!(FALSE(), ret)
         end
@@ -446,7 +446,7 @@ end
         a = parse_expression(ps)
         setbinding!(a)
         push!(args, a)
-        if ps.nt.kind == Tokens.COMMA
+        if kindof(ps.nt) == Tokens.COMMA
             accept_comma(ps, args)
         end
     end
@@ -461,8 +461,8 @@ end
 @addctx :module function parse_module(ps::ParseState)
     sb = ps.t.startbyte
     kw = mKEYWORD(ps)
-    @assert kw.kind == Tokens.MODULE || kw.kind == Tokens.BAREMODULE # work around julia issue #23766
-    if ps.nt.kind == Tokens.IDENTIFIER
+    @assert kindof(kw) == Tokens.MODULE || kindof(kw) == Tokens.BAREMODULE # work around julia issue #23766
+    if kindof(ps.nt) == Tokens.IDENTIFIER
         arg = mIDENTIFIER(next(ps))
     else
         arg = @precedence ps 15 @closer ps ws parse_expression(ps)
@@ -484,7 +484,7 @@ end
 
 
 function parse_mutable(ps::ParseState)
-    if ps.nt.kind == Tokens.STRUCT
+    if kindof(ps.nt) == Tokens.STRUCT
         kw = mKEYWORD(ps)
         next(ps)
         ret = parse_struct(ps, true)
@@ -498,9 +498,9 @@ end
 
 function markparameters!(sig)
     signame = rem_where_subtype(sig)
-    if signame.typ === Curly
+    if typof(signame) === Curly
         for i = 3:length(signame.args) - 1
-            if !(signame.args[i].typ === PUNCTUATION)
+            if !(typof(signame.args[i]) === PUNCTUATION)
                 setbinding!(signame.args[i])
             end
         end

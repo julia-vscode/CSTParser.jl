@@ -191,7 +191,7 @@ end
 
 @testset "Tuples" begin
     @static if VERSION > v"1.1-"
-        @test CSTParser.parse("1,").typ === CSTParser.ErrorToken
+        @test typof(CSTParser.parse("1,")) === CSTParser.ErrorToken
     else
         @test "1," |> test_expr
     end
@@ -532,10 +532,10 @@ end
 end
 
 @testset "Triple-quoted string" begin
-    @test CSTParser.parse("\"\"\" \" \"\"\"").val == " \" "
-    @test CSTParser.parse("\"\"\"a\"\"\"").val == "a"
-    @test CSTParser.parse("\"\"\"\"\"\"").val == ""
-    @test CSTParser.parse("\"\"\"\n\t \ta\n\n\t \tb\"\"\"").val == "a\n\nb"
+    @test valof(CSTParser.parse("\"\"\" \" \"\"\"")) == " \" "
+    @test valof(CSTParser.parse("\"\"\"a\"\"\"")) == "a"
+    @test valof(CSTParser.parse("\"\"\"\"\"\"")) == ""
+    @test valof(CSTParser.parse("\"\"\"\n\t \ta\n\n\t \tb\"\"\"")) == "a\n\nb"
     @test Expr(CSTParser.parse("\"\"\"\ta\n\tb \$c\n\td\n\"\"\"")) == Expr(:string, "\ta\n\tb ", :c, "\n\td\n")
     @test Expr(CSTParser.parse("\"\"\"\n\ta\n\tb \$c\n\td\n\"\"\"")) == Expr(:string, "\ta\n\tb ", :c, "\n\td\n")
     @test Expr(CSTParser.parse("\"\"\"\n\ta\n\tb \$c\n\td\n\t\"\"\"")) == Expr(:string, "a\nb ", :c, "\nd\n")
@@ -548,8 +548,8 @@ end
     "\"\"\"\n$(ws1)a\n\n$(ws1)b\n\n$(ws2)c\n\n$(ws2)d\n\n$(ws2)\"\"\"" |> test_expr
     @test "\"\"\"\n$(ws1)α\n$(ws1)β\n$(ws2)γ\n$(ws2)δ\n$(ws2)\"\"\"" |> test_expr
     @test "\"\"\"Float\$(bit)\"\"\"" |> test_expr
-    @test CSTParser.parse("\"\"\"abc\$(de)fg\"\"\"")[3].kind == CSTParser.Tokens.STRING
-    @test CSTParser.parse("\"\"\"abc(de)fg\"\"\"").kind == CSTParser.Tokens.TRIPLE_STRING
+    @test kindof(CSTParser.parse("\"\"\"abc\$(de)fg\"\"\"")[3]) == CSTParser.Tokens.STRING
+    @test kindof(CSTParser.parse("\"\"\"abc(de)fg\"\"\"")) == CSTParser.Tokens.TRIPLE_STRING
 end
 
 @testset "No longer broken things" begin
@@ -563,7 +563,7 @@ end
     @test "isa(a,a) != isa(a,a)" |> test_expr
     @test "@mac return x" |> test_expr
     @static if VERSION > v"1.1-"
-        @test CSTParser.parse("a,b,").args[4].typ === CSTParser.ErrorToken
+        @test typof(CSTParser.parse("a,b,").args[4]) === CSTParser.ErrorToken
     else
         @test "a,b," |> test_expr
     end
@@ -756,18 +756,18 @@ end
 end
 
 @testset "errors" begin
-    @test CSTParser.parse("1? b : c ")[1].typ === CSTParser.ErrorToken
-    @test CSTParser.parse("1 ?b : c ")[2].typ === CSTParser.ErrorToken
-    @test CSTParser.parse("1 ? b :c ")[4].typ === CSTParser.ErrorToken
-    @test CSTParser.parse("1:\n2")[2].typ === CSTParser.ErrorToken
-    @test CSTParser.parse("1.a")[1].typ === CSTParser.ErrorToken
-    @test CSTParser.parse("f ()").typ === CSTParser.ErrorToken
-    @test CSTParser.parse("f{t} ()").typ === CSTParser.ErrorToken
-    @test CSTParser.parse(": a")[1].typ === CSTParser.ErrorToken
-    @test CSTParser.parse("const a")[2].typ === CSTParser.ErrorToken
-    @test CSTParser.parse("const a = 1")[2].typ === CSTParser.BinaryOpCall
-    @test CSTParser.parse("const global a")[2].typ === CSTParser.ErrorToken
-    @test CSTParser.parse("const global a = 1")[2].typ === CSTParser.Global
+    @test typof(CSTParser.parse("1? b : c ")[1]) === CSTParser.ErrorToken
+    @test typof(CSTParser.parse("1 ?b : c ")[2]) === CSTParser.ErrorToken
+    @test typof(CSTParser.parse("1 ? b :c ")[4]) === CSTParser.ErrorToken
+    @test typof(CSTParser.parse("1:\n2")[2]) === CSTParser.ErrorToken
+    @test typof(CSTParser.parse("1.a")[1]) === CSTParser.ErrorToken
+    @test typof(CSTParser.parse("f ()")) === CSTParser.ErrorToken
+    @test typof(CSTParser.parse("f{t} ()")) === CSTParser.ErrorToken
+    @test typof(CSTParser.parse(": a")[1]) === CSTParser.ErrorToken
+    @test typof(CSTParser.parse("const a")[2]) === CSTParser.ErrorToken
+    @test typof(CSTParser.parse("const a = 1")[2]) === CSTParser.BinaryOpCall
+    @test typof(CSTParser.parse("const global a")[2]) === CSTParser.ErrorToken
+    @test typof(CSTParser.parse("const global a = 1")[2]) === CSTParser.Global
 end
 
 @testset "tuple params" begin

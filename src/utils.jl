@@ -1,43 +1,43 @@
 function closer(ps::ParseState)
-    (ps.closer.newline && ps.ws.kind == NewLineWS && ps.t.kind != Tokens.COMMA) ||
-    (ps.closer.semicolon && ps.ws.kind == SemiColonWS) ||
+    (ps.closer.newline && kindof(ps.ws) == NewLineWS && kindof(ps.t) != Tokens.COMMA) ||
+    (ps.closer.semicolon && kindof(ps.ws) == SemiColonWS) ||
     (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence) ||
-    (ps.nt.kind == Tokens.WHERE && ps.closer.precedence == LazyAndOp) ||
-    (ps.closer.inwhere && ps.nt.kind == Tokens.WHERE) ||
-    (ps.closer.inwhere && ps.closer.ws && ps.t.kind == Tokens.RPAREN && isoperator(ps.nt) && precedence(ps.nt) < DeclarationOp) ||
+    (kindof(ps.nt) == Tokens.WHERE && ps.closer.precedence == LazyAndOp) ||
+    (ps.closer.inwhere && kindof(ps.nt) == Tokens.WHERE) ||
+    (ps.closer.inwhere && ps.closer.ws && kindof(ps.t) == Tokens.RPAREN && isoperator(ps.nt) && precedence(ps.nt) < DeclarationOp) ||
     (ps.closer.precedence > WhereOp && (
-        ps.nt.kind == Tokens.LPAREN ||
-        ps.nt.kind == Tokens.LBRACE ||
-        ps.nt.kind == Tokens.LSQUARE ||
-        (ps.nt.kind == Tokens.STRING && isemptyws(ps.ws)) ||
-        ((ps.nt.kind == Tokens.RPAREN || ps.nt.kind == Tokens.RSQUARE) && isidentifier(ps.nt))  
+        kindof(ps.nt) == Tokens.LPAREN ||
+        kindof(ps.nt) == Tokens.LBRACE ||
+        kindof(ps.nt) == Tokens.LSQUARE ||
+        (kindof(ps.nt) == Tokens.STRING && isemptyws(ps.ws)) ||
+        ((kindof(ps.nt) == Tokens.RPAREN || kindof(ps.nt) == Tokens.RSQUARE) && isidentifier(ps.nt))  
     )) ||
-    (ps.nt.kind == Tokens.COMMA && ps.closer.precedence > 0) ||
-    ps.nt.kind == Tokens.ENDMARKER ||
+    (kindof(ps.nt) == Tokens.COMMA && ps.closer.precedence > 0) ||
+    kindof(ps.nt) == Tokens.ENDMARKER ||
     (ps.closer.comma && iscomma(ps.nt)) ||
     (ps.closer.tuple && (iscomma(ps.nt) || isassignment(ps.nt))) ||
-    (ps.nt.kind == Tokens.FOR && ps.closer.precedence > -1) ||
-    (ps.closer.block && ps.nt.kind == Tokens.END) ||
-    (ps.closer.paren && ps.nt.kind == Tokens.RPAREN) ||
-    (ps.closer.brace && ps.nt.kind == Tokens.RBRACE) ||
-    (ps.closer.square && ps.nt.kind == Tokens.RSQUARE) ||
-    ps.nt.kind == Tokens.ELSEIF || 
-    ps.nt.kind == Tokens.ELSE ||
-    ps.nt.kind == Tokens.CATCH || 
-    ps.nt.kind == Tokens.FINALLY || 
-    (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt) <= 0 || ps.nt.kind == Tokens.COLON)) ||
-    (ps.closer.range && (ps.nt.kind == Tokens.FOR || iscomma(ps.nt) || ps.nt.kind == Tokens.IF)) ||
+    (kindof(ps.nt) == Tokens.FOR && ps.closer.precedence > -1) ||
+    (ps.closer.block && kindof(ps.nt) == Tokens.END) ||
+    (ps.closer.paren && kindof(ps.nt) == Tokens.RPAREN) ||
+    (ps.closer.brace && kindof(ps.nt) == Tokens.RBRACE) ||
+    (ps.closer.square && kindof(ps.nt) == Tokens.RSQUARE) ||
+    kindof(ps.nt) == Tokens.ELSEIF || 
+    kindof(ps.nt) == Tokens.ELSE ||
+    kindof(ps.nt) == Tokens.CATCH || 
+    kindof(ps.nt) == Tokens.FINALLY || 
+    (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt) <= 0 || kindof(ps.nt) == Tokens.COLON)) ||
+    (ps.closer.range && (kindof(ps.nt) == Tokens.FOR || iscomma(ps.nt) || kindof(ps.nt) == Tokens.IF)) ||
     (ps.closer.ws && !isemptyws(ps.ws) &&
-        !(ps.nt.kind == Tokens.COMMA) &&
-        !(ps.t.kind == Tokens.COMMA) &&
-        !(!ps.closer.inmacro && ps.nt.kind == Tokens.FOR) &&
-        !(ps.nt.kind == Tokens.DO) &&
+        !(kindof(ps.nt) == Tokens.COMMA) &&
+        !(kindof(ps.t) == Tokens.COMMA) &&
+        !(!ps.closer.inmacro && kindof(ps.nt) == Tokens.FOR) &&
+        !(kindof(ps.nt) == Tokens.DO) &&
         !(
             (isbinaryop(ps.nt) && !(isemptyws(ps.nws) && isunaryop(ps.nt) && ps.closer.wsop)) || 
-            (isunaryop(ps.t) && ps.ws.kind == WS)
+            (isunaryop(ps.t) && kindof(ps.ws) == WS)
         )) ||
     (ps.nt.startbyte ≥ ps.closer.stop) ||
-    (ps.closer.unary && (ps.t.kind in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE) && ps.nt.kind == Tokens.IDENTIFIER))
+    (ps.closer.unary && (kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE) && kindof(ps.nt) == Tokens.IDENTIFIER))
 end
 
 """
@@ -205,17 +205,17 @@ macro default(ps, body)
 end
 
 
-isidentifier(t::AbstractToken) = t.kind == Tokens.IDENTIFIER
-isidentifier(x::EXPR) = x.typ === IDENTIFIER
+isidentifier(t::AbstractToken) = kindof(t) == Tokens.IDENTIFIER
+isidentifier(x::EXPR) = typof(x) === IDENTIFIER
 
-isliteral(t::AbstractToken) = Tokens.begin_literal < t.kind < Tokens.end_literal
-isliteral(x::EXPR) = x.typ === LITERAL
+isliteral(t::AbstractToken) = Tokens.begin_literal < kindof(t) < Tokens.end_literal
+isliteral(x::EXPR) = typof(x) === LITERAL
 
-isbool(t::AbstractToken) =  Tokens.TRUE ≤ t.kind ≤ Tokens.FALSE
-iscomma(t::AbstractToken) =  t.kind == Tokens.COMMA
+isbool(t::AbstractToken) =  Tokens.TRUE ≤ kindof(t) ≤ Tokens.FALSE
+iscomma(t::AbstractToken) =  kindof(t) == Tokens.COMMA
 
-iskw(t::AbstractToken) = Tokens.iskeyword(t.kind)
-iskw(x::EXPR) = x.typ === KEYWORD
+iskw(t::AbstractToken) = Tokens.iskeyword(kindof(t))
+iskw(x::EXPR) = typof(x) === KEYWORD
 
 isinstance(t::AbstractToken) = isidentifier(t) ||
                        isliteral(t) ||
@@ -223,22 +223,22 @@ isinstance(t::AbstractToken) = isidentifier(t) ||
                        iskw(t)
 
 
-ispunctuation(t::AbstractToken) = t.kind == Tokens.COMMA ||
-                          t.kind == Tokens.END ||
-                          Tokens.LSQUARE ≤ t.kind ≤ Tokens.RPAREN || 
-                          t.kind == Tokens.AT_SIGN
-ispunctuation(x::EXPR) = x.typ === PUNCTUATION
+ispunctuation(t::AbstractToken) = kindof(t) == Tokens.COMMA ||
+                            kindof(t) == Tokens.END ||
+                            Tokens.LSQUARE ≤ kindof(t) ≤ Tokens.RPAREN || 
+                            kindof(t) == Tokens.AT_SIGN
+ispunctuation(x::EXPR) = typof(x) === PUNCTUATION
 
-isstring(x) = x.typ === StringH || (isliteral(x) && (x.kind == Tokens.STRING || x.kind == Tokens.TRIPLE_STRING))
-is_integer(x) = isliteral(x) && x.kind == Tokens.INTEGER
-is_float(x) = isliteral(x) && x.kind == Tokens.FLOAT
-is_number(x) = isliteral(x) && (x.kind == Tokens.INTEGER || x.kind == Tokens.FLOAT)
-is_nothing(x) = isliteral(x) && x.kind == Tokens.NOTHING
+isstring(x) = typof(x) === StringH || (isliteral(x) && (kindof(x) == Tokens.STRING || kindof(x) == Tokens.TRIPLE_STRING))
+is_integer(x) = isliteral(x) && kindof(x) == Tokens.INTEGER
+is_float(x) = isliteral(x) && kindof(x) == Tokens.FLOAT
+is_number(x) = isliteral(x) && (kindof(x) == Tokens.INTEGER || kindof(x) == Tokens.FLOAT)
+is_nothing(x) = isliteral(x) && kindof(x) == Tokens.NOTHING
 
-isajuxtaposition(ps::ParseState, ret) = ((is_number(ret) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.LPAREN || ps.nt.kind == Tokens.CMD || ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)) || 
-        ((ret.typ === UnaryOpCall && is_prime(ret.args[2]) && ps.nt.kind == Tokens.IDENTIFIER) ||
-        ((ps.t.kind == Tokens.RPAREN || ps.t.kind == Tokens.RSQUARE) && (ps.nt.kind == Tokens.IDENTIFIER || ps.nt.kind == Tokens.CMD)) ||
-        ((ps.t.kind == Tokens.STRING || ps.t.kind == Tokens.TRIPLE_STRING) && (ps.nt.kind == Tokens.STRING || ps.nt.kind == Tokens.TRIPLE_STRING)))) || ((ps.t.kind in (Tokens.INTEGER, Tokens.FLOAT) || ps.t.kind in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && ps.nt.kind == Tokens.IDENTIFIER)
+isajuxtaposition(ps::ParseState, ret) = ((is_number(ret) && (kindof(ps.nt) == Tokens.IDENTIFIER || kindof(ps.nt) == Tokens.LPAREN || kindof(ps.nt) == Tokens.CMD || kindof(ps.nt) == Tokens.STRING || kindof(ps.nt) == Tokens.TRIPLE_STRING)) || 
+        ((typof(ret) === UnaryOpCall && is_prime(ret.args[2]) && kindof(ps.nt) == Tokens.IDENTIFIER) ||
+        ((kindof(ps.t) == Tokens.RPAREN || kindof(ps.t) == Tokens.RSQUARE) && (kindof(ps.nt) == Tokens.IDENTIFIER || kindof(ps.nt) == Tokens.CMD)) ||
+        ((kindof(ps.t) == Tokens.STRING || kindof(ps.t) == Tokens.TRIPLE_STRING) && (kindof(ps.nt) == Tokens.STRING || kindof(ps.nt) == Tokens.TRIPLE_STRING)))) || ((kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT) || kindof(ps.t) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && kindof(ps.nt) == Tokens.IDENTIFIER)
 
 
 
@@ -472,7 +472,7 @@ Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
 function check_span(x::EXPR, neq = [])
-    (ispunctuation(x) || isidentifier(x) || iskw(x) || isoperator(x) || isliteral(x) || x.typ == StringH) && return neq
+    (ispunctuation(x) || isidentifier(x) || iskw(x) || isoperator(x) || isliteral(x) || typof(x) == StringH) && return neq
     
     s = 0
     for a in x.args
@@ -528,9 +528,9 @@ Base.length(x::EXPR) = x.args isa Nothing ? 0 : length(x.args)
 @inline val(token::RawToken, ps::ParseState) = String(ps.l.io.data[token.startbyte + 1:token.endbyte + 1])
 
 function str_value(x)
-    if isidentifier(x) || x.typ === LITERAL
-        return x.val
-    elseif x.typ === OPERATOR || x.typ === MacroName
+    if isidentifier(x) || typof(x) === LITERAL
+        return valof(x)
+    elseif typof(x) === OPERATOR || typof(x) === MacroName
         return string(Expr(x))
     else
         return ""
@@ -598,7 +598,7 @@ end
 
 function match_closer(ps::ParseState)
     length(ps.closer.cc) == 0 && return false
-    kind = ps.nt.kind
+    kind = kindof(ps.nt)
     lc = last(ps.closer.cc)
     return (kind === Tokens.RPAREN && lc == :paren) ||
            (kind === Tokens.RSQUARE && lc == :square) ||

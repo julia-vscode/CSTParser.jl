@@ -24,31 +24,31 @@ end
 end
 
 @testset "get_name" begin
-    @test CSTParser.get_name(CSTParser.parse("struct T end")).val == "T"
-    @test CSTParser.get_name(CSTParser.parse("struct T{T} end")).val == "T"
-    @test CSTParser.get_name(CSTParser.parse("struct T <: T end")).val == "T"
-    @test CSTParser.get_name(CSTParser.parse("struct T{T} <: T end")).val == "T"
+    @test valof(CSTParser.get_name(CSTParser.parse("struct T end"))) == "T"
+    @test valof(CSTParser.get_name(CSTParser.parse("struct T{T} end"))) == "T"
+    @test valof(CSTParser.get_name(CSTParser.parse("struct T <: T end"))) == "T"
+    @test valof(CSTParser.get_name(CSTParser.parse("struct T{T} <: T end"))) == "T"
 
-    @test CSTParser.get_name(CSTParser.parse("mutable struct T end")).val == "T"
-    @test CSTParser.get_name(CSTParser.parse("mutable struct T{T} end")).val == "T"
-    @test CSTParser.get_name(CSTParser.parse("mutable struct T <: T end")).val == "T"
-    @test CSTParser.get_name(CSTParser.parse("mutable struct T{T} <: T end")).val == "T"
+    @test valof(CSTParser.get_name(CSTParser.parse("mutable struct T end"))) == "T"
+    @test valof(CSTParser.get_name(CSTParser.parse("mutable struct T{T} end"))) == "T"
+    @test valof(CSTParser.get_name(CSTParser.parse("mutable struct T <: T end"))) == "T"
+    @test valof(CSTParser.get_name(CSTParser.parse("mutable struct T{T} <: T end"))) == "T"
 
-    @test CSTParser.get_name(CSTParser.parse("abstract type T end")).val == "T"
-    @test CSTParser.get_name(CSTParser.parse("abstract type T{T} end")).val == "T"
-    @test CSTParser.get_name(CSTParser.parse("abstract type T <: T end")).val == "T"
-    @test CSTParser.get_name(CSTParser.parse("abstract type T{T} <: T end")).val == "T"
+    @test valof(CSTParser.get_name(CSTParser.parse("abstract type T end"))) == "T"
+    @test valof(CSTParser.get_name(CSTParser.parse("abstract type T{T} end"))) == "T"
+    @test valof(CSTParser.get_name(CSTParser.parse("abstract type T <: T end"))) == "T"
+    @test valof(CSTParser.get_name(CSTParser.parse("abstract type T{T} <: T end"))) == "T"
     # NEEDS FIX: v0.6 dep
     # @test CSTParser.get_name(CSTParser.parse("abstract T")).val == "T"
     # @test CSTParser.get_name(CSTParser.parse("abstract T{T}")).val == "T"
     # @test CSTParser.get_name(CSTParser.parse("abstract T <: T")).val == "T"
     # @test CSTParser.get_name(CSTParser.parse("abstract T{T} <: T")).val == "T"
 
-    @test CSTParser.get_name(CSTParser.parse("function f end")).val == "f"
-    @test CSTParser.get_name(CSTParser.parse("function f() end")).val == "f"
-    @test CSTParser.get_name(CSTParser.parse("function f()::T end")).val == "f"
-    @test CSTParser.get_name(CSTParser.parse("function f(x::T) where T end")).val == "f"
-    @test CSTParser.get_name(CSTParser.parse("function f{T}() end")).val == "f"
+    @test valof(CSTParser.get_name(CSTParser.parse("function f end"))) == "f"
+    @test valof(CSTParser.get_name(CSTParser.parse("function f() end"))) == "f"
+    @test valof(CSTParser.get_name(CSTParser.parse("function f()::T end"))) == "f"
+    @test valof(CSTParser.get_name(CSTParser.parse("function f(x::T) where T end"))) == "f"
+    @test valof(CSTParser.get_name(CSTParser.parse("function f{T}() end"))) == "f"
 
     # Operators
     @test CSTParser.str_value(CSTParser.get_name(CSTParser.parse("function +() end"))) == "+"
