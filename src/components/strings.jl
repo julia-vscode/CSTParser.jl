@@ -119,12 +119,14 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     end
                     # Compared to flisp/JuliaParser, we have an extra lookahead token,
                     # so we need to back up one here
+                elseif Tokenize.Lexers.iswhitespace(peekchar(input)) || peekchar(input) === '#'
+                    push!(ret, mErrorToken(op, StringInterpolationWithTrailingWhitespace))
                 else
                     pos = position(input)
                     ps1 = ParseState(input)
                     next(ps1)
                     if kindof(ps1.t) == Tokens.WHITESPACE
-                        t = EXPR(ErrorToken, EXPR[], ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1)
+                        error("Unexpecte whitespace after \$ in String")
                     else
                         t = INSTANCE(ps1)
                     end

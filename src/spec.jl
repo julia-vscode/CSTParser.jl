@@ -99,6 +99,7 @@ ErrorToken)
     MissingConditional,
     MissingCloser,
     InvalidIterator,
+    StringInterpolationWithTrailingWhitespace,
     Unknown)
 
 const NoKind = Tokenize.Tokens.begin_keywords

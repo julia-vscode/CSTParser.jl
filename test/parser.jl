@@ -706,6 +706,15 @@ end""" |> test_expr
     @test "@~" |> test_expr
 end
 
+@testset "interpolation error catching" begin
+    x = CSTParser.parse("\"a \$ b\"")
+    @test x.fullspan == 7
+    @test CSTParser.typof(x[2]) === CSTParser.ErrorToken
+    x = CSTParser.parse("\"a \$# b\"")
+    @test x.fullspan == 8
+    @test CSTParser.typof(x[2]) === CSTParser.ErrorToken
+end
+
 @testset "Broken things" begin
     @test_broken "\$(a) * -\$(b)" |> test_expr_broken
 end
