@@ -262,7 +262,7 @@ function _continue_doc_parse(x, ps)
     typof(x) === MacroCall &&
     typof(x.args[1]) === MacroName &&
     length(x.args[1]) == 2 &&
-    valof(x.args[1].args[2]) === "doc" &&
+    valof(x.args[1].args[2]) == "doc" &&
     length(x.args) < 3 && 
     ps.t.endpos[1] +1 <= ps.nt.startpos[1]
 end
