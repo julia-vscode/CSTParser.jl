@@ -424,6 +424,8 @@ function mark_typealias_bindings!(x)
     for i = 2:length(x.args[1].args)
         if typof(x.args[1].args[i]) === IDENTIFIER
             setbinding!(x.args[1].args[i])
+        elseif typof(x.args[1].args[i]) === BinaryOpCall && kindof(x.args[1].args[i].args[2]) === Tokens.ISSUBTYPE && typof(x.args[1].args[i].args[1]) === IDENTIFIER
+            setbinding!(x.args[1].args[i].args[1])
         end
     end
     return x

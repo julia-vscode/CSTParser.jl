@@ -201,7 +201,12 @@ function parse_operator_eq(ps::ParseState, @nospecialize(ret), op)
         setbinding!(ret)
     else
         ret = mBinaryOpCall(ret, op, nextarg)
-        setbinding!(ret.args[1], ret)
+        if typof(ret.args[1]) === Curly
+            mark_typealias_bindings!(ret)
+            setscope!(ret)
+        else
+            setbinding!(ret.args[1], ret)
+        end
     end
     return ret
 end

@@ -80,10 +80,6 @@ function parse_const(ps::ParseState)
         arg = mErrorToken(arg, ExpectedAssignment)
     end
     ret = EXPR(Const, EXPR[kw, arg])
-    if typof(arg) === BinaryOpCall && kindof(arg.args[2]) === Tokens.EQ && typof(arg.args[1]) === Curly
-        #setbinding!
-        mark_typealias_bindings!(arg)
-    end
     return ret
 end
 
