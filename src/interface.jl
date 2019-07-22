@@ -222,7 +222,7 @@ function defines_function(x)
         if is_eq(x.args[2])
             sig = x.args[1]
             while true
-                if typof(sig) === Call || typof(sig) === UnaryOpCall || (typof(sig) === BinaryOpCall && (kindof(sig.args[2]) == Tokens.DOT || !issyntaxcall(sig.args[2])))
+                if typof(sig) === Call || typof(sig) === UnaryOpCall || (typof(sig) === BinaryOpCall && !(kindof(sig.args[2]) == Tokens.DOT || issyntaxcall(sig.args[2])))
                     return true
                 elseif typof(sig) === BinaryOpCall && is_decl(sig.args[2]) || typof(sig) === WhereOpCall
                     sig = sig.args[1]

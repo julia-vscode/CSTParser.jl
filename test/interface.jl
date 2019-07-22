@@ -12,6 +12,9 @@
     @test CSTParser.defines_function(CSTParser.parse("*(x,y) = x"))
     @test CSTParser.defines_function(CSTParser.parse("*(x,y)::T = x"))
     @test CSTParser.defines_function(CSTParser.parse("!(x::T)::T = x"))
+    @test CSTParser.defines_function(CSTParser.parse("a + b = a"))
+    @test CSTParser.defines_function(CSTParser.parse("a/b = x"))
+    @test !CSTParser.defines_function(CSTParser.parse("a.b = x"))
 end
 
 @testset "datatype defs" begin
