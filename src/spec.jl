@@ -407,6 +407,8 @@ function mark_sig_args!(x)
             setbinding!(x.args[1])
             setbinding!(x.args[3])
         end
+    elseif typof(x) == UnaryOpCall && typof(x.args[2]) == InvisBrackets
+        setbinding!(x.args[2].args[2])
     end
 end
 Base.getindex(x::EXPR, i) = x.args[i]

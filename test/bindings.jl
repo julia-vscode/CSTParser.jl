@@ -77,3 +77,5 @@ let cst = CSTParser.parse("function a::T * b::T end")
     @test bindingof(cst[2][1]) !== nothing
     @test bindingof(cst[2][3]) !== nothing
 end
+
+@test collect_bindings(CSTParser.parse("-(x::T) = x")) == ["-", "x"]
