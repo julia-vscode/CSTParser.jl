@@ -342,6 +342,11 @@ function setbinding!(x)
         end
     elseif typof(x) === Kw
         setbinding!(x.args[1], x)
+    elseif typof(x) === Parameters
+        for arg in x.args
+            typof(arg) === PUNCTUATION && continue    
+            setbinding!(arg)
+        end
     elseif typof(x) === InvisBrackets
         setbinding!(rem_invis(x))
     elseif typof(x) == UnaryOpCall && kindof(x.args[1]) === Tokens.DECLARATION
