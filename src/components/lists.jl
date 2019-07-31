@@ -188,7 +188,7 @@ Handles cases where an expression - `ret` - is followed by
 """
 function parse_ref(ps::ParseState, @nospecialize(ret))
     next(ps)
-    ref = parse_array(ps, true)
+    ref = @nocloser ps inwhere parse_array(ps, true)
     if typof(ref) === Vect
         args = EXPR[ret]
         for a in ref.args

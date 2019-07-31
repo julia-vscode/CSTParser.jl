@@ -4,6 +4,7 @@ function Base.show(io::IO, x::EXPR, d = 0, er = false)
     if isidentifier(x)
         printstyled(io, " "^d, valof(x), "  ", x.fullspan, "(", x.span, ")", color = :yellow)
         bindingof(x) != nothing && printstyled(" $(bindingof(x).name)", bindingof(x).t === nothing ? "" : "::", color = :blue)
+        refof(x) != nothing && printstyled(" * ", color = :red)
         println()
     elseif isoperator(x)
         printstyled(io, " "^d, "OP: ", kindof(x), "  ", x.fullspan, "(", x.span, ")\n", color = c)
@@ -29,8 +30,9 @@ function Base.show(io::IO, x::EXPR, d = 0, er = false)
         printstyled(io, " "^d, T, "  ", x.fullspan, "(", x.span, ")", color = c)
         scopeof(x) != nothing && printstyled(io, " new scope", color = :green)
         bindingof(x) != nothing && printstyled(io, " $(bindingof(x).name)", bindingof(x).t === nothing ? "" : "::", color = :blue)
+        refof(x) != nothing && printstyled(" * ", color = :red)
         println()
-        x.args == nothing && return
+        x.args === nothing && return
         for a in x.args
             show(io, a, d + 1, er)
         end
