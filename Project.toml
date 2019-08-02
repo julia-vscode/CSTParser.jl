@@ -1,7 +1,7 @@
 name = "CSTParser"
 uuid = "00ebfdb7-1f24-5e51-bd34-a7502290713f"
 authors = ["Zac Nugent <zac.nugent@gmail.com>"]
-version = "0.6.2-DEV"
+version = "0.6.2"
 
 [deps]
 Tokenize = "0796e94c-ce3b-5d07-9a54-7f471281c624"
