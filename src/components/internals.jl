@@ -45,7 +45,7 @@ end
 
 function parse_iter(ps::ParseState)
     startbyte = ps.nt.startbyte
-    if kindof(ps.nt) == Tokens.OUTER && kindof(ps.nws) != EmptyWS && !Tokens.isoperator(kindof(ps.nnt)) 
+    if kindof(ps.nt) == Tokens.OUTER && kindof(ps.nws) != EmptyWS && !Tokens.isoperator(kindof(ps.nnt))
         outer = INSTANCE(next(ps))
         arg = @closer ps range @closer ps ws parse_expression(ps)
         if is_range(arg)
@@ -122,7 +122,7 @@ function parse_call(ps::ParseState, ret, ismacro = false)
         else
             ret = mUnaryOpCall(ret, arg)
         end
-    elseif is_and(ret) || is_decl(ret) || is_exor(ret) 
+    elseif is_and(ret) || is_decl(ret) || is_exor(ret)
         arg = @precedence ps 20 parse_expression(ps)
         if is_exor(ret) && typof(arg) === TupleH && length(arg.args) == 3 && typof(arg.args[2]) === UnaryOpCall && is_dddot(arg.args[2].arg[2])
             arg = EXPR(InvisBrackets, arg.args)
@@ -161,7 +161,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw = true, block = 
             break
         end
     end
-    if istuple && length(args) > 2 
+    if istuple && length(args) > 2
         block = false
     end
 
@@ -188,7 +188,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw = true, block = 
             end
         end
     end
-    return #args
+    return # args
 end
 
 function parse_parameters(ps, args::Vector{EXPR}, args1::Vector{EXPR} = EXPR[]; usekw = true)
@@ -296,7 +296,7 @@ function parse_generator(ps::ParseState, @nospecialize ret)
     else
         push!(ret, ranges)
     end
-    
+
 
     if typof(ret.args[1]) === Generator || typof(ret.args[1]) === Flatten
         ret = EXPR(Flatten, EXPR[ret])

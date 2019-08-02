@@ -189,7 +189,7 @@ function Expr(x::EXPR)
             end
         elseif isoperator(x.args[2])
             return Symbol("@", Expr(x.args[2]))
-            
+
         else
             return Symbol("@")
         end
@@ -247,7 +247,7 @@ function Expr(x::EXPR)
                 push!(ret.args, Expr(a))
             end
         end
-        return ret    
+        return ret
     elseif typof(x) === Braces
         ret = Expr(:braces)
         for a in x.args
@@ -662,7 +662,7 @@ Removes line info expressions. (i.e. Expr(:line, 1))
 """
 function remlineinfo!(x)
     if isa(x, Expr)
-        if x.head == :macrocall && x.args[2] != nothing
+        if x.head == :macrocall && x.args[2] !== nothing
             id = findall(map(x->(isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
             deleteat!(x.args, id)
             for j in x.args
@@ -731,7 +731,7 @@ function fix_range(a)
     end
 end
 
-function get_inner_gen(x, iters = [], arg = []) 
+function get_inner_gen(x, iters = [], arg = [])
     if typof(x) == Flatten
         get_inner_gen(x.args[1], iters, arg)
     elseif typof(x) === Generator
@@ -743,10 +743,10 @@ function get_inner_gen(x, iters = [], arg = [])
             push!(arg, x.args[1])
         end
     end
-    return iters, arg 
+    return iters, arg
 end
 
-function get_iter(x) 
+function get_iter(x)
     if typof(x) === Generator
         return x.args[3]
     end
@@ -792,10 +792,10 @@ end
 function expr_import(x, kw)
     col = findall(a->isoperator(a) && precedence(a) == ColonOp, x.args)
     comma = findall(is_comma, x.args)
-    
+
     header = []
     args = [Expr(:.)]
-    i = 1 #skip keyword
+    i = 1 # skip keyword
     while i < length(x.args)
         i += 1
         a = x.args[i]

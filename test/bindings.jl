@@ -1,7 +1,7 @@
 using CSTParser
 using CSTParser: bindingof, typof
 function collect_bindings(x, out = String[])
-    if bindingof(x) != nothing
+    if bindingof(x) !== nothing
         push!(out, bindingof(x).name)
     end
     if (typof(x) === CSTParser.BinaryOpCall && CSTParser.is_assignment(x) && !CSTParser.is_func_call(x)) || typof(x) === CSTParser.Filter

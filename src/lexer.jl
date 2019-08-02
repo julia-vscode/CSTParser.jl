@@ -85,7 +85,7 @@ function next(ps::ParseState)
         ps.nnt = Tokenize.Lexers.next_token(ps.l)
         ps.done = ps.nnt == Tokens.ENDMARKER
     end
-    
+
     # combines whitespace, comments and semicolons
     if iswhitespace(peekchar(ps.l)) || peekchar(ps.l) == '#' || peekchar(ps.l) == ';'
         ps.nnws = lex_ws_comment(ps.l, readchar(ps.l))

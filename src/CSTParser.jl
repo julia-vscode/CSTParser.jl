@@ -44,7 +44,7 @@ function parse_expression(ps::ParseState)
         ret = mErrorToken(mPUNCTUATION(next(ps)), UnexpectedToken)
     elseif kindof(ps.nt) ∈ term_c && !(kindof(ps.nt) === Tokens.END && ps.closer.square)
         if match_closer(ps)
-            #trying to parse an expression but we've hit a token that closes a parent expression
+            # trying to parse an expression but we've hit a token that closes a parent expression
             ps.errored = true
             ret = mErrorToken(MissingCloser)
         else
@@ -105,7 +105,7 @@ function parse_compound(ps::ParseState, @nospecialize ret)
         ret = EXPR(head, EXPR[ret, arg])
     elseif kindof(ps.nt) == Tokens.LPAREN
         no_ws = !isemptyws(ps.ws)
-        err_rng = ps.t.endbyte + 2:ps.nt.startbyte 
+        err_rng = ps.t.endbyte + 2:ps.nt.startbyte
         ret = @closeparen ps parse_call(ps, ret)
         if no_ws && !(typof(ret) === UnaryOpCall)
             ps.errored = true
@@ -131,10 +131,10 @@ function parse_compound(ps::ParseState, @nospecialize ret)
     elseif typof(ret) === UnaryOpCall && is_prime(ret.args[2])
         # prime operator followed by an identifier has an implicit multiplication
         nextarg = @precedence ps 11 parse_expression(ps)
-        ret = mBinaryOpCall(ret, mOPERATOR(0, 0, Tokens.STAR,false), nextarg)
-################################################################################
+        ret = mBinaryOpCall(ret, mOPERATOR(0, 0, Tokens.STAR, false), nextarg)
+# ###############################################################################
 # Everything below here is an error
-################################################################################
+# ###############################################################################
     elseif kindof(ps.nt) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)
         ps.errored = true
         ret = EXPR(ErrorToken, EXPR[ret, mErrorToken(mPUNCTUATION(next(ps)), Unknown)])
@@ -151,7 +151,7 @@ end
 
 Parses an expression starting with a `(`.
 """
-@addctx :paren function parse_paren(ps::ParseState)  
+@addctx :paren function parse_paren(ps::ParseState)
     args = EXPR[mPUNCTUATION(ps)]
     @closeparen ps @default ps @nocloser ps inwhere parse_comma_sep(ps, args, false, true, true)
 
@@ -225,7 +225,7 @@ function parse(ps::ParseState, cont = false)
             if curr_line == last_line && typof(last(top.args)) === TopLevel
                 push!(last(top.args), ret)
                 top.fullspan += ret.fullspan
-                top.span = top.fullspan - (ret.fullspan-ret.span)
+                top.span = top.fullspan - (ret.fullspan - ret.span)
             elseif kindof(ps.ws) == SemiColonWS
                 push!(top, EXPR(TopLevel, EXPR[ret]))
             else
@@ -263,8 +263,8 @@ function _continue_doc_parse(x, ps)
     typof(x.args[1]) === MacroName &&
     length(x.args[1]) == 2 &&
     valof(x.args[1].args[2]) == "doc" &&
-    length(x.args) < 3 && 
-    ps.t.endpos[1] +1 <= ps.nt.startpos[1]
+    length(x.args) < 3 &&
+    ps.t.endpos[1] + 1 <= ps.nt.startpos[1]
 end
 
 function parse_file(path::String)

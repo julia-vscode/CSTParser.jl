@@ -1,7 +1,7 @@
 function longest_common_prefix(prefixa, prefixb)
     maxplength = min(sizeof(prefixa), sizeof(prefixb))
     maxplength == 0 && return ""
-    idx = findfirst(i -> (prefixa[i] != prefixb[i]), 1:maxplength)
+    idx = findfirst(i->(prefixa[i] != prefixb[i]), 1:maxplength)
     idx = idx === nothing ? maxplength : idx - 1
     prefixa[1:idx]
 end
@@ -34,7 +34,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         if isliteral(expr)
             push!(exprs_to_adjust, expr)
             str = valof(expr)
-            (isempty(str) || (lcp != nothing && isempty(lcp))) && return
+            (isempty(str) || (lcp !== nothing && isempty(lcp))) && return
             (last && str[end] == '\n') && return (lcp = "")
             idxstart, idxend = 2, 1
             while nextind(str, idxend) - 1 < sizeof(str) && (lcp === nothing || !isempty(lcp))
@@ -71,7 +71,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             _val = replace(_val, "\\`" => "`")
         else
             if endswith(_val, "\\\\")
-                _val = _val[1:end-1]
+                _val = _val[1:end - 1]
             end
             _val = replace(_val, "\\\"" => "\"")
         end
@@ -158,12 +158,12 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             end
         end
         push!(ret, ex)
-        
+
     end
 
-    single_string_T = (Tokens.STRING,kindof(ps.t))
+    single_string_T = (Tokens.STRING, kindof(ps.t))
     if istrip
-        if lcp != nothing && !isempty(lcp)
+        if lcp !== nothing && !isempty(lcp)
             for expr in exprs_to_adjust
                 for (i, a) in enumerate(ret.args)
                     if expr == a
