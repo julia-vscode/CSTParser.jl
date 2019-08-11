@@ -133,7 +133,8 @@ function Expr(x::EXPR)
             return Symbol(lowercase(string(kindof(x))))
         end
     elseif isoperator(x)
-        return x.dot ? Symbol(:., UNICODE_OPS_REVERSE[kindof(x)]) : UNICODE_OPS_REVERSE[kindof(x)]
+        ret = x.val isa String ? Symbol(valof(x)) : UNICODE_OPS_REVERSE[kindof(x)]
+        return x.dot ? Symbol(:., ret) : ret
     elseif ispunctuation(x)
         return string(kindof(x))
     elseif isliteral(x)

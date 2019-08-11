@@ -162,7 +162,7 @@ mPUNCTUATION(kind, fullspan, span) = EXPR(PUNCTUATION, nothing, fullspan, span, 
 @noinline mPUNCTUATION(ps::ParseState) = EXPR(PUNCTUATION, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, kindof(ps.t), false, nothing, nothing, nothing, nothing)
 
 mOPERATOR(fullspan, span, kind, dotop) = EXPR(OPERATOR, nothing, fullspan, span, nothing, kind, dotop, nothing, nothing, nothing, nothing)
-@noinline mOPERATOR(ps::ParseState) = EXPR(OPERATOR, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, kindof(ps.t), ps.t.dotop, nothing, nothing, nothing, nothing)
+@noinline mOPERATOR(ps::ParseState) = EXPR(OPERATOR, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, ps.t.suffix ? val(ps.t, ps) : nothing, kindof(ps.t), ps.t.dotop, nothing, nothing, nothing, nothing)
 
 mKEYWORD(kind, fullspan, span) = EXPR(KEYWORD, nothing, fullspan, span, nothing, kind, false, nothing, nothing, nothing, nothing)
 @noinline mKEYWORD(ps::ParseState) = EXPR(KEYWORD, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, kindof(ps.t), false, nothing, nothing, nothing, nothing)
