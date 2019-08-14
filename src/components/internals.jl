@@ -355,7 +355,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
             push!(args, mPUNCTUATION(next(ps)))
         elseif isoperator(ps.nt) && (ps.nt.dotop || kindof(ps.nt) == Tokens.DOT)
             push!(args, mPUNCTUATION(Tokens.DOT, 1, 1))
-            ps.nt = RawToken(kindof(ps.nt), ps.nt.startpos, ps.nt.endpos, ps.nt.startbyte + 1, ps.nt.endbyte, ps.nt.token_error, false)
+            ps.nt = RawToken(kindof(ps.nt), ps.nt.startpos, ps.nt.endpos, ps.nt.startbyte + 1, ps.nt.endbyte, ps.nt.token_error, false, ps.nt.suffix)
         else
             break
         end

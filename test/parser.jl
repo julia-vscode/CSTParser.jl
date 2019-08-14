@@ -704,6 +704,7 @@ end""" |> test_expr
     @test "x\"\\\\ \"" |> test_expr
     @test "a.{1}" |> test_expr
     @test "@~" |> test_expr
+    @test "\$\$(x)" |> test_expr
 end
 
 @testset "interpolation error catching" begin

@@ -6,7 +6,7 @@ function closer(ps::ParseState)
     (ps.closer.inwhere && kindof(ps.nt) == Tokens.WHERE) ||
     (ps.closer.inwhere && ps.closer.ws && kindof(ps.t) == Tokens.RPAREN && isoperator(ps.nt) && precedence(ps.nt) < DeclarationOp) ||
     (ps.closer.precedence > WhereOp && (
-        kindof(ps.nt) == Tokens.LPAREN ||
+        (kindof(ps.nt) == Tokens.LPAREN && !(ps.t.kind === Tokens.EX_OR)) ||
         kindof(ps.nt) == Tokens.LBRACE ||
         kindof(ps.nt) == Tokens.LSQUARE ||
         (kindof(ps.nt) == Tokens.STRING && isemptyws(ps.ws)) ||
