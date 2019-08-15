@@ -420,7 +420,9 @@ function Expr(x::EXPR)
     elseif typof(x) === Begin
         return Expr(x.args[2])
     elseif typof(x) === Quote
-        if typof(x.args[2]) === InvisBrackets && (isoperator(x.args[2].args[2]) || isliteral(x.args[2].args[2]) || isidentifier(x.args[2].args[2]))
+        if length(x.args) == 1
+            return Expr(:quote, Expr(x.args[1]))
+        elseif typof(x.args[2]) === InvisBrackets && (isoperator(x.args[2].args[2]) || isliteral(x.args[2].args[2]) || isidentifier(x.args[2].args[2]))
             return QuoteNode(Expr(x.args[2]))
         else
             return Expr(:quote, Expr(x.args[2]))

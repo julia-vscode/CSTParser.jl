@@ -176,8 +176,8 @@ function parse_unary_colon(ps::ParseState, op)
     op = requires_no_ws(op, ps)
     if Tokens.begin_keywords < kindof(ps.nt) < Tokens.end_keywords
         ret = EXPR(Quotenode, EXPR[op, mIDENTIFIER(next(ps))])
-    elseif Tokens.begin_literal < kindof(ps.nt) < Tokens.end_literal ||
-        isoperator(kindof(ps.nt)) || kindof(ps.nt) == Tokens.IDENTIFIER
+    elseif Tokens.begin_literal < kindof(ps.nt) < Tokens.CHAR ||
+        isoperator(kindof(ps.nt)) || kindof(ps.nt) == Tokens.IDENTIFIER || kindof(ps.nt) === Tokens.TRUE || kindof(ps.nt) === Tokens.FALSE
         ret = EXPR(Quotenode, EXPR[op, INSTANCE(next(ps))])
     elseif closer(ps)
         ret = op
@@ -325,8 +325,10 @@ function parse_operator_dot(ps::ParseState, @nospecialize(ret), op)
         nextarg = @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)
     end
 
-    if isidentifier(nextarg) || typof(nextarg) === Vect || (typof(nextarg) === UnaryOpCall && is_exor(nextarg.args[1]))
+    if isidentifier(nextarg) || (typof(nextarg) === UnaryOpCall && is_exor(nextarg.args[1]))
         ret = mBinaryOpCall(ret, op, EXPR(Quotenode, EXPR[nextarg]))
+    elseif typof(nextarg) === Vect
+        ret = mBinaryOpCall(ret, op, EXPR(Quote, EXPR[nextarg]))
     elseif typof(nextarg) === MacroCall
         mname = mBinaryOpCall(ret, op, EXPR(Quotenode, EXPR[nextarg.args[1]]))
         ret = EXPR(MacroCall, EXPR[mname])
