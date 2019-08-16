@@ -363,7 +363,7 @@ end
 @addctx :let function parse_let(ps::ParseState)
     args = EXPR[mKEYWORD(ps)]
     if !(kindof(ps.ws) == NewLineWS || kindof(ps.ws) == SemiColonWS)
-        arg = @closer ps range @closer ps ws  parse_expression(ps)
+        arg = @closer ps comma @closer ps ws  parse_expression(ps)
         if kindof(ps.nt) == Tokens.COMMA || !(is_wrapped_assignment(arg) || typof(arg) === IDENTIFIER)
             arg = EXPR(Block, EXPR[arg])
             while kindof(ps.nt) == Tokens.COMMA

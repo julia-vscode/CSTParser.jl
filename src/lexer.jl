@@ -18,18 +18,15 @@ mutable struct Closer
     inwhere::Bool
     square::Bool
     block::Bool
-    ifelse::Bool
     ifop::Bool
     range::Bool
-    trycatch::Bool
     ws::Bool
     wsop::Bool
     unary::Bool
     precedence::Int
-    stop::Int
     cc::Vector{Symbol}
 end
-Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, typemax(Int), [])
+Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, [])
 
 mutable struct ParseState
     l::Lexer{Base.GenericIOBuffer{Array{UInt8,1}},RawToken}

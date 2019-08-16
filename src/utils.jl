@@ -36,7 +36,6 @@ function closer(ps::ParseState)
             (isbinaryop(ps.nt) && !(isemptyws(ps.nws) && isunaryop(ps.nt) && ps.closer.wsop)) || 
             (isunaryop(ps.t) && kindof(ps.ws) == WS)
         )) ||
-    (ps.nt.startbyte ≥ ps.closer.stop) ||
     (ps.closer.unary && (kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE) && kindof(ps.nt) == Tokens.IDENTIFIER))
 end
 
@@ -131,7 +130,6 @@ struct Closer_TMP
     comma::Bool
     insquare::Bool
     range::Bool
-    ifelse::Bool
     ifop::Bool
     ws::Bool
     wsop::Bool
@@ -147,7 +145,6 @@ end
         c.comma,
         c.insquare,
         c.range,
-        c.ifelse,
         c.ifop,
         c.ws,
         c.wsop,
@@ -163,7 +160,6 @@ end
     c.comma = tmp.comma
     c.insquare = tmp.insquare
     c.range = tmp.range
-    c.ifelse = tmp.ifelse
     c.ifop = tmp.ifop
     c.ws = tmp.ws
     c.wsop = tmp.wsop
@@ -180,7 +176,6 @@ end
     c.comma = false
     c.insquare = false
     c.range = false
-    c.ifelse = false
     c.ifop = false
     c.ws = false
     c.wsop = false
