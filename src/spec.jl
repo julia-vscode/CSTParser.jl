@@ -96,6 +96,7 @@ ErrorToken)
     UnexpectedWhiteSpace, 
     UnexpectedNewLine,
     ExpectedAssignment,
+    UnexpectedAssignmentOp,
     MissingConditional,
     MissingCloser,
     InvalidIterator,

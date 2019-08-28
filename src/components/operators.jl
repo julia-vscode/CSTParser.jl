@@ -183,6 +183,10 @@ function parse_unary_colon(ps::ParseState, op)
         ret = op
     else
         arg = @precedence ps 20 parse_expression(ps)
+        if typof(arg) === InvisBrackets && length(arg.args) == 3 && typof(arg.args[2]) === ErrorToken && refof(arg.args[2]) === UnexpectedAssignmentOp
+            arg.args[2] = arg.args[2].args[1]
+            setparent!(arg.args[2], arg)
+        end
         ret = EXPR(Quote, EXPR[op, arg])
     end
     return ret

@@ -69,6 +69,8 @@ function parse_expression(ps::ParseState)
             end
             if is_colon(ret) && kindof(ps.nt) != Tokens.COMMA
                 ret = parse_unary(ps, ret)
+            elseif typof(ret) === OPERATOR && precedence(ret) == AssignmentOp && kindof(ret) !== Tokens.APPROX
+                ret = mErrorToken(ret, UnexpectedAssignmentOp)
             end
         elseif kindof(ps.t) == Tokens.AT_SIGN
             ret = parse_macrocall(ps)

@@ -705,6 +705,9 @@ end""" |> test_expr
     @test "a.{1}" |> test_expr
     @test "@~" |> test_expr
     @test "\$\$(x)" |> test_expr
+    @test "\$\$(x)" |> test_expr
+    @test CSTParser.typof(CSTParser.parse("=")) === CSTParser.ErrorToken
+    @test CSTParser.typof(CSTParser.parse("~")) === CSTParser.OPERATOR
 end
 
 @testset "interpolation error catching" begin
