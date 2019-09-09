@@ -352,7 +352,7 @@ function parse_operator_anon_func(ps::ParseState, @nospecialize(ret), op)
         arg = EXPR(Block, EXPR[arg])
     end
     setbinding!(ret)
-    return mBinaryOpCall(ret, op, arg)
+    return setscope!(mBinaryOpCall(ret, op, arg))
 end
 
 function parse_operator(ps::ParseState, @nospecialize(ret), op)
