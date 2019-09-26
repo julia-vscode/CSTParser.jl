@@ -1,4 +1,4 @@
-function is_func_call(x)
+function is_func_call(x::EXPR)
     if typof(x) === Call
         return true
     elseif typof(x) === WhereOpCall
@@ -75,7 +75,7 @@ is_importall(x) = iskw(x) && kindof(x) == Tokens.IMPORTALL
 is_lit_string(x) = isliteral(x) && (kindof(x) == Tokens.STRING || kindof(x) == Tokens.TRIPLE_STRING)
 
 
-function _arg_id(x)
+function _arg_id(x::EXPR)
     if typof(x) === IDENTIFIER
         return x
     elseif typof(x) === Quotenode
@@ -92,7 +92,7 @@ function _arg_id(x)
 end
 
 
-function get_where_params(x, params = [])
+function get_where_params(x::EXPR, params = String[])
     if typof(x) === WhereOpCall
         for i = 3:length(x.args)
             a = x.args[i]
@@ -106,7 +106,7 @@ function get_where_params(x, params = [])
     return params
 end
 
-function get_curly_params(x, params = [])
+function get_curly_params(x::EXPR, params = String[])
     if typof(x) == Curly
         for i = 2:length(x.args)
             a = x.args[i]
@@ -122,7 +122,7 @@ end
 
 
 
-function get_sig_params(x, params = [])
+function get_sig_params(x::EXPR, params = String[])
     get_where_params(x, params)
     if typof(x) === WhereOpCall && typof(x.args[1]) === WhereOpCall
         get_where_params(x.args[1], params)
@@ -134,7 +134,7 @@ function get_sig_params(x, params = [])
 end
 
 
-function rem_subtype(x)
+function rem_subtype(x::EXPR)
     if typof(x) === BinaryOpCall && isoperator(x.args[2]) && kindof(x.args[2]) == Tokens.ISSUBTYPE
         return x.args[1]
     else
@@ -142,7 +142,7 @@ function rem_subtype(x)
     end
 end
 
-function rem_decl(x)
+function rem_decl(x::EXPR)
     if typof(x) === BinaryOpCall && is_decl(x.args[2])
         return x.args[1]
     else
@@ -150,7 +150,7 @@ function rem_decl(x)
     end
 end
 
-function rem_curly(x)
+function rem_curly(x::EXPR)
     if typof(x) === Curly
         return x.args[1]
     else
@@ -158,7 +158,7 @@ function rem_curly(x)
     end
 end
 
-function rem_call(x)
+function rem_call(x::EXPR)
     if typof(x) === Call
         return x.args[1]
     else
@@ -166,7 +166,7 @@ function rem_call(x)
     end
 end
 
-function rem_where(x)
+function rem_where(x::EXPR)
     if typof(x) === WhereOpCall
         return rem_where(x.args[1])
     else
@@ -174,7 +174,7 @@ function rem_where(x)
     end
 end
 
-function rem_where_subtype(x)
+function rem_where_subtype(x::EXPR)
     if typof(x) === WhereOpCall || typof(x) === BinaryOpCall && kindof(x.args[2]) === Tokens.ISSUBTYPE
         return rem_where_subtype(x.args[1])
     else
@@ -182,7 +182,7 @@ function rem_where_subtype(x)
     end
 end
 
-function rem_where_decl(x)
+function rem_where_decl(x::EXPR)
     if typof(x) === WhereOpCall || typof(x) === BinaryOpCall && kindof(x.args[2]) === Tokens.DECLARATION
         return rem_where_decl(x.args[1])
     else
@@ -190,7 +190,7 @@ function rem_where_decl(x)
     end
 end
 
-function rem_invis(x)
+function rem_invis(x::EXPR)
     if typof(x) === InvisBrackets
         return x.args[2]
     else
@@ -198,7 +198,7 @@ function rem_invis(x)
     end
 end
 
-function rem_dddot(x)
+function rem_dddot(x::EXPR)
     if typof(x) === UnaryOpCall && is_dddot(x.args[2])
         return x.args[1]
     else
@@ -206,7 +206,7 @@ function rem_dddot(x)
     end
 end
 
-function rem_kw(x)
+function rem_kw(x::EXPR)
     if typof(x) === Kw
         return x.args[1]
     else
@@ -215,7 +215,7 @@ function rem_kw(x)
 end
 
 # Definitions
-function defines_function(x)
+function defines_function(x::EXPR)
     if typof(x) === FunctionDef
         return true
     elseif typof(x) === BinaryOpCall
@@ -247,7 +247,7 @@ defines_primitive(x) = typof(x) === Primitive
 defines_module(x) = typof(x) === ModuleH || typof(x) === BareModule
 defines_anon_function(x) = typof(x) === BinaryOpCall && is_anon_func(x.args[2])
 
-function has_sig(x)
+function has_sig(x::EXPR)
     defines_datatype(x) || defines_function(x) || defines_macro(x) || defines_anon_function(x)
 end
 
@@ -258,7 +258,7 @@ end
 Returns the full signature of function, macro and datatype definitions. 
 Should only be called when has_sig(x) == true.
 """
-function get_sig(x)
+function get_sig(x::EXPR)
     if typof(x) === BinaryOpCall
         return x.args[1]
     elseif typof(x) === Struct ||
@@ -273,7 +273,7 @@ function get_sig(x)
     end
 end
 
-function get_name(x)
+function get_name(x::EXPR)
     if typof(x) === Struct || typof(x) === Mutable || typof(x) === Abstract || typof(x) === Primitive
         sig = get_sig(x)
         sig = rem_subtype(sig)
@@ -329,7 +329,7 @@ function get_name(x)
     end
 end
 
-function get_args(x)
+function get_args(x::EXPR)
     if typof(x) === IDENTIFIER
         return []
     elseif defines_anon_function(x) && !(typof(x.args[1]) === TupleH)
@@ -430,7 +430,7 @@ function get_args(x)
 end
 
 
-function get_arg_name(arg)
+function get_arg_name(arg::EXPR)
     arg = rem_kw(arg)
     arg = rem_dddot(arg)
     arg = rem_where(arg)
@@ -442,7 +442,7 @@ end
 
 
 
-function get_arg_type(arg)
+function get_arg_type(arg::EXPR)
     if typof(arg) === BinaryOpCall && is_decl(arg.args[2])
         return Expr(arg.args[3])
     else
@@ -452,7 +452,7 @@ end
 
 get_body(x) = typof(x) === Mutable ? x.args[4] : x.args[3]
 
-function flatten_tuple(x, out = [])
+function flatten_tuple(x::EXPR, out = EXPR[])
     if typof(x) === TupleH
         for arg in x
             ispunctuation(arg) && continue    
@@ -472,7 +472,7 @@ end
 Get the IDENTIFIER name of a variable, possibly in the presence of 
 type declaration operators.
 """
-function get_id(x)
+function get_id(x::EXPR)
     if typof(x) === BinaryOpCall && (is_issubt(x.args[2]) || is_decl(x.args[2])) ||
         (typof(x) === UnaryOpCall && is_dddot(x.args[2])) ||
         typof(x) === WhereOpCall ||
@@ -534,5 +534,5 @@ end
     contributes_scope(x)
 Checks whether the body of `x` is included in the toplevel namespace.
 """
-contributes_scope(x) = typof(x) in (FileH, Begin, Block, Const, Global, Local, If, MacroCall, TopLevel)
+contributes_scope(x::EXPR) = typof(x) in (FileH, Begin, Block, Const, Global, Local, If, MacroCall, TopLevel)
 

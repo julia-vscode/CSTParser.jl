@@ -154,7 +154,7 @@ LtoR(prec::Int) = AssignmentOp ≤ prec ≤ LazyAndOp || prec == PowerOp
 
 Having hit a unary operator at the start of an expression return a call.
 """
-function parse_unary(ps::ParseState, op)
+function parse_unary(ps::ParseState, op::EXPR)
     K, dot = kindof(op), op.dot
     if isoperator(op) && kindof(op) == Tokens.COLON
         ret = parse_unary_colon(ps, op)
@@ -172,7 +172,7 @@ function parse_unary(ps::ParseState, op)
     return ret
 end
 
-function parse_unary_colon(ps::ParseState, op)
+function parse_unary_colon(ps::ParseState, op::EXPR)
     op = requires_no_ws(op, ps)
     if Tokens.begin_keywords < kindof(ps.nt) < Tokens.end_keywords
         ret = EXPR(Quotenode, EXPR[op, mIDENTIFIER(next(ps))])
@@ -192,7 +192,7 @@ function parse_unary_colon(ps::ParseState, op)
     return ret
 end
 
-function parse_operator_eq(ps::ParseState, @nospecialize(ret), op)
+function parse_operator_eq(ps::ParseState, ret::EXPR, op::EXPR)
     nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
 
     if is_func_call(ret)
@@ -216,7 +216,7 @@ function parse_operator_eq(ps::ParseState, @nospecialize(ret), op)
 end
 
 # Parse conditionals
-function parse_operator_cond(ps::ParseState, @nospecialize(ret), op)
+function parse_operator_cond(ps::ParseState, ret::EXPR, op::EXPR)
     ret = requires_ws(ret, ps)
     op = requires_ws(op, ps)
     nextarg = @closer ps ifop parse_expression(ps)
@@ -228,7 +228,7 @@ function parse_operator_cond(ps::ParseState, @nospecialize(ret), op)
 end
 
 # Parse comparisons
-function parse_comp_operator(ps::ParseState, @nospecialize(ret), op)
+function parse_comp_operator(ps::ParseState, ret::EXPR, op::EXPR)
     nextarg = @precedence ps ComparisonOp - LtoR(ComparisonOp) parse_expression(ps)
 
     if typof(ret) === Comparison
@@ -245,7 +245,7 @@ function parse_comp_operator(ps::ParseState, @nospecialize(ret), op)
 end
 
 # Parse ranges
-function parse_operator_colon(ps::ParseState, @nospecialize(ret), op)  
+function parse_operator_colon(ps::ParseState, ret::EXPR, op::EXPR)  
     if isnewlinews(ps.ws)
         ps.errored = true
         op = mErrorToken(op, UnexpectedNewLine)
@@ -264,7 +264,7 @@ end
 
 
 # Parse power (special case for preceding unary ops)
-function parse_operator_power(ps::ParseState, @nospecialize(ret), op)
+function parse_operator_power(ps::ParseState, ret::EXPR, op::EXPR)
     nextarg = @precedence ps PowerOp - LtoR(PowerOp) @closer ps inwhere parse_expression(ps)
     
     if typof(ret) === UnaryOpCall
@@ -278,7 +278,7 @@ end
 
 
 # parse where
-function parse_operator_where(ps::ParseState, @nospecialize(ret), op, setscope = true)
+function parse_operator_where(ps::ParseState, ret::EXPR, op::EXPR, setscope = true)
     nextarg = @precedence ps LazyAndOp @closer ps inwhere parse_expression(ps)
     
     if typof(nextarg) === Braces
@@ -298,7 +298,7 @@ function parse_operator_where(ps::ParseState, @nospecialize(ret), op, setscope =
     return ret
 end
 
-function parse_operator_dot(ps::ParseState, @nospecialize(ret), op)
+function parse_operator_dot(ps::ParseState, ret::EXPR, op::EXPR)
     if kindof(ps.nt) == Tokens.LPAREN
         @static if VERSION > v"1.1-"
             iserred = kindof(ps.ws) != Tokens.EMPTY_WS
@@ -345,7 +345,7 @@ function parse_operator_dot(ps::ParseState, @nospecialize(ret), op)
     return ret
 end
 
-function parse_operator_anon_func(ps::ParseState, @nospecialize(ret), op)
+function parse_operator_anon_func(ps::ParseState, ret::EXPR, op::EXPR)
     arg = @closer ps comma @precedence ps 0 parse_expression(ps)
     
     if !(typof(arg) === Begin || (typof(arg) === InvisBrackets && typof(arg.args[2]) === Block))
@@ -355,7 +355,7 @@ function parse_operator_anon_func(ps::ParseState, @nospecialize(ret), op)
     return setscope!(mBinaryOpCall(ret, op, arg))
 end
 
-function parse_operator(ps::ParseState, @nospecialize(ret), op)
+function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
     K, dot = kindof(op), op.dot
     P = precedence(K)
 

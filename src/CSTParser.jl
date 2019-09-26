@@ -85,7 +85,7 @@ function parse_expression(ps::ParseState)
     return ret
 end
 
-function parse_compound(ps::ParseState, @nospecialize ret)
+function parse_compound(ps::ParseState, ret::EXPR)
     if kindof(ps.nt) == Tokens.FOR
         ret = parse_generator(ps, ret)
     elseif kindof(ps.nt) == Tokens.DO
@@ -260,7 +260,7 @@ function parse(ps::ParseState, cont = false)
     return top, ps
 end
 
-function _continue_doc_parse(x, ps)
+function _continue_doc_parse(x::EXPR, ps::ParseState)
     typof(x) === MacroCall &&
     typof(x.args[1]) === MacroName &&
     length(x.args[1]) == 2 &&
@@ -288,4 +288,7 @@ function parse_directory(path::String, proj = Project(path, []))
     end
     proj
 end
+
+include("precompile.jl")
+_precompile()
 end

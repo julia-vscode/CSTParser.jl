@@ -7,7 +7,7 @@ tuple.
 function parse_tuple end
 
 @static if VERSION > v"1.1-"
-    function parse_tuple(ps::ParseState, @nospecialize(ret))
+    function parse_tuple(ps::ParseState, ret::EXPR)
         op = mPUNCTUATION(next(ps))
         if typof(ret) == TupleH
             if (isassignment(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
@@ -38,7 +38,7 @@ function parse_tuple end
         return ret
     end
 else
-    function parse_tuple(ps::ParseState, @nospecialize(ret))
+    function parse_tuple(ps::ParseState, ret::EXPR)
         op = mPUNCTUATION(next(ps))
         if typof(ret) === TupleH
             if closer(ps) || (isassignment(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
@@ -186,7 +186,7 @@ Handles cases where an expression - `ret` - is followed by
 `[`. Parses the following bracketed expression and modifies it's
 `.head` appropriately.
 """
-function parse_ref(ps::ParseState, @nospecialize(ret))
+function parse_ref(ps::ParseState, ret::EXPR)
     next(ps)
     ref = @nocloser ps inwhere parse_array(ps, true)
     if typof(ref) === Vect
@@ -225,7 +225,7 @@ parse_curly(ps, ret)
 Parses the juxtaposition of `ret` with an opening brace. Parses a comma
 seperated list.
 """
-function parse_curly(ps::ParseState, ret)
+function parse_curly(ps::ParseState, ret::EXPR)
     args = EXPR[ret, mPUNCTUATION(next(ps))]
     parse_comma_sep(ps, args, true)
     accept_rbrace(ps, args)

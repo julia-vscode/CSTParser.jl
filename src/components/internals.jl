@@ -95,7 +95,7 @@ function parse_ranges(ps::ParseState, allowfilter = false)
     return arg
 end
 
-function is_range(x)
+function is_range(x::EXPR)
     typof(x) === BinaryOpCall && (is_eq(x.args[2]) || is_in(x.args[2]) || is_elof(x.args[2]))
 end
 
@@ -104,7 +104,7 @@ end
 
 Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
 """
-function parse_call(ps::ParseState, ret, ismacro = false)
+function parse_call(ps::ParseState, ret::EXPR, ismacro = false)
     sb = ps.nt.startbyte - ret.fullspan
     if typof(ret) === IDENTIFIER && valof(ret) == "new" && :struct in ps.closer.cc
         ret = mKEYWORD(Tokens.NEW, ret.fullspan, ret.span)
@@ -191,7 +191,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw = true, block = 
     return # args
 end
 
-function parse_parameters(ps, args::Vector{EXPR}, args1::Vector{EXPR} = EXPR[]; usekw = true)
+function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR} = EXPR[]; usekw = true)
     if isempty(args1)
         sb = ps.nt.startbyte
         isfirst = true
@@ -286,7 +286,7 @@ parse_generator(ps)
 Having hit `for` not at the beginning of an expression return a generator.
 Comprehensions are parsed as SQUAREs containing a generator.
 """
-function parse_generator(ps::ParseState, @nospecialize ret)
+function parse_generator(ps::ParseState, ret::EXPR)
     kw = mKEYWORD(next(ps))
     ret = EXPR(Generator, EXPR[ret, kw])
     ranges = @closesquare ps parse_ranges(ps, true)

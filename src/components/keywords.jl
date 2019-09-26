@@ -1,5 +1,4 @@
-
-function parse_kw(ps)
+function parse_kw(ps::ParseState)
     k = kindof(ps.t)
     if k == Tokens.IF
         return @default ps @closer ps block parse_if(ps)
@@ -351,7 +350,7 @@ Parse an `if` block.
     return ret
 end
 
-function is_wrapped_assignment(x)
+function is_wrapped_assignment(x::EXPR)
     if is_assignment(x)
         return true
     elseif typof(x) === CSTParser.InvisBrackets && x.args isa Vector{EXPR} && length(x.args) == 3
@@ -434,7 +433,7 @@ end
     return setscope!(ret)
 end
 
-@addctx :do function parse_do(ps::ParseState, @nospecialize(ret))
+@addctx :do function parse_do(ps::ParseState, ret::EXPR)
     kw = mKEYWORD(next(ps))
 
     args = EXPR(TupleH, EXPR[])
@@ -492,7 +491,7 @@ function parse_mutable(ps::ParseState)
     return setscope!(ret)
 end
 
-function markparameters!(sig)
+function markparameters!(sig::EXPR)
     signame = rem_where_subtype(sig)
     if typof(signame) === Curly
         for i = 3:length(signame.args) - 1
@@ -504,7 +503,7 @@ function markparameters!(sig)
     return sig
 end
 
-@addctx :struct function parse_struct(ps::ParseState, mutable)
+@addctx :struct function parse_struct(ps::ParseState, mutable::Bool)
     sb = ps.t.startbyte
     kw = mKEYWORD(ps)
     sig = @closer ps ws parse_expression(ps)    

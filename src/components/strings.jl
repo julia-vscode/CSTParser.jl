@@ -30,7 +30,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
 
     lcp = nothing
     exprs_to_adjust = []
-    function adjust_lcp(expr, last = false)
+    function adjust_lcp(expr::EXPR, last = false)
         if isliteral(expr)
             push!(exprs_to_adjust, expr)
             str = valof(expr)
@@ -193,4 +193,4 @@ function adjustspan(x::EXPR)
     return x
 end
 
-dropleadlingnewline(x) = mLITERAL(x.fullspan, x.span, valof(x)[2:end], kindof(x))
+dropleadlingnewline(x::EXPR) = mLITERAL(x.fullspan, x.span, valof(x)[2:end], kindof(x))

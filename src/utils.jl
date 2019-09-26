@@ -230,7 +230,7 @@ is_float(x) = isliteral(x) && kindof(x) == Tokens.FLOAT
 is_number(x) = isliteral(x) && (kindof(x) == Tokens.INTEGER || kindof(x) == Tokens.FLOAT)
 is_nothing(x) = isliteral(x) && kindof(x) == Tokens.NOTHING
 
-isajuxtaposition(ps::ParseState, ret) = ((is_number(ret) && (kindof(ps.nt) == Tokens.IDENTIFIER || kindof(ps.nt) == Tokens.LPAREN || kindof(ps.nt) == Tokens.CMD || kindof(ps.nt) == Tokens.STRING || kindof(ps.nt) == Tokens.TRIPLE_STRING)) || 
+isajuxtaposition(ps::ParseState, ret::EXPR) = ((is_number(ret) && (kindof(ps.nt) == Tokens.IDENTIFIER || kindof(ps.nt) == Tokens.LPAREN || kindof(ps.nt) == Tokens.CMD || kindof(ps.nt) == Tokens.STRING || kindof(ps.nt) == Tokens.TRIPLE_STRING)) || 
         ((typof(ret) === UnaryOpCall && is_prime(ret.args[2]) && kindof(ps.nt) == Tokens.IDENTIFIER) ||
         ((kindof(ps.t) == Tokens.RPAREN || kindof(ps.t) == Tokens.RSQUARE) && (kindof(ps.nt) == Tokens.IDENTIFIER || kindof(ps.nt) == Tokens.CMD)) ||
         ((kindof(ps.t) == Tokens.STRING || kindof(ps.t) == Tokens.TRIPLE_STRING) && (kindof(ps.nt) == Tokens.STRING || kindof(ps.nt) == Tokens.TRIPLE_STRING)))) || ((kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT) || kindof(ps.t) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && kindof(ps.nt) == Tokens.IDENTIFIER)
