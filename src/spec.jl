@@ -105,26 +105,26 @@ ErrorToken)
 
 const NoKind = Tokenize.Tokens.begin_keywords
 
-mutable struct Binding
-    name::String
-    val
-    t
-    refs::Vector
-    overwrites::Union{Nothing,Binding}
-end
-function Binding(x)
-    Binding(str_value(get_name(x)), x, nothing, [], nothing)
-end
+# mutable struct Binding
+#     name::String
+#     val
+#     t
+#     refs::Vector
+#     overwrites::Union{Nothing,Binding}
+# end
+# function Binding(x)
+#     Binding(str_value(get_name(x)), x, nothing, [], nothing)
+# end
 
 
-mutable struct Scope
-    parent::Union{Nothing,Scope}
-    names::Dict{String,Binding}
-    modules::Union{Nothing,Dict{String,Any}}
-    ismodule::Bool
-end
+# mutable struct Scope
+#     parent::Union{Nothing,Scope}
+#     names::Dict{String,Binding}
+#     modules::Union{Nothing,Dict{String,Any}}
+#     ismodule::Bool
+# end
 
-Scope() = Scope(nothing, Dict{String,Binding}(), nothing, false)
+# Scope() = Scope(nothing, Dict{String,Binding}(), nothing, false)
 
 mutable struct EXPR
     typ::Head
@@ -135,13 +135,14 @@ mutable struct EXPR
     kind::Tokenize.Tokens.Kind
     dot::Bool
     parent::Union{Nothing,EXPR}
-    scope::Union{Nothing,Scope}
-    binding::Union{Nothing,Binding}
-    ref
+    meta
+    # scope::Union{Nothing,Scope}
+    # binding::Union{Nothing,Binding}
+    # ref
 end
 
 function EXPR(T::Head, args::Vector{EXPR}, fullspan::Int, span::Int)
-    ex = EXPR(T, args, fullspan, span, nothing, NoKind, false, nothing, nothing, nothing, nothing)
+    ex = EXPR(T, args, fullspan, span, nothing, NoKind, false, nothing, nothing)
     for c in args
         setparent!(c, ex)
     end
@@ -157,18 +158,18 @@ end
 
 
 
-@noinline mIDENTIFIER(ps::ParseState) = EXPR(IDENTIFIER, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), NoKind, false, nothing, nothing, nothing, nothing)
+@noinline mIDENTIFIER(ps::ParseState) = EXPR(IDENTIFIER, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), NoKind, false, nothing, nothing)
 
-mPUNCTUATION(kind::Tokens.Kind, fullspan::Int, span::Int) = EXPR(PUNCTUATION, nothing, fullspan, span, nothing, kind, false, nothing, nothing, nothing, nothing)
-@noinline mPUNCTUATION(ps::ParseState) = EXPR(PUNCTUATION, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, kindof(ps.t), false, nothing, nothing, nothing, nothing)
+mPUNCTUATION(kind::Tokens.Kind, fullspan::Int, span::Int) = EXPR(PUNCTUATION, nothing, fullspan, span, nothing, kind, false, nothing, nothing)
+@noinline mPUNCTUATION(ps::ParseState) = EXPR(PUNCTUATION, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, kindof(ps.t), false, nothing, nothing)
 
-mOPERATOR(fullspan::Int, span::Int, kind::Tokens.Kind, dotop::Bool) = EXPR(OPERATOR, nothing, fullspan, span, nothing, kind, dotop, nothing, nothing, nothing, nothing)
-@noinline mOPERATOR(ps::ParseState) = EXPR(OPERATOR, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, ps.t.suffix ? val(ps.t, ps) : nothing, kindof(ps.t), ps.t.dotop, nothing, nothing, nothing, nothing)
+mOPERATOR(fullspan::Int, span::Int, kind::Tokens.Kind, dotop::Bool) = EXPR(OPERATOR, nothing, fullspan, span, nothing, kind, dotop, nothing, nothing)
+@noinline mOPERATOR(ps::ParseState) = EXPR(OPERATOR, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, ps.t.suffix ? val(ps.t, ps) : nothing, kindof(ps.t), ps.t.dotop, nothing, nothing)
 
-mKEYWORD(kind::Tokens.Kind, fullspan::Int, span::Int) = EXPR(KEYWORD, nothing, fullspan, span, nothing, kind, false, nothing, nothing, nothing, nothing)
-@noinline mKEYWORD(ps::ParseState) = EXPR(KEYWORD, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, kindof(ps.t), false, nothing, nothing, nothing, nothing)
+mKEYWORD(kind::Tokens.Kind, fullspan::Int, span::Int) = EXPR(KEYWORD, nothing, fullspan, span, nothing, kind, false, nothing, nothing)
+@noinline mKEYWORD(ps::ParseState) = EXPR(KEYWORD, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, kindof(ps.t), false, nothing, nothing)
 
-mLITERAL(fullspan::Int, span::Int, val::String, kind::Tokens.Kind) = EXPR(LITERAL, nothing, fullspan, span, val, kind, false, nothing, nothing, nothing, nothing)
+mLITERAL(fullspan::Int, span::Int, val::String, kind::Tokens.Kind) = EXPR(LITERAL, nothing, fullspan, span, val, kind, false, nothing, nothing)
 @noinline function mLITERAL(ps::ParseState) 
     if kindof(ps.t) == Tokens.STRING || kindof(ps.t) == Tokens.TRIPLE_STRING ||
         kindof(ps.t) == Tokens.CMD || kindof(ps.t) == Tokens.TRIPLE_CMD
@@ -182,7 +183,7 @@ end
 
 span(x::EXPR) = x.span
 
-function update_span!(x::EXPR) end
+function update_span!(x) end
 function update_span!(x::EXPR)
     (x.args isa Nothing || isempty(x.args)) && return
     x.fullspan = 0
@@ -247,7 +248,7 @@ function INSTANCE(ps::ParseState)
     elseif ispunctuation(ps.t)
         return mPUNCTUATION(ps)
     elseif kindof(ps.t) == Tokens.ERROR
-        return EXPR(ErrorToken, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), NoKind, false, nothing, nothing, nothing, Unknown)
+        return EXPR(ErrorToken, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), NoKind, false, nothing, Unknown)
     else
         ps.errored = true
         return mErrorToken(Unknown)
@@ -255,19 +256,19 @@ function INSTANCE(ps::ParseState)
 end
 
 
-mutable struct File
-    imports
-    includes::Vector{Tuple{String,Any}}
-    path::String
-    ast::EXPR
-    errors
-end
-File(path::String) = File([], [], path, EXPR(FileH, EXPR[]), [])
+# mutable struct File
+#     imports
+#     includes::Vector{Tuple{String,Any}}
+#     path::String
+#     ast::EXPR
+#     errors
+# end
+# File(path::String) = File([], [], path, EXPR(FileH, EXPR[]), [])
 
-mutable struct Project
-    path::String
-    files::Vector{File}
-end
+# mutable struct Project
+#     path::String
+#     files::Vector{File}
+# end
 
 
 
@@ -301,8 +302,8 @@ end
 
 
 
-mErrorToken(k::ErrorKind) = EXPR(ErrorToken, EXPR[], 0, 0, nothing, NoKind, false, nothing, nothing, nothing, k)
-mErrorToken(x::EXPR, k) = EXPR(ErrorToken, EXPR[x], x.fullspan, x.span, nothing, NoKind, false, nothing, nothing, nothing, k)
+mErrorToken(k::ErrorKind) = EXPR(ErrorToken, EXPR[], 0, 0, nothing, NoKind, false, nothing, k)
+mErrorToken(x::EXPR, k) = EXPR(ErrorToken, EXPR[x], x.fullspan, x.span, nothing, NoKind, false, nothing, k)
 
 TRUE() = mLITERAL(0, 0, "", Tokens.TRUE)
 FALSE() = mLITERAL(0, 0, "", Tokens.FALSE)
@@ -314,127 +315,129 @@ valof(x::EXPR) = x.val
 kindof(x::EXPR) = x.kind
 kindof(t::Tokens.AbstractToken) = t.kind
 parentof(x::EXPR) = x.parent
-parentof(s::Scope) = s.parent
-scopeof(x::EXPR) = x.scope
-bindingof(x::EXPR) = x.binding
-refof(x::EXPR) = x.ref
+errorof(x::EXPR) = errorof(x.meta)
+errorof(x) = x
+# parentof(s::Scope) = s.parent
+# scopeof(x::EXPR) = x.scope
+# bindingof(x::EXPR) = x.binding
+# refof(x::EXPR) = x.ref
 
 function setparent!(c, p)
     c.parent = p
     return c
 end
 
-function setscope!(x::EXPR, s = Scope())
-    x.scope = s
-    return x
-end
+# function setscope!(x::EXPR, s = Scope())
+#     x.scope = s
+#     return x
+# end
 
-function setref!(x::EXPR, r)
-    x.ref = r
-    return x
-end
-
-
-function setbinding!(x::EXPR)
-    if typof(x) === TupleH
-        for arg in x.args
-            typof(arg) === PUNCTUATION && continue    
-            setbinding!(arg)
-        end
-    elseif typof(x) === Kw
-        setbinding!(x.args[1], x)
-    elseif typof(x) === Parameters
-        for arg in x.args
-            typof(arg) === PUNCTUATION && continue    
-            setbinding!(arg)
-        end
-    elseif typof(x) === InvisBrackets
-        setbinding!(rem_invis(x))
-    elseif typof(x) == UnaryOpCall && kindof(x.args[1]) === Tokens.DECLARATION
-        return x
-    else
-        x.binding = Binding(x)
-    end
-    return x
-end
-
-function setbinding!(x::EXPR, binding)
-    if typof(x) === TupleH
-        for arg in x.args
-            typof(arg) === PUNCTUATION && continue    
-            setbinding!(arg, binding)
-        end
-    elseif typof(x) === InvisBrackets
-        setbinding!(rem_invis(x), binding)
-    elseif typof(x) === IDENTIFIER || (typof(x) === BinaryOpCall && kindof(x.args[2]) === Tokens.DECLARATION)
-        x.binding = Binding(str_value(get_name(x)), binding, nothing, [], nothing)
-    end
-    return x
-end
+# function setref!(x::EXPR, r)
+#     x.ref = r
+#     return x
+# end
 
 
+# function setbinding!(x::EXPR)
+#     if typof(x) === TupleH
+#         for arg in x.args
+#             typof(arg) === PUNCTUATION && continue    
+#             setbinding!(arg)
+#         end
+#     elseif typof(x) === Kw
+#         setbinding!(x.args[1], x)
+#     elseif typof(x) === Parameters
+#         for arg in x.args
+#             typof(arg) === PUNCTUATION && continue    
+#             setbinding!(arg)
+#         end
+#     elseif typof(x) === InvisBrackets
+#         setbinding!(rem_invis(x))
+#     elseif typof(x) == UnaryOpCall && kindof(x.args[1]) === Tokens.DECLARATION
+#         return x
+#     else
+#         x.binding = Binding(x)
+#     end
+#     return x
+# end
 
-function setiterbinding!(iter::EXPR)
-    if typof(iter) === BinaryOpCall && kindof(iter.args[2]) in (Tokens.EQ, Tokens.IN, Tokens.ELEMENT_OF)
-        setbinding!(iter.args[1], iter)
-    end
-    return iter
-end
+# function setbinding!(x::EXPR, binding)
+#     if typof(x) === TupleH
+#         for arg in x.args
+#             typof(arg) === PUNCTUATION && continue    
+#             setbinding!(arg, binding)
+#         end
+#     elseif typof(x) === InvisBrackets
+#         setbinding!(rem_invis(x), binding)
+#     elseif typof(x) === IDENTIFIER || (typof(x) === BinaryOpCall && kindof(x.args[2]) === Tokens.DECLARATION)
+#         x.binding = Binding(str_value(get_name(x)), binding, nothing, [], nothing)
+#     end
+#     return x
+# end
 
-function mark_sig_args!(x::EXPR)
-    if typof(x) === Call || typof(x) === TupleH
-        if typof(x.args[1]) === InvisBrackets && typof(x.args[1].args[2]) === BinaryOpCall && kindof(x.args[1].args[2].args[2]) === Tokens.DECLARATION
-            setbinding!(x.args[1].args[2])
-        end
-        for i = 2:length(x.args) - 1
-            a = x.args[i]
-            if typof(a) === Parameters
-                for j = 1:length(a.args)
-                    aa = a.args[j]
-                    if !(typof(aa) === PUNCTUATION)
-                        setbinding!(aa)
-                    end
-                end
-            elseif !(typof(a) === PUNCTUATION)
-                setbinding!(a)
-            end
-        end
-    elseif typof(x) === WhereOpCall
-        for i in 3:length(x.args)
-            if !(typof(x.args[i]) === PUNCTUATION)
-                setbinding!(x.args[i])
-            end
-        end
-        mark_sig_args!(x.args[1])
-    elseif typof(x) === BinaryOpCall
-        if kindof(x.args[2]) == Tokens.DECLARATION
-            mark_sig_args!(x.args[1])
-        else
-            setbinding!(x.args[1])
-            setbinding!(x.args[3])
-        end
-    elseif typof(x) == UnaryOpCall && typof(x.args[2]) == InvisBrackets
-        setbinding!(x.args[2].args[2])
-    end
-end
+
+
+# function setiterbinding!(iter::EXPR)
+#     if typof(iter) === BinaryOpCall && kindof(iter.args[2]) in (Tokens.EQ, Tokens.IN, Tokens.ELEMENT_OF)
+#         setbinding!(iter.args[1], iter)
+#     end
+#     return iter
+# end
+
+# function mark_sig_args!(x::EXPR)
+#     if typof(x) === Call || typof(x) === TupleH
+#         if typof(x.args[1]) === InvisBrackets && typof(x.args[1].args[2]) === BinaryOpCall && kindof(x.args[1].args[2].args[2]) === Tokens.DECLARATION
+#             setbinding!(x.args[1].args[2])
+#         end
+#         for i = 2:length(x.args) - 1
+#             a = x.args[i]
+#             if typof(a) === Parameters
+#                 for j = 1:length(a.args)
+#                     aa = a.args[j]
+#                     if !(typof(aa) === PUNCTUATION)
+#                         setbinding!(aa)
+#                     end
+#                 end
+#             elseif !(typof(a) === PUNCTUATION)
+#                 setbinding!(a)
+#             end
+#         end
+#     elseif typof(x) === WhereOpCall
+#         for i in 3:length(x.args)
+#             if !(typof(x.args[i]) === PUNCTUATION)
+#                 setbinding!(x.args[i])
+#             end
+#         end
+#         mark_sig_args!(x.args[1])
+#     elseif typof(x) === BinaryOpCall
+#         if kindof(x.args[2]) == Tokens.DECLARATION
+#             mark_sig_args!(x.args[1])
+#         else
+#             setbinding!(x.args[1])
+#             setbinding!(x.args[3])
+#         end
+#     elseif typof(x) == UnaryOpCall && typof(x.args[2]) == InvisBrackets
+#         setbinding!(x.args[2].args[2])
+#     end
+# end
 Base.getindex(x::EXPR, i) = x.args[i]
 
-function strip_where_scopes(sig::EXPR)
-    if typof(sig) === WhereOpCall
-        setscope!(sig, nothing)
-        strip_where_scopes(sig.args[1])
-    end
-end
+# function strip_where_scopes(sig::EXPR)
+#     if typof(sig) === WhereOpCall
+#         setscope!(sig, nothing)
+#         strip_where_scopes(sig.args[1])
+#     end
+# end
 
-function mark_typealias_bindings!(x::EXPR)
-    x.binding = Binding(str_value(get_name(x.args[1])), x, nothing, [], nothing)
-    setscope!(x)
-    for i = 2:length(x.args[1].args)
-        if typof(x.args[1].args[i]) === IDENTIFIER
-            setbinding!(x.args[1].args[i])
-        elseif typof(x.args[1].args[i]) === BinaryOpCall && kindof(x.args[1].args[i].args[2]) === Tokens.ISSUBTYPE && typof(x.args[1].args[i].args[1]) === IDENTIFIER
-            setbinding!(x.args[1].args[i].args[1])
-        end
-    end
-    return x
-end
+# function mark_typealias_bindings!(x::EXPR)
+#     x.binding = Binding(str_value(get_name(x.args[1])), x, nothing, [], nothing)
+#     setscope!(x)
+#     for i = 2:length(x.args[1].args)
+#         if typof(x.args[1].args[i]) === IDENTIFIER
+#             setbinding!(x.args[1].args[i])
+#         elseif typof(x.args[1].args[i]) === BinaryOpCall && kindof(x.args[1].args[i].args[2]) === Tokens.ISSUBTYPE && typof(x.args[1].args[i].args[1]) === IDENTIFIER
+#             setbinding!(x.args[1].args[i].args[1])
+#         end
+#     end
+#     return x
+# end

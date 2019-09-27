@@ -183,7 +183,7 @@ function parse_unary_colon(ps::ParseState, op::EXPR)
         ret = op
     else
         arg = @precedence ps 20 parse_expression(ps)
-        if typof(arg) === InvisBrackets && length(arg.args) == 3 && typof(arg.args[2]) === ErrorToken && refof(arg.args[2]) === UnexpectedAssignmentOp
+        if typof(arg) === InvisBrackets && length(arg.args) == 3 && typof(arg.args[2]) === ErrorToken && errorof(arg.args[2]) === UnexpectedAssignmentOp
             arg.args[2] = arg.args[2].args[1]
             setparent!(arg.args[2], arg)
         end
@@ -199,18 +199,19 @@ function parse_operator_eq(ps::ParseState, ret::EXPR, op::EXPR)
         if !(typof(nextarg) === Begin || (typof(nextarg) === InvisBrackets && typof(nextarg.args[2]) === Block))
             nextarg = EXPR(Block, EXPR[nextarg])
         end
-        strip_where_scopes(ret)
-        mark_sig_args!(ret)
-        ret = setscope!(mBinaryOpCall(ret, op, nextarg))
-        setbinding!(ret)
+        # strip_where_scopes(ret)
+        # mark_sig_args!(ret)
+        # ret = setscope!(mBinaryOpCall(ret, op, nextarg))
+        # setbinding!(ret)
+        ret = mBinaryOpCall(ret, op, nextarg)
     else
         ret = mBinaryOpCall(ret, op, nextarg)
-        if typof(ret.args[1]) === Curly
-            mark_typealias_bindings!(ret)
-            setscope!(ret)
-        else
-            setbinding!(ret.args[1], ret)
-        end
+        # if typof(ret.args[1]) === Curly
+        #     mark_typealias_bindings!(ret)
+        #     setscope!(ret)
+        # else
+        #     setbinding!(ret.args[1], ret)
+        # end
     end
     return ret
 end
@@ -286,15 +287,15 @@ function parse_operator_where(ps::ParseState, ret::EXPR, op::EXPR, setscope = tr
     else
         args = EXPR[nextarg]
     end
-    for a in args 
-        if typof(a) !== PUNCTUATION
-            setbinding!(a)
-        end
-    end
+    # for a in args 
+    #     if typof(a) !== PUNCTUATION
+    #         setbinding!(a)
+    #     end
+    # end
     ret = mWhereOpCall(ret, op, args)
-    if setscope
-        setscope!(ret)
-    end
+    # if setscope
+    #     setscope!(ret)
+    # end
     return ret
 end
 
@@ -351,8 +352,9 @@ function parse_operator_anon_func(ps::ParseState, ret::EXPR, op::EXPR)
     if !(typof(arg) === Begin || (typof(arg) === InvisBrackets && typof(arg.args[2]) === Block))
         arg = EXPR(Block, EXPR[arg])
     end
-    setbinding!(ret)
-    return setscope!(mBinaryOpCall(ret, op, arg))
+    # setbinding!(ret)
+    # return setscope!(mBinaryOpCall(ret, op, arg))
+    return mBinaryOpCall(ret, op, arg)
 end
 
 function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)

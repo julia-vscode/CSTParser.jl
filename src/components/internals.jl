@@ -64,7 +64,7 @@ end
 function parse_ranges(ps::ParseState, allowfilter = false)
     startbyte = ps.nt.startbyte
     arg = parse_iter(ps)
-    setiterbinding!(arg)
+    # setiterbinding!(arg)
     if (typof(arg) === Outer && !is_range(arg.args[2])) || !is_range(arg)
         arg = mErrorToken(arg, InvalidIterator)
         ps.errored = true
@@ -73,7 +73,7 @@ function parse_ranges(ps::ParseState, allowfilter = false)
         while kindof(ps.nt) == Tokens.COMMA
             accept_comma(ps, arg)
             nextarg = parse_iter(ps)
-            setiterbinding!(nextarg)
+            # setiterbinding!(nextarg)
             if (typof(nextarg) === Outer && !is_range(nextarg.args[2])) || !is_range(nextarg)
                 arg = mErrorToken(arg, InvalidIterator)
                 ps.errored = true
@@ -302,7 +302,8 @@ function parse_generator(ps::ParseState, ret::EXPR)
         ret = EXPR(Flatten, EXPR[ret])
     end
 
-    return setscope!(ret)
+    # return setscope!(ret)
+    return ret
 end
 
 

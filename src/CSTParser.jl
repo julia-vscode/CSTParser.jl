@@ -269,25 +269,25 @@ function _continue_doc_parse(x::EXPR, ps::ParseState)
     ps.t.endpos[1] + 1 <= ps.nt.startpos[1]
 end
 
-function parse_file(path::String)
-    x = parse(read(path, String), true)
-    File([], [], path, x, [])
-end
+# function parse_file(path::String)
+#     x = parse(read(path, String), true)
+#     File([], [], path, x, [])
+# end
 
-function parse_directory(path::String, proj = Project(path, []))
-    for f in readdir(path)
-        if isfile(joinpath(path, f)) && endswith(f, ".jl")
-            try
-                push!(proj.files, parse_file(joinpath(path, f)))
-            catch
-                println("$f failed to parse")
-            end
-        elseif isdir(joinpath(path, f))
-            parse_directory(joinpath(path, f), proj)
-        end
-    end
-    proj
-end
+# function parse_directory(path::String, proj = Project(path, []))
+#     for f in readdir(path)
+#         if isfile(joinpath(path, f)) && endswith(f, ".jl")
+#             try
+#                 push!(proj.files, parse_file(joinpath(path, f)))
+#             catch
+#                 println("$f failed to parse")
+#             end
+#         elseif isdir(joinpath(path, f))
+#             parse_directory(joinpath(path, f), proj)
+#         end
+#     end
+#     proj
+# end
 
 include("precompile.jl")
 _precompile()

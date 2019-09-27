@@ -7,9 +7,11 @@ function parse_kw(ps::ParseState)
     elseif k == Tokens.TRY
         return @default ps @closer ps block parse_try(ps)
     elseif k == Tokens.FUNCTION
-        return setbinding!(@default ps @closer ps block parse_function(ps))
+        # return setbinding!(@default ps @closer ps block parse_function(ps))
+        return @default ps @closer ps block parse_function(ps)
     elseif k == Tokens.MACRO
-        return setbinding!(@default ps @closer ps block parse_macro(ps))
+        # return setbinding!(@default ps @closer ps block parse_macro(ps))
+        return @default ps @closer ps block parse_macro(ps)
     elseif k == Tokens.BEGIN
         return @default ps @closer ps block parse_begin(ps)
     elseif k == Tokens.QUOTE
@@ -31,7 +33,8 @@ function parse_kw(ps::ParseState)
     elseif k == Tokens.EXPORT
         return parse_export(ps)
     elseif k == Tokens.MODULE || k == Tokens.BAREMODULE
-        return setbinding!(@default ps @closer ps block parse_module(ps))
+        # return setbinding!(@default ps @closer ps block parse_module(ps))
+        return @default ps @closer ps block parse_module(ps)
     elseif k == Tokens.CONST
         return @default ps parse_const(ps)
     elseif k == Tokens.GLOBAL
@@ -59,9 +62,11 @@ function parse_kw(ps::ParseState)
     elseif k == Tokens.TYPE
         return mIDENTIFIER(ps)
     elseif k == Tokens.STRUCT
-        return setbinding!(@default ps @closer ps block parse_struct(ps, false))
+        # return setbinding!(@default ps @closer ps block parse_struct(ps, false))
+        return @default ps @closer ps block parse_struct(ps, false)
     elseif k == Tokens.MUTABLE
-        return setbinding!(@default ps @closer ps block parse_mutable(ps))
+        # return setbinding!(@default ps @closer ps block parse_mutable(ps))
+        return @default ps @closer ps block parse_mutable(ps)
     elseif k == Tokens.OUTER
         return mIDENTIFIER(ps)
     else
@@ -113,7 +118,8 @@ end
         kw2 = mKEYWORD(next(ps))
         sig = @closer ps block parse_expression(ps)
         markparameters!(sig)
-        ret = setbinding!(setscope!(EXPR(Abstract, EXPR[kw1, kw2, sig, accept_end(ps)])))
+        # ret = setbinding!(setscope!(EXPR(Abstract, EXPR[kw1, kw2, sig, accept_end(ps)])))
+        ret = EXPR(Abstract, EXPR[kw1, kw2, sig, accept_end(ps)])
     else
         ret = mIDENTIFIER(ps)
     end
@@ -128,7 +134,8 @@ end
         markparameters!(sig)
         arg = @closer ps block parse_expression(ps)
 
-        ret = setbinding!(setscope!(EXPR(Primitive, EXPR[kw1, kw2, sig, arg, accept_end(ps)])))
+        # ret = setbinding!(setscope!(EXPR(Primitive, EXPR[kw1, kw2, sig, arg, accept_end(ps)])))
+        ret = EXPR(Primitive, EXPR[kw1, kw2, sig, arg, accept_end(ps)])
     else
         ret = mIDENTIFIER(ps)
     end
@@ -222,7 +229,7 @@ end
         # sig = @closer ps inwhere @closer ps ws parse_compound(ps, sig)
         sig = @closer ps inwhere @closer ps ws parse_operator_where(ps, sig, INSTANCE(next(ps)), false)
     end
-    mark_sig_args!(sig)
+    # mark_sig_args!(sig)
     blockargs = parse_block(ps)
 
     if isempty(blockargs)
@@ -240,14 +247,15 @@ end
         push!(ret, a)
     end
     accept_end(ps, ret)
-    return setscope!(ret)
+    # return setscope!(ret)
+    return ret
 end
 
 @addctx :macro function parse_macro(ps::ParseState)
     sb  = ps.t.startbyte
     kw = mKEYWORD(ps)
     sig = @closer ps inwhere @closer ps ws parse_expression(ps)
-    mark_sig_args!(sig)
+    # mark_sig_args!(sig)
     sb1  = ps.nt.startbyte
     blockargs = parse_block(ps)
 
@@ -266,7 +274,8 @@ end
         fullspan1 = ps.nt.startbyte - sb
         ret = EXPR(Macro, EXPR[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
     end
-    return setscope!(ret)
+    # return setscope!(ret)
+    return ret
 end
 
 # loops
@@ -285,7 +294,8 @@ end
     end
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return setscope!(EXPR(For, EXPR[kw, ranges, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span))
+    # return setscope!(EXPR(For, EXPR[kw, ranges, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span))
+    return EXPR(For, EXPR[kw, ranges, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
 end
 
 @addctx :while function parse_while(ps::ParseState)
@@ -303,7 +313,8 @@ end
     end
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return setscope!(EXPR(While, EXPR[kw, cond, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span))
+    # return setscope!(EXPR(While, EXPR[kw, cond, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span))
+    return EXPR(While, EXPR[kw, cond, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
 end
 
 # control flow
@@ -379,7 +390,8 @@ end
     push!(args, EXPR(Block, blockargs))
     accept_end(ps, args)
 
-    return setscope!(EXPR(Let, args))
+    # return setscope!(EXPR(Let, args))
+    return EXPR(Let, args)
 end
 
 @addctx :try function parse_try(ps::ParseState)
@@ -402,7 +414,7 @@ end
                 caught = FALSE()
             else
                 caught = @closer ps ws parse_expression(ps)
-                setbinding!(caught)
+                # setbinding!(caught)caught
             end
             
             catchblockargs = parse_block(ps, EXPR[], (Tokens.END, Tokens.FINALLY))
@@ -430,7 +442,8 @@ end
     end
 
     push!(ret, accept_end(ps))
-    return setscope!(ret)
+    # return setscope!(ret)
+    return ret
 end
 
 @addctx :do function parse_do(ps::ParseState, ret::EXPR)
@@ -439,7 +452,7 @@ end
     args = EXPR(TupleH, EXPR[])
     @closer ps comma @closer ps block while !closer(ps)
         a = parse_expression(ps)
-        setbinding!(a)
+        # setbinding!(a)
         push!(args, a)
         if kindof(ps.nt) == Tokens.COMMA
             accept_comma(ps, args)
@@ -448,7 +461,8 @@ end
 
     blockargs = parse_block(ps)
 
-    return setscope!(EXPR(Do, EXPR[ret, kw, args, EXPR(Block, blockargs), accept_end(ps)]))
+    # return setscope!(EXPR(Do, EXPR[ret, kw, args, EXPR(Block, blockargs), accept_end(ps)]))
+    return EXPR(Do, EXPR[ret, kw, args, EXPR(Block, blockargs), accept_end(ps)])
 end
 
 # modules
@@ -474,7 +488,8 @@ end
     end
     ender = accept_end(ps)
     fullspan1 = ps.nt.startbyte - sb
-    return setscope!(EXPR(is_module(kw) ? ModuleH : BareModule, EXPR[kw, arg, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span), Scope(nothing, Dict{String,Binding}(), nothing, true))
+    # return setscope!(EXPR(is_module(kw) ? ModuleH : BareModule, EXPR[kw, arg, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span), Scope(nothing, Dict{String,Binding}(), nothing, true))
+    return EXPR(is_module(kw) ? ModuleH : BareModule, EXPR[kw, arg, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
 end
 
 
@@ -488,7 +503,8 @@ function parse_mutable(ps::ParseState)
     else
         ret = mIDENTIFIER(ps)
     end
-    return setscope!(ret)
+    # return setscope!(ret)
+    return ret
 end
 
 function markparameters!(sig::EXPR)
@@ -496,7 +512,7 @@ function markparameters!(sig::EXPR)
     if typof(signame) === Curly
         for i = 3:length(signame.args) - 1
             if !(typof(signame.args[i]) === PUNCTUATION)
-                setbinding!(signame.args[i])
+                # setbinding!(signame.args[i])
             end
         end
     end
@@ -507,13 +523,13 @@ end
     sb = ps.t.startbyte
     kw = mKEYWORD(ps)
     sig = @closer ps ws parse_expression(ps)    
-    markparameters!(sig)
+    # markparameters!(sig)
 
     sb1 = ps.nt.startbyte
     blockargs = parse_block(ps)
-    for a in blockargs
-        setbinding!(a)
-    end
+    # for a in blockargs
+    #     setbinding!(a)
+    # end
     if isempty(blockargs)
         block = EXPR(Block, blockargs, 0, 0)
     else
@@ -525,7 +541,8 @@ end
     if mutable
         ret = EXPR(Mutable, EXPR[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
     else
-        ret = setscope!(EXPR(Struct, EXPR[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span))
+        # ret = setscope!(EXPR(Struct, EXPR[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span))
+        ret = EXPR(Struct, EXPR[kw, sig, block, ender], fullspan1, fullspan1 - ender.fullspan + ender.span)
     end
     return ret
 end
