@@ -1,4 +1,4 @@
-import Base: Expr
+import Core: Expr
 
 # Terminals
 function julia_normalization_map(c::Int32, x::Ptr{Nothing})::Int32

@@ -5,17 +5,6 @@ macro addctx(t, func)
     return esc(func)
 end
 
-# macro enterctx(ps, t)
-#     :(push!($(esc(ps)).closer.cc, $t))
-# end
-
-# macro exitctx(ps, ret)
-#     quote
-#         pop!($(esc(ps)).closer.cc)
-#         $(esc(ret))
-#     end
-# end
-
 function accept_rparen(ps)
     if kindof(ps.nt) == Tokens.RPAREN
         return mPUNCTUATION(next(ps))

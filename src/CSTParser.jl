@@ -85,11 +85,16 @@ function parse_expression(ps::ParseState)
     return ret
 end
 
+"""
+    parse_compound(ps::ParseState, ret::EXPR)
+
+Attempts to parse a compound expression given the preceding expression `ret`.
+"""
 function parse_compound(ps::ParseState, ret::EXPR)
     if kindof(ps.nt) == Tokens.FOR
         ret = parse_generator(ps, ret)
     elseif kindof(ps.nt) == Tokens.DO
-        ret = @default ps @closer ps block parse_do(ps, ret)
+        ret = @default ps @closer ps :block parse_do(ps, ret)
     elseif isajuxtaposition(ps, ret)
         if is_number(ret) && last(valof(ret)) == '.'
             ps.errored = true
@@ -115,14 +120,14 @@ function parse_compound(ps::ParseState, ret::EXPR)
         end
     elseif kindof(ps.nt) == Tokens.LBRACE
         if isemptyws(ps.ws)
-            ret = @default ps @nocloser ps inwhere @closebrace ps parse_curly(ps, ret)
+            ret = @default ps @nocloser ps :inwhere @closebrace ps parse_curly(ps, ret)
         else
             ps.errored = true
-            ret = mErrorToken((@default ps @nocloser ps inwhere @closebrace ps parse_curly(ps, ret)), UnexpectedWhiteSpace)
+            ret = mErrorToken((@default ps @nocloser ps :inwhere @closebrace ps parse_curly(ps, ret)), UnexpectedWhiteSpace)
 
         end
     elseif kindof(ps.nt) == Tokens.LSQUARE && isemptyws(ps.ws) && !isoperator(ret)
-        ret = @default ps @nocloser ps block parse_ref(ps, ret)
+        ret = @default ps @nocloser ps :block parse_ref(ps, ret)
     elseif kindof(ps.nt) == Tokens.COMMA
         ret = parse_tuple(ps, ret)
     elseif isunaryop(ret) && kindof(ps.nt) != Tokens.EQ
@@ -155,7 +160,7 @@ Parses an expression starting with a `(`.
 """
 @addctx :paren function parse_paren(ps::ParseState)
     args = EXPR[mPUNCTUATION(ps)]
-    @closeparen ps @default ps @nocloser ps inwhere parse_comma_sep(ps, args, false, true, true)
+    @closeparen ps @default ps @nocloser ps :inwhere parse_comma_sep(ps, args, false, true, true)
 
     if length(args) == 2 && ((kindof(ps.ws) != SemiColonWS || (length(args) == 2 && typof(args[2]) === Block)) && !(typof(args[2]) === Parameters))
         accept_rparen(ps, args)
@@ -178,6 +183,9 @@ function parse(str::String, cont = false)
     return x
 end
 
+"""
+Used for top-level parsing - attaches documentation (such as this) to expressions.
+"""
 function parse_doc(ps::ParseState)
     if (kindof(ps.nt) == Tokens.STRING || kindof(ps.nt) == Tokens.TRIPLE_STRING) && !isemptyws(ps.nws)
         doc = mLITERAL(next(ps))
@@ -220,7 +228,7 @@ function parse(ps::ParseState, cont = false)
         while !ps.done
             curr_line = ps.nt.startpos[1]
             ret = parse_doc(ps)
-            if _continue_doc_parse(ret, ps)
+            if _continue_doc_parse(ps, ret)
                 push!(ret, parse_expression(ps))
             end
             # join semicolon sep items
@@ -242,7 +250,7 @@ function parse(ps::ParseState, cont = false)
         else
             curr_line = ps.nt.startpos[1]
             top = parse_doc(ps)
-            if _continue_doc_parse(top, ps)
+            if _continue_doc_parse(ps, top)
                 push!(top, parse_expression(ps))
             end
             last_line = ps.nt.startpos[1]
@@ -260,7 +268,7 @@ function parse(ps::ParseState, cont = false)
     return top, ps
 end
 
-function _continue_doc_parse(x::EXPR, ps::ParseState)
+function _continue_doc_parse(ps::ParseState, x::EXPR)
     typof(x) === MacroCall &&
     typof(x.args[1]) === MacroName &&
     length(x.args[1]) == 2 &&
@@ -268,26 +276,6 @@ function _continue_doc_parse(x::EXPR, ps::ParseState)
     length(x.args) < 3 &&
     ps.t.endpos[1] + 1 <= ps.nt.startpos[1]
 end
-
-# function parse_file(path::String)
-#     x = parse(read(path, String), true)
-#     File([], [], path, x, [])
-# end
-
-# function parse_directory(path::String, proj = Project(path, []))
-#     for f in readdir(path)
-#         if isfile(joinpath(path, f)) && endswith(f, ".jl")
-#             try
-#                 push!(proj.files, parse_file(joinpath(path, f)))
-#             catch
-#                 println("$f failed to parse")
-#             end
-#         elseif isdir(joinpath(path, f))
-#             parse_directory(joinpath(path, f), proj)
-#         end
-#     end
-#     proj
-# end
 
 include("precompile.jl")
 _precompile()
