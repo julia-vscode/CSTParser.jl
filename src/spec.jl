@@ -93,7 +93,7 @@ ErrorToken)
 @enum(ErrorKind,
     UnexpectedToken,
     CannotJuxtapose,
-    UnexpectedWhiteSpace, 
+    UnexpectedWhiteSpace,
     UnexpectedNewLine,
     ExpectedAssignment,
     UnexpectedAssignmentOp,
@@ -169,7 +169,7 @@ mKEYWORD(kind::Tokens.Kind, fullspan::Int, span::Int) = EXPR(KEYWORD, nothing, f
 @noinline mKEYWORD(ps::ParseState) = EXPR(KEYWORD, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, kindof(ps.t), false, nothing, nothing, nothing, nothing)
 
 mLITERAL(fullspan::Int, span::Int, val::String, kind::Tokens.Kind) = EXPR(LITERAL, nothing, fullspan, span, val, kind, false, nothing, nothing, nothing, nothing)
-@noinline function mLITERAL(ps::ParseState) 
+@noinline function mLITERAL(ps::ParseState)
     if kindof(ps.t) == Tokens.STRING || kindof(ps.t) == Tokens.TRIPLE_STRING ||
         kindof(ps.t) == Tokens.CMD || kindof(ps.t) == Tokens.TRIPLE_CMD
         return parse_string_or_cmd(ps)
@@ -182,7 +182,6 @@ end
 
 span(x::EXPR) = x.span
 
-function update_span!(x::EXPR) end
 function update_span!(x::EXPR)
     (x.args isa Nothing || isempty(x.args)) && return
     x.fullspan = 0
@@ -190,9 +189,9 @@ function update_span!(x::EXPR)
         x.fullspan += x.args[i].fullspan
     end
     x.span = x.fullspan - last(x.args).fullspan + last(x.args).span
-    return 
+    return
 end
-    
+
 function Base.push!(e::EXPR, arg::EXPR)
     e.span = e.fullspan + arg.span
     e.fullspan += arg.fullspan
@@ -272,14 +271,14 @@ end
 
 
 
-function mUnaryOpCall(op::EXPR, arg::EXPR) 
+function mUnaryOpCall(op::EXPR, arg::EXPR)
     fullspan = op.fullspan + arg.fullspan
     ex = EXPR(UnaryOpCall, EXPR[op, arg], fullspan, fullspan - arg.fullspan + arg.span)
     setparent!(op, ex)
     setparent!(op, ex)
     return ex
 end
-function mBinaryOpCall(arg1::EXPR, op::EXPR, arg2::EXPR) 
+function mBinaryOpCall(arg1::EXPR, op::EXPR, arg2::EXPR)
     fullspan = arg1.fullspan + op.fullspan + arg2.fullspan
     ex = EXPR(BinaryOpCall, EXPR[arg1, op, arg2], fullspan, fullspan - arg2.fullspan + arg2.span)
     setparent!(arg1, ex)
@@ -338,14 +337,14 @@ end
 function setbinding!(x::EXPR)
     if typof(x) === TupleH
         for arg in x.args
-            typof(arg) === PUNCTUATION && continue    
+            typof(arg) === PUNCTUATION && continue
             setbinding!(arg)
         end
     elseif typof(x) === Kw
         setbinding!(x.args[1], x)
     elseif typof(x) === Parameters
         for arg in x.args
-            typof(arg) === PUNCTUATION && continue    
+            typof(arg) === PUNCTUATION && continue
             setbinding!(arg)
         end
     elseif typof(x) === InvisBrackets
@@ -361,7 +360,7 @@ end
 function setbinding!(x::EXPR, binding)
     if typof(x) === TupleH
         for arg in x.args
-            typof(arg) === PUNCTUATION && continue    
+            typof(arg) === PUNCTUATION && continue
             setbinding!(arg, binding)
         end
     elseif typof(x) === InvisBrackets
