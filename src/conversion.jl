@@ -552,8 +552,6 @@ function Expr(x::EXPR)
         return ret
     elseif typof(x) === Import
         return expr_import(x, :import)
-    elseif typof(x) === ImportAll
-        return expr_import(x, :importall)
     elseif typof(x) === Using
         return expr_import(x, :using)
     elseif typof(x) === Export
