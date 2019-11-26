@@ -137,7 +137,7 @@ function parse_compound(ps::ParseState, ret::EXPR)
         ret = parse_operator(ps, ret, op)
     elseif typof(ret) === UnaryOpCall && is_prime(ret.args[2])
         # prime operator followed by an identifier has an implicit multiplication
-        nextarg = @precedence ps 11 parse_expression(ps)
+        nextarg = @precedence ps TimesOp parse_expression(ps)
         ret = mBinaryOpCall(ret, mOPERATOR(0, 0, Tokens.STAR, false), nextarg)
 # ###############################################################################
 # Everything below here is an error

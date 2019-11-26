@@ -125,7 +125,7 @@ function parse_call(ps::ParseState, ret::EXPR, ismacro = false)
     elseif typof(ret) === Curly && valof(ret.args[1]) == "new" && :struct in ps.closer.cc
         ret.args[1] = setparent!(mKEYWORD(Tokens.NEW, ret.args[1].fullspan, ret.args[1].span), ret)
     elseif is_minus(ret) || is_not(ret)
-        arg = @closer ps :unary @closer ps :inwhere @precedence ps 13 parse_expression(ps)
+        arg = @closer ps :unary @closer ps :inwhere @precedence ps PowerOp parse_expression(ps)
         if typof(arg) === TupleH
             pushfirst!(arg.args, ret)
             fullspan = ps.nt.startbyte - sb

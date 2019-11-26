@@ -4,13 +4,20 @@ const ConditionalOp = 2
 const ArrowOp       = 3
 const LazyOrOp      = 4
 const LazyAndOp     = 5
-const ComparisonOp  = 6
+const ComparisonOp  = 6 
 const PipeOp        = 7
 const ColonOp       = 8
-const PlusOp        = 9
-const BitShiftOp    = 10
-const TimesOp       = 11
-const RationalOp    = 12
+@static if Base.operator_precedence(:<<) == 12
+    const PlusOp        = 9
+    const BitShiftOp    = 10
+    const TimesOp       = 11
+    const RationalOp    = 12
+else
+    const PlusOp        = 9
+    const TimesOp       = 10
+    const RationalOp    = 11
+    const BitShiftOp    = 12
+end
 const PowerOp       = 13
 const DeclarationOp = 14
 const WhereOp       = 15
