@@ -331,14 +331,14 @@ end
 
 function get_args(x::EXPR)
     if typof(x) === IDENTIFIER
-        return []
+        return EXPR[]
     elseif defines_anon_function(x) && !(typof(x.args[1]) === TupleH)
         arg = x.args[1]
         arg = rem_invis(arg)
         arg = get_arg_name(arg)
         return [arg]
     elseif typof(x) === TupleH
-        args = []
+        args = EXPR[]
         for i = 2:length(x.args)
             arg = x.args[i]
             ispunctuation(arg) && continue
@@ -348,7 +348,7 @@ function get_args(x::EXPR)
         end
         return args
     elseif typof(x) === Do
-        args = []
+        args = EXPR[]
         for i = 1:length(x.args[3].args)
             arg = x.args[3].args[i]
             ispunctuation(arg) && continue
@@ -358,7 +358,7 @@ function get_args(x::EXPR)
         end
         return args
     elseif typof(x) === Call
-        args = []
+        args = EXPR[]
         sig = rem_where(x)
         sig = rem_decl(sig)
         if typof(sig) === Call
@@ -366,12 +366,7 @@ function get_args(x::EXPR)
                 arg = sig.args[i]
                 ispunctuation(arg) && continue
                 if typof(arg) === Parameters
-                    for j = 1:length(arg.args)
-                        parg = arg.args[j]
-                        ispunctuation(parg) && continue
-                        parg_name = get_arg_name(parg)
-                        push!(args, parg_name)
-                    end
+                    append!(args, get_args(arg))
                 else
                     arg_name = get_arg_name(arg)
                     push!(args, arg_name)
@@ -381,8 +376,17 @@ function get_args(x::EXPR)
             error("not sig: $sig")
         end
         return args
+    elseif typof(x) === Parameters
+        args = EXPR[]
+        for i = 1:length(x.args)
+            parg = x.args[i]
+            ispunctuation(parg) && continue
+            parg_name = get_arg_name(parg)
+            push!(args, parg_name)
+        end
+        return args
     elseif typof(x) === Struct
-        args = []
+        args = EXPR[]
         for arg in x.args[3]
             if !defines_function(arg)
                 arg = rem_decl(arg)
@@ -391,7 +395,7 @@ function get_args(x::EXPR)
         end
         return args
     elseif typof(x) === Mutable
-        args = []
+        args = EXPR[]
         for arg in x.args[4]
             if !defines_function(arg)
                 arg = rem_decl(arg)
@@ -402,7 +406,7 @@ function get_args(x::EXPR)
     elseif typof(x) === Flatten
         return get_args(x.args[1])
     elseif typof(x) === Generator || typof(x) === Flatten
-        args = []
+        args = EXPR[]
         if typof(x.args[1]) === Flatten || typof(x.args[1]) === Generator
             append!(args, get_args(x.args[1]))
         end
