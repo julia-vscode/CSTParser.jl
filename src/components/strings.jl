@@ -112,7 +112,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                         push!(ret, call)
                         skip(input, 1)
                     else
-                        interp = @closer ps1 paren parse_expression(ps1)
+                        interp = @closer ps1 :paren parse_expression(ps1)
                         call = mUnaryOpCall(op, EXPR(InvisBrackets, EXPR[lparen, interp, rparen]))
                         push!(ret, call)
                         seek(input, ps1.nt.startbyte + 1)

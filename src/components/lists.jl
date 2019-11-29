@@ -16,7 +16,7 @@ function parse_tuple end
                 ps.errored = true
                 push!(ret, mErrorToken(op, Unknown))
             else
-                nextarg = @closer ps tuple parse_expression(ps)
+                nextarg = @closer ps :tuple parse_expression(ps)
                 if !(is_lparen(first(ret.args)))
                     push!(ret, op)
                     push!(ret, nextarg)
@@ -31,7 +31,7 @@ function parse_tuple end
                 ps.errored = true
                 ret = mErrorToken(EXPR(TupleH, EXPR[ret, op]), Unknown)
             else
-                nextarg = @closer ps tuple parse_expression(ps)
+                nextarg = @closer ps :tuple parse_expression(ps)
                 ret = EXPR(TupleH, EXPR[ret, op, nextarg])
             end
         end
@@ -44,7 +44,7 @@ else
             if closer(ps) || (isassignment(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
                 push!(ret, op)
             else
-                nextarg = @closer ps tuple parse_expression(ps)
+                nextarg = @closer ps :tuple parse_expression(ps)
                 if !(is_lparen(first(ret.args)))
                     push!(ret, op)
                     push!(ret, nextarg)
@@ -56,7 +56,7 @@ else
             if closer(ps) || (isassignment(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
                 ret = EXPR(TupleH, EXPR[ret, op])
             else
-                nextarg = @closer ps tuple parse_expression(ps)
+                nextarg = @closer ps :tuple parse_expression(ps)
                 ret = EXPR(TupleH, EXPR[ret, op, nextarg])
             end
         end
@@ -80,7 +80,7 @@ function parse_array(ps::ParseState, isref = false)
         accept_rsquare(ps, args)
         ret = EXPR(Vect, args)
     else
-        first_arg = @nocloser ps newline @closesquare ps  @closer ps insquare @closer ps ws @closer ps wsop @closer ps comma parse_expression(ps)
+        first_arg = @nocloser ps :newline @closesquare ps  @closer ps :insquare @closer ps :ws @closer ps :wsop @closer ps :comma parse_expression(ps)
         if isref && _do_kw_convert(ps, first_arg)
             first_arg = _kw_convert(first_arg)
         end
@@ -129,7 +129,7 @@ function parse_array(ps::ParseState, isref = false)
                 if kindof(ps.nt) == Tokens.ENDMARKER
                     break
                 end
-                a = @closesquare ps @closer ps ws @closer ps wsop parse_expression(ps)
+                a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                 push!(first_row, a)
             end
             if kindof(ps.nt) == Tokens.RSQUARE && kindof(ps.ws) != SemiColonWS
@@ -151,13 +151,13 @@ function parse_array(ps::ParseState, isref = false)
                     if kindof(ps.nt) == Tokens.ENDMARKER
                         break
                     end
-                    first_arg = @closesquare ps @closer ps ws @closer ps wsop parse_expression(ps)
+                    first_arg = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                     push!(ret, EXPR(Row, EXPR[first_arg]))
                     while kindof(ps.nt) != Tokens.RSQUARE && kindof(ps.ws) != NewLineWS && kindof(ps.ws) != SemiColonWS
                         if kindof(ps.nt) == Tokens.ENDMARKER
                             break
                         end
-                        a = @closesquare ps @closer ps ws @closer ps wsop parse_expression(ps)
+                        a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                         push!(last(ret.args), a)
                     end
                     # if only one entry dont use :row
@@ -188,7 +188,7 @@ Handles cases where an expression - `ret` - is followed by
 """
 function parse_ref(ps::ParseState, ret::EXPR)
     next(ps)
-    ref = @nocloser ps inwhere parse_array(ps, true)
+    ref = @nocloser ps :inwhere parse_array(ps, true)
     if typof(ref) === Vect
         args = EXPR[ret]
         for a in ref.args
@@ -233,11 +233,7 @@ function parse_curly(ps::ParseState, ret::EXPR)
 end
 
 function parse_braces(ps::ParseState)
-    # args = EXPR[mPUNCTUATION(ps)]
-    # parse_comma_sep(ps, args, true)
-    # accept_rbrace(ps, args)
-    # return EXPR(Braces, args)
-    return @default ps @nocloser ps inwhere parse_barray(ps)
+    return @default ps @nocloser ps :inwhere parse_barray(ps)
 end
 
 
@@ -248,7 +244,7 @@ function parse_barray(ps::ParseState)
         accept_rbrace(ps, args)
         ret = EXPR(Braces, args)
     else
-        first_arg = @nocloser ps newline @closebrace ps  @closer ps ws @closer ps wsop @closer ps comma parse_expression(ps)
+        first_arg = @nocloser ps :newline @closebrace ps  @closer ps :ws @closer ps :wsop @closer ps :comma parse_expression(ps)
         if kindof(ps.nt) == Tokens.RBRACE
             push!(args, first_arg)
             if kindof(ps.ws) == SemiColonWS
@@ -281,7 +277,7 @@ function parse_barray(ps::ParseState)
                 if kindof(ps.nt) == Tokens.ENDMARKER
                     break
                 end
-                a = @closebrace ps @closer ps ws @closer ps wsop parse_expression(ps)
+                a = @closebrace ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                 push!(first_row, a)
             end
             if kindof(ps.nt) == Tokens.RBRACE && kindof(ps.ws) != SemiColonWS
@@ -302,13 +298,13 @@ function parse_barray(ps::ParseState)
                     if kindof(ps.nt) == Tokens.ENDMARKER
                         break
                     end
-                    first_arg = @closebrace ps @closer ps ws @closer ps wsop parse_expression(ps)
+                    first_arg = @closebrace ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                     push!(ret, EXPR(Row, EXPR[first_arg]))
                     while kindof(ps.nt) != Tokens.RBRACE && kindof(ps.ws) != NewLineWS && kindof(ps.ws) != SemiColonWS
                         if kindof(ps.nt) == Tokens.ENDMARKER
                             break
                         end
-                        a = @closebrace ps @closer ps ws @closer ps wsop parse_expression(ps)
+                        a = @closebrace ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                         push!(last(ret.args), a)
                     end
                     # if only one entry dont use :row

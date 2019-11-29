@@ -166,7 +166,7 @@ function parse_unary(ps::ParseState, op::EXPR)
         prec = P == DeclarationOp ? DeclarationOp :
                     K == Tokens.AND ? DeclarationOp :
                     K == Tokens.EX_OR ? 20 : PowerOp
-        arg = @closer ps unary @precedence ps prec parse_expression(ps)
+        arg = @closer ps :unary @precedence ps prec parse_expression(ps)
         ret = mUnaryOpCall(op, arg)
     end
     return ret
@@ -183,7 +183,7 @@ function parse_unary_colon(ps::ParseState, op::EXPR)
         ret = op
     else
         arg = @precedence ps 20 parse_expression(ps)
-        if typof(arg) === InvisBrackets && length(arg.args) == 3 && typof(arg.args[2]) === ErrorToken && refof(arg.args[2]) === UnexpectedAssignmentOp
+        if typof(arg) === InvisBrackets && length(arg.args) == 3 && typof(arg.args[2]) === ErrorToken && errorof(arg.args[2]) === UnexpectedAssignmentOp
             arg.args[2] = arg.args[2].args[1]
             setparent!(arg.args[2], arg)
         end
@@ -199,19 +199,8 @@ function parse_operator_eq(ps::ParseState, ret::EXPR, op::EXPR)
         if !(typof(nextarg) === Begin || (typof(nextarg) === InvisBrackets && typof(nextarg.args[2]) === Block))
             nextarg = EXPR(Block, EXPR[nextarg])
         end
-        strip_where_scopes(ret)
-        mark_sig_args!(ret)
-        ret = setscope!(mBinaryOpCall(ret, op, nextarg))
-        setbinding!(ret)
-    else
-        ret = mBinaryOpCall(ret, op, nextarg)
-        if typof(ret.args[1]) === Curly
-            mark_typealias_bindings!(ret)
-            setscope!(ret)
-        else
-            setbinding!(ret.args[1], ret)
-        end
     end
+    ret = mBinaryOpCall(ret, op, nextarg)
     return ret
 end
 
@@ -219,9 +208,9 @@ end
 function parse_operator_cond(ps::ParseState, ret::EXPR, op::EXPR)
     ret = requires_ws(ret, ps)
     op = requires_ws(op, ps)
-    nextarg = @closer ps ifop parse_expression(ps)
+    nextarg = @closer ps :ifop parse_expression(ps)
     op2 = requires_ws(mOPERATOR(next(ps)), ps)
-    nextarg2 = @closer ps comma @precedence ps 0 parse_expression(ps)
+    nextarg2 = @closer ps :comma @precedence ps 0 parse_expression(ps)
 
     fullspan = ret.fullspan + op.fullspan + nextarg.fullspan + op2.fullspan + nextarg2.fullspan
     return EXPR(ConditionalOpCall, EXPR[ret, op, nextarg, op2, nextarg2], fullspan, fullspan - nextarg2.fullspan + nextarg2.span)
@@ -265,7 +254,7 @@ end
 
 # Parse power (special case for preceding unary ops)
 function parse_operator_power(ps::ParseState, ret::EXPR, op::EXPR)
-    nextarg = @precedence ps PowerOp - LtoR(PowerOp) @closer ps inwhere parse_expression(ps)
+    nextarg = @precedence ps PowerOp - LtoR(PowerOp) @closer ps :inwhere parse_expression(ps)
     
     if typof(ret) === UnaryOpCall
         nextarg = mBinaryOpCall(ret.args[2], op, nextarg)
@@ -279,22 +268,14 @@ end
 
 # parse where
 function parse_operator_where(ps::ParseState, ret::EXPR, op::EXPR, setscope = true)
-    nextarg = @precedence ps LazyAndOp @closer ps inwhere parse_expression(ps)
+    nextarg = @precedence ps LazyAndOp @closer ps :inwhere parse_expression(ps)
     
     if typof(nextarg) === Braces
         args = nextarg.args
     else
         args = EXPR[nextarg]
     end
-    for a in args 
-        if typof(a) !== PUNCTUATION
-            setbinding!(a)
-        end
-    end
     ret = mWhereOpCall(ret, op, args)
-    if setscope
-        setscope!(ret)
-    end
     return ret
 end
 
@@ -346,13 +327,12 @@ function parse_operator_dot(ps::ParseState, ret::EXPR, op::EXPR)
 end
 
 function parse_operator_anon_func(ps::ParseState, ret::EXPR, op::EXPR)
-    arg = @closer ps comma @precedence ps 0 parse_expression(ps)
+    arg = @closer ps :comma @precedence ps 0 parse_expression(ps)
     
     if !(typof(arg) === Begin || (typof(arg) === InvisBrackets && typof(arg.args[2]) === Block))
         arg = EXPR(Block, EXPR[arg])
     end
-    setbinding!(ret)
-    return setscope!(mBinaryOpCall(ret, op, arg))
+    return mBinaryOpCall(ret, op, arg)
 end
 
 function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
