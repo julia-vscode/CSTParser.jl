@@ -357,11 +357,12 @@ function get_args(x::EXPR)
             push!(args, arg_name)
         end
         return args
-    elseif typof(x) === Call
+    elseif typof(x) === Call || typof(x) === MacroCall
+
         args = EXPR[]
         sig = rem_where(x)
         sig = rem_decl(sig)
-        if typof(sig) === Call
+        if typof(sig) === Call || typof(x) === MacroCall
             for i = 2:length(sig.args)
                 arg = sig.args[i]
                 ispunctuation(arg) && continue
