@@ -46,10 +46,25 @@ Continues parsing closing on `rule`.
 """
 macro closer(ps, opt, body)
     quote
-        local tmp1 = $(esc(ps)).closer.$opt
-        $(esc(ps)).closer.$opt = true
+        local tmp1 = getfield($(esc(ps)).closer, $opt)
+        setfield!($(esc(ps)).closer, $opt, true)
         out = $(esc(body))
-        $(esc(ps)).closer.$opt = tmp1
+        setfield!($(esc(ps)).closer, $opt, tmp1)
+        out
+    end
+end
+
+"""
+    @nocloser ps rule body
+
+Continues parsing not closing on `rule`.
+"""
+macro nocloser(ps, opt, body)
+    quote
+        local tmp1 = getfield($(esc(ps)).closer, $opt)
+        setfield!($(esc(ps)).closer, $opt, false)
+        out = $(esc(body))
+        setfield!($(esc(ps)).closer, $opt, tmp1)
         out
     end
 end
@@ -85,21 +100,6 @@ macro closebrace(ps, body)
         out = $(esc(body))
         pop!($(esc(ps)).closer.cc)
         $(esc(ps)).closer.brace = tmp1
-        out
-    end
-end
-
-"""
-    @nocloser ps rule body
-
-Continues parsing not closing on `rule`.
-"""
-macro nocloser(ps, opt, body)
-    quote
-        local tmp1 = $(esc(ps)).closer.$opt
-        $(esc(ps)).closer.$opt = false
-        out = $(esc(body))
-        $(esc(ps)).closer.$opt = tmp1
         out
     end
 end
@@ -297,11 +297,11 @@ norm_ast(a::Any) = begin
             elseif fa == Symbol("@big_str")
                 s = a.args[3]
                 n = tryparse(BigInt, s)
-                if !(n == nothing)
+                if !(n === nothing)
                     return (n)
                 end
                 n = tryparse(BigFloat, s)
-                if !(n == nothing)
+                if !(n === nothing)
                     return isnan((n)) ? :NaN : (n)
                 end
                 return s
@@ -334,7 +334,7 @@ function flisp_parsefile(str, display = true)
         end
         return x1, true
     end
-    if length(x1.args) > 0  && x1.args[end] == nothing
+    if length(x1.args) > 0  && x1.args[end] === nothing
         pop!(x1.args)
     end
     x1 = norm_ast(x1)

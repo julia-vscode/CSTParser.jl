@@ -358,6 +358,7 @@ function get_args(x::EXPR)
         end
         return args
     elseif typof(x) === Call || typof(x) === MacroCall
+
         args = EXPR[]
         sig = rem_where(x)
         sig = rem_decl(sig)
