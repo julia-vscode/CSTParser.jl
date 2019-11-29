@@ -495,7 +495,7 @@ end
 @addctx :struct function parse_struct(ps::ParseState, mutable::Bool)
     sb = ps.t.startbyte
     kw = mKEYWORD(ps)
-    sig = @closer ps ws parse_expression(ps)
+    sig = @closer ps :ws parse_expression(ps)
     
 
     sb1 = ps.nt.startbyte
