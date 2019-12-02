@@ -812,6 +812,11 @@ end
     @test "{a b; c = 1}" |> test_expr
 end
 
+@testset "import preceding dot whitespace" begin
+    @test CSTParser.parse("using . M")[2].fullspan == 2
+    @test CSTParser.parse("using .. M")[3].fullspan == 2
+    @test CSTParser.parse("using ... M")[4].fullspan == 2
+end
 
 end
 

@@ -331,15 +331,16 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
 
     while kindof(ps.nt) == Tokens.DOT || kindof(ps.nt) == Tokens.DDOT || kindof(ps.nt) == Tokens.DDDOT
         d = mOPERATOR(next(ps))
+        trailing_ws = d.fullspan - d.span
         if is_dot(d)
-            push!(args, mOPERATOR(1, 1, Tokens.DOT, false))
+            push!(args, mOPERATOR(1 + trailing_ws, 1, Tokens.DOT, false))
         elseif is_ddot(d)
             push!(args, mOPERATOR(1, 1, Tokens.DOT, false))
-            push!(args, mOPERATOR(1, 1, Tokens.DOT, false))
+            push!(args, mOPERATOR(1 + trailing_ws, 1, Tokens.DOT, false))
         elseif is_dddot(d)
             push!(args, mOPERATOR(1, 1, Tokens.DOT, false))
             push!(args, mOPERATOR(1, 1, Tokens.DOT, false))
-            push!(args, mOPERATOR(1, 1, Tokens.DOT, false))
+            push!(args, mOPERATOR(1 + trailing_ws, 1, Tokens.DOT, false))
         end
     end
 
