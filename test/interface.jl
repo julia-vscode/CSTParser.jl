@@ -15,6 +15,7 @@
     @test CSTParser.defines_function(CSTParser.parse("a + b = a"))
     @test CSTParser.defines_function(CSTParser.parse("a/b = x"))
     @test !CSTParser.defines_function(CSTParser.parse("a.b = x"))
+    @test CSTParser.defines_function(CSTParser.parse("a = (n) -> 2n"))
 end
 
 @testset "datatype defs" begin
@@ -90,11 +91,10 @@ end
     @test f("(a::T) -> a") == ["a"]
     @test f("(a,b) -> a") == ["a", "b"]
 
-    @test f("map(1:10) do a 
+    @test f("map(1:10) do a
         a
     end") == ["a"]
     @test f("map(1:10) do a,b
         a
     end") == ["a", "b"]
 end
-
