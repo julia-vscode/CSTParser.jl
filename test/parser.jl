@@ -818,6 +818,18 @@ end
     @test CSTParser.parse("using ... M")[4].fullspan == 2
 end
 
+@testset "issue #116" begin
+    @test """
+    function foo() where {A <:B}
+        body
+    end""" |> test_expr
+
+    @test """
+    function foo() where {A <: B}
+        body
+    end""" |> test_expr
+end
+
 end
 
 

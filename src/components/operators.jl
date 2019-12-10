@@ -51,32 +51,63 @@ isoperator(x::EXPR) = typof(x) === OPERATOR
 isunaryop(op) = false
 isunaryop(op::EXPR) = isoperator(op) && isunaryop(kindof(op))
 isunaryop(t::AbstractToken) = isunaryop(kindof(t))
-isunaryop(kind::Tokens.Kind) = kind == Tokens.ISSUBTYPE ||
-                  kind == Tokens.ISSUPERTYPE ||
-                  kind == Tokens.PLUS ||
-                  kind == Tokens.MINUS ||
-                  kind == Tokens.NOT ||
-                  kind == Tokens.APPROX ||
-                  kind == Tokens.NOT_SIGN ||
-                  kind == Tokens.AND ||
-                  kind == Tokens.SQUARE_ROOT ||
-                  kind == Tokens.CUBE_ROOT ||
-                  kind == Tokens.QUAD_ROOT ||
-                  kind == Tokens.DECLARATION ||
-                  kind == Tokens.EX_OR ||
-                  kind == Tokens.COLON
+@static if VERSION < v"1.2.0"
+    isunaryop(kind::Tokens.Kind) = kind == Tokens.ISSUBTYPE ||
+                    kind == Tokens.ISSUPERTYPE ||
+                    kind == Tokens.PLUS ||
+                    kind == Tokens.MINUS ||
+                    kind == Tokens.NOT ||
+                    kind == Tokens.APPROX ||
+                    kind == Tokens.NOT_SIGN ||
+                    kind == Tokens.AND ||
+                    kind == Tokens.SQUARE_ROOT ||
+                    kind == Tokens.CUBE_ROOT ||
+                    kind == Tokens.QUAD_ROOT ||
+                    kind == Tokens.DECLARATION ||
+                    kind == Tokens.EX_OR ||
+                    kind == Tokens.COLON
+else
+    isunaryop(kind::Tokens.Kind) = kind == Tokens.ISSUBTYPE ||
+                    kind == Tokens.ISSUPERTYPE ||
+                    kind == Tokens.PLUS ||
+                    kind == Tokens.MINUS ||
+                    kind == Tokens.NOT ||
+                    kind == Tokens.APPROX ||
+                    kind == Tokens.NOT_SIGN ||
+                    kind == Tokens.AND ||
+                    kind == Tokens.SQUARE_ROOT ||
+                    kind == Tokens.CUBE_ROOT ||
+                    kind == Tokens.QUAD_ROOT ||
+                    kind == Tokens.DECLARATION ||
+                    kind == Tokens.EX_OR ||
+                    kind == Tokens.COLON ||
+                    kind == Tokens.STAR_OPERATOR
+end
 
 isunaryandbinaryop(t) = false
 isunaryandbinaryop(t::AbstractToken) = isunaryandbinaryop(kindof(t))
-isunaryandbinaryop(kind::Tokens.Kind) = kind == Tokens.PLUS ||
-                           kind == Tokens.MINUS ||
-                           kind == Tokens.EX_OR ||
-                           kind == Tokens.ISSUBTYPE ||
-                           kind == Tokens.ISSUPERTYPE ||
-                           kind == Tokens.AND ||
-                           kind == Tokens.APPROX ||
-                           kind == Tokens.DECLARATION ||
-                           kind == Tokens.COLON
+@static if VERSION < v"1.2.0"
+    isunaryandbinaryop(kind::Tokens.Kind) = kind == Tokens.PLUS ||
+                            kind == Tokens.MINUS ||
+                            kind == Tokens.EX_OR ||
+                            kind == Tokens.ISSUBTYPE ||
+                            kind == Tokens.ISSUPERTYPE ||
+                            kind == Tokens.AND ||
+                            kind == Tokens.APPROX ||
+                            kind == Tokens.DECLARATION ||
+                            kind == Tokens.COLON
+else
+    isunaryandbinaryop(kind::Tokens.Kind) = kind == Tokens.PLUS ||
+                            kind == Tokens.MINUS ||
+                            kind == Tokens.EX_OR ||
+                            kind == Tokens.ISSUBTYPE ||
+                            kind == Tokens.ISSUPERTYPE ||
+                            kind == Tokens.AND ||
+                            kind == Tokens.APPROX ||
+                            kind == Tokens.DECLARATION ||
+                            kind == Tokens.COLON ||
+                            kind == Tokens.STAR_OPERATOR
+end
 
 isbinaryop(op) = false
 isbinaryop(op::EXPR) = isoperator(op) && isbinaryop(kindof(op))

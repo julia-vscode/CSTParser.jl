@@ -33,7 +33,7 @@ function closer(ps::ParseState)
         !(!ps.closer.inmacro && kindof(ps.nt) == Tokens.FOR) &&
         !(kindof(ps.nt) == Tokens.DO) &&
         !(
-            (isbinaryop(ps.nt) && !(isemptyws(ps.nws) && isunaryop(ps.nt) && ps.closer.wsop)) || 
+            (isbinaryop(ps.nt) && !(ps.closer.wsop && isemptyws(ps.nws) && isunaryop(ps.nt) && precedence(ps.nt) > 7)) || 
             (isunaryop(ps.t) && kindof(ps.ws) == WS)
         )) ||
     (ps.closer.unary && (kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE) && kindof(ps.nt) == Tokens.IDENTIFIER))
