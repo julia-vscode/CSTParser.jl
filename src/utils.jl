@@ -201,7 +201,7 @@ end
 
 
 isidentifier(t::AbstractToken) = kindof(t) == Tokens.IDENTIFIER
-isidentifier(x::EXPR) = typof(x) === IDENTIFIER
+isidentifier(x::EXPR) = typof(x) === IDENTIFIER || typof(x) === NONSTDIDENTIFIER
 
 isliteral(t::AbstractToken) = Tokens.begin_literal < kindof(t) < Tokens.end_literal
 isliteral(x::EXPR) = typof(x) === LITERAL

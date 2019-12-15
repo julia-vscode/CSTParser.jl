@@ -367,6 +367,8 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
         elseif !is_colon && isoperator(ps.nt)
             next(ps)
             push!(args, mOPERATOR(ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, kindof(ps.t), false))
+        elseif VERSION > v"1.3.0" && isidentifier(ps.nt) && isemptyws(ps.nws) && (kindof(ps.nnt) === Tokens.STRING || kindof(ps.nnt) === Tokens.TRIPLE_STRING)
+            push!(args, EXPR(NONSTDIDENTIFIER, EXPR[INSTANCE(next(ps)), INSTANCE(next(ps))]))
         else
             push!(args, INSTANCE(next(ps)))
         end

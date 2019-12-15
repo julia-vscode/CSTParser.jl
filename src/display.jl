@@ -2,7 +2,7 @@ function Base.show(io::IO, x::EXPR, d = 0, er = false)
     T = typof(x)
     c =  T === ErrorToken || er ? :red : :normal
     if isidentifier(x)
-        printstyled(io, " "^d, valof(x), "  ", x.fullspan, "(", x.span, ") ", color = :yellow)
+        printstyled(io, " "^d, typof(x) == NONSTDIDENTIFIER ? valof(x.args[2]) : valof(x), "  ", x.fullspan, "(", x.span, ") ", color = :yellow)
         x.meta !== nothing && show(io, x.meta)
         println(io)
     elseif isoperator(x)
