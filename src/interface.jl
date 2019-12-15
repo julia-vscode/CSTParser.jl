@@ -75,7 +75,7 @@ is_lit_string(x) = isliteral(x) && (kindof(x) == Tokens.STRING || kindof(x) == T
 
 
 function _arg_id(x::EXPR)
-    if typof(x) === IDENTIFIER
+    if isidentifier(x)
         return x
     elseif typof(x) === Quotenode
         return x.args[1]
@@ -329,7 +329,7 @@ function get_name(x::EXPR)
 end
 
 function get_args(x::EXPR)
-    if typof(x) === IDENTIFIER
+    if isidentifier(x)
         return EXPR[]
     elseif defines_anon_function(x) && !(typof(x.args[1]) === TupleH)
         arg = x.args[1]

@@ -36,7 +36,7 @@ function closer(ps::ParseState)
             (isbinaryop(ps.nt) && !(ps.closer.wsop && isemptyws(ps.nws) && isunaryop(ps.nt) && precedence(ps.nt) > 7)) || 
             (isunaryop(ps.t) && kindof(ps.ws) == WS)
         )) ||
-    (ps.closer.unary && (kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE) && kindof(ps.nt) == Tokens.IDENTIFIER))
+    (ps.closer.unary && (kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE) && isidentifier(ps.nt)))
 end
 
 """
@@ -230,10 +230,10 @@ is_float(x) = isliteral(x) && kindof(x) == Tokens.FLOAT
 is_number(x) = isliteral(x) && (kindof(x) == Tokens.INTEGER || kindof(x) == Tokens.FLOAT)
 is_nothing(x) = isliteral(x) && kindof(x) == Tokens.NOTHING
 
-isajuxtaposition(ps::ParseState, ret::EXPR) = ((is_number(ret) && (kindof(ps.nt) == Tokens.IDENTIFIER || kindof(ps.nt) == Tokens.LPAREN || kindof(ps.nt) == Tokens.CMD || kindof(ps.nt) == Tokens.STRING || kindof(ps.nt) == Tokens.TRIPLE_STRING)) || 
-        ((typof(ret) === UnaryOpCall && is_prime(ret.args[2]) && kindof(ps.nt) == Tokens.IDENTIFIER) ||
-        ((kindof(ps.t) == Tokens.RPAREN || kindof(ps.t) == Tokens.RSQUARE) && (kindof(ps.nt) == Tokens.IDENTIFIER || kindof(ps.nt) == Tokens.CMD)) ||
-        ((kindof(ps.t) == Tokens.STRING || kindof(ps.t) == Tokens.TRIPLE_STRING) && (kindof(ps.nt) == Tokens.STRING || kindof(ps.nt) == Tokens.TRIPLE_STRING)))) || ((kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT) || kindof(ps.t) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && kindof(ps.nt) == Tokens.IDENTIFIER)
+isajuxtaposition(ps::ParseState, ret::EXPR) = ((is_number(ret) && (isidentifier(ps.nt) || kindof(ps.nt) == Tokens.LPAREN || kindof(ps.nt) == Tokens.CMD || kindof(ps.nt) == Tokens.STRING || kindof(ps.nt) == Tokens.TRIPLE_STRING)) || 
+        ((typof(ret) === UnaryOpCall && is_prime(ret.args[2]) && isidentifier(ps.nt)) ||
+        ((kindof(ps.t) == Tokens.RPAREN || kindof(ps.t) == Tokens.RSQUARE) && (isidentifier(ps.nt) || kindof(ps.nt) == Tokens.CMD)) ||
+        ((kindof(ps.t) == Tokens.STRING || kindof(ps.t) == Tokens.TRIPLE_STRING) && (kindof(ps.nt) == Tokens.STRING || kindof(ps.nt) == Tokens.TRIPLE_STRING)))) || ((kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT) || kindof(ps.t) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && isidentifier(ps.nt))
 
 
 

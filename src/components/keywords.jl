@@ -355,7 +355,7 @@ end
     args = EXPR[mKEYWORD(ps)]
     if !(kindof(ps.ws) == NewLineWS || kindof(ps.ws) == SemiColonWS)
         arg = @closer ps :comma @closer ps :ws  parse_expression(ps)
-        if kindof(ps.nt) == Tokens.COMMA || !(is_wrapped_assignment(arg) || typof(arg) === IDENTIFIER)
+        if kindof(ps.nt) == Tokens.COMMA || !(is_wrapped_assignment(arg) || isidentifier(arg))
             arg = EXPR(Block, EXPR[arg])
             while kindof(ps.nt) == Tokens.COMMA
                 accept_comma(ps, arg)
@@ -447,7 +447,7 @@ end
     sb = ps.t.startbyte
     kw = mKEYWORD(ps)
     @assert kindof(kw) == Tokens.MODULE || kindof(kw) == Tokens.BAREMODULE # work around julia issue #23766
-    if kindof(ps.nt) == Tokens.IDENTIFIER
+    if isidentifier(ps.nt)
         arg = mIDENTIFIER(next(ps))
     else
         arg = @precedence ps 15 @closer ps :ws parse_expression(ps)

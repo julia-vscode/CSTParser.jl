@@ -208,7 +208,7 @@ function parse_unary_colon(ps::ParseState, op::EXPR)
     if Tokens.begin_keywords < kindof(ps.nt) < Tokens.end_keywords
         ret = EXPR(Quotenode, EXPR[op, mIDENTIFIER(next(ps))])
     elseif Tokens.begin_literal < kindof(ps.nt) < Tokens.CHAR ||
-        isoperator(kindof(ps.nt)) || kindof(ps.nt) == Tokens.IDENTIFIER || kindof(ps.nt) === Tokens.TRUE || kindof(ps.nt) === Tokens.FALSE
+        isoperator(kindof(ps.nt)) || isidentifier(ps.nt) || kindof(ps.nt) === Tokens.TRUE || kindof(ps.nt) === Tokens.FALSE
         ret = EXPR(Quotenode, EXPR[op, INSTANCE(next(ps))])
     elseif closer(ps)
         ret = op

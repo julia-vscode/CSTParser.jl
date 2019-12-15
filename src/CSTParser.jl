@@ -102,7 +102,7 @@ function parse_compound(ps::ParseState, ret::EXPR)
         end
         op = mOPERATOR(0, 0, Tokens.STAR, false)
         ret = parse_operator(ps, ret, op)
-    elseif (typof(ret) === x_Str || typof(ret) === x_Cmd) && kindof(ps.nt) == Tokens.IDENTIFIER
+    elseif (typof(ret) === x_Str || typof(ret) === x_Cmd) && isidentifier(ps.nt)
         arg = mIDENTIFIER(next(ps))
         push!(ret, mLITERAL(arg.fullspan, arg.span, val(ps.t, ps), Tokens.STRING))
     elseif (isidentifier(ret) || (typof(ret) === BinaryOpCall && is_dot(ret.args[2]))) && (kindof(ps.nt) == Tokens.STRING || kindof(ps.nt) == Tokens.TRIPLE_STRING || kindof(ps.nt) == Tokens.CMD || kindof(ps.nt) == Tokens.TRIPLE_CMD)
@@ -198,7 +198,7 @@ function parse_doc(ps::ParseState)
 
         ret = parse_expression(ps)
         ret = EXPR(MacroCall, EXPR[GlobalRefDOC(), doc, ret])
-    elseif kindof(ps.nt) == Tokens.IDENTIFIER && val(ps.nt, ps) == "doc" && (kindof(ps.nnt) == Tokens.STRING || kindof(ps.nnt) == Tokens.TRIPLE_STRING)
+    elseif isidentifier(ps.nt) && val(ps.nt, ps) == "doc" && (kindof(ps.nnt) == Tokens.STRING || kindof(ps.nnt) == Tokens.TRIPLE_STRING)
         doc = mIDENTIFIER(next(ps))
         next(ps)
         arg = parse_string_or_cmd(ps, doc)
