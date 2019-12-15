@@ -48,8 +48,8 @@ is_where(x) = isoperator(x) && kindof(x) == Tokens.WHERE
 is_anon_func(x) = isoperator(x) && kindof(x) == Tokens.ANON_FUNC
 
 # PUNCTUATION
-is_punc(x) = typof(x) === PUNCTUATION && 
-    kindof(x) == Tokens.COMMA && 
+is_punc(x) = typof(x) === PUNCTUATION &&
+    kindof(x) == Tokens.COMMA &&
     kindof(x) == Tokens.LPAREN &&
     kindof(x) == Tokens.RPAREN &&
     kindof(x) == Tokens.LBRACE &&
@@ -68,7 +68,6 @@ is_rsquare(x) = ispunctuation(x) && kindof(x) == Tokens.RSQUARE
 is_if(x) = iskw(x) && kindof(x) == Tokens.IF
 is_module(x) = iskw(x) && kindof(x) == Tokens.MODULE
 is_import(x) = iskw(x) && kindof(x) == Tokens.IMPORT
-is_importall(x) = iskw(x) && kindof(x) == Tokens.IMPORTALL
 
 
 # Literals
@@ -80,13 +79,13 @@ function _arg_id(x::EXPR)
         return x
     elseif typof(x) === Quotenode
         return x.args[1]
-    elseif typof(x) === Curly || 
-        typof(x) === Kw || 
+    elseif typof(x) === Curly ||
+        typof(x) === Kw ||
         typof(x) === WhereOpCall ||
            (typof(x) === UnaryOpCall && is_dddot(x.args[2])) ||
            (typof(x) === BinaryOpCall && is_decl(x.args[2])) ||
         return _arg_id(x.args[1])
-    else 
+    else
         return x
     end
 end
@@ -255,7 +254,7 @@ end
 """
     get_sig(x)
 
-Returns the full signature of function, macro and datatype definitions. 
+Returns the full signature of function, macro and datatype definitions.
 Should only be called when has_sig(x) == true.
 """
 function get_sig(x::EXPR)
@@ -281,7 +280,7 @@ function get_name(x::EXPR)
         sig = rem_subtype(sig)
         sig = rem_curly(sig)
     elseif typof(x) === ModuleH || typof(x) === BareModule
-        sig = x.args[2] 
+        sig = x.args[2]
     elseif typof(x) === FunctionDef || typof(x) === Macro
         sig = get_sig(x)
         sig = rem_where(sig)
@@ -307,7 +306,7 @@ function get_name(x::EXPR)
             end
         end
         sig = x.args[1]
-        if typof(sig) === UnaryOpCall 
+        if typof(sig) === UnaryOpCall
             return get_name(sig.args[1])
         end
         sig = rem_where(sig)
@@ -318,7 +317,7 @@ function get_name(x::EXPR)
         return get_name(sig)
     else
         sig = x
-        if typof(sig) === UnaryOpCall 
+        if typof(sig) === UnaryOpCall
             sig = sig.args[1]
         end
         sig = rem_where(sig)
@@ -460,7 +459,7 @@ get_body(x) = typof(x) === Mutable ? x.args[4] : x.args[3]
 function flatten_tuple(x::EXPR, out = EXPR[])
     if typof(x) === TupleH
         for arg in x
-            ispunctuation(arg) && continue    
+            ispunctuation(arg) && continue
             flatten_tuple(arg, out)
         end
     elseif typof(x) === InvisBrackets
@@ -474,7 +473,7 @@ end
 """
     get_id(x)
 
-Get the IDENTIFIER name of a variable, possibly in the presence of 
+Get the IDENTIFIER name of a variable, possibly in the presence of
 type declaration operators.
 """
 function get_id(x::EXPR)
@@ -497,7 +496,7 @@ end
 # Basic inference in the presence of type declarations.
 # """
 # get_t(x) = :Any
-# function get_t(x::BinaryOpCall) 
+# function get_t(x::BinaryOpCall)
 #     if is_decl(x.args[2])
 #         return Expr(x.args[3])
 #     else
@@ -540,4 +539,3 @@ end
 Checks whether the body of `x` is included in the toplevel namespace.
 """
 contributes_scope(x::EXPR) = typof(x) in (FileH, Begin, Block, Const, Global, Local, If, MacroCall, TopLevel)
-

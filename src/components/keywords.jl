@@ -24,8 +24,6 @@ function parse_kw(ps::ParseState)
         return INSTANCE(ps)
     elseif k == Tokens.IMPORT
         return parse_imports(ps)
-    elseif k == Tokens.IMPORTALL
-        return parse_imports(ps)
     elseif k == Tokens.USING
         return parse_imports(ps)
     elseif k == Tokens.EXPORT
@@ -47,7 +45,7 @@ function parse_kw(ps::ParseState)
             ret = mErrorToken(mIDENTIFIER(ps), UnexpectedToken)
             ps.errored = true
         end
-        
+
         return ret
     elseif k == Tokens.ELSE || k == Tokens.ELSEIF || k == Tokens.CATCH || k == Tokens.FINALLY
         ps.errored = true
@@ -71,7 +69,7 @@ function parse_kw(ps::ParseState)
         return mErrorToken(Unknown)
     end
 end
-# Prefix 
+# Prefix
 
 function parse_const(ps::ParseState)
     kw = mKEYWORD(ps)
@@ -136,9 +134,7 @@ end
 
 function parse_imports(ps::ParseState)
     kw = mKEYWORD(ps)
-    kwt = is_import(kw) ? Import :
-          is_importall(kw) ? ImportAll :
-          Using
+    kwt = is_import(kw) ? Import : Using
     tk = kindof(ps.t)
 
     arg = parse_dot_mod(ps)
@@ -370,7 +366,7 @@ end
         end
         push!(args, arg)
     end
-    
+
     blockargs = parse_block(ps)
     push!(args, EXPR(Block, blockargs))
     accept_end(ps, args)
@@ -399,7 +395,7 @@ end
             else
                 caught = @closer ps :ws parse_expression(ps)
             end
-            
+
             catchblockargs = parse_block(ps, EXPR[], (Tokens.END, Tokens.FINALLY))
             if !(isidentifier(caught) || kindof(caught) == Tokens.FALSE || (typof(caught) === UnaryOpCall && isoperator(caught.args[1]) && kindof(caught.args[1]) == Tokens.EX_OR))
                 pushfirst!(catchblockargs, caught)
@@ -499,7 +495,8 @@ end
 @addctx :struct function parse_struct(ps::ParseState, mutable::Bool)
     sb = ps.t.startbyte
     kw = mKEYWORD(ps)
-    sig = @closer ps :ws parse_expression(ps)    
+    sig = @closer ps :ws parse_expression(ps)
+    
 
     sb1 = ps.nt.startbyte
     blockargs = parse_block(ps)
