@@ -108,8 +108,13 @@ function parse_compound(ps::ParseState, ret::EXPR)
     elseif (isidentifier(ret) || (typof(ret) === BinaryOpCall && is_dot(ret.args[2]))) && (kindof(ps.nt) == Tokens.STRING || kindof(ps.nt) == Tokens.TRIPLE_STRING || kindof(ps.nt) == Tokens.CMD || kindof(ps.nt) == Tokens.TRIPLE_CMD)
         next(ps)
         arg = parse_string_or_cmd(ps, ret)
-        head = kindof(arg) == Tokens.CMD || kindof(arg) == Tokens.TRIPLE_CMD ? x_Cmd : x_Str
-        ret = EXPR(head, EXPR[ret, arg])
+        if kindof(arg) == Tokens.CMD || kindof(arg) == Tokens.TRIPLE_CMD
+            ret = EXPR(x_Cmd, EXPR[ret, arg])
+        elseif valof(ret) == "var" && VERSION > v"1.3.0-"
+            ret = EXPR(NONSTDIDENTIFIER, EXPR[ret, arg])
+        else
+            ret = EXPR(x_Str, EXPR[ret, arg])
+        end
     elseif kindof(ps.nt) == Tokens.LPAREN
         no_ws = !isemptyws(ps.ws)
         err_rng = ps.t.endbyte + 2:ps.nt.startbyte

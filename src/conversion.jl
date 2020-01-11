@@ -123,7 +123,11 @@ end
 # Fallback
 function Expr(x::EXPR)
     if isidentifier(x)
-        return Symbol(normalize_julia_identifier(valof(x)))
+        if typof(x) === NONSTDIDENTIFIER
+            Symbol(normalize_julia_identifier(valof(x.args[2])))
+        else
+            return Symbol(normalize_julia_identifier(valof(x)))
+        end
     elseif iskw(x)
         if kindof(x) == Tokens.BREAK
             return Expr(:break)

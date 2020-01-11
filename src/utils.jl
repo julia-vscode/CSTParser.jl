@@ -201,7 +201,7 @@ end
 
 
 isidentifier(t::AbstractToken) = kindof(t) == Tokens.IDENTIFIER
-isidentifier(x::EXPR) = typof(x) === IDENTIFIER
+isidentifier(x::EXPR) = typof(x) === IDENTIFIER || typof(x) === NONSTDIDENTIFIER
 
 isliteral(t::AbstractToken) = Tokens.begin_literal < kindof(t) < Tokens.end_literal
 isliteral(x::EXPR) = typof(x) === LITERAL
@@ -523,8 +523,10 @@ Base.length(x::EXPR) = x.args isa Nothing ? 0 : length(x.args)
 @inline val(token::RawToken, ps::ParseState) = String(ps.l.io.data[token.startbyte + 1:token.endbyte + 1])
 
 function str_value(x)
-    if isidentifier(x) || typof(x) === LITERAL
+    if typof(x) === IDENTIFIER || typof(x) === LITERAL
         return valof(x)
+    elseif isidentifier(x)
+        valof(x.args[2])
     elseif typof(x) === OPERATOR || typof(x) === MacroName
         return string(Expr(x))
     else

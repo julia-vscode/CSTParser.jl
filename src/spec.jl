@@ -27,6 +27,7 @@ const DddotOp       = 7
 const AnonFuncOp    = 14
 
 @enum(Head,IDENTIFIER,
+NONSTDIDENTIFIER,
 PUNCTUATION,
 OPERATOR,
 KEYWORD,
