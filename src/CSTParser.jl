@@ -110,7 +110,7 @@ function parse_compound(ps::ParseState, ret::EXPR)
         arg = parse_string_or_cmd(ps, ret)
         if kindof(arg) == Tokens.CMD || kindof(arg) == Tokens.TRIPLE_CMD
             ret = EXPR(x_Cmd, EXPR[ret, arg])
-        elseif valof(ret) == "var" && VERSION > v"1.3.0"
+        elseif valof(ret) == "var" && VERSION > v"1.3.0-"
             ret = EXPR(NONSTDIDENTIFIER, EXPR[ret, arg])
         else
             ret = EXPR(x_Str, EXPR[ret, arg])
