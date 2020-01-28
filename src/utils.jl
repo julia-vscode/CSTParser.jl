@@ -596,9 +596,14 @@ end
 function match_closer(ps::ParseState)
     length(ps.closer.cc) == 0 && return false
     kind = kindof(ps.nt)
-    lc = last(ps.closer.cc)
-    return (kind === Tokens.RPAREN && lc == :paren) ||
-           (kind === Tokens.RSQUARE && lc == :square) ||
-           (kind === Tokens.RBRACE && lc == :braces) ||
-           (kind === Tokens.END && (lc == :begin || lc == :if)) 
+    for i = length(ps.closer.cc):-1:1
+        lc = ps.closer.cc[i]
+        if (kind === Tokens.RPAREN && lc == :paren) ||
+            (kind === Tokens.RSQUARE && lc == :square) ||
+            (kind === Tokens.RBRACE && lc == :braces) ||
+            (kind === Tokens.END && (lc == :begin || lc == :if)) 
+            return true
+        end
+    end
+    return false
 end
