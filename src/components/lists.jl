@@ -111,6 +111,7 @@ function parse_array(ps::ParseState, isref = false)
             accept_rsquare(ps, args)
             return EXPR(etype, args)
         elseif kindof(ps.ws) == NewLineWS
+            ps.closer.inref = false
             ret = EXPR(Vcat, args)
             push!(ret, first_arg)
             while kindof(ps.nt) != Tokens.RSQUARE
@@ -124,6 +125,7 @@ function parse_array(ps::ParseState, isref = false)
             update_span!(ret)
             return ret
         elseif kindof(ps.ws) == WS || kindof(ps.ws) == SemiColonWS
+            ps.closer.inref = false
             first_row = EXPR(Hcat, EXPR[first_arg])
             while kindof(ps.nt) != Tokens.RSQUARE && kindof(ps.ws) != NewLineWS && kindof(ps.ws) != SemiColonWS
                 if kindof(ps.nt) == Tokens.ENDMARKER
@@ -188,7 +190,7 @@ Handles cases where an expression - `ret` - is followed by
 """
 function parse_ref(ps::ParseState, ret::EXPR)
     next(ps)
-    ref = @nocloser ps :inwhere parse_array(ps, true)
+    ref = @closer ps :inref @nocloser ps :inwhere parse_array(ps, true)
     if typof(ref) === Vect
         args = EXPR[ret]
         for a in ref.args

@@ -15,6 +15,7 @@ mutable struct Closer
     brace::Bool
     inmacro::Bool
     insquare::Bool
+    inref::Bool
     inwhere::Bool
     square::Bool
     block::Bool
@@ -26,7 +27,7 @@ mutable struct Closer
     precedence::Int
     cc::Vector{Symbol}
 end
-Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, Symbol[])
+Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, Symbol[])
 
 mutable struct ParseState
     l::Lexer{Base.GenericIOBuffer{Array{UInt8,1}},RawToken}
