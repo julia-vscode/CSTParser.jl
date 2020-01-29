@@ -11,7 +11,15 @@ function parse_kw(ps::ParseState)
     elseif k == Tokens.MACRO
         return @default ps @closer ps :block parse_macro(ps)
     elseif k == Tokens.BEGIN
-        return @default ps @closer ps :block parse_begin(ps)
+        @static if VERSION < v"1.4"
+            return @default ps @closer ps :block parse_begin(ps)
+        else
+            if ps.closer.inref
+                ret = mKEYWORD(ps)
+            else
+                return @default ps @closer ps :block parse_begin(ps)
+            end
+        end
     elseif k == Tokens.QUOTE
         return @default ps @closer ps :block parse_quote(ps)
     elseif k == Tokens.FOR
