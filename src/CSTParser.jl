@@ -67,7 +67,7 @@ function parse_expression(ps::ParseState)
             else
                 ret = INSTANCE(ps)
             end
-            if is_colon(ret) && kindof(ps.nt) != Tokens.COMMA
+            if is_colon(ret) && !(kindof(ps.nt) == Tokens.COMMA || kindof(ps.ws) == SemiColonWS)
                 ret = parse_unary(ps, ret)
             elseif typof(ret) === OPERATOR && precedence(ret) == AssignmentOp && kindof(ret) !== Tokens.APPROX
                 ret = mErrorToken(ret, UnexpectedAssignmentOp)
