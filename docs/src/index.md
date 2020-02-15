@@ -1,10 +1,13 @@
+```@meta
+CurrentModule = CSTParser
+```
+
 # CSTParser
 
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://julia-vscode.github.io/CSTParser.jl/dev)
 [![Project Status: Active - The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
 ![](https://github.com/julia-vscode/CSTParser.jl/workflows/Run%20CI%20on%20master/badge.svg)
 [![codecov](https://codecov.io/gh/julia-vscode/CSTParser.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/julia-vscode/CSTParser.jl)
-
 
 A parser for Julia using [Tokenize](https://github.com/JuliaLang/Tokenize.jl/) that aims to extend the built-in parser by providing additional meta information along with the resultant AST.
 
@@ -18,16 +21,17 @@ using CSTParser
 ```
 **Documentation**: [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://julia-vscode.github.io/CSTParser.jl/dev)
 
-### Additional Output
-- `EXPR`'s are iterable producing children in the order that they appear in the source code, including punctuation. 
 
-    Example: 
+### Additional Output
+- `EXPR`'s are iterable producing children in the order that they appear in the source code, including punctuation.
+
+    Example:
   ```
   f(x) = x*2 becomes [f(x), =, x*2]
   f(x) becomes [f, (, x, )]
   ```
 - The byte span of each `EXPR` is stored allowing a mapping between byte position in the source code and the releveant parsed expression. The span of a single token includes any trailing whitespace, newlines or comments. This also allows for fast partial parsing of modified source code.
-- Formatting hints are generated as the source code is parsed (e.g. mismatched indents for blocks, missing white space around operators). 
+- Formatting hints are generated as the source code is parsed (e.g. mismatched indents for blocks, missing white space around operators).
 - The declaration of modules, functions, datatypes and variables are tracked and stored in the relevant hierarchical scopes attatched to the expressions that declare the scope. This allows for a mapping between any identifying symbol and the relevant code that it refers to.
 
 ### Structure
