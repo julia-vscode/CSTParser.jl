@@ -19,15 +19,15 @@ using CSTParser
 **Documentation**: [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://www.julia-vscode.org/CSTParser.jl/dev)
 
 ### Additional Output
-- `EXPR`'s are iterable producing children in the order that they appear in the source code, including punctuation. 
+- `EXPR`'s are iterable producing children in the order that they appear in the source code, including punctuation.
 
-    Example: 
+    Example:
   ```
   f(x) = x*2 becomes [f(x), =, x*2]
   f(x) becomes [f, (, x, )]
   ```
 - The byte span of each `EXPR` is stored allowing a mapping between byte position in the source code and the releveant parsed expression. The span of a single token includes any trailing whitespace, newlines or comments. This also allows for fast partial parsing of modified source code.
-- Formatting hints are generated as the source code is parsed (e.g. mismatched indents for blocks, missing white space around operators). 
+- Formatting hints are generated as the source code is parsed (e.g. mismatched indents for blocks, missing white space around operators).
 - The declaration of modules, functions, datatypes and variables are tracked and stored in the relevant hierarchical scopes attatched to the expressions that declare the scope. This allows for a mapping between any identifying symbol and the relevant code that it refers to.
 
 ### Structure

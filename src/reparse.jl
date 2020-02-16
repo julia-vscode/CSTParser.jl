@@ -7,7 +7,7 @@ function find_enclosing_expr(cst, offset, pos = 0, stack = EXPRStack[])
         if pos < first(offset) < pos + a.span && pos < last(offset) < pos + a.span
             push!(stack, (cst, pos1, i))
             return find_enclosing_expr(a, offset, pos, stack)
-        else 
+        else
             pos += a.fullspan
         end
     end
@@ -42,7 +42,7 @@ function replace_args!(replacement_args, stack)
         dfullspan = replacement_args[1].fullspan - oldfullspan
         @info "Replacing $(typeof(pexpr)) at $(pi)"
         fix_stack_span(stack, dfullspan, replacement_args[1].span - replacement_args[1].fullspan)
-    end 
+    end
 end
 
 function reparse(stack::Array{EXPRStack}, edittedtext::String, insertsize::Int, oldcst)
@@ -51,10 +51,10 @@ function reparse(stack::Array{EXPRStack}, edittedtext::String, insertsize::Int, 
     if length(stack) == 1
         return false
     else
-        if parent_expr(stack) isa EXPR{FileH} 
+        if parent_expr(stack) isa EXPR{FileH}
             replacement_args = parse(edittedtext[enclosing_expr_range(stack, insertsize)], true).args
         elseif parent_expr(stack) isa EXPR{Block} && !(length(stack) > 2 && stack[end - 2] isa EXPR{If})
-            replacement_args = let 
+            replacement_args = let
                 ps = ParseState(edittedtext[enclosing_expr_range(stack, insertsize)])
                 newblockargs = Any[]
                 CSTParser.parse_block(ps, newblockargs)
@@ -74,7 +74,7 @@ function fixlastchild(x, pi, dspan)
     if pi == nx
         x[pi] = x.fullspan - dspan
         return true
-    elseif x[nx].fullspan == 0 
+    elseif x[nx].fullspan == 0
         for i = nx - 1:-1:1
             if x[i].fullspan > 0
                 x[pi] = x.fullspan - dspan
@@ -99,7 +99,7 @@ function fix_stack_span(stack::Array{EXPRStack}, dfullspan, dspan)
 end
 
 function reparse_test(text, insertrange, inserttext)
-    cst = parse(text, true) 
+    cst = parse(text, true)
     cst0 = deepcopy(cst)
     edittedtext = edit_string(text, insertrange, inserttext)
     reparsed, reparsed_cst = reparse(edittedtext, inserttext, insertrange, cst)
@@ -120,11 +120,11 @@ function edit_string(text, insertrange, inserttext)
         text = string(text[1:first(insertrange)], inserttext)
     else
         text = string(text[1:first(insertrange)], inserttext, text[nextind(text, last(insertrange)):end])
-    end    
+    end
 end
 
 spanequiv(a::EXPR, b::EXPR) = a.span == b.span && a.fullspan == b.fullspan
- 
+
 isequiv(a, b; span = true) = false
 
 function isequiv(a::EXPR, b::EXPR; span = true)
@@ -133,7 +133,7 @@ function isequiv(a::EXPR, b::EXPR; span = true)
     if a.args isa Vector
         length(a.args) != length(b.args) && return false
         for i = 1:length(a.args)
-            t = t && isequiv(a.args[i], b.args[i], span = span) 
+            t = t && isequiv(a.args[i], b.args[i], span = span)
             t || return false
         end
     end

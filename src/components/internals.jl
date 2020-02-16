@@ -120,7 +120,7 @@ Parses a function call. Expects to start before the opening parentheses and is p
 function parse_call(ps::ParseState, ret::EXPR, ismacro = false)
     sb = ps.nt.startbyte - ret.fullspan
     # special case for `new` call inside Type definitions, converts `new` to a keyword.
-    if isidentifier(ret) && valof(ret) == "new" && :struct in ps.closer.cc 
+    if isidentifier(ret) && valof(ret) == "new" && :struct in ps.closer.cc
         ret = mKEYWORD(Tokens.NEW, ret.fullspan, ret.span)
     elseif typof(ret) === Curly && valof(ret.args[1]) == "new" && :struct in ps.closer.cc
         ret.args[1] = setparent!(mKEYWORD(Tokens.NEW, ret.args[1].fullspan, ret.args[1].span), ret)
@@ -159,7 +159,7 @@ _do_kw_convert(ps, a) = !ps.closer.brace && typof(a) === BinaryOpCall && is_eq(a
 _kw_convert(a) = EXPR(Kw, EXPR[a.args[1], a.args[2], a.args[3]], a.fullspan, a.span)
 
 """
-Parses a comma separated list, optionally allowing for conversion of 
+Parses a comma separated list, optionally allowing for conversion of
 assignment (`=`) expressions to `Kw`.
 """
 function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw = true, block = false, istuple = false)
@@ -202,7 +202,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw = true, block = 
             end
         end
     end
-    return 
+    return
 end
 
 """
