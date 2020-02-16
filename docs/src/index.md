@@ -4,7 +4,7 @@ CurrentModule = CSTParser
 
 # CSTParser
 
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://julia-vscode.github.io/CSTParser.jl/dev)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://www.julia-vscode.org/CSTParser.jl/dev)
 [![Project Status: Active - The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
 ![](https://github.com/julia-vscode/CSTParser.jl/workflows/Run%20CI%20on%20master/badge.svg)
 [![codecov](https://codecov.io/gh/julia-vscode/CSTParser.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/julia-vscode/CSTParser.jl)
@@ -19,7 +19,7 @@ Pkg.add("CSTParser")
 ```julia
 using CSTParser
 ```
-**Documentation**: [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://julia-vscode.github.io/CSTParser.jl/dev)
+**Documentation**: [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://www.julia-vscode.org/CSTParser.jl/dev)
 
 
 ### Additional Output

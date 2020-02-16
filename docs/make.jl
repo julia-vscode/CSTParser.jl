@@ -8,7 +8,7 @@ makedocs(;
     sitename="CSTParser.jl",
     format=Documenter.HTML(;
         prettyurls = prettyurls = get(ENV, "CI", nothing) == "true",
-        # canonical="https://julia-vscode.github.io/CSTParser.jl",
+        # canonical="https://www.julia-vscode.org/CSTParser.jl",
         # assets=String[],
     ),
     pages=[
