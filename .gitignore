@@ -4,3 +4,4 @@
 *.junk.jl
 .vscode
 *.ignore.*
+Manifest.toml
