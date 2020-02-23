@@ -153,9 +153,11 @@ function Expr(x::EXPR)
         return Expr(:if, Expr(x.args[1]), Expr(x.args[3]), Expr(x.args[5]))
     elseif typof(x) === ErrorToken
         ret = Expr(:error)
-        for a in x.args
-            if !(ispunctuation(a))
-                push!(ret.args, Expr(a))
+        if x.args !== nothing
+            for a in x.args
+                if !(ispunctuation(a))
+                    push!(ret.args, Expr(a))
+                end
             end
         end
         return ret
