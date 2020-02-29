@@ -266,7 +266,7 @@ end
 
 # Parse ranges
 function parse_operator_colon(ps::ParseState, ret::EXPR, op::EXPR)  
-    if isnewlinews(ps.ws)
+    if isnewlinews(ps.ws) && !ps.closer.paren
         ps.errored = true
         op = mErrorToken(op, UnexpectedNewLine)
     end
