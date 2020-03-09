@@ -43,14 +43,14 @@ function parse_expression(ps::ParseState)
         ps.errored = true
         ret = mErrorToken(mPUNCTUATION(next(ps)), UnexpectedToken)
     elseif kindof(ps.nt) ∈ term_c && !(kindof(ps.nt) === Tokens.END && ps.closer.square)
-        if match_closer(ps)
-            # trying to parse an expression but we've hit a token that closes a parent expression
-            ps.errored = true
-            ret = mErrorToken(MissingCloser)
-        else
+        # if match_closer(ps)
+        #     # trying to parse an expression but we've hit a token that closes a parent expression
+        #     ps.errored = true
+        #     ret = mErrorToken(MissingCloser)
+        # else
             ps.errored = true
             ret = mErrorToken(INSTANCE(next(ps)), UnexpectedToken)
-        end
+        # end
     else
         next(ps)
         if iskeyword(kindof(ps.t)) && kindof(ps.t) != Tokens.DO
