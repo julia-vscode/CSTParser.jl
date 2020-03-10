@@ -108,6 +108,7 @@ ErrorToken)
     MissingCloser,
     InvalidIterator,
     StringInterpolationWithTrailingWhitespace,
+    TooLongChar,
     Unknown)
 
 const NoKind = Tokenize.Tokens.begin_keywords
@@ -159,7 +160,13 @@ mLITERAL(fullspan::Int, span::Int, val::String, kind::Tokens.Kind) = EXPR(LITERA
         kindof(ps.t) == Tokens.CMD || kindof(ps.t) == Tokens.TRIPLE_CMD
         return parse_string_or_cmd(ps)
     else
-        mLITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), kindof(ps.t))
+        v = val(ps.t, ps)
+        if kindof(ps.t) == Tokens.CHAR && length(v) > 3
+            # A char with more than 1 character has been written, e.g. 'aa'.
+            # To continue to allow conversion to Expr we'll only take the first character.
+            return mErrorToken(mLITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, string(v[1:2], '\''), kindof(ps.t)), TooLongChar)
+        end
+        return mLITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, v, kindof(ps.t))
     end
 end
 
