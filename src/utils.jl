@@ -608,3 +608,53 @@ function match_closer(ps::ParseState)
     end
     return false
 end
+
+function valid_escaped_seq(s::AbstractString)
+    a = Iterators.Stateful(s)
+    for c in a
+        if !isempty(a) && c == '\\'
+            c = popfirst!(a)
+            if c == 'x' || c == 'u' || c == 'U'
+                n = k = 0
+                m = c == 'x' ? 2 :
+                    c == 'u' ? 4 : 8
+                while (k += 1) <= m && !isempty(a)
+                    nc = Base.peek(a)
+                    n = '0' <= nc <= '9' ? n<<4 + (nc-'0') :
+                        'a' <= nc <= 'f' ? n<<4 + (nc-'a'+10) :
+                        'A' <= nc <= 'F' ? n<<4 + (nc-'A'+10) : break
+                    popfirst!(a)
+                end
+                if k == 1 || n > 0x10ffff
+                    u = m == 4 ? 'u' : 'U'
+                    return false
+                end
+            elseif '0' <= c <= '7'
+                k = 1
+                n = c-'0'
+                while (k += 1) <= 3 && !isempty(a)
+                    c = Base.peek(a)
+                    n = ('0' <= c <= '7') ? n<<3 + c-'0' : break
+                    popfirst!(a)
+                end
+                if n > 255
+                    return false
+                end
+            else
+                c == 'a' ||
+                c == 'b' ||
+                c == 't' ||
+                c == 'n' ||
+                c == 'v' ||
+                c == 'f' ||
+                c == 'r' ||
+                c == 'e' ||
+                c == '\\' ||
+                c == '"' ||
+                c == '\'' ||
+                return false
+            end
+        end
+    end
+    return true
+end
