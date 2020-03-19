@@ -62,7 +62,7 @@ function parse_iterator(ps::ParseState)
             arg.span = outer.fullspan + arg.span
         else # error handling - incorrect iterator specification
             arg = EXPR(ErrorToken, EXPR[outer, arg])
-            arg.kind = InvalidIterator
+            arg.meta = InvalidIterator
         end
     else
         arg = @closer ps :range @closer ps :ws parse_expression(ps)
