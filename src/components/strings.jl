@@ -148,12 +148,12 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         else
             str = tostr(b)
             if istrip
-                str = str[1:prevind(str, prevind(str, sizeof(str), 2))]
+                str = str[1:prevind(str, lastindex(str), 3)]
                 # only mark non-interpolated triple strings
                 ex = mLITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, length(ret) == 0 ? Tokens.TRIPLE_STRING : Tokens.STRING)
                 adjust_lcp(ex, true)
             else
-                str =  str[1:prevind(str, sizeof(str))]
+                str = str[1:prevind(str, lastindex(str))]
                 ex = mLITERAL(lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str, Tokens.STRING)
             end
         end
