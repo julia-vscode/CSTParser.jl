@@ -85,7 +85,9 @@ function requires_ws(x, ps)
 end
 
 function requires_no_ws(x, ps)
-    if x.span != x.fullspan
+    if !(ps.nt.kind === Tokens.RPAREN ||
+        ps.nt.kind === Tokens.RBRACE ||
+        ps.nt.kind === Tokens.RSQUARE) && x.span != x.fullspan
         ps.errored = true
         return mErrorToken(x, UnexpectedWhiteSpace)
     else

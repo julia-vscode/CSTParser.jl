@@ -709,6 +709,7 @@ end""" |> test_expr
     @test CSTParser.typof(CSTParser.parse("=")) === CSTParser.ErrorToken
     @test CSTParser.typof(CSTParser.parse("~")) === CSTParser.OPERATOR
     @test "(1:\n2)" |> test_expr
+    @test "a[: ]" |> test_expr
 end
 
 @testset "interpolation error catching" begin
