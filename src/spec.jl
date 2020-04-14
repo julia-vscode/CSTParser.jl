@@ -159,7 +159,6 @@ mLITERAL(fullspan::Int, span::Int, val::String, kind::Tokens.Kind) = EXPR(LITERA
     if kindof(ps.t) == Tokens.STRING || kindof(ps.t) == Tokens.TRIPLE_STRING ||
         kindof(ps.t) == Tokens.CMD || kindof(ps.t) == Tokens.TRIPLE_CMD
         return parse_string_or_cmd(ps)
-        return mLITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, v, kindof(ps.t))
     else
         v = val(ps.t, ps)
         if kindof(ps.t) == Tokens.CHAR && length(v) > 3 && !(v[2] == '\\' && valid_escaped_seq(v[2:prevind(v, length(v))]))
