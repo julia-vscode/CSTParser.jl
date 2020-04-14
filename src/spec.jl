@@ -159,11 +159,10 @@ mLITERAL(fullspan::Int, span::Int, val::String, kind::Tokens.Kind) = EXPR(LITERA
     if kindof(ps.t) == Tokens.STRING || kindof(ps.t) == Tokens.TRIPLE_STRING ||
         kindof(ps.t) == Tokens.CMD || kindof(ps.t) == Tokens.TRIPLE_CMD
         return parse_string_or_cmd(ps)
+        return mLITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, v, kindof(ps.t))
     else
         v = val(ps.t, ps)
-        if kindof(ps.t) == Tokens.CHAR && !valid_escaped_seq(v[2:prevind(v, length(v))])
-            # A char with more than 1 character has been written, e.g. 'aa'.
-            # To continue to allow conversion to Expr we'll only take the first character.
+        if kindof(ps.t) == Tokens.CHAR && length(v) > 3 && !(v[2] == '\\' && valid_escaped_seq(v[2:prevind(v, length(v))]))
             return mErrorToken(mLITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, string(v[1:2], '\''), kindof(ps.t)), TooLongChar)
         end
         return mLITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, v, kindof(ps.t))
