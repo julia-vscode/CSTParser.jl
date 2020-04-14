@@ -109,7 +109,7 @@ function Expr_float(x)
     Base.parse(Float64, replace(valof(x), "_" => ""))
 end
 function Expr_char(x)
-    val = _unescape_string(valof(x)[2:prevind(valof(x), sizeof(valof(x)))])
+    val = _unescape_string(valof(x)[2:prevind(valof(x), lastindex(valof(x)))])
     # one byte e.g. '\xff' maybe not valid UTF-8
     # but we want to use the raw value as a codepoint in this case
     sizeof(val) == 1 && return Char(codeunit(val, 1))
