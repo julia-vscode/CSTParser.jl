@@ -35,7 +35,7 @@ function closer(ps::ParseState)
         !(kindof(ps.nt) == Tokens.DO) &&
         !(
             (isbinaryop(ps.nt) && !(ps.closer.wsop && isemptyws(ps.nws) && isunaryop(ps.nt) && precedence(ps.nt) > 7)) || 
-            (isunaryop(ps.t) && kindof(ps.ws) == WS)
+            (isunaryop(ps.t) && kindof(ps.ws) == WS && ps.lt.kind !== CSTParser.Tokens.COLON)
         )) ||
     (ps.closer.unary && (kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE) && isidentifier(ps.nt)))
 end
