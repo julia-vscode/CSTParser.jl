@@ -430,6 +430,9 @@ function check_base(dir = dirname(Base.find_source_file("essentials.jl")), displ
         println(" : $neq    $(100 * neq / N)%", "  -  $aerr     $(100 * aerr / N)%")
         printstyled("base failed", color = :magenta)
         println(" : $bfail    $(100 * bfail / N)%")
+        println()
+    else
+        println("\r")
     end
     ret
 end
