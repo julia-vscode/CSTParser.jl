@@ -271,7 +271,11 @@ function mWhereOpCall(arg1::EXPR, op::EXPR, args::Vector{EXPR})
 end
 
 mErrorToken(k::ErrorKind) = EXPR(ErrorToken, EXPR[], 0, 0, nothing, NoKind, false, nothing, k)
-mErrorToken(x::EXPR, k) = EXPR(ErrorToken, EXPR[x], x.fullspan, x.span, nothing, NoKind, false, nothing, k)
+function mErrorToken(x::EXPR, k) 
+    ret = EXPR(ErrorToken, EXPR[x], x.fullspan, x.span, nothing, NoKind, false, nothing, k)
+    setparent!(ret[1], ret)
+    return ret
+end
 
 TRUE() = mLITERAL(0, 0, "", Tokens.TRUE)
 FALSE() = mLITERAL(0, 0, "", Tokens.FALSE)
