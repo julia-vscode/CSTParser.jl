@@ -489,51 +489,6 @@ function get_id(x::EXPR)
     end
 end
 
-
-# """
-#     get_t(x)
-
-# Basic inference in the presence of type declarations.
-# """
-# get_t(x) = :Any
-# function get_t(x::BinaryOpCall)
-#     if is_decl(x.args[2])
-#         return Expr(x.args[3])
-#     else
-#         return :Any
-#     end
-# end
-
-
-# infer_t(x) = :Any
-# function infer_t(x::LITERAL)
-#     if kindof(x) == Tokens.INTEGER
-#         return :Int
-#     elseif kindof(x) == Tokens.FLOAT
-#         return :Float64
-#     elseif kindof(x) == Tokens.STRING
-#         return :String
-#     elseif kindof(x) == Tokens.TRIPLE_STRING
-#         return :String
-#     elseif kindof(x) == Tokens.CHAR
-#         return :Char
-#     elseif kindof(x) == Tokens.TRUE || kindof(x) == Tokens.FALSE
-#         return :Bool
-#     elseif kindof(x) == Tokens.CMD
-#         return :Cmd
-#     end
-# end
-
-# infer_t(x::EXPR{Vect}) = :(Array{Any,1})
-# infer_t(x::EXPR{Vcat}) = :(Array{Any,N})
-# infer_t(x::EXPR{TypedVcat}) = :(Array{$(Expr(x.args[1])),N})
-# infer_t(x::EXPR{Hcat}) = :(Array{Any,2})
-# infer_t(x::EXPR{TypedHcat}) = :(Array{$(Expr(x.args[1])),2})
-# infer_t(x::EXPR{Quote}) = :Expr
-# infer_t(x::EXPR{StringH}) = :String
-# infer_t(x::EXPR{Quotenode}) = :QuoteNode
-
-
 """
     contributes_scope(x)
 Checks whether the body of `x` is included in the toplevel namespace.

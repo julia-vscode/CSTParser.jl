@@ -35,9 +35,3 @@ function Base.show(io::IO, x::EXPR, d = 0, er = false)
         end
     end
 end
-
-# function Base.show(io::IO, scope::Scope)
-#     println(io, parentof(scope) === nothing ? "Root scope:" : "Scope:")
-#     println(io, scope.names isa Dict ? string("[", join(collect(keys(scope.names)), ","), "]") : "[]")
-#     println(io, scope.modules isa Dict ? string("[", join(collect(keys(scope.modules)), ","), "]") : "[]")
-# end

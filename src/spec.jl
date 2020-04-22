@@ -295,6 +295,13 @@ function setparent!(c, p)
     return c
 end
 
+
+Base.iterate(x::EXPR) = length(x) == 0 ? nothing : (x.args[1], 1)
+Base.iterate(x::EXPR, s) = s < length(x) ? (x.args[s + 1], s + 1) : nothing
+Base.length(x::EXPR) = x.args isa Nothing ? 0 : length(x.args)
+Base.firstindex(x::EXPR) = 1
+Base.lastindex(x::EXPR) = x.args === nothing ? 0 : lastindex(x.args)
 Base.getindex(x::EXPR, i) = x.args[i]
+Base.setindex!(x::EXPR, val, i) = Base.setindex!(x.args, val, i)
 Base.first(x::EXPR) = x.args === nothing ? nothing : first(x.args)
 Base.last(x::EXPR) = x.args === nothing ? nothing : last(x.args)

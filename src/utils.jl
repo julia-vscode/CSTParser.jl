@@ -519,10 +519,6 @@ function trailing_ws_length(x)
     x.fullspan - x.span
 end
 
-Base.iterate(x::EXPR) = length(x) == 0 ? nothing : (x.args[1], 1)
-Base.iterate(x::EXPR, s) = s < length(x) ? (x.args[s + 1], s + 1) : nothing
-Base.length(x::EXPR) = x.args isa Nothing ? 0 : length(x.args)
-
 
 @inline val(token::RawToken, ps::ParseState) = String(ps.l.io.data[token.startbyte + 1:token.endbyte + 1])
 
@@ -661,3 +657,14 @@ function valid_escaped_seq(s::AbstractString)
     end
     return true
 end
+
+is_getfield(x) = typof(x) === BinaryOpCall && length(x) == 3 && kindof(x[2]) == Tokens.DOT 
+
+# lexer treats word as operator
+both_symbol_and_op(t) = kindof(t) == Tokens.WHERE || kindof(t) == Tokens.IN || kindof(t) == Tokens.ISA
+
+disallowednumberjuxt(ret) = is_number(ret) && last(valof(ret)) == '.'
+
+isprefixableliteral(t) = (kindof(t) == Tokens.STRING || kindof(t) == Tokens.TRIPLE_STRING || kindof(t) == Tokens.CMD || kindof(t) == Tokens.TRIPLE_CMD)
+ 
+nexttokenstartsdocstring(ps::ParseState) = isidentifier(ps.nt) && val(ps.nt, ps) == "doc" && (kindof(ps.nnt) == Tokens.STRING || kindof(ps.nnt) == Tokens.TRIPLE_STRING)
