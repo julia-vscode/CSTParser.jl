@@ -98,3 +98,11 @@ end
     end") == ["a", "b"]
 end
 
+@testset "has_error" begin
+    # Just an error token
+    @test CSTParser.has_error(CSTParser.parse(","))
+    # A nested ErrorToken
+    @test CSTParser.has_error(CSTParser.parse("foo(bar(\"\$ x\"))"))
+    # Not an error
+    @test !CSTParser.has_error(CSTParser.parse("foo(bar(\"\$x\"))"))
+end

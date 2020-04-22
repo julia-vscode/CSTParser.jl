@@ -21,7 +21,7 @@ function test_expr(str, show_data = true)
 
     x0 = Expr(x)
     x1 = remlineinfo!(Meta.parse(str))
-    if ps.errored || x0 != x1
+    if CSTParser.has_error(ps) || x0 != x1
         if show_data
             println("Mismatch between flisp and CSTParser when parsing string $str")
             println("ParserState:\n $ps\n")

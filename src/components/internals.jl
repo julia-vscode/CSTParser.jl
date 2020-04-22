@@ -13,26 +13,22 @@ function parse_block(ps::ParseState, ret::Vector{EXPR} = EXPR[], closers = (Toke
                 if length(ps.closer.cc) > 1 && :paren == ps.closer.cc[end - 1]
                     break
                 else
-                    push!(ret, mErrorToken(INSTANCE(next(ps)), UnexpectedToken))
-                    ps.errored = true
+                    push!(ret, mErrorToken(ps, INSTANCE(next(ps)), UnexpectedToken))
                 end
             elseif kindof(ps.nt) == Tokens.RBRACE
                 if length(ps.closer.cc) > 1 && :brace == ps.closer.cc[end - 1]
                     break
                 else
-                    push!(ret, mErrorToken(INSTANCE(next(ps)), UnexpectedToken))
-                    ps.errored = true
+                    push!(ret, mErrorToken(ps, INSTANCE(next(ps)), UnexpectedToken))
                 end
             elseif kindof(ps.nt) == Tokens.RSQUARE
                 if length(ps.closer.cc) > 1 && :square == ps.closer.cc[end - 1]
                     break
                 else
-                    push!(ret, mErrorToken(INSTANCE(next(ps)), UnexpectedToken))
-                    ps.errored = true
+                    push!(ret, mErrorToken(ps, INSTANCE(next(ps)), UnexpectedToken))
                 end
             else
-                push!(ret, mErrorToken(INSTANCE(next(ps)), UnexpectedToken))
-                ps.errored = true
+                push!(ret, mErrorToken(ps, INSTANCE(next(ps)), UnexpectedToken))
             end
         else
             if docable
@@ -61,6 +57,7 @@ function parse_iterator(ps::ParseState)
             arg.fullspan += outer.fullspan
             arg.span = outer.fullspan + arg.span
         else # error handling - incorrect iterator specification
+            ps.errored = true
             arg = EXPR(ErrorToken, EXPR[outer, arg])
             arg.meta = InvalidIterator
         end
@@ -79,8 +76,7 @@ function parse_iterators(ps::ParseState, allowfilter = false)
     arg = parse_iterator(ps)
     if (typof(arg) === Outer && !is_range(arg.args[2])) || !is_range(arg)
         # error handling - incorrect iterator specification
-        arg = mErrorToken(arg, InvalidIterator)
-        ps.errored = true
+        arg = mErrorToken(ps, arg, InvalidIterator)
     elseif kindof(ps.nt) == Tokens.COMMA # we've hit a comma separated list of iterators.
         arg = EXPR(Block, EXPR[arg])
         while kindof(ps.nt) == Tokens.COMMA
@@ -88,8 +84,7 @@ function parse_iterators(ps::ParseState, allowfilter = false)
             nextarg = parse_iterator(ps)
             if (typof(nextarg) === Outer && !is_range(nextarg.args[2])) || !is_range(nextarg)
                 # error handling - incorrect iterator specification
-                arg = mErrorToken(arg, InvalidIterator)
-                ps.errored = true
+                arg = mErrorToken(ps, arg, InvalidIterator)
             end
             push!(arg, nextarg)
         end
@@ -256,8 +251,7 @@ function parse_macrocall(ps::ParseState)
     sb = ps.t.startbyte
     at = mPUNCTUATION(ps)
     if !isemptyws(ps.ws)
-        mname = mErrorToken(INSTANCE(next(ps)), UnexpectedWhiteSpace)
-        ps.errored = true
+        mname = mErrorToken(ps, INSTANCE(next(ps)), UnexpectedWhiteSpace)
     else
         mname = EXPR(MacroName, EXPR[at, mIDENTIFIER(next(ps))])
     end
