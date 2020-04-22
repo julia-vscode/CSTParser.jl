@@ -244,7 +244,7 @@ Determine whether a parsing error occured while processing text with the given
 `ParseState`, or exists as a (sub) expression of `x`.
 """
 function has_error(x::EXPR)
-    return typof(x) == ErrorToken || (!isnothing(x.args) && any(has_error, x.args))
+    return typof(x) == ErrorToken || (x.args !== nothing && any(has_error, x.args))
 end
 has_error(ps::ParseState) = ps.errored
 
