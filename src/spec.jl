@@ -162,7 +162,7 @@ mLITERAL(fullspan::Int, span::Int, val::String, kind::Tokens.Kind) = EXPR(LITERA
     else
         v = val(ps.t, ps)
         if kindof(ps.t) == Tokens.CHAR && length(v) > 3 && !(v[2] == '\\' && valid_escaped_seq(v[2:prevind(v, length(v))]))
-            return mErrorToken(mLITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, string(v[1:2], '\''), kindof(ps.t)), TooLongChar)
+            return mErrorToken(ps, mLITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, string(v[1:2], '\''), kindof(ps.t)), TooLongChar)
         end
         return mLITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, v, kindof(ps.t))
     end
@@ -236,10 +236,10 @@ function INSTANCE(ps::ParseState)
     elseif ispunctuation(ps.t)
         return mPUNCTUATION(ps)
     elseif kindof(ps.t) == Tokens.ERROR
+        ps.errored = true
         return EXPR(ErrorToken, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), NoKind, false, nothing, Unknown)
     else
-        ps.errored = true
-        return mErrorToken(Unknown)
+        return mErrorToken(ps, Unknown)
     end
 end
 
@@ -270,8 +270,12 @@ function mWhereOpCall(arg1::EXPR, op::EXPR, args::Vector{EXPR})
     return ex
 end
 
-mErrorToken(k::ErrorKind) = EXPR(ErrorToken, EXPR[], 0, 0, nothing, NoKind, false, nothing, k)
-function mErrorToken(x::EXPR, k) 
+function mErrorToken(ps::ParseState, k::ErrorKind)
+    ps.errored = true
+    return EXPR(ErrorToken, EXPR[], 0, 0, nothing, NoKind, false, nothing, k)
+end
+function mErrorToken(ps::ParseState, x::EXPR, k)
+    ps.errored = true
     ret = EXPR(ErrorToken, EXPR[x], x.fullspan, x.span, nothing, NoKind, false, nothing, k)
     setparent!(ret[1], ret)
     return ret

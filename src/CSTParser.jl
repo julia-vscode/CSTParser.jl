@@ -40,16 +40,13 @@ Acceptable starting tokens are:
 """
 function parse_expression(ps::ParseState)
     if kindof(ps.nt) == Tokens.COMMA
-        ps.errored = true
-        ret = mErrorToken(mPUNCTUATION(next(ps)), UnexpectedToken)
+        ret = mErrorToken(ps, mPUNCTUATION(next(ps)), UnexpectedToken)
     elseif kindof(ps.nt) ∈ term_c && !(kindof(ps.nt) === Tokens.END && ps.closer.square)
         # if match_closer(ps)
         #     # trying to parse an expression but we've hit a token that closes a parent expression
-        #     ps.errored = true
-        #     ret = mErrorToken(MissingCloser)
+        #     ret = mErrorToken(ps, MissingCloser)
         # else
-            ps.errored = true
-            ret = mErrorToken(INSTANCE(next(ps)), UnexpectedToken)
+            ret = mErrorToken(ps, INSTANCE(next(ps)), UnexpectedToken)
         # end
     else
         next(ps)
@@ -70,13 +67,12 @@ function parse_expression(ps::ParseState)
             if is_colon(ret) && !(kindof(ps.nt) == Tokens.COMMA || kindof(ps.ws) == SemiColonWS)
                 ret = parse_unary(ps, ret)
             elseif typof(ret) === OPERATOR && precedence(ret) == AssignmentOp && kindof(ret) !== Tokens.APPROX
-                ret = mErrorToken(ret, UnexpectedAssignmentOp)
+                ret = mErrorToken(ps, ret, UnexpectedAssignmentOp)
             end
         elseif kindof(ps.t) == Tokens.AT_SIGN
             ret = parse_macrocall(ps)
         else
-            ps.errored = true
-            ret = mErrorToken(INSTANCE(ps), UnexpectedToken)
+            ret = mErrorToken(ps, INSTANCE(ps), UnexpectedToken)
         end
         while !closer(ps)
             ret = parse_compound(ps, ret)
@@ -97,8 +93,7 @@ function parse_compound(ps::ParseState, ret::EXPR)
         ret = @default ps @closer ps :block parse_do(ps, ret)
     elseif isajuxtaposition(ps, ret)
         if is_number(ret) && last(valof(ret)) == '.'
-            ps.errored = true
-            ret = mErrorToken(ret, CannotJuxtapose)
+            ret = mErrorToken(ps, ret, CannotJuxtapose)
         end
         op = mOPERATOR(0, 0, Tokens.STAR, false)
         ret = parse_operator(ps, ret, op)
@@ -120,15 +115,13 @@ function parse_compound(ps::ParseState, ret::EXPR)
         err_rng = ps.t.endbyte + 2:ps.nt.startbyte
         ret = @closeparen ps parse_call(ps, ret)
         if no_ws && !(typof(ret) === UnaryOpCall)
-            ps.errored = true
-            ret = mErrorToken(ret, UnexpectedWhiteSpace)
+            ret = mErrorToken(ps, ret, UnexpectedWhiteSpace)
         end
     elseif kindof(ps.nt) == Tokens.LBRACE
         if isemptyws(ps.ws)
             ret = @default ps @nocloser ps :inwhere @closebrace ps parse_curly(ps, ret)
         else
-            ps.errored = true
-            ret = mErrorToken((@default ps @nocloser ps :inwhere @closebrace ps parse_curly(ps, ret)), UnexpectedWhiteSpace)
+            ret = mErrorToken(ps, (@default ps @nocloser ps :inwhere @closebrace ps parse_curly(ps, ret)), UnexpectedWhiteSpace)
 
         end
     elseif kindof(ps.nt) == Tokens.LSQUARE && isemptyws(ps.ws) && !isoperator(ret)
@@ -149,7 +142,7 @@ function parse_compound(ps::ParseState, ret::EXPR)
 # ###############################################################################
     elseif kindof(ps.nt) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)
         ps.errored = true
-        ret = EXPR(ErrorToken, EXPR[ret, mErrorToken(mPUNCTUATION(next(ps)), Unknown)])
+        ret = EXPR(ErrorToken, EXPR[ret, mErrorToken(ps, mPUNCTUATION(next(ps)), Unknown)])
     else
         nextarg = parse_expression(ps)
         ps.errored = true
