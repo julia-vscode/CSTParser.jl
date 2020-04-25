@@ -213,8 +213,10 @@ function parse_unary_colon(ps::ParseState, op::EXPR)
     elseif closer(ps)
         ret = op
     else
+        prev_errored = ps.errored
         arg = @precedence ps 20 parse_expression(ps)
         if typof(arg) === InvisBrackets && length(arg.args) == 3 && typof(arg.args[2]) === ErrorToken && errorof(arg.args[2]) === UnexpectedAssignmentOp
+            ps.errored = prev_errored
             arg.args[2] = arg.args[2].args[1]
             setparent!(arg.args[2], arg)
         end
@@ -267,8 +269,7 @@ end
 # Parse ranges
 function parse_operator_colon(ps::ParseState, ret::EXPR, op::EXPR)  
     if isnewlinews(ps.ws) && !ps.closer.paren
-        ps.errored = true
-        op = mErrorToken(op, UnexpectedNewLine)
+        op = mErrorToken(ps, op, UnexpectedNewLine)
     end
     nextarg = @precedence ps ColonOp - LtoR(ColonOp) parse_expression(ps)
 
@@ -317,8 +318,7 @@ function parse_operator_dot(ps::ParseState, ret::EXPR, op::EXPR)
             sig = @default ps parse_call(ps, ret)
             nextarg = EXPR(TupleH, sig.args[2:end])
             if iserred
-                ps.errored = true
-                nextarg = mErrorToken(nextarg, UnexpectedWhiteSpace)
+                nextarg = mErrorToken(ps, nextarg, UnexpectedWhiteSpace)
             end
         else
             sig = @default ps parse_call(ps, ret)

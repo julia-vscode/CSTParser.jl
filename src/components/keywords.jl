@@ -50,14 +50,12 @@ function parse_kw(ps::ParseState)
         if ps.closer.square
             ret = mKEYWORD(ps)
         else
-            ret = mErrorToken(mIDENTIFIER(ps), UnexpectedToken)
-            ps.errored = true
+            ret = mErrorToken(ps, mIDENTIFIER(ps), UnexpectedToken)
         end
 
         return ret
     elseif k == Tokens.ELSE || k == Tokens.ELSEIF || k == Tokens.CATCH || k == Tokens.FINALLY
-        ps.errored = true
-        return mErrorToken(mIDENTIFIER(ps), UnexpectedToken)
+        return mErrorToken(ps, mIDENTIFIER(ps), UnexpectedToken)
     elseif k == Tokens.ABSTRACT
         return @default ps parse_abstract(ps)
     elseif k == Tokens.PRIMITIVE
@@ -71,8 +69,7 @@ function parse_kw(ps::ParseState)
     elseif k == Tokens.OUTER
         return mIDENTIFIER(ps)
     else
-        ps.errored = true
-        return mErrorToken(Unknown)
+        return mErrorToken(ps, Unknown)
     end
 end
 
@@ -81,8 +78,7 @@ function parse_const(ps::ParseState)
     kw = mKEYWORD(ps)
     arg = parse_expression(ps)
     if !(is_assignment(arg) || (typof(arg) === Global && is_assignment(arg.args[2])))
-        ps.errored = true
-        arg = mErrorToken(arg, ExpectedAssignment)
+        arg = mErrorToken(ps, arg, ExpectedAssignment)
     end
     ret = EXPR(Const, EXPR[kw, arg])
     return ret
@@ -317,8 +313,7 @@ Parse an `if` block.
     # Parsing
     kw = mKEYWORD(ps)
     if kindof(ps.ws) == NewLineWS || kindof(ps.ws) == SemiColonWS
-        ps.errored = true
-        cond = mErrorToken(MissingConditional)
+        cond = mErrorToken(ps, MissingConditional)
     else
         cond = @closer ps :ws parse_expression(ps)
     end

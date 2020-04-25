@@ -236,7 +236,17 @@ isajuxtaposition(ps::ParseState, ret::EXPR) = ((is_number(ret) && (isidentifier(
         ((kindof(ps.t) == Tokens.RPAREN || kindof(ps.t) == Tokens.RSQUARE) && (isidentifier(ps.nt) || kindof(ps.nt) == Tokens.CMD)) ||
         ((kindof(ps.t) == Tokens.STRING || kindof(ps.t) == Tokens.TRIPLE_STRING) && (kindof(ps.nt) == Tokens.STRING || kindof(ps.nt) == Tokens.TRIPLE_STRING)))) || ((kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT) || kindof(ps.t) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && isidentifier(ps.nt))
 
+"""
+    has_error(ps::ParseState)
+    has_error(x::EXPR)
 
+Determine whether a parsing error occured while processing text with the given
+`ParseState`, or exists as a (sub) expression of `x`.
+"""
+function has_error(x::EXPR)
+    return typof(x) == ErrorToken || (x.args !== nothing && any(has_error, x.args))
+end
+has_error(ps::ParseState) = ps.errored
 
 # When using the FancyDiagnostics package, Base.parse, is the
 # same as CSTParser.parse. Manually call the flisp parser here
@@ -354,7 +364,7 @@ function cst_parsefile(str)
         pop!(x.args)
     end
     x0 = norm_ast(Expr(x))
-    x0, ps.errored, sp
+    x0, has_error(ps), sp
 end
 
 function check_file(file, ret, neq)
