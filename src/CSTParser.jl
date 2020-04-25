@@ -59,7 +59,7 @@ function parse_expression(ps::ParseState)
         elseif kindof(ps.t) == Tokens.LBRACE
             ret = @default ps @closebrace ps parse_braces(ps)
         elseif isinstance(ps.t) || isoperator(ps.t)
-            if kindof(ps.t) == Tokens.WHERE || kindof(ps.t) == Tokens.IN || kindof(ps.t) == Tokens.ISA
+            if both_symbol_and_op(ps.t)
                 ret = mIDENTIFIER(ps)
             else
                 ret = INSTANCE(ps)
@@ -92,7 +92,7 @@ function parse_compound(ps::ParseState, ret::EXPR)
     elseif kindof(ps.nt) == Tokens.DO
         ret = @default ps @closer ps :block parse_do(ps, ret)
     elseif isajuxtaposition(ps, ret)
-        if is_number(ret) && last(valof(ret)) == '.'
+        if disallowednumberjuxt(ret)
             ret = mErrorToken(ps, ret, CannotJuxtapose)
         end
         op = mOPERATOR(0, 0, Tokens.STAR, false)
@@ -100,7 +100,7 @@ function parse_compound(ps::ParseState, ret::EXPR)
     elseif (typof(ret) === x_Str || typof(ret) === x_Cmd) && isidentifier(ps.nt)
         arg = mIDENTIFIER(next(ps))
         push!(ret, mLITERAL(arg.fullspan, arg.span, val(ps.t, ps), Tokens.STRING))
-    elseif (isidentifier(ret) || (typof(ret) === BinaryOpCall && is_dot(ret.args[2]))) && (kindof(ps.nt) == Tokens.STRING || kindof(ps.nt) == Tokens.TRIPLE_STRING || kindof(ps.nt) == Tokens.CMD || kindof(ps.nt) == Tokens.TRIPLE_CMD)
+    elseif (isidentifier(ret) || is_getfield(ret)) && isprefixableliteral(ps.nt)
         next(ps)
         arg = parse_string_or_cmd(ps, ret)
         if kindof(arg) == Tokens.CMD || kindof(arg) == Tokens.TRIPLE_CMD
@@ -140,12 +140,13 @@ function parse_compound(ps::ParseState, ret::EXPR)
 # ###############################################################################
 # Everything below here is an error
 # ###############################################################################
-    elseif kindof(ps.nt) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)
-        ps.errored = true
-        ret = EXPR(ErrorToken, EXPR[ret, mErrorToken(ps, mPUNCTUATION(next(ps)), Unknown)])
     else
-        nextarg = parse_expression(ps)
         ps.errored = true
+        if kindof(ps.nt) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)
+            nextarg = mErrorToken(ps, mPUNCTUATION(next(ps)), Unknown)
+        else
+            nextarg = parse_expression(ps)
+        end
         ret = EXPR(ErrorToken, EXPR[ret, nextarg])
     end
     return ret
@@ -196,10 +197,9 @@ function parse_doc(ps::ParseState)
 
         ret = parse_expression(ps)
         ret = EXPR(MacroCall, EXPR[GlobalRefDOC(), doc, ret])
-    elseif isidentifier(ps.nt) && val(ps.nt, ps) == "doc" && (kindof(ps.nnt) == Tokens.STRING || kindof(ps.nnt) == Tokens.TRIPLE_STRING)
+    elseif nexttokenstartsdocstring(ps)
         doc = mIDENTIFIER(next(ps))
-        next(ps)
-        arg = parse_string_or_cmd(ps, doc)
+        arg = parse_string_or_cmd(next(ps), doc)
         doc = EXPR(x_Str, EXPR[doc, arg])
         ret = parse_expression(ps)
         ret = EXPR(MacroCall, EXPR[GlobalRefDOC(), doc, ret])

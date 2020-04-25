@@ -63,10 +63,8 @@ function parse_kw(ps::ParseState)
     elseif k == Tokens.TYPE
         return mIDENTIFIER(ps)
     elseif k == Tokens.STRUCT
-        # return setbinding!(@default ps @closer ps block parse_struct(ps, false))
         return @default ps @closer ps :block parse_struct(ps, false)
     elseif k == Tokens.MUTABLE
-        # return setbinding!(@default ps @closer ps block parse_mutable(ps))
         return @default ps @closer ps :block parse_mutable(ps)
     elseif k == Tokens.OUTER
         return mIDENTIFIER(ps)
@@ -74,12 +72,12 @@ function parse_kw(ps::ParseState)
         return mErrorToken(ps, Unknown)
     end
 end
-# Prefix
 
+# Prefix
 function parse_const(ps::ParseState)
     kw = mKEYWORD(ps)
     arg = parse_expression(ps)
-    if !((typof(arg) === BinaryOpCall && kindof(arg.args[2]) === Tokens.EQ) || (typof(arg) === Global && typof(arg.args[2]) === BinaryOpCall && kindof(arg.args[2].args[2]) === Tokens.EQ))
+    if !(is_assignment(arg) || (typof(arg) === Global && is_assignment(arg.args[2])))
         arg = mErrorToken(ps, arg, ExpectedAssignment)
     end
     ret = EXPR(Const, EXPR[kw, arg])
@@ -102,6 +100,8 @@ end
 
 function parse_return(ps::ParseState)
     kw = mKEYWORD(ps)
+    # Note to self: Nothing could be treated as implicit and added
+    # during conversion to Expr.
     args = closer(ps) ? NOTHING() : parse_expression(ps)
 
     return EXPR(Return, EXPR[kw, args])
@@ -482,17 +482,6 @@ function parse_mutable(ps::ParseState)
         ret = mIDENTIFIER(ps)
     end
     return ret
-end
-
-function markparameters!(sig::EXPR)
-    signame = rem_where_subtype(sig)
-    if typof(signame) === Curly
-        for i = 3:length(signame.args) - 1
-            if !(typof(signame.args[i]) === PUNCTUATION)
-            end
-        end
-    end
-    return sig
 end
 
 @addctx :struct function parse_struct(ps::ParseState, mutable::Bool)
