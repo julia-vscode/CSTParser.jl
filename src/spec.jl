@@ -106,6 +106,7 @@ ErrorToken)
     UnexpectedAssignmentOp,
     MissingConditional,
     MissingCloser,
+    MissingColon, # We didn't get a colon (`:`) when we expected to while parsing a `?` expression.
     InvalidIterator,
     StringInterpolationWithTrailingWhitespace,
     TooLongChar,
