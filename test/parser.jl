@@ -832,7 +832,13 @@ end
     end""" |> test_expr
 end
 
+@testset "issue #165" begin
+    x =CSTParser.parse("""
+    a ? b 
+    function f end""")
+    @test length(x) == 5 # make sure we always give out an EXPR of the right length
+    @test typof(x[4]) === CSTParser.ErrorToken
+    @test typof(x[4][1]) === CSTParser.OPERATOR
 end
 
-
-
+end

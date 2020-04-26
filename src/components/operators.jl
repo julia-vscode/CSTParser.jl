@@ -242,7 +242,12 @@ function parse_operator_cond(ps::ParseState, ret::EXPR, op::EXPR)
     ret = requires_ws(ret, ps)
     op = requires_ws(op, ps)
     nextarg = @closer ps :ifop parse_expression(ps)
-    op2 = requires_ws(mOPERATOR(next(ps)), ps)
+    if ps.nt.kind !== Tokens.COLON
+        op2 = mErrorToken(ps, mOPERATOR(0,0, Tokens.COLON, false), MissingColon)
+    else
+        op2 = requires_ws(mOPERATOR(next(ps)), ps)
+    end
+
     nextarg2 = @closer ps :comma @precedence ps 0 parse_expression(ps)
 
     fullspan = ret.fullspan + op.fullspan + nextarg.fullspan + op2.fullspan + nextarg2.fullspan
