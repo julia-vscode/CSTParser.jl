@@ -243,7 +243,7 @@ function parse_operator_cond(ps::ParseState, ret::EXPR, op::EXPR)
     op = requires_ws(op, ps)
     nextarg = @closer ps :ifop parse_expression(ps)
     if ps.nt.kind !== Tokens.COLON
-        op2 = mErrorToken(ps, MissingColon)
+        op2 = mErrorToken(ps, mOPERATOR(0,0, Tokens.COLON, false), MissingColon)
     else
         op2 = requires_ws(mOPERATOR(next(ps)), ps)
     end
