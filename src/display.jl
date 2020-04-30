@@ -1,7 +1,9 @@
 function Base.show(io::IO, x::EXPR, offset = 0, d = 0, er = false)
     T = typof(x)
     c =  T === ErrorToken || er ? :red : :normal
-    print(io, rpad(offset, 3), " ", rpad(x.fullspan, 3), " ", rpad(x.span, 3), "| ")
+    # Print span as 1-based range of the source string. This presentation is
+    # simple to understand when strings are presented to CSTParser.parse().
+    print(io, lpad(offset+1, 3), ":", rpad(offset+x.fullspan, 3), " ")
     if isidentifier(x)
         printstyled(io, " "^d, typof(x) == NONSTDIDENTIFIER ? valof(x.args[2]) : valof(x), color = :yellow)
         x.meta !== nothing && show(io, x.meta)
