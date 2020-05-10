@@ -432,10 +432,12 @@ end
 
     args = EXPR(TupleH, EXPR[])
     @closer ps :comma @closer ps :block while !closer(ps)
-        a = parse_expression(ps)
+        @closer ps :ws a = parse_expression(ps)
         push!(args, a)
         if kindof(ps.nt) == Tokens.COMMA
             accept_comma(ps, args)
+        elseif @closer ps :ws closer(ps)
+            break
         end
     end
 
