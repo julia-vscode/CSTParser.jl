@@ -528,6 +528,7 @@ end
         @test """f(X,Y) do x,y
             return x,y
         end""" |> test_expr
+        @test "f() do x body end" |> test_expr
     end
 end
 
@@ -840,5 +841,7 @@ end
     @test typof(x[4]) === CSTParser.ErrorToken
     @test typof(x[4][1]) === CSTParser.OPERATOR
 end
+
+
 
 end
