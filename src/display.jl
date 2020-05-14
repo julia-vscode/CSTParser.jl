@@ -13,15 +13,15 @@ function Base.show(io::IO, x::EXPR, offset = 0, d = 0, er = false)
     elseif iskw(x)
         printstyled(io, " "^d, kindof(x), "\n", color = :magenta)
     elseif ispunctuation(x)
-        if kindof(x) == Tokens.LPAREN
+        if kindof(x) === Tokens.LPAREN
             printstyled(io, " "^d, "(\n", color = c)
-        elseif kindof(x) == Tokens.RPAREN
+        elseif kindof(x) === Tokens.RPAREN
             printstyled(io, " "^d, ")\n", color = c)
-        elseif kindof(x) == Tokens.LSQUARE
+        elseif kindof(x) === Tokens.LSQUARE
             printstyled(io, " "^d, "[\n", color = c)
-        elseif kindof(x) == Tokens.RSQUARE
+        elseif kindof(x) === Tokens.RSQUARE
             printstyled(io, " "^d, "]\n", color = c)
-        elseif kindof(x) == Tokens.COMMA
+        elseif kindof(x) === Tokens.COMMA
             printstyled(io, " "^d, ",\n", color = c)
         else
             printstyled(io, " "^d, "PUNC: ", kindof(x), "\n", color = c)

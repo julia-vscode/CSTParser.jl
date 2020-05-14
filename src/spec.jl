@@ -157,12 +157,12 @@ mKEYWORD(kind::Tokens.Kind, fullspan::Int, span::Int) = EXPR(KEYWORD, nothing, f
 mLITERAL(fullspan::Int, span::Int, val::String, kind::Tokens.Kind) = EXPR(LITERAL, nothing, fullspan, span, val, kind, false, nothing, nothing)
 @noinline function mLITERAL(ps::ParseState) 
 
-    if kindof(ps.t) == Tokens.STRING || kindof(ps.t) == Tokens.TRIPLE_STRING ||
-        kindof(ps.t) == Tokens.CMD || kindof(ps.t) == Tokens.TRIPLE_CMD
+    if kindof(ps.t) === Tokens.STRING || kindof(ps.t) === Tokens.TRIPLE_STRING ||
+        kindof(ps.t) === Tokens.CMD || kindof(ps.t) === Tokens.TRIPLE_CMD
         return parse_string_or_cmd(ps)
     else
         v = val(ps.t, ps)
-        if kindof(ps.t) == Tokens.CHAR && length(v) > 3 && !(v[2] == '\\' && valid_escaped_seq(v[2:prevind(v, length(v))]))
+        if kindof(ps.t) === Tokens.CHAR && length(v) > 3 && !(v[2] == '\\' && valid_escaped_seq(v[2:prevind(v, length(v))]))
             return mErrorToken(ps, mLITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, string(v[1:2], '\''), kindof(ps.t)), TooLongChar)
         end
         return mLITERAL(ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, v, kindof(ps.t))
@@ -236,7 +236,7 @@ function INSTANCE(ps::ParseState)
         return mOPERATOR(ps)
     elseif ispunctuation(ps.t)
         return mPUNCTUATION(ps)
-    elseif kindof(ps.t) == Tokens.ERROR
+    elseif kindof(ps.t) === Tokens.ERROR
         ps.errored = true
         return EXPR(ErrorToken, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), NoKind, false, nothing, Unknown)
     else

@@ -25,8 +25,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     sfullspan = ps.nt.startbyte - ps.t.startbyte
     sspan = 1 + ps.t.endbyte - ps.t.startbyte
 
-    istrip = (kindof(ps.t) == Tokens.TRIPLE_STRING) || (kindof(ps.t) == Tokens.TRIPLE_CMD)
-    iscmd = kindof(ps.t) == Tokens.CMD || kindof(ps.t) == Tokens.TRIPLE_CMD
+    istrip = (kindof(ps.t) === Tokens.TRIPLE_STRING) || (kindof(ps.t) === Tokens.TRIPLE_CMD)
+    iscmd = kindof(ps.t) === Tokens.CMD || kindof(ps.t) === Tokens.TRIPLE_CMD
 
     lcp = nothing
     exprs_to_adjust = []
@@ -107,7 +107,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     skip(input, 1)
                     ps1 = ParseState(input)
 
-                    if kindof(ps1.nt) == Tokens.RPAREN
+                    if kindof(ps1.nt) === Tokens.RPAREN
                         call = mUnaryOpCall(op, EXPR(InvisBrackets, EXPR[lparen, rparen]))
                         push!(ret, call)
                         skip(input, 1)
@@ -125,7 +125,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     pos = position(input)
                     ps1 = ParseState(input)
                     next(ps1)
-                    if kindof(ps1.t) == Tokens.WHITESPACE
+                    if kindof(ps1.t) === Tokens.WHITESPACE
                         error("Unexpecte whitespace after \$ in String")
                     else
                         t = INSTANCE(ps1)

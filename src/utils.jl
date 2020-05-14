@@ -1,38 +1,44 @@
+"""
+closer(ps::ParseState)
+
+A magical function determining whether the parsing of an expression should continue or
+stop.
+"""
 function closer(ps::ParseState)
-    (ps.closer.newline && kindof(ps.ws) == NewLineWS && kindof(ps.t) != Tokens.COMMA) ||
+    (ps.closer.newline && kindof(ps.ws) == NewLineWS && !iscomma(ps.t)) ||
     (ps.closer.semicolon && kindof(ps.ws) == SemiColonWS) ||
     (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence) ||
-    (kindof(ps.nt) == Tokens.WHERE && ps.closer.precedence == LazyAndOp) ||
-    (ps.closer.inwhere && kindof(ps.nt) == Tokens.WHERE) ||
-    (ps.closer.inwhere && ps.closer.ws && kindof(ps.t) == Tokens.RPAREN && isoperator(ps.nt) && precedence(ps.nt) < DeclarationOp) ||
+    (kindof(ps.nt) === Tokens.WHERE && ps.closer.precedence == LazyAndOp) ||
+    (ps.closer.inwhere && kindof(ps.nt) === Tokens.WHERE) ||
+    (ps.closer.inwhere && ps.closer.ws && kindof(ps.t) === Tokens.RPAREN && isoperator(ps.nt) && precedence(ps.nt) < DeclarationOp) ||
     (ps.closer.precedence > WhereOp && (
-        (kindof(ps.nt) == Tokens.LPAREN && !(ps.t.kind === Tokens.EX_OR)) ||
-        kindof(ps.nt) == Tokens.LBRACE ||
-        kindof(ps.nt) == Tokens.LSQUARE ||
-        (kindof(ps.nt) == Tokens.STRING && isemptyws(ps.ws)) ||
-        ((kindof(ps.nt) == Tokens.RPAREN || kindof(ps.nt) == Tokens.RSQUARE) && isidentifier(ps.nt))  
+        (kindof(ps.nt) === Tokens.LPAREN && !(ps.t.kind === Tokens.EX_OR)) ||
+        kindof(ps.nt) === Tokens.LBRACE ||
+        kindof(ps.nt) === Tokens.LSQUARE ||
+        (kindof(ps.nt) === Tokens.STRING && isemptyws(ps.ws)) ||
+        ((kindof(ps.nt) === Tokens.RPAREN || kindof(ps.nt) === Tokens.RSQUARE) && isidentifier(ps.nt))  
     )) ||
-    (kindof(ps.nt) == Tokens.COMMA && ps.closer.precedence > 0) ||
-    kindof(ps.nt) == Tokens.ENDMARKER ||
+    (iscomma(ps.nt) && ps.closer.precedence > 0) ||
+    kindof(ps.nt) === Tokens.ENDMARKER ||
     (ps.closer.comma && iscomma(ps.nt)) ||
     (ps.closer.tuple && (iscomma(ps.nt) || isassignment(ps.nt))) ||
-    (kindof(ps.nt) == Tokens.FOR && ps.closer.precedence > -1) ||
-    (ps.closer.block && kindof(ps.nt) == Tokens.END) ||
-    (ps.closer.paren && kindof(ps.nt) == Tokens.RPAREN) ||
-    (ps.closer.brace && kindof(ps.nt) == Tokens.RBRACE) ||
-    (ps.closer.square && kindof(ps.nt) == Tokens.RSQUARE) ||
-    (@static VERSION < v"1.4" ? false : ((ps.closer.insquare || ps.closer.inmacro) && kindof(ps.nt) == Tokens.APPROX && kindof(ps.nws) == EmptyWS)) ||
-    kindof(ps.nt) == Tokens.ELSEIF || 
-    kindof(ps.nt) == Tokens.ELSE ||
-    kindof(ps.nt) == Tokens.CATCH || 
-    kindof(ps.nt) == Tokens.FINALLY || 
-    (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt) <= 0 || kindof(ps.nt) == Tokens.COLON)) ||
-    (ps.closer.range && (kindof(ps.nt) == Tokens.FOR || iscomma(ps.nt) || kindof(ps.nt) == Tokens.IF)) ||
+    (kindof(ps.nt) === Tokens.FOR && ps.closer.precedence > -1) ||
+    (ps.closer.block && kindof(ps.nt) === Tokens.END) ||
+    (ps.closer.paren && kindof(ps.nt) === Tokens.RPAREN) ||
+    (ps.closer.brace && kindof(ps.nt) === Tokens.RBRACE) ||
+    (ps.closer.square && kindof(ps.nt) === Tokens.RSQUARE) ||
+    (@static VERSION < v"1.4" ? false : ((ps.closer.insquare || ps.closer.inmacro) && kindof(ps.nt) === Tokens.APPROX && kindof(ps.nws) == EmptyWS)) ||
+    kindof(ps.nt) === Tokens.ELSEIF || 
+    kindof(ps.nt) === Tokens.ELSE ||
+    kindof(ps.nt) === Tokens.CATCH || 
+    kindof(ps.nt) === Tokens.FINALLY || 
+    (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt) <= 0 || kindof(ps.nt) === Tokens.COLON)) ||
+    (ps.closer.range && (kindof(ps.nt) === Tokens.FOR || iscomma(ps.nt) || kindof(ps.nt) === Tokens.IF)) ||
     (ps.closer.ws && !isemptyws(ps.ws) &&
-        !(kindof(ps.nt) == Tokens.COMMA) &&
-        !(kindof(ps.t) == Tokens.COMMA) &&
-        !(!ps.closer.inmacro && kindof(ps.nt) == Tokens.FOR) &&
-        !(kindof(ps.nt) == Tokens.DO) &&
+        !iscomma(ps.nt) &&
+        !iscomma(ps.t) &&
+        !(!ps.closer.inmacro && kindof(ps.nt) === Tokens.FOR) &&
+        !(kindof(ps.nt) === Tokens.DO) &&
         !(
             (isbinaryop(ps.nt) && !(ps.closer.wsop && isemptyws(ps.nws) && isunaryop(ps.nt) && precedence(ps.nt) > 7)) || 
             (isunaryop(ps.t) && kindof(ps.ws) == WS && ps.lt.kind !== CSTParser.Tokens.COLON)
@@ -74,9 +80,7 @@ macro closeparen(ps, body)
     quote
         local tmp1 = $(esc(ps)).closer.paren
         $(esc(ps)).closer.paren = true
-        push!($(esc(ps)).closer.cc, :paren)
         out = $(esc(body))
-        pop!($(esc(ps)).closer.cc)
         $(esc(ps)).closer.paren = tmp1
         out
     end
@@ -86,9 +90,7 @@ macro closesquare(ps, body)
     quote
         local tmp1 = $(esc(ps)).closer.square
         $(esc(ps)).closer.square = true
-        push!($(esc(ps)).closer.cc, :square)
         out = $(esc(body))
-        pop!($(esc(ps)).closer.cc)
         $(esc(ps)).closer.square = tmp1
         out
     end
@@ -97,9 +99,7 @@ macro closebrace(ps, body)
     quote
         local tmp1 = $(esc(ps)).closer.brace
         $(esc(ps)).closer.brace = true
-        push!($(esc(ps)).closer.cc, :brace)
         out = $(esc(body))
-        pop!($(esc(ps)).closer.cc)
         $(esc(ps)).closer.brace = tmp1
         out
     end
@@ -201,40 +201,33 @@ macro default(ps, body)
 end
 
 
-isidentifier(t::AbstractToken) = kindof(t) == Tokens.IDENTIFIER
+
 isidentifier(x::EXPR) = typof(x) === IDENTIFIER || typof(x) === NONSTDIDENTIFIER
 
-isliteral(t::AbstractToken) = Tokens.begin_literal < kindof(t) < Tokens.end_literal
+isunarycall(x::EXPR) = typof(x) === UnaryOpCall
+isbinarycall(x::EXPR) = typof(x) === BinaryOpCall
+iswherecall(x::EXPR) = typof(x) === WhereOpCall
+isdeclaration(x::EXPR) = isbinarycall(x) && is_decl(x[2])
+isinterpolant(x::EXPR) = isunarycall(x) && is_exor(x[1])
+istuple(x::EXPR) = typof(x) === TupleH
+is_either_id_op_interp(x::EXPR) = isidentifier(x) || isoperator(x) || isinterpolant(x)
+is_splat(x::EXPR) = isunarycall(x) && is_dddot(x[2])
+
+
 isliteral(x::EXPR) = typof(x) === LITERAL
-
-isbool(t::AbstractToken) =  Tokens.TRUE ≤ kindof(t) ≤ Tokens.FALSE
-iscomma(t::AbstractToken) =  kindof(t) == Tokens.COMMA
-
-iskw(t::AbstractToken) = Tokens.iskeyword(kindof(t))
-iskw(x::EXPR) = typof(x) === KEYWORD
-
-isinstance(t::AbstractToken) = isidentifier(t) ||
-                       isliteral(t) ||
-                       isbool(t) ||
-                       iskw(t)
-
-
-ispunctuation(t::AbstractToken) = kindof(t) == Tokens.COMMA ||
-                            kindof(t) == Tokens.END ||
-                            Tokens.LSQUARE ≤ kindof(t) ≤ Tokens.RPAREN || 
-                            kindof(t) == Tokens.AT_SIGN
+iskw(x::EXPR) = typof(x) === KEYWORD #TODO: should change to `iskeyword`
 ispunctuation(x::EXPR) = typof(x) === PUNCTUATION
 
-isstring(x) = typof(x) === StringH || (isliteral(x) && (kindof(x) == Tokens.STRING || kindof(x) == Tokens.TRIPLE_STRING))
-is_integer(x) = isliteral(x) && kindof(x) == Tokens.INTEGER
-is_float(x) = isliteral(x) && kindof(x) == Tokens.FLOAT
-is_number(x) = isliteral(x) && (kindof(x) == Tokens.INTEGER || kindof(x) == Tokens.FLOAT)
-is_nothing(x) = isliteral(x) && kindof(x) == Tokens.NOTHING
+isstring(x) = typof(x) === StringH || (isliteral(x) && (kindof(x) === Tokens.STRING || kindof(x) === Tokens.TRIPLE_STRING))
+is_integer(x) = isliteral(x) && kindof(x) === Tokens.INTEGER
+is_float(x) = isliteral(x) && kindof(x) === Tokens.FLOAT
+is_number(x) = isliteral(x) && (kindof(x) === Tokens.INTEGER || kindof(x) === Tokens.FLOAT)
+is_nothing(x) = isliteral(x) && kindof(x) === Tokens.NOTHING
 
-isajuxtaposition(ps::ParseState, ret::EXPR) = ((is_number(ret) && (isidentifier(ps.nt) || kindof(ps.nt) == Tokens.LPAREN || kindof(ps.nt) == Tokens.CMD || kindof(ps.nt) == Tokens.STRING || kindof(ps.nt) == Tokens.TRIPLE_STRING)) || 
+isajuxtaposition(ps::ParseState, ret::EXPR) = ((is_number(ret) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.LPAREN || kindof(ps.nt) === Tokens.CMD || kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)) || 
         ((typof(ret) === UnaryOpCall && is_prime(ret.args[2]) && isidentifier(ps.nt)) ||
-        ((kindof(ps.t) == Tokens.RPAREN || kindof(ps.t) == Tokens.RSQUARE) && (isidentifier(ps.nt) || kindof(ps.nt) == Tokens.CMD)) ||
-        ((kindof(ps.t) == Tokens.STRING || kindof(ps.t) == Tokens.TRIPLE_STRING) && (kindof(ps.nt) == Tokens.STRING || kindof(ps.nt) == Tokens.TRIPLE_STRING)))) || ((kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT) || kindof(ps.t) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && isidentifier(ps.nt))
+        ((kindof(ps.t) === Tokens.RPAREN || kindof(ps.t) === Tokens.RSQUARE) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.CMD)) ||
+        ((kindof(ps.t) === Tokens.STRING || kindof(ps.t) === Tokens.TRIPLE_STRING) && (kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)))) || ((kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT) || kindof(ps.t) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && isidentifier(ps.nt))
 
 """
     has_error(ps::ParseState)
@@ -503,35 +496,10 @@ function speed_test()
 end
 
 """
-    check_reformat()
+    str_value(x)
 
-Reads and parses all files in current directory, applys formatting fixes and checks that the output AST remains the same.
+Attempt to get a string representation of a nodeless expression.
 """
-function check_reformat()
-    fs = filter(f->endswith(f, ".jl"), readdir())
-    for (i, f) in enumerate(fs)
-        f == "deprecated.jl" && continue
-        str = read(f, String)
-        x, ps = parse(ParseState(str), true);
-        cnt = 0
-        for i = 1:length(x) - 1
-            y = x[i]
-            sstr = str[cnt + (1:y.span)]
-
-            y1 = parse(sstr)
-            @assert Expr(y) == Expr(y1)
-            cnt += y.span
-        end
-    end
-end
-
-function trailing_ws_length(x)
-    x.fullspan - x.span
-end
-
-
-@inline val(token::RawToken, ps::ParseState) = String(ps.l.io.data[token.startbyte + 1:token.endbyte + 1])
-
 function str_value(x)
     if typof(x) === IDENTIFIER || typof(x) === LITERAL
         return valof(x)
@@ -603,21 +571,6 @@ function _unescape_string(io, s::AbstractString)
 end
 
 
-function match_closer(ps::ParseState)
-    length(ps.closer.cc) == 0 && return false
-    kind = kindof(ps.nt)
-    for i = length(ps.closer.cc):-1:1
-        lc = ps.closer.cc[i]
-        if (kind === Tokens.RPAREN && lc == :paren) ||
-            (kind === Tokens.RSQUARE && lc == :square) ||
-            (kind === Tokens.RBRACE && lc == :braces) ||
-            (kind === Tokens.END && (lc == :begin || lc == :if)) 
-            return true
-        end
-    end
-    return false
-end
-
 function valid_escaped_seq(s::AbstractString)
     a = Iterators.Stateful(s)
     for c in a
@@ -668,13 +621,88 @@ function valid_escaped_seq(s::AbstractString)
     return true
 end
 
-is_getfield(x) = typof(x) === BinaryOpCall && length(x) == 3 && kindof(x[2]) == Tokens.DOT 
+"""
+    is_getfield(x::EXPR)
 
-# lexer treats word as operator
-both_symbol_and_op(t) = kindof(t) == Tokens.WHERE || kindof(t) == Tokens.IN || kindof(t) == Tokens.ISA
+Is this an expression of the form `a.b`.
+"""
+is_getfield(x::EXPR) = isbinarycall(x) && length(x) == 3 && kindof(x[2]) === Tokens.DOT 
 
-disallowednumberjuxt(ret) = is_number(ret) && last(valof(ret)) == '.'
+"""
+    disallowednumberjuxt(ret::EXPR)
 
-isprefixableliteral(t) = (kindof(t) == Tokens.STRING || kindof(t) == Tokens.TRIPLE_STRING || kindof(t) == Tokens.CMD || kindof(t) == Tokens.TRIPLE_CMD)
- 
-nexttokenstartsdocstring(ps::ParseState) = isidentifier(ps.nt) && val(ps.nt, ps) == "doc" && (kindof(ps.nnt) == Tokens.STRING || kindof(ps.nnt) == Tokens.TRIPLE_STRING)
+Does this number literal end in a decimal and so cannot precede a paren for
+implicit multiplication?
+"""
+disallowednumberjuxt(ret::EXPR) = is_number(ret) && last(valof(ret)) == '.'
+
+
+nexttokenstartsdocstring(ps::ParseState) = isidentifier(ps.nt) && val(ps.nt, ps) == "doc" && (kindof(ps.nnt) === Tokens.STRING || kindof(ps.nnt) === Tokens.TRIPLE_STRING)
+
+"""
+    is_wrapped_assignment(x::EXPR)
+    
+Is `x` an assignment expression, ignoring any surrounding parentheses.
+"""
+is_wrapped_assignment(x::EXPR) = is_assignment(x) || (isbracketed(x) && is_wrapped_assignment(x.args[2]))
+
+"""
+    is_range(x::EXPR)
+
+Is `x` a valid iterator for use in `for` loops or generators?
+"""
+is_range(x::EXPR) = isbinarycall(x) && (is_eq(x.args[2]) || is_in(x.args[2]) || is_elof(x.args[2]))
+
+"""
+    _do_kw_convert(ps::ParseState, a::EXPR)
+
+Should `a` be converted to a keyword-argument expression?
+"""
+_do_kw_convert(ps::ParseState, a::EXPR) = !ps.closer.brace && is_assignment(a)
+
+"""
+    _kw_convert(ps::ParseState, a::EXPR)
+
+Converted an assignment expression to a keyword-argument expression.
+"""
+_kw_convert(a::EXPR) = EXPR(Kw, EXPR[a.args[1], a.args[2], a.args[3]], a.fullspan, a.span)
+
+"""
+    convertsigtotuple(sig::EXPR)
+
+When parsing a function or macro signature, should it be converted to a tuple?
+"""
+convertsigtotuple(sig::EXPR) = isbracketed(sig) && !(istuple(sig.args[2]) || (typof(sig.args[2]) === Block) || is_splat(sig.args[2]))
+
+"""
+    docable(head)
+
+When parsing a block of expressions, can documentation be attached? Prefixed docs at the
+top-level are handled within `parse(ps::ParseState, cont = false)`.
+"""
+docable(head) = head === Begin || head === ModuleH || head === BareModule
+
+
+should_negate_number_literal(ps::ParseState, op::EXPR) = (is_plus(op) || is_minus(op)) && (kindof(ps.nt) === Tokens.INTEGER || kindof(ps.nt) === Tokens.FLOAT) && isemptyws(ps.ws) && kindof(ps.nnt) != Tokens.CIRCUMFLEX_ACCENT
+
+isbracketed(x::EXPR) = typof(x) === InvisBrackets # Assumption that x has 3 args, doesn't need checking?
+
+unwrapbracket(x::EXPR) = isbracketed(x) ? unwrapbracket(x[2]) : x
+
+isbeginorblock(x::EXPR) = typof(x) === Begin || typof(unwrapbracket(x)) == Block
+
+"""
+    can_become_comparison(x::EXPR)
+
+Is `x` a binary comparison call (e.g. `a < b`) that can be extended to include more
+arguments?
+"""
+can_become_comparison(x::EXPR) = isbinarycall(x) && (precedence(x.args[2]) == ComparisonOp || is_issubt(x.args[2]) || is_issupt(x.args[2]))
+
+"""
+    can_become_chain(x::EXPR, op::EXPR)
+
+Is `x` a binary call for `+` or `*` that can be extended to include more
+arguments?
+"""
+can_become_chain(x::EXPR, op::EXPR) = isbinarycall(x) && (is_star(op) || is_plus(op)) && kindof(op) == kindof(x.args[2]) && !x.args[2].dot && x.args[2].span > 0

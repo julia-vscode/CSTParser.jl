@@ -55,27 +55,27 @@ function sized_uint_oct_literal(s::AbstractString)
 end
 
 function _literal_expr(x)
-    if kindof(x) == Tokens.TRUE
+    if kindof(x) === Tokens.TRUE
         return true
-    elseif kindof(x) == Tokens.FALSE
+    elseif kindof(x) === Tokens.FALSE
         return false
     elseif is_nothing(x)
         return nothing
-    elseif kindof(x) == Tokens.INTEGER || kindof(x) == Tokens.BIN_INT || kindof(x) == Tokens.HEX_INT || kindof(x) == Tokens.OCT_INT
+    elseif kindof(x) === Tokens.INTEGER || kindof(x) === Tokens.BIN_INT || kindof(x) === Tokens.HEX_INT || kindof(x) === Tokens.OCT_INT
         return Expr_int(x)
-    elseif kindof(x) == Tokens.FLOAT
+    elseif kindof(x) === Tokens.FLOAT
         return Expr_float(x)
-    elseif kindof(x) == Tokens.CHAR
+    elseif kindof(x) === Tokens.CHAR
         return Expr_char(x)
-    elseif kindof(x) == Tokens.MACRO
+    elseif kindof(x) === Tokens.MACRO
         return Symbol(valof(x))
-    elseif kindof(x) == Tokens.STRING
+    elseif kindof(x) === Tokens.STRING
         return valof(x)
-    elseif kindof(x) == Tokens.TRIPLE_STRING
+    elseif kindof(x) === Tokens.TRIPLE_STRING
         return valof(x)
-    elseif kindof(x) == Tokens.CMD
+    elseif kindof(x) === Tokens.CMD
         return Expr_cmd(x)
-    elseif kindof(x) == Tokens.TRIPLE_CMD
+    elseif kindof(x) === Tokens.TRIPLE_CMD
         return Expr_tcmd(x)
     end
 end
@@ -129,9 +129,9 @@ function Expr(x::EXPR)
             return Symbol(normalize_julia_identifier(valof(x)))
         end
     elseif iskw(x)
-        if kindof(x) == Tokens.BREAK
+        if kindof(x) === Tokens.BREAK
             return Expr(:break)
-        elseif kindof(x) == Tokens.CONTINUE
+        elseif kindof(x) === Tokens.CONTINUE
             return Expr(:continue)
         else
             return Symbol(lowercase(string(kindof(x))))
@@ -143,11 +143,11 @@ function Expr(x::EXPR)
         return string(kindof(x))
     elseif isliteral(x)
         return _literal_expr(x)
-    elseif typof(x) === UnaryOpCall
+    elseif isunarycall(x)
         return _unary_expr(x)
-    elseif typof(x) === BinaryOpCall
+    elseif isbinarycall(x)
         return _binary_expr(x)
-    elseif typof(x) === WhereOpCall
+    elseif iswherecall(x)
         return _where_expr(x)
     elseif typof(x) === ConditionalOpCall
         return Expr(:if, Expr(x.args[1]), Expr(x.args[3]), Expr(x.args[5]))
@@ -214,7 +214,7 @@ function Expr(x::EXPR)
         end
         ret
     elseif typof(x) === x_Str
-        if typof(x.args[1]) === BinaryOpCall && issyntaxcall(x.args[1].args[2])
+        if isbinarycall(x.args[1]) && issyntaxcall(x.args[1].args[2])
             mname = Expr(x.args[1])
             mname.args[2] = QuoteNode(Symbol("@", mname.args[2].value, "_str"))
             ret = Expr(:macrocall, mname, nothing)
@@ -340,7 +340,7 @@ function Expr(x::EXPR)
             end
         end
         return ret
-    elseif typof(x) === TupleH
+    elseif istuple(x)
         ret = Expr(:tuple)
         for a in x.args
             if typof(a) == Parameters
@@ -421,14 +421,14 @@ function Expr(x::EXPR)
             push!(ret.args, Expr(a))
         end
         return ret
-    elseif typof(x) === InvisBrackets
+    elseif isbracketed(x)
         return Expr(x.args[2])
     elseif typof(x) === Begin
         return Expr(x.args[2])
     elseif typof(x) === Quote
         if length(x.args) == 1
             return Expr(:quote, Expr(x.args[1]))
-        elseif typof(x.args[2]) === InvisBrackets && (isoperator(x.args[2].args[2]) || isliteral(x.args[2].args[2]) || isidentifier(x.args[2].args[2]))
+        elseif isbracketed(x.args[2]) && (isoperator(x.args[2].args[2]) || isliteral(x.args[2].args[2]) || isidentifier(x.args[2].args[2]))
             return QuoteNode(Expr(x.args[2]))
         else
             return Expr(:quote, Expr(x.args[2]))
@@ -437,7 +437,7 @@ function Expr(x::EXPR)
         ret = Expr(:global)
         if typof(x.args[2]) === Const
             ret = Expr(:const, Expr(:global, Expr(x.args[2].args[2])))
-        elseif length(x.args) == 2 && typof(x.args[2]) === TupleH
+        elseif length(x.args) == 2 && istuple(x.args[2])
             for a in x.args[2].args
                 if !(ispunctuation(a))
                     push!(ret.args, Expr(a))
@@ -454,7 +454,7 @@ function Expr(x::EXPR)
         ret = Expr(:local)
         if typof(x.args[2]) === Const
             ret = Expr(:const, Expr(:global, Expr(x.args[2].args[2])))
-        elseif length(x.args) == 2 && typof(x.args[2]) === TupleH
+        elseif length(x.args) == 2 && istuple(x.args[2])
             for a in x.args[2].args
                 if !(ispunctuation(a))
                     push!(ret.args, Expr(a))
@@ -578,11 +578,11 @@ function Expr(x::EXPR)
     elseif typof(x) === StringH
         ret = Expr(:string)
         for (i, a) in enumerate(x.args)
-            if typof(a) === UnaryOpCall
+            if isunarycall(a)
                 a = a.args[2]
-            elseif isliteral(a) && kindof(a) == Tokens.STRING && span(a) == 0 || ((i == 1 || i == length(x.args)) && span(a) == 1) || (valof(a) === nothing || isempty(valof(a)))
+            elseif isliteral(a) && kindof(a) === Tokens.STRING && span(a) == 0 || ((i == 1 || i == length(x.args)) && span(a) == 1) || (valof(a) === nothing || isempty(valof(a)))
                 continue
-            else isliteral(a) && kindof(a) == Tokens.TRIPLE_STRING && span(a) == 0 || ((i == 1 || i == length(x.args)) && span(a) == 3) || (valof(a) === nothing || isempty(valof(a)))
+            else isliteral(a) && kindof(a) === Tokens.TRIPLE_STRING && span(a) == 0 || ((i == 1 || i == length(x.args)) && span(a) == 3) || (valof(a) === nothing || isempty(valof(a)))
             end
             push!(ret.args, Expr(a))
         end
@@ -698,7 +698,7 @@ function _if_expr(x)
     while i < n
         i += 1
         a = x.args[i]
-        if iskw(a) && kindof(a) == Tokens.ELSEIF
+        if iskw(a) && kindof(a) === Tokens.ELSEIF
             i += 1
             r1 = Expr(x.args[i].args[1])
             push!(ret.args, Expr(:elseif, r1.args...))
@@ -731,7 +731,7 @@ function _let_expr(x)
 end
 
 function fix_range(a)
-    if typof(a) === BinaryOpCall && (is_in(a.args[2]) || is_elof(a.args[2]))
+    if isbinarycall(a) && (is_in(a.args[2]) || is_elof(a.args[2]))
         Expr(:(=), Expr(a.args[1]), Expr(a.args[3]))
     else
         Expr(a)
@@ -773,7 +773,7 @@ function get_iters(x, iters)
 end
 
 function convert_iter_assign(a)
-    if typof(a) === BinaryOpCall && (is_in(a.args[2]) || is_elof(a.args[2]))
+    if isbinarycall(a) && (is_in(a.args[2]) || is_elof(a.args[2]))
         return Expr(:(=), Expr(a.args[1]), Expr(a.args[3]))
     else
         return Expr(a)
