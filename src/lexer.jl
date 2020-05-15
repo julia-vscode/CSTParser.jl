@@ -25,9 +25,8 @@ mutable struct Closer
     wsop::Bool
     unary::Bool
     precedence::Int
-    cc::Vector{Symbol}
 end
-Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1, Symbol[])
+Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1)
 
 mutable struct ParseState
     l::Lexer{Base.GenericIOBuffer{Array{UInt8,1}},RawToken}
@@ -81,7 +80,7 @@ function next(ps::ParseState)
         ps.done = ps.done
     else
         ps.nnt = Tokenize.Lexers.next_token(ps.l)
-        ps.done = ps.nnt == Tokens.ENDMARKER
+        ps.done = ps.nnt === Tokens.ENDMARKER
     end
 
     # combines whitespace, comments and semicolons
@@ -90,7 +89,7 @@ function next(ps::ParseState)
     else
         ps.nnws = EmptyWSToken
     end
-    ps.done = kindof(ps.nt) == Tokens.ENDMARKER
+    ps.done = kindof(ps.nt) === Tokens.ENDMARKER
     return ps
 end
 
@@ -172,5 +171,21 @@ function read_comment(l::Lexer)
     end
 end
 
+# Functions relating to tokens
 isemptyws(t::AbstractToken) = kindof(t) == EmptyWS
 isnewlinews(t::AbstractToken) = kindof(t) === NewLineWS
+isendoflinews(t::AbstractToken) = kindof(t) == SemiColonWS || kindof(t) == NewLineWS
+@inline val(token::AbstractToken, ps::ParseState) = String(ps.l.io.data[token.startbyte + 1:token.endbyte + 1])
+both_symbol_and_op(t::AbstractToken) = kindof(t) === Tokens.WHERE || kindof(t) === Tokens.IN || kindof(t) === Tokens.ISA
+isprefixableliteral(t::AbstractToken) = (kindof(t) === Tokens.STRING || kindof(t) === Tokens.TRIPLE_STRING || kindof(t) === Tokens.CMD || kindof(t) === Tokens.TRIPLE_CMD)
+isassignment(t::AbstractToken) = Tokens.begin_assignments < kindof(t) < Tokens.end_assignments
+
+isidentifier(t::AbstractToken) = kindof(t) === Tokens.IDENTIFIER
+isliteral(t::AbstractToken) = Tokens.begin_literal < kindof(t) < Tokens.end_literal
+isbool(t::AbstractToken) =  Tokens.TRUE ≤ kindof(t) ≤ Tokens.FALSE
+iscomma(t::AbstractToken) =  kindof(t) === Tokens.COMMA
+iscolon(t::AbstractToken) =  kindof(t) === Tokens.COLON
+iskw(t::AbstractToken) = Tokens.iskeyword(kindof(t))
+isinstance(t::AbstractToken) = isidentifier(t) || isliteral(t) || isbool(t) || iskw(t)
+ispunctuation(t::AbstractToken) = iscomma(t) || kindof(t) === Tokens.END || Tokens.LSQUARE ≤ kindof(t) ≤ Tokens.RPAREN || kindof(t) === Tokens.AT_SIGN
+

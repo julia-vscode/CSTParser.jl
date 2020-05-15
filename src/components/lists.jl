@@ -9,7 +9,7 @@ function parse_tuple end
 @static if VERSION > v"1.1-"
     function parse_tuple(ps::ParseState, ret::EXPR)
         op = mPUNCTUATION(next(ps))
-        if typof(ret) == TupleH
+        if istuple(ret)
             if (isassignment(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
                 push!(ret, op)
             elseif closer(ps)
@@ -38,7 +38,7 @@ function parse_tuple end
 else
     function parse_tuple(ps::ParseState, ret::EXPR)
         op = mPUNCTUATION(next(ps))
-        if typof(ret) === TupleH
+        if istuple(ret)
             if closer(ps) || (isassignment(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
                 push!(ret, op)
             else
@@ -74,7 +74,7 @@ Having hit '[' return either:
 function parse_array(ps::ParseState, isref = false)
     args = EXPR[mPUNCTUATION(ps)]
 
-    if kindof(ps.nt) == Tokens.RSQUARE
+    if kindof(ps.nt) === Tokens.RSQUARE
         accept_rsquare(ps, args)
         ret = EXPR(Vect, args)
     else
@@ -83,11 +83,11 @@ function parse_array(ps::ParseState, isref = false)
             first_arg = _kw_convert(first_arg)
         end
 
-        if kindof(ps.nt) == Tokens.RSQUARE
+        if kindof(ps.nt) === Tokens.RSQUARE
             if typof(first_arg) === Generator || typof(first_arg) === Flatten
                 accept_rsquare(ps, args)
 
-                if typof(first_arg.args[1]) === BinaryOpCall && is_pairarrow(first_arg.args[1].args[2])
+                if isbinarycall(first_arg.args[1]) && is_pairarrow(first_arg.args[1].args[2])
                     return EXPR(DictComprehension, EXPR[args[1], first_arg, INSTANCE(ps)])
                 else
                     return EXPR(Comprehension, EXPR[args[1], first_arg, INSTANCE(ps)])
@@ -101,7 +101,7 @@ function parse_array(ps::ParseState, isref = false)
                 accept_rsquare(ps, args)
                 ret = EXPR(Vect, args)
             end
-        elseif kindof(ps.nt) == Tokens.COMMA
+        elseif iscomma(ps.nt)
             etype = Vect
             push!(args, first_arg)
             accept_comma(ps, args)
@@ -126,7 +126,7 @@ function parse_array(ps::ParseState, isref = false)
                 a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                 push!(first_row, a)
             end
-            if kindof(ps.nt) == Tokens.RSQUARE && kindof(ps.ws) != SemiColonWS
+            if kindof(ps.nt) === Tokens.RSQUARE && kindof(ps.ws) != SemiColonWS
                 if length(first_row.args) == 1
                     first_row = EXPR(Vcat, first_row.args)
                 end
@@ -228,19 +228,19 @@ end
 function parse_barray(ps::ParseState)
     args = EXPR[mPUNCTUATION(ps)]
 
-    if kindof(ps.nt) == Tokens.RBRACE
+    if kindof(ps.nt) === Tokens.RBRACE
         accept_rbrace(ps, args)
         ret = EXPR(Braces, args)
     else
         first_arg = @nocloser ps :newline @closebrace ps  @closer ps :ws @closer ps :wsop @closer ps :comma parse_expression(ps)
-        if kindof(ps.nt) == Tokens.RBRACE
+        if kindof(ps.nt) === Tokens.RBRACE
             push!(args, first_arg)
             if kindof(ps.ws) == SemiColonWS
                 push!(args, EXPR(Parameters, EXPR[]))
             end
             accept_rbrace(ps, args)
             ret = EXPR(Braces, args)
-        elseif kindof(ps.nt) == Tokens.COMMA
+        elseif iscomma(ps.nt)
             push!(args, first_arg)
             accept_comma(ps, args)
             @closebrace ps parse_comma_sep(ps, args, true)
@@ -262,7 +262,7 @@ function parse_barray(ps::ParseState)
                 a = @closebrace ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                 push!(first_row, a)
             end
-            if kindof(ps.nt) == Tokens.RBRACE && kindof(ps.ws) != SemiColonWS
+            if kindof(ps.nt) === Tokens.RBRACE && kindof(ps.ws) != SemiColonWS
                 if length(first_row.args) == 1
                     first_row = EXPR(BracesCat, first_row.args)
                 end
@@ -277,7 +277,7 @@ function parse_barray(ps::ParseState)
                 end
                 ret = EXPR(BracesCat, EXPR[args[1], first_row])
                 while kindof(ps.nt) != Tokens.RBRACE
-                    if kindof(ps.nt) == Tokens.ENDMARKER
+                    if kindof(ps.nt) === Tokens.ENDMARKER
                         break
                     end
                     first_arg = @closebrace ps @closer ps :ws @closer ps :wsop parse_expression(ps)
