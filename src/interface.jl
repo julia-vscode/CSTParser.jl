@@ -70,9 +70,10 @@ rem_decl(x::EXPR) = isdeclaration(x) ? x[1] : x
 rem_curly(x::EXPR) = typof(x) === Curly ? x.args[1] : x
 rem_call(x::EXPR) = typof(x) === Call ? x[1] : x
 rem_where(x::EXPR) = iswherecall(x) ? x[1] : x
+rem_wheres(x::EXPR) = iswherecall(x) ? rem_wheres(x[1]) : x
 rem_where_subtype(x::EXPR) = (iswherecall(x) || issubtypedecl(x)) ? x[1] : x
 rem_where_decl(x::EXPR) = (iswherecall(x) || isdeclaration(x)) ? x[1] : x
-rem_invis(x::EXPR) = isbracketed(x) ? x[2] : x
+rem_invis(x::EXPR) = isbracketed(x) ? rem_invis(x[2]) : x
 rem_dddot(x::EXPR) = is_splat(x) ? x[1] : x
 const rem_splat = rem_dddot
 rem_kw(x::EXPR) = typof(x) === Kw ? x[1] : x
@@ -112,14 +113,14 @@ function get_name(x::EXPR)
     if typof(x) === Struct || typof(x) === Mutable || typof(x) === Abstract || typof(x) === Primitive
         sig = get_sig(x)
         sig = rem_subtype(sig)
-        sig = rem_where(sig)
+        sig = rem_wheres(sig)
         sig = rem_subtype(sig)
         sig = rem_curly(sig)
     elseif typof(x) === ModuleH || typof(x) === BareModule
         sig = x.args[2]
     elseif typof(x) === FunctionDef || typof(x) === Macro
         sig = get_sig(x)
-        sig = rem_where(sig)
+        sig = rem_wheres(sig)
         sig = rem_decl(sig)
         sig = rem_call(sig)
         sig = rem_curly(sig)
@@ -143,7 +144,7 @@ function get_name(x::EXPR)
         if isunarycall(sig)
             return get_name(sig.args[1])
         end
-        sig = rem_where(sig)
+        sig = rem_wheres(sig)
         sig = rem_decl(sig)
         sig = rem_call(sig)
         sig = rem_curly(sig)
@@ -154,7 +155,7 @@ function get_name(x::EXPR)
         if isunarycall(sig)
             sig = sig.args[1]
         end
-        sig = rem_where(sig)
+        sig = rem_wheres(sig)
         sig = rem_decl(sig)
         sig = rem_call(sig)
         sig = rem_curly(sig)
