@@ -71,7 +71,7 @@ function parse_iterators(ps::ParseState, allowfilter = false)
         end
     end
 
-    if allowfilter 
+    if allowfilter
         arg = parse_filter(ps, arg)
     end
     return arg
@@ -175,7 +175,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw = true, block = 
             end
         end
     end
-    return 
+    return
 end
 
 """

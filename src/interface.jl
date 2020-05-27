@@ -63,7 +63,7 @@ is_import(x) = iskw(x) && kindof(x) === Tokens.IMPORT
 # Literals
 is_lit_string(x) = kindof(x) === Tokens.STRING || kindof(x) === Tokens.TRIPLE_STRING
 
-issubtypedecl(x::EXPR) = isbinarycall(x) && is_issubt(x.args[2]) 
+issubtypedecl(x::EXPR) = isbinarycall(x) && is_issubt(x.args[2])
 
 rem_subtype(x::EXPR) = issubtypedecl(x) ? x[1] : x
 rem_decl(x::EXPR) = isdeclaration(x) ? x[1] : x

@@ -16,7 +16,7 @@ function closer(ps::ParseState)
         kindof(ps.nt) === Tokens.LBRACE ||
         kindof(ps.nt) === Tokens.LSQUARE ||
         (kindof(ps.nt) === Tokens.STRING && isemptyws(ps.ws)) ||
-        ((kindof(ps.nt) === Tokens.RPAREN || kindof(ps.nt) === Tokens.RSQUARE) && isidentifier(ps.nt))  
+        ((kindof(ps.nt) === Tokens.RPAREN || kindof(ps.nt) === Tokens.RSQUARE) && isidentifier(ps.nt))
     )) ||
     (iscomma(ps.nt) && ps.closer.precedence > 0) ||
     kindof(ps.nt) === Tokens.ENDMARKER ||
@@ -28,10 +28,10 @@ function closer(ps::ParseState)
     (ps.closer.brace && kindof(ps.nt) === Tokens.RBRACE) ||
     (ps.closer.square && kindof(ps.nt) === Tokens.RSQUARE) ||
     (@static VERSION < v"1.4" ? false : ((ps.closer.insquare || ps.closer.inmacro) && kindof(ps.nt) === Tokens.APPROX && kindof(ps.nws) == EmptyWS)) ||
-    kindof(ps.nt) === Tokens.ELSEIF || 
+    kindof(ps.nt) === Tokens.ELSEIF ||
     kindof(ps.nt) === Tokens.ELSE ||
-    kindof(ps.nt) === Tokens.CATCH || 
-    kindof(ps.nt) === Tokens.FINALLY || 
+    kindof(ps.nt) === Tokens.CATCH ||
+    kindof(ps.nt) === Tokens.FINALLY ||
     (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt) <= 0 || kindof(ps.nt) === Tokens.COLON)) ||
     (ps.closer.range && (kindof(ps.nt) === Tokens.FOR || iscomma(ps.nt) || kindof(ps.nt) === Tokens.IF)) ||
     (ps.closer.ws && !isemptyws(ps.ws) &&
@@ -40,7 +40,7 @@ function closer(ps::ParseState)
         !(!ps.closer.inmacro && kindof(ps.nt) === Tokens.FOR) &&
         !(kindof(ps.nt) === Tokens.DO) &&
         !(
-            (isbinaryop(ps.nt) && !(ps.closer.wsop && isemptyws(ps.nws) && isunaryop(ps.nt) && precedence(ps.nt) > 7)) || 
+            (isbinaryop(ps.nt) && !(ps.closer.wsop && isemptyws(ps.nws) && isunaryop(ps.nt) && precedence(ps.nt) > 7)) ||
             (isunaryop(ps.t) && kindof(ps.ws) == WS && ps.lt.kind !== CSTParser.Tokens.COLON)
         )) ||
     (ps.closer.unary && (kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE) && isidentifier(ps.nt)))
@@ -215,7 +215,7 @@ is_splat(x::EXPR) = isunarycall(x) && is_dddot(x[2])
 
 
 isliteral(x::EXPR) = typof(x) === LITERAL
-iskw(x::EXPR) = typof(x) === KEYWORD #TODO: should change to `iskeyword`
+iskw(x::EXPR) = typof(x) === KEYWORD # TODO: should change to `iskeyword`
 ispunctuation(x::EXPR) = typof(x) === PUNCTUATION
 
 isstring(x) = typof(x) === StringH || (isliteral(x) && (kindof(x) === Tokens.STRING || kindof(x) === Tokens.TRIPLE_STRING))
@@ -224,7 +224,7 @@ is_float(x) = isliteral(x) && kindof(x) === Tokens.FLOAT
 is_number(x) = isliteral(x) && (kindof(x) === Tokens.INTEGER || kindof(x) === Tokens.FLOAT)
 is_nothing(x) = isliteral(x) && kindof(x) === Tokens.NOTHING
 
-isajuxtaposition(ps::ParseState, ret::EXPR) = ((is_number(ret) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.LPAREN || kindof(ps.nt) === Tokens.CMD || kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)) || 
+isajuxtaposition(ps::ParseState, ret::EXPR) = ((is_number(ret) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.LPAREN || kindof(ps.nt) === Tokens.CMD || kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)) ||
         ((typof(ret) === UnaryOpCall && is_prime(ret.args[2]) && isidentifier(ps.nt)) ||
         ((kindof(ps.t) === Tokens.RPAREN || kindof(ps.t) === Tokens.RSQUARE) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.CMD)) ||
         ((kindof(ps.t) === Tokens.STRING || kindof(ps.t) === Tokens.TRIPLE_STRING) && (kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)))) || ((kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT) || kindof(ps.t) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && isidentifier(ps.nt))
@@ -364,7 +364,7 @@ function check_file(file, ret, neq)
     str = read(file, String)
     x0, cstfailed, sp = cst_parsefile(str)
     x1, flispfailed = flisp_parsefile(str)
-    
+
     print("\r                             ")
     if !isempty(sp)
         printstyled(file, color = :blue)
@@ -386,7 +386,7 @@ function check_file(file, ret, neq)
         printstyled(string("    ", c1), bold = true, color = :light_green)
         println()
         push!(ret, (file, :noteq))
-    end    
+    end
 end
 
 function check_base(dir = dirname(Base.find_source_file("essentials.jl")), display = false)
@@ -406,7 +406,7 @@ function check_base(dir = dirname(Base.find_source_file("essentials.jl")), displ
                 N += 1
                 try
                     print("\r", rpad(string(N), 5), rpad(string(round(fail / N * 100, sigdigits = 3)), 8), rpad(string(round(err / N * 100, sigdigits = 3)), 8), rpad(string(round(neq / N * 100, sigdigits = 3)), 8))
-                    
+
                     check_file(file, ret, neq)
                 catch er
                     isa(er, InterruptException) && rethrow(er)
@@ -475,7 +475,7 @@ of its components. Returns a vector of failing expressions.
 """
 function check_span(x::EXPR, neq = [])
     (ispunctuation(x) || isidentifier(x) || iskw(x) || isoperator(x) || isliteral(x) || typof(x) == StringH) && return neq
-    
+
     s = 0
     for a in x.args
         check_span(a, neq)
@@ -582,9 +582,9 @@ function valid_escaped_seq(s::AbstractString)
                     c == 'u' ? 4 : 8
                 while (k += 1) <= m && !isempty(a)
                     nc = Base.peek(a)
-                    n = '0' <= nc <= '9' ? n<<4 + (nc-'0') :
-                        'a' <= nc <= 'f' ? n<<4 + (nc-'a'+10) :
-                        'A' <= nc <= 'F' ? n<<4 + (nc-'A'+10) : break
+                    n = '0' <= nc <= '9' ? n << 4 + (nc - '0') :
+                        'a' <= nc <= 'f' ? n << 4 + (nc - 'a' + 10) :
+                        'A' <= nc <= 'F' ? n << 4 + (nc - 'A' + 10) : break
                     popfirst!(a)
                 end
                 if k == 1 || n > 0x10ffff
@@ -593,10 +593,10 @@ function valid_escaped_seq(s::AbstractString)
                 end
             elseif '0' <= c <= '7'
                 k = 1
-                n = c-'0'
+                n = c - '0'
                 while (k += 1) <= 3 && !isempty(a)
                     c = Base.peek(a)
-                    n = ('0' <= c <= '7') ? n<<3 + c-'0' : break
+                    n = ('0' <= c <= '7') ? n << 3 + c - '0' : break
                     popfirst!(a)
                 end
                 if n > 255
@@ -626,7 +626,7 @@ end
 
 Is this an expression of the form `a.b`.
 """
-is_getfield(x::EXPR) = isbinarycall(x) && length(x) == 3 && kindof(x[2]) === Tokens.DOT 
+is_getfield(x::EXPR) = isbinarycall(x) && length(x) == 3 && kindof(x[2]) === Tokens.DOT
 
 """
     disallowednumberjuxt(ret::EXPR)
