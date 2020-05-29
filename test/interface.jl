@@ -78,7 +78,7 @@ end
 #     @test f("(a::T) -> a") == ["a"]
 #     @test f("(a,b) -> a") == ["a", "b"]
 
-#     @test f("map(1:10) do a 
+#     @test f("map(1:10) do a
 #         a
 #     end") == ["a"]
 #     @test f("map(1:10) do a,b

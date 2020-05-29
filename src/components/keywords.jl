@@ -219,7 +219,7 @@ function parse_blockexpr_sig(ps::ParseState, head)
             return nothing
         else
             arg = @closer ps :comma @closer ps :ws  parse_expression(ps)
-            if iscomma(ps.nt)|| !(is_wrapped_assignment(arg) || isidentifier(arg))
+            if iscomma(ps.nt) || !(is_wrapped_assignment(arg) || isidentifier(arg))
                 arg = EXPR(Block, EXPR[arg])
                 while iscomma(ps.nt)
                     accept_comma(ps, arg)
@@ -243,7 +243,7 @@ function parse_blockexpr_sig(ps::ParseState, head)
         end
         return sig
     elseif head === ModuleH || head === BareModule
-        return isidentifier(ps.nt) ? mIDENTIFIER(next(ps)) : 
+        return isidentifier(ps.nt) ? mIDENTIFIER(next(ps)) :
             @precedence ps 15 @closer ps :ws parse_expression(ps)
     end
     return nothing

@@ -237,7 +237,7 @@ function parse_operator_cond(ps::ParseState, ret::EXPR, op::EXPR)
     op = requires_ws(op, ps)
     nextarg = @closer ps :ifop parse_expression(ps)
     if ps.nt.kind !== Tokens.COLON
-        op2 = mErrorToken(ps, mOPERATOR(0,0, Tokens.COLON, false), MissingColon)
+        op2 = mErrorToken(ps, mOPERATOR(0, 0, Tokens.COLON, false), MissingColon)
     else
         op2 = requires_ws(mOPERATOR(next(ps)), ps)
     end
@@ -263,7 +263,7 @@ function parse_comp_operator(ps::ParseState, ret::EXPR, op::EXPR)
 end
 
 # Parse ranges
-function parse_operator_colon(ps::ParseState, ret::EXPR, op::EXPR)  
+function parse_operator_colon(ps::ParseState, ret::EXPR, op::EXPR)
     if isnewlinews(ps.ws) && !ps.closer.paren
         op = mErrorToken(ps, op, UnexpectedNewLine)
     end
@@ -280,7 +280,7 @@ end
 # Parse power (special case for preceding unary ops)
 function parse_operator_power(ps::ParseState, ret::EXPR, op::EXPR)
     nextarg = @precedence ps PowerOp - LtoR(PowerOp) @closer ps :inwhere parse_expression(ps)
-    
+
     if isunarycall(ret)
         nextarg = mBinaryOpCall(ret.args[2], op, nextarg)
         ret = mUnaryOpCall(ret.args[1], nextarg)
@@ -293,7 +293,7 @@ end
 # parse where
 function parse_operator_where(ps::ParseState, ret::EXPR, op::EXPR, setscope = true)
     nextarg = @precedence ps LazyAndOp @closer ps :inwhere parse_expression(ps)
-    
+
     if typof(nextarg) === Braces
         args = nextarg.args
     else
@@ -323,7 +323,7 @@ function parse_operator_dot(ps::ParseState, ret::EXPR, op::EXPR)
         if kindof(ps.nt) === Tokens.LPAREN
             nextarg = @closeparen ps @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)
             nextarg = EXPR(Quote, EXPR[op2, nextarg])
-        else    
+        else
             nextarg = @precedence ps DotOp - LtoR(DotOp) parse_unary(ps, op2)
         end
     elseif kindof(ps.nt) === Tokens.EX_OR && kindof(ps.nnt) === Tokens.LPAREN
@@ -351,7 +351,7 @@ end
 
 function parse_operator_anon_func(ps::ParseState, ret::EXPR, op::EXPR)
     arg = @closer ps :comma @precedence ps 0 parse_expression(ps)
-    
+
     if !isbeginorblock(arg)
         arg = EXPR(Block, EXPR[arg])
     end

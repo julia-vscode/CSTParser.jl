@@ -4,7 +4,7 @@ const ConditionalOp = 2
 const ArrowOp       = 3
 const LazyOrOp      = 4
 const LazyAndOp     = 5
-const ComparisonOp  = 6 
+const ComparisonOp  = 6
 const PipeOp        = 7
 const ColonOp       = 8
 @static if Base.operator_precedence(:<<) == 12
@@ -155,7 +155,7 @@ mKEYWORD(kind::Tokens.Kind, fullspan::Int, span::Int) = EXPR(KEYWORD, nothing, f
 @noinline mKEYWORD(ps::ParseState) = EXPR(KEYWORD, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, nothing, kindof(ps.t), false, nothing, nothing)
 
 mLITERAL(fullspan::Int, span::Int, val::String, kind::Tokens.Kind) = EXPR(LITERAL, nothing, fullspan, span, val, kind, false, nothing, nothing)
-@noinline function mLITERAL(ps::ParseState) 
+@noinline function mLITERAL(ps::ParseState)
 
     if kindof(ps.t) === Tokens.STRING || kindof(ps.t) === Tokens.TRIPLE_STRING ||
         kindof(ps.t) === Tokens.CMD || kindof(ps.t) === Tokens.TRIPLE_CMD
@@ -244,7 +244,7 @@ function INSTANCE(ps::ParseState)
     end
 end
 
-function mUnaryOpCall(op::EXPR, arg::EXPR) 
+function mUnaryOpCall(op::EXPR, arg::EXPR)
     fullspan = op.fullspan + arg.fullspan
     ex = EXPR(UnaryOpCall, EXPR[op, arg], fullspan, fullspan - arg.fullspan + arg.span)
     setparent!(op, ex)
