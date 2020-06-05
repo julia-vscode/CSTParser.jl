@@ -1,3 +1,4 @@
+import Tokenize.Tokens: isoperator
 precedence(op::Int) = op < Tokens.end_assignments ?  AssignmentOp :
                        op < Tokens.end_pairarrow ? 2 :
                        op < Tokens.end_conditional ? ConditionalOp :
@@ -39,15 +40,15 @@ precedence(kind::Tokens.Kind) = kind === Tokens.DDDOT ? DddotOp :
 
 precedence(x) = 0
 precedence(x::AbstractToken) = precedence(kindof(x))
-precedence(x::EXPR) = precedence(kindof(x))
+precedence(x::EXPR) = error()#precedence(kindof(x))
 
-isoperator(kind) = Tokens.begin_ops < kind < Tokens.end_ops
+isoperator(x) = false
 isoperator(t::AbstractToken) = isoperator(kindof(t))
-isoperator(x::EXPR) = typof(x) === OPERATOR
+isoperator(x::EXPR) = headof(x) === :Operator
 
 
 isunaryop(op) = false
-isunaryop(op::EXPR) = isoperator(op) && isunaryop(kindof(op))
+isunaryop(op::EXPR) = isoperator(op) && (valof(op) == "<:" || valof(op) == ">:" || valof(op) == "+" || valof(op) == "-" || valof(op) == "!" || valof(op) == "~" || valof(op) == "¬" || valof(op) == "&" || valof(op) == "√" || valof(op) == "∛"  || valof(op) == "∜"  || valof(op) == "::" || valof(op) == "\$" || valof(op) == ":" || valof(op) == "⋆")
 isunaryop(t::AbstractToken) = isunaryop(kindof(t))
 @static if VERSION < v"1.2.0"
     isunaryop(kind::Tokens.Kind) = kind === Tokens.ISSUBTYPE ||
@@ -108,7 +109,11 @@ else
 end
 
 isbinaryop(op) = false
-isbinaryop(op::EXPR) = isoperator(op) && isbinaryop(kindof(op))
+isbinaryop(op::EXPR) = isoperator(op) && !(valof(op) == "√" ||
+    valof(op) == "∛" ||
+    valof(op) == "∜" ||
+    valof(op) == "!" ||
+    valof(op) == "¬")
 isbinaryop(t::AbstractToken) = isbinaryop(kindof(t))
 isbinaryop(kind::Tokens.Kind) = isoperator(kind) &&
                     !(kind === Tokens.SQUARE_ROOT ||
@@ -137,38 +142,34 @@ function non_dotted_op(t::AbstractToken)
             k === Tokens.WHERE ||
             (isunaryop(k) && !isbinaryop(k) && !(k === Tokens.NOT)))
 end
-
+isdotted(x::EXPR) = valof(x) isa String && length(valof(x)) > 1 && valof(x)[1] === '.' && !(valof(x) == "..." || valof(x) == "..")
 
 issyntaxcall(op) = false
 function issyntaxcall(op::EXPR)
-    K = kindof(op)
-    P = precedence(K)
-    P == AssignmentOp && !(K === Tokens.APPROX || K === Tokens.PAIR_ARROW) ||
-    K === Tokens.RIGHT_ARROW ||
-    P == LazyOrOp ||
-    P == LazyAndOp ||
-    K === Tokens.ISSUBTYPE ||
-    K === Tokens.ISSUPERTYPE ||
-    K === Tokens.COLON ||
-    K === Tokens.DECLARATION ||
-    K === Tokens.DOT ||
-    K === Tokens.DDDOT ||
-    K === Tokens.PRIME ||
-    K === Tokens.WHERE ||
-    K === Tokens.ANON_FUNC
+    v = valof(op)
+    if v[1] == '.' && length(v) > 1 && assign_prec(v[2:end])
+        return true
+    end
+    assign_prec(v) && !(v == "~" || v== "=>") ||
+    v == "-->" ||
+    v == "||" ||
+    v == "&&" ||
+    v == "<:" ||
+    v == ">:" ||
+    v == ":" ||
+    v == "::" ||
+    v == "." ||
+    v == "..." ||
+    v == "'" ||
+    v == "where" ||
+    v == "->"
 end
 
 
 issyntaxunarycall(op) = false
 function issyntaxunarycall(op::EXPR)
-    K = kindof(op)
-    !op.dot && (K === Tokens.EX_OR ||
-    K === Tokens.AND ||
-    K === Tokens.DECLARATION ||
-    K === Tokens.DDDOT ||
-    K === Tokens.PRIME ||
-    K === Tokens.ISSUBTYPE ||
-    K === Tokens.ISSUPERTYPE)
+    v = valof(op)
+    !isdotted(op) && (v == "\$" || v == "&" || v == "::" || v == "..." || v == "'" || v == "<:" || v == ">:")
 end
 
 
@@ -182,19 +183,22 @@ LtoR(prec::Int) = AssignmentOp ≤ prec ≤ LazyAndOp || prec == PowerOp
 Having hit a unary operator at the start of an expression return a call.
 """
 function parse_unary(ps::ParseState, op::EXPR)
-    K, dot = kindof(op), op.dot
+    dot = isdotted(op)
     if is_colon(op)
         ret = parse_unary_colon(ps, op)
     elseif should_negate_number_literal(ps, op)
         arg = mLITERAL(next(ps))
-        ret = mLITERAL(op.fullspan + arg.fullspan, (op.fullspan + arg.span), string(is_plus(op) ? "+" : "-", val(ps.t, ps)), kindof(ps.t))
+        ret = EXPR(literalmap(kindof(ps.t)), op.fullspan + arg.fullspan, (op.fullspan + arg.span), string(is_plus(op) ? "+" : "-", val(ps.t, ps)))
     else
-        P = precedence(K)
-        prec = P == DeclarationOp ? DeclarationOp :
-                    K === Tokens.AND ? DeclarationOp :
-                    K === Tokens.EX_OR ? 20 : PowerOp
+        prec = valof(op) == "::" ? DeclarationOp :
+                valof(op) == "&" ? DeclarationOp :
+                valof(op) == "\$" ? 20 : PowerOp
         arg = @closer ps :unary @precedence ps prec parse_expression(ps)
-        ret = mUnaryOpCall(op, arg)
+        if issyntaxunarycall(op)
+            ret = EXPR(op, EXPR[arg], nothing)
+        else
+            ret = EXPR(:Call, EXPR[op, arg], nothing)
+        end
     end
     return ret
 end
@@ -202,21 +206,27 @@ end
 function parse_unary_colon(ps::ParseState, op::EXPR)
     op = requires_no_ws(op, ps)
     if Tokens.iskeyword(kindof(ps.nt))
-        ret = EXPR(Quotenode, EXPR[op, mIDENTIFIER(next(ps))])
+        ret = EXPR(:Quotenode, EXPR[EXPR(:Identifier, next(ps))], EXPR[op])
     elseif Tokens.begin_literal < kindof(ps.nt) < Tokens.CHAR ||
         isoperator(kindof(ps.nt)) || isidentifier(ps.nt) || kindof(ps.nt) === Tokens.TRUE || kindof(ps.nt) === Tokens.FALSE
-        ret = EXPR(Quotenode, EXPR[op, INSTANCE(next(ps))])
+        ret = EXPR(:Quotenode, EXPR[INSTANCE(next(ps))], EXPR[op])
     elseif closer(ps)
         ret = op
     else
         prev_errored = ps.errored
         arg = @precedence ps 20 parse_expression(ps)
-        if isbracketed(arg)  && typof(arg.args[2]) === ErrorToken && errorof(arg.args[2]) === UnexpectedAssignmentOp
+        if isbracketed(arg) && headof(arg.args[1]) === :ErrorToken && errorof(arg.args[1]) === UnexpectedAssignmentOp
             ps.errored = prev_errored
-            arg.args[2] = arg.args[2].args[1]
-            setparent!(arg.args[2], arg)
+            arg.args[1] = arg.args[1].args[1]
+            setparent!(arg.args[1], arg)
         end
-        ret = EXPR(Quote, EXPR[op, arg])
+        # TODO: need special conversion where arg is a n-bracketed terminal (not keywords)
+        unwrapped = unwrapbracket(arg)
+        if isoperator(unwrapped) || isidentifier(unwrapped) || isliteral(unwrapped)
+            ret = EXPR(:Quotenode, EXPR[arg], EXPR[op])
+        else
+            ret = EXPR(:Quote, EXPR[arg], EXPR[op])
+        end
     end
     return ret
 end
@@ -225,39 +235,53 @@ function parse_operator_eq(ps::ParseState, ret::EXPR, op::EXPR)
     nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
 
     if is_func_call(ret) && !(isbeginorblock(nextarg))
-        nextarg = EXPR(Block, EXPR[nextarg])
+        nextarg = EXPR(:Block, EXPR[nextarg], nothing)
     end
-    ret = mBinaryOpCall(ret, op, nextarg)
+    if issyntaxcall(op)
+        ret = EXPR(op, EXPR[ret, nextarg], nothing)
+    else
+        ret = EXPR(:Call, EXPR[op, ret, nextarg], nothing)
+    end
     return ret
 end
 
 # Parse conditionals
+
+isconditional(x::EXPR) = headof(x) === :If && hastrivia(x) && isoperator(first(x.trivia))
 function parse_operator_cond(ps::ParseState, ret::EXPR, op::EXPR)
     ret = requires_ws(ret, ps)
     op = requires_ws(op, ps)
     nextarg = @closer ps :ifop parse_expression(ps)
-    if ps.nt.kind !== Tokens.COLON
-        op2 = mErrorToken(ps, mOPERATOR(0, 0, Tokens.COLON, false), MissingColon)
+    if kindof(ps.nt) !== Tokens.COLON
+        op2 = mErrorToken(ps, EXPR(:Operator, 0, 0, ":"), MissingColon)
+        nextarg2 = mErrorToken(ps, Unknown)
+        return EXPR(:If, EXPR[ret, nextarg, nextarg2], EXPR[op, op2])
     else
-        op2 = requires_ws(mOPERATOR(next(ps)), ps)
+        op2 = requires_ws(EXPR(:Operator, next(ps)), ps)
     end
 
     nextarg2 = @closer ps :comma @precedence ps 0 parse_expression(ps)
 
-    return EXPR(ConditionalOpCall, EXPR[ret, op, nextarg, op2, nextarg2])
+    return EXPR(:If, EXPR[ret, nextarg, nextarg2], EXPR[op, op2])
 end
 
 # Parse comparisons
 function parse_comp_operator(ps::ParseState, ret::EXPR, op::EXPR)
     nextarg = @precedence ps ComparisonOp - LtoR(ComparisonOp) parse_expression(ps)
 
-    if typof(ret) === Comparison
+    if headof(ret) === :Comparison
         push!(ret, op)
         push!(ret, nextarg)
     elseif can_become_comparison(ret)
-        ret = EXPR(Comparison, EXPR[ret.args[1], ret.args[2], ret.args[3], op, nextarg])
+        if isoperator(headof(ret))
+            ret = EXPR(:Comparison, EXPR[ret.args[1], ret.head, ret.args[2], op, nextarg], nothing)
+        else
+            ret = EXPR(:Comparison, EXPR[ret.args[2], ret.args[1], ret.args[3], op, nextarg], nothing)
+        end
+    elseif issyntaxcall(op)
+        ret = EXPR(op, EXPR[ret, nextarg], nothing)
     else
-        ret = mBinaryOpCall(ret, op, nextarg)
+        ret = EXPR(:Call, EXPR[op, ret, nextarg], nothing)
     end
     return ret
 end
@@ -269,10 +293,12 @@ function parse_operator_colon(ps::ParseState, ret::EXPR, op::EXPR)
     end
     nextarg = @precedence ps ColonOp - LtoR(ColonOp) parse_expression(ps)
 
-    if isbinarycall(ret) && is_colon(ret.args[2])
-        ret = EXPR(ColonOpCall, EXPR[ret.args[1], ret.args[2], ret.args[3], op, nextarg])
+    if isbinarycall(ret) && is_colon(ret.args[1])
+        ret.trivia = EXPR[]
+        pushtotrivia!(ret, op)
+        push!(ret, nextarg)
     else
-        ret = mBinaryOpCall(ret, op, nextarg)
+        ret = EXPR(:Call, EXPR[op, ret, nextarg], nothing)
     end
     return ret
 end
@@ -282,10 +308,11 @@ function parse_operator_power(ps::ParseState, ret::EXPR, op::EXPR)
     nextarg = @precedence ps PowerOp - LtoR(PowerOp) @closer ps :inwhere parse_expression(ps)
 
     if isunarycall(ret)
-        nextarg = mBinaryOpCall(ret.args[2], op, nextarg)
-        ret = mUnaryOpCall(ret.args[1], nextarg)
+        # TODO: this smells wrong
+        nextarg = EXPR(:Call, EXPR[op, ret.args[2], nextarg], nothing)
+        ret = EXPR(:Call, EXPR[ret.args[1], nextarg], nothing)
     else
-        ret = mBinaryOpCall(ret, op, nextarg)
+        ret = EXPR(:Call, EXPR[op, ret, nextarg], nothing)
     end
     return ret
 end
@@ -293,13 +320,11 @@ end
 # parse where
 function parse_operator_where(ps::ParseState, ret::EXPR, op::EXPR, setscope = true)
     nextarg = @precedence ps LazyAndOp @closer ps :inwhere parse_expression(ps)
-
-    if typof(nextarg) === Braces
-        args = nextarg.args
+    if headof(nextarg) === :Braces
+        ret = EXPR(:Where, EXPR[ret; nextarg.args], EXPR[op; nextarg.trivia])
     else
-        args = EXPR[nextarg]
+        ret = EXPR(:Where, EXPR[ret, nextarg], EXPR[op])
     end
-    ret = mWhereOpCall(ret, op, args)
     return ret
 end
 
@@ -308,68 +333,70 @@ function parse_operator_dot(ps::ParseState, ret::EXPR, op::EXPR)
         @static if VERSION > v"1.1-"
             iserred = kindof(ps.ws) != Tokens.EMPTY_WS
             sig = @default ps parse_call(ps, ret)
-            nextarg = EXPR(TupleH, sig.args[2:end])
+            nextarg = EXPR(:Tuple, sig.args[2:end], sig.trivia)
             if iserred
                 nextarg = mErrorToken(ps, nextarg, UnexpectedWhiteSpace)
             end
         else
             sig = @default ps parse_call(ps, ret)
-            nextarg = EXPR(TupleH, sig.args[2:end])
+            nextarg = EXPR(:Tuple, sig.args[2:end], sig.trivia)
         end
-    elseif iskw(ps.nt) || both_symbol_and_op(ps.nt)
-        nextarg = mIDENTIFIER(next(ps))
+    elseif iskeyword(ps.nt) || both_symbol_and_op(ps.nt)
+        nextarg = EXPR(:Identifier, next(ps))
     elseif kindof(ps.nt) === Tokens.COLON
-        op2 = mOPERATOR(next(ps))
+        op2 = EXPR(:Operator, next(ps))
         if kindof(ps.nt) === Tokens.LPAREN
             nextarg = @closeparen ps @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)
-            nextarg = EXPR(Quote, EXPR[op2, nextarg])
+            nextarg = EXPR(:Quotenode, EXPR[nextarg], EXPR[op2])
         else
             nextarg = @precedence ps DotOp - LtoR(DotOp) parse_unary(ps, op2)
         end
     elseif kindof(ps.nt) === Tokens.EX_OR && kindof(ps.nnt) === Tokens.LPAREN
-        op2 = mOPERATOR(next(ps))
+        op2 = EXPR(:Operator, next(ps))
         nextarg = parse_call(ps, op2)
     else
         nextarg = @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)
     end
 
     if isidentifier(nextarg) || isinterpolant(nextarg)
-        ret = mBinaryOpCall(ret, op, EXPR(Quotenode, EXPR[nextarg]))
-    elseif typof(nextarg) === Vect
-        ret = mBinaryOpCall(ret, op, EXPR(Quote, EXPR[nextarg]))
-    elseif typof(nextarg) === MacroCall
-        mname = mBinaryOpCall(ret, op, EXPR(Quotenode, EXPR[nextarg.args[1]]))
-        ret = EXPR(MacroCall, EXPR[mname])
+        ret = EXPR(op, EXPR[ret, EXPR(:Quotenode, EXPR[nextarg], nothing)], nothing)
+    elseif headof(nextarg) === :Vect || headof(nextarg) === :Braces
+        ret = EXPR(op, EXPR[ret, EXPR(:Quote, EXPR[nextarg], nothing)], nothing)
+    elseif headof(nextarg) === :MacroCall
+        # TODO : ?
+        mname = EXPR(op, EXPR[ret, EXPR(:Quotenode, EXPR[nextarg.args[1]], nothing)], nothing)
+        ret = EXPR(:MacroCall, EXPR[mname], nothing)
         for i = 2:length(nextarg.args)
             push!(ret, nextarg.args[i])
         end
     else
-        ret = mBinaryOpCall(ret, op, nextarg)
+        ret = EXPR(op, EXPR[ret, nextarg], nothing)
     end
     return ret
 end
 
 function parse_operator_anon_func(ps::ParseState, ret::EXPR, op::EXPR)
     arg = @closer ps :comma @precedence ps 0 parse_expression(ps)
-
     if !isbeginorblock(arg)
-        arg = EXPR(Block, EXPR[arg])
+        arg = EXPR(:Block, EXPR[arg], nothing)
     end
-    return mBinaryOpCall(ret, op, arg)
+    return EXPR(op, EXPR[ret, arg], nothing)
 end
 
 function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
-    K, dot = kindof(op), op.dot
-    P = precedence(K)
+    dot = isdotted(op)
+    P = isdotted(op) ? AllPrecs[valof(op)[2:end]] : AllPrecs[valof(op)]
 
-    if typof(ret) === ChainOpCall && (is_star(op) || is_plus(op)) && kindof(op) == kindof(ret.args[2])
+    if headof(ret) === :Call && (is_plus(ret.args[1]) || is_star(ret.args[1])) && valof(ret.args[1]) == valof(op) && ret.args[1].span > 0
+        # a + b -> a + b + c
         nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
-        push!(ret, op)
+        ret.trivia = EXPR[]
+        pushtotrivia!(ret, op)
         push!(ret, nextarg)
         ret = ret
     elseif can_become_chain(ret, op)
         nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
-        ret = EXPR(ChainOpCall, EXPR[ret.args[1], ret.args[2], ret.args[3], op, nextarg])
+        ret = EXPR(:ChainOpCall, EXPR[ret.args[1], ret.args[2], ret.args[3], op, nextarg])
     elseif is_eq(op)
         ret = parse_operator_eq(ps, ret, op)
     elseif is_cond(op)
@@ -383,15 +410,24 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
     elseif is_dot(op)
         ret = parse_operator_dot(ps, ret, op)
     elseif is_dddot(op) || is_prime(op)
-        ret = mUnaryOpCall(ret, op)
+        ret = EXPR(op, EXPR[ret], nothing)
     elseif P == ComparisonOp
         ret = parse_comp_operator(ps, ret, op)
     elseif P == PowerOp
         ret = parse_operator_power(ps, ret, op)
     else
-        ltor = K === Tokens.LPIPE ? true : LtoR(P)
+        ltor = valof(op) == "<|" ? true : LtoR(P)
         nextarg = @precedence ps P - ltor parse_expression(ps)
-        ret = mBinaryOpCall(ret, op, nextarg)
+        if issyntaxcall(op)
+            ret = EXPR(op, EXPR[ret, nextarg], nothing)
+        else
+            ret = EXPR(:Call, EXPR[op, ret, nextarg], nothing)
+        end
     end
     return ret
 end
+
+assign_prec(op) = get(AllPrecs, op, 0) === AssignmentOp
+comp_prec(op) = get(AllPrecs, op, 0) === ComparisonOp
+
+const AllPrecs = Dict("≏" => 9,"⤎" => 3,"<:" => 6,"⫌" => 6,"⇀" => 0,"≁" => 6,"⧀" => 6,"⪎" => 6,"⪱" => 6,"↬" => 0,"⇝" => 0,"⩳" => 6,"⪻" => 6,"//" => 11,"⬿" => 3,"⊅" => 6,"⋳" => 6,"≮" => 6,"\$=" => 1,"≗" => 6,"⋗" => 6,"⩊" => 9,"⪵" => 6,"⋟" => 6,"⤠" => 3,"≵" => 6,"⧁" => 6,"≫" => 6,"⩫" => 6,"⪸" => 6,"⊓" => 10,"⭄" => 3,"⇁" => 0,"≀" => 10,"⪚" => 6,"∷" => 6,"⥪" => 3,"⥔" => 13,"⊻" => 9,"⩯" => 6,"↷" => 0,"⇿" => 3,"⪉" => 6,"⊰" => 6,"⨟" => 0,"⩻" => 6,"⭋" => 3,"⩒" => 9,"-" => 9,"⫸" => 6,"⤒" => 13,"+=" => 1,"↦" => 3,"⊜" => 6,"|>" => 7,"⩀" => 10,"⪫" => 6,"≡" => 6,"⋹" => 6,"⤑" => 3,"⥐" => 3,"≭" => 6,"≼" => 6,"⥇" => 3,"⋶" => 6,"⨸" => 10,"⩽" => 6,"⪐" => 6,"⨥" => 9,"∊" => 6,"⪙" => 6,"⥢" => 3,"⅋" => 10,"⫘" => 6,"⊂" => 6,"⩸" => 6,"⩄" => 10,"⤞" => 3,"⫍" => 6,"⨢" => 9,"⊄" => 6,"≯" => 6,"===" => 6,"⬺" => 3,"⪛" => 6,"⋡" => 6,"⫀" => 6,"⨣" => 9,"↞" => 0,"⟾" => 3,"⊬" => 6,"⇌" => 0,"≷" => 6,"∓" => 9,"⪶" => 6,"⊀" => 6,"⊛" => 10,"⋠" => 6,"↢" => 0,"⥦" => 3,"⪪" => 6,"⋌" => 10,"⪅" => 6,"≿" => 6,">>=" => 1,"\$" => 9,"≽" => 6,"⪟" => 6,"⋆" => 10,"±" => 9,"⋴" => 6,"⥧" => 3,"/" => 10,"⥕" => 13,"." => 16,"⩢" => 9,"⟖" => 10,"⪗" => 6,"≓" => 6,"⋨" => 6,"⥜" => 13,"⪊" => 6,"⨽" => 10,"⪦" => 6,"≱" => 6,"⧷" => 10,">>" => 12,"⊏" => 6,"⬴" => 3,"⪴" => 6,"⁝" => 8,"⤘" => 3,"⩜" => 10,"￬" => 13,"∤" => 10,"⩲" => 6,"⫙" => 6,"⇵" => 13,"⤗" => 3,"⪀" => 6,"⩬" => 6,"↫" => 0,"&" => 10,"⩺" => 6,"↚" => 3,"⨇" => 10,"⋭" => 6,"≐" => 6,"∩" => 10,"↓" => 13,"⪓" => 6,"≦" => 6,"=" => 1,"∧" => 10,"⇇" => 0,"≖" => 6,"⇸" => 3,"⋙" => 6,"≚" => 6,"⇴" => 3,"⬲" => 3,"⥙" => 13,"⋢" => 6,"⫹" => 6,"⩛" => 9,"⋿" => 6,"⪑" => 6,"⭉" => 3,"⋎" => 9,"⋋" => 10,"⇋" => 0,"≴" => 6,"…" => 8,"⪰" => 6,"↺" => 0,"⪖" => 6,"⨦" => 9,"⬼" => 3,"⤐" => 3,"⊗" => 10,"⨮" => 9,"⊚" => 10,"⥈" => 3,"≣" => 6,"⋫" => 6,"≺" => 6,"⇽" => 3,"⬳" => 3,"⥨" => 3,"⋽" => 6,"⩟" => 10,"⋞" => 6,"⩖" => 9,"⧥" => 6,"⨝" => 10,"⪕" => 6,"⊟" => 9,"⋑" => 6,"⊲" => 6,"≟" => 6,"⫈" => 6,"⥋" => 3,"⩂" => 9,"⥏" => 13,"⥩" => 3,"⥑" => 13,"⪤" => 6,"⫖" => 6,"×" => 10,"÷=" => 1,"⋪" => 6,"⫓" => 6,"⫄" => 6,"⊋" => 6,"⇆" => 0,"⤌" => 3,"⟹" => 3,"⊖" => 9,"⫏" => 6,"⫷" => 6,"⪜" => 6,"⊕" => 9,"%=" => 1,"⊍" => 10,"⨤" => 9,"≃" => 6,"⩪" => 6,"⤉" => 13,"⪽" => 6,"⋓" => 9,"⤀" => 3,"∺" => 6,"⤆" => 3,"⊳" => 6,"//=" => 1,"≒" => 6,"⩦" => 6,"↶" => 0,"⊡" => 10,"⟈" => 6,"≩" => 6,"||" => 4,"↠" => 3,"⥒" => 3,"⨧" => 9,"⪧" => 6,"⨪" => 9,"⇹" => 3,"⥛" => 3,"↣" => 3,"⫁" => 6,"⭊" => 3,"⋜" => 6,"⪳" => 6,"⋼" => 6,"⥍" => 13,"⫎" => 6,"^=" => 1,"⪢" => 6,"∪" => 9,"⩅" => 9,"⬵" => 3,"⬽" => 3,"≬" => 6,"⧶" => 10,"⪡" => 6,"≶" => 6,"⇼" => 3,"^" => 13,"⇷" => 3,"⋸" => 6,"⊩" => 6,"⭀" => 3,"⧴" => 3,"⊷" => 6,"⤔" => 3,"~" => 1,"⫒" => 6,"⩼" => 6,"⧺" => 9,"⧻" => 9,">>>=" => 1,"⪂" => 6,"⨻" => 10,"⤏" => 3,"⥘" => 13,"≕" => 6,"⥓" => 3,"⨰" => 10,"⨺" => 9,"⟵" => 3,"⇜" => 0,"<<=" => 1,"≔" => 6,"⩋" => 10,"⫊" => 6,"⪠" => 6,"⥬" => 3,"⥖" => 3,"⪣" => 6,"↔" => 3,"≥" => 6,"⧤" => 6,"⤄" => 3,"⊢" => 6,"⋛" => 6,"⩔" => 9,"⇶" => 3,"⤇" => 3,"⟽" => 3,"⩵" => 6,"⬶" => 3,"⩌" => 9,"↮" => 3,"⪾" => 6,"⋕" => 6,"⥤" => 3,"∋" => 6,"↽" => 0,"⋇" => 10,"⪍" => 6,"⩃" => 10,"⨈" => 9,"⋚" => 6,"⩐" => 9,"≾" => 6,"⋤" => 6,"∔" => 9,"⤈" => 13,"⇾" => 3,"⊮" => 6,"⪩" => 6,"⬷" => 3,"|++|" => 9,"↪" => 0,"⭇" => 3,"⨨" => 9,"⩓" => 10,"⤊" => 13,"↤" => 0,"⊱" => 6,"⟼" => 3,"⨴" => 10,"⤋" => 13,"⊴" => 6,"≊" => 6,"⧡" => 6,"⫆" => 6,"⋯" => 8,"≜" => 6,"∍" => 6,"::" => 14,"⥣" => 13,"⪃" => 6,"⪹" => 6,"⩴" => 6,"⥫" => 3,"￫" => 3,">>>" => 12,"≢" => 6,"⊈" => 6,"≤" => 6,"⟿" => 3,"⪨" => 6,"⋖" => 6,"⫉" => 6,"⩹" => 6,"￪" => 13,"⊆" => 6,"!==" => 6,"⪔" => 6,"⥎" => 3,"≋" => 6,"⊁" => 6,"⋥" => 6,"⋉" => 10,"⨱" => 10,"?" => 2,"⥚" => 3,"⋷" => 6,"⟒" => 6,"⫅" => 6,"⪏" => 6,"⩕" => 10,"⪞" => 6,">:" => 6,"⟗" => 10,"⪷" => 6,"⩎" => 10,"⬱" => 3,"⇺" => 3,"⩁" => 9,"⥆" => 3,"⊘" => 10,"⨼" => 10,"⊙" => 10,"⊇" => 6,"⋍" => 6,"≛" => 6,"⊒" => 6,"⋏" => 10,"⭁" => 3,"⤂" => 3,"⥄" => 3,"⋝" => 6,"÷" => 10,"⧣" => 6,"⊞" => 9,"⬾" => 3,"⇉" => 0,"⨶" => 10,"in" => 6,"==" => 6,"⟶" => 3,"⬰" => 3,":=" => 1,"⪋" => 6,"≂" => 9,"<|" => 7,"⥊" => 3,"⪺" => 6,"≎" => 6,"≈" => 6,"∌" => 6,"⨹" => 9,"⪘" => 6,"⨵" => 10,"⦾" => 10,"⇒" => 3,".." => 8,"⇛" => 0,"⪿" => 6,"≹" => 6,"⋱" => 8,"⇎" => 3,"→" => 3,"⥮" => 13,"-=" => 1,"<" => 6,"⪇" => 6,"⥗" => 3,"⪈" => 6,"⨫" => 9,"⥞" => 3,"⭂" => 3,"⩠" => 10,"\\" => 10,"⩿" => 6,"↑" => 13,"≳" => 6,"⋧" => 6,"⩧" => 6,"--" => 0,"⪮" => 6,"⪄" => 6,"⊎" => 9,"⩾" => 6,"↝" => 0,"⨲" => 10,"⊐" => 6,"⟻" => 3,"⫗" => 6,"⩞" => 10,"⥯" => 13,"⪌" => 6,"≨" => 6,"⋄" => 10,"⪯" => 6,"⦸" => 10,"⫐" => 6,"↜" => 0,"≧" => 6,"∉" => 6,"⤟" => 3,"⋾" => 6,"￩" => 3,"<<" => 12,"≞" => 6,"⩍" => 10,"⇄" => 0,"▷" => 10,"⋘" => 6,"≇" => 6,"⇏" => 3,"⊶" => 6,"⫇" => 6,"*" => 10,"⩣" => 9,"⬸" => 3,"⥥" => 13,"≙" => 6,"*=" => 1,"≄" => 6,"⊑" => 6,"⫑" => 6,"⩗" => 9,"⟷" => 3,"⟱" => 13,"≻" => 6,"⋲" => 6,"≑" => 6,"⭈" => 3,"∾" => 6,"&=" => 1,"≪" => 6,"\\\\=" => 10,"↼" => 0,"⬹" => 3,"∗" => 10,"⊣" => 6,"⫺" => 6,"⥌" => 13,"⋩" => 6,"≲" => 6,"≝" => 6,"⊽" => 9,"/=" => 1,"⋬" => 6,"⩶" => 6,"⫛" => 10,"=>" => 2,"⪁" => 6,"⨩" => 9,"⥝" => 13,"⩝" => 9,"⟕" => 10,"⤖" => 3,"⥉" => 13,"⩏" => 9,"!=" => 6,"⨳" => 10,"≰" => 6,"⟂" => 6,"⋐" => 6,"\\=" => 1,"⤝" => 3,"⦷" => 6,"⊔" => 9,">" => 6,"⥰" => 3,"∽" => 6,"⋦" => 6,"⤅" => 3,"⫕" => 6,"⋺" => 6,"∈" => 6,"∙" => 10,"⥅" => 3,"⦼" => 10,"<=" => 6,"←" => 3,"isa" => 6,"⋻" => 6,"⫔" => 6,"⋵" => 6,"⋅" => 10,"⨷" => 10,"⟰" => 13,"∨" => 9,"≆" => 6,"⪥" => 6,"≍" => 6,"⪝" => 6,"⫂" => 6,"⊻=" => 1,"⨭" => 9,"⋒" => 10,"⦿" => 10,"≸" => 6,"⥡" => 13,"+" => 9,"⇻" => 3,"⥟" => 3,"⟉" => 6,"⊵" => 6,"⩰" => 6,"%" => 10,"⫃" => 6,"∸" => 9,"⋣" => 6,"-->" => 3,"∥" => 6,"∦" => 6,"⋮" => 8,"⪒" => 6,"⤃" => 3,"⟑" => 10,"⩑" => 10,"⋰" => 8,"⪬" => 6,"≠" => 6,"≅" => 6,"⊼" => 10,"⬻" => 3,"⩘" => 10,"⭃" => 3,"⥭" => 3,"⤕" => 3,"≘" => 6,"⇠" => 0,"⟺" => 3,"⪼" => 6,"⇢" => 0,"↩" => 0,"⋊" => 10,"&&" => 5,"⩚" => 10,"⩮" => 6,"⤓" => 13,"⥠" => 13,"⤁" => 3,"≌" => 6,"⭌" => 3,"⇐" => 0,":" => 8,"⇍" => 0,"⩭" => 6,"↛" => 3,"↻" => 0,"⪲" => 6,"⇔" => 3,"⪭" => 6,"⩱" => 6,"⤍" => 3,"⊃" => 6,"∝" => 6,"⊊" => 6,"⊠" => 10,"∘" => 10,"⇚" => 0,"⪆" => 6,"⫋" => 6,"|" => 9,"⊉" => 6,"∻" => 6,"≉" => 6,"⩡" => 9,"⨬" => 9,"⩷" => 6,">=" => 6, "..." => 0, "where" => WhereOp, "->" => AnonFuncOp, "|=" => 1)

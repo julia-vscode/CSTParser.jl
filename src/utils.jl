@@ -12,7 +12,7 @@ function closer(ps::ParseState)
     (ps.closer.inwhere && kindof(ps.nt) === Tokens.WHERE) ||
     (ps.closer.inwhere && ps.closer.ws && kindof(ps.t) === Tokens.RPAREN && isoperator(ps.nt) && precedence(ps.nt) < DeclarationOp) ||
     (ps.closer.precedence > WhereOp && (
-        (kindof(ps.nt) === Tokens.LPAREN && !(ps.t.kind === Tokens.EX_OR)) ||
+        (kindof(ps.nt) === Tokens.LPAREN && !(kindof(ps.t) === Tokens.EX_OR)) ||
         kindof(ps.nt) === Tokens.LBRACE ||
         kindof(ps.nt) === Tokens.LSQUARE ||
         (kindof(ps.nt) === Tokens.STRING && isemptyws(ps.ws)) ||
@@ -41,7 +41,7 @@ function closer(ps::ParseState)
         !(kindof(ps.nt) === Tokens.DO) &&
         !(
             (isbinaryop(ps.nt) && !(ps.closer.wsop && isemptyws(ps.nws) && isunaryop(ps.nt) && precedence(ps.nt) > 7)) ||
-            (isunaryop(ps.t) && kindof(ps.ws) == WS && ps.lt.kind !== CSTParser.Tokens.COLON)
+            (isunaryop(ps.t) && kindof(ps.ws) == WS && kindof(ps.lt) !== CSTParser.Tokens.COLON)
         )) ||
     (ps.closer.unary && (kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE) && isidentifier(ps.nt)))
 end
@@ -202,30 +202,37 @@ end
 
 
 
-isidentifier(x::EXPR) = typof(x) === IDENTIFIER || typof(x) === NONSTDIDENTIFIER
+isidentifier(x::EXPR) = headof(x) === :Identifier || headof(x) === :NonStdIdentifier
 
-isunarycall(x::EXPR) = typof(x) === UnaryOpCall
-isbinarycall(x::EXPR) = typof(x) === BinaryOpCall
-iswherecall(x::EXPR) = typof(x) === WhereOpCall
-isdeclaration(x::EXPR) = isbinarycall(x) && is_decl(x[2])
-isinterpolant(x::EXPR) = isunarycall(x) && is_exor(x[1])
-istuple(x::EXPR) = typof(x) === TupleH
+isunarycall(x::EXPR) = (headof(x) === :Call && length(x) == 2 && (isoperator(x.args[1]) || isoperator(x.args[2]))) || (isoperator(x.head) && length(x.args) == 1)
+isbinarycall(x::EXPR) = headof(x) === :Call && length(x) == 3 && isoperator(x.args[1])
+iswherecall(x::EXPR) = headof(x) === :Where
+isdeclaration(x::EXPR) = isoperator(x.head) && valof(x.head) == "::"
+isinterpolant(x::EXPR) = isoperator(x.head) && valof(x.head) == "\$"
+istuple(x::EXPR) = headof(x) === :Tuple
 is_either_id_op_interp(x::EXPR) = isidentifier(x) || isoperator(x) || isinterpolant(x)
-is_splat(x::EXPR) = isunarycall(x) && is_dddot(x[2])
+is_splat(x::EXPR) = isoperator(x.head) && valof(x.head) == "..."
 
 
-isliteral(x::EXPR) = typof(x) === LITERAL
-iskw(x::EXPR) = typof(x) === KEYWORD # TODO: should change to `iskeyword`
-ispunctuation(x::EXPR) = typof(x) === PUNCTUATION
 
-isstring(x) = typof(x) === StringH || (isliteral(x) && (kindof(x) === Tokens.STRING || kindof(x) === Tokens.TRIPLE_STRING))
-is_integer(x) = isliteral(x) && kindof(x) === Tokens.INTEGER
-is_float(x) = isliteral(x) && kindof(x) === Tokens.FLOAT
-is_number(x) = isliteral(x) && (kindof(x) === Tokens.INTEGER || kindof(x) === Tokens.FLOAT)
-is_nothing(x) = isliteral(x) && kindof(x) === Tokens.NOTHING
+iskeyword(x::EXPR) = headof(x) in (:abstract, :baremodule, :begin, :break, :catch, :const, :continue, :do, :else, :elseif, :end, :export, :finally, :for, :function, :global, :if, :import, :importall, :let, :local, :macro, :module, :mutable, :new, :outer, :primitive, :quote, :return, :struct, :try, :type, :using, :while)
 
-isajuxtaposition(ps::ParseState, ret::EXPR) = ((is_number(ret) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.LPAREN || kindof(ps.nt) === Tokens.CMD || kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)) ||
-        ((typof(ret) === UnaryOpCall && is_prime(ret.args[2]) && isidentifier(ps.nt)) ||
+ispunctuation(x::EXPR) = is_comma(x) || is_lparen(x) || is_rparen(x) || is_lsquare(x) || is_rsquare(x) || is_lbrace(x) || is_rbrace(x) || headof(x) === :AtSign  || headof(x) === :Dot
+
+
+isstringliteral(x) = headof(x) === :string || headof(x) === :triplestring
+isstring(x) = headof(x) === :String || isstringliteral(x)
+iscmd(x) = headof(x) === :cmd || headof(x) === :triplecmd
+ischar(x) = headof(x) === :char
+isinteger(x) = headof(x) === :integer
+isfloat(x) = headof(x) === :float
+isnumber(x) = isinteger(x) || isfloat(x)
+is_nothing(x) = headof(x) === :nothing
+
+isliteral(x::EXPR) = isstringliteral(x) || iscmd(x) || ischar(x) || headof(x) in (:integer, :bin_int, :hexint, :octint, :float,  :nothing, :(var"true"), :(var"false"))
+
+isajuxtaposition(ps::ParseState, ret::EXPR) = ((isnumber(ret) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.LPAREN || kindof(ps.nt) === Tokens.CMD || kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)) ||
+        ((is_prime(ret.head) && isidentifier(ps.nt)) ||
         ((kindof(ps.t) === Tokens.RPAREN || kindof(ps.t) === Tokens.RSQUARE) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.CMD)) ||
         ((kindof(ps.t) === Tokens.STRING || kindof(ps.t) === Tokens.TRIPLE_STRING) && (kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)))) || ((kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT) || kindof(ps.t) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && isidentifier(ps.nt))
 
@@ -237,7 +244,7 @@ Determine whether a parsing error occured while processing text with the given
 `ParseState`, or exists as a (sub) expression of `x`.
 """
 function has_error(x::EXPR)
-    return typof(x) == ErrorToken || (x.args !== nothing && any(has_error, x.args))
+    return headof(x) == :ErrorToken || (x.args !== nothing && any(has_error, x.args))
 end
 has_error(ps::ParseState) = ps.errored
 
@@ -474,14 +481,25 @@ Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
 function check_span(x::EXPR, neq = [])
-    (ispunctuation(x) || isidentifier(x) || iskw(x) || isoperator(x) || isliteral(x) || typof(x) == StringH) && return neq
+    (ispunctuation(x) || isidentifier(x) || iskeyword(x) || isoperator(x) || isliteral(x) || headof(x) == :String) && return neq
 
     s = 0
-    for a in x.args
-        check_span(a, neq)
-        s += a.fullspan
+    if x.args !== nothing
+        for a in x.args
+            check_span(a, neq)
+            s += a.fullspan
+        end
     end
-    if length(x.args) > 0 && s != x.fullspan
+    if hastrivia(x)
+        for a in x.trivia
+            check_span(a, neq)
+            s += a.fullspan
+        end
+    end
+    if x.head isa EXPR
+        s += x.head.fullspan
+    end
+    if length(x) > 0 && s != x.fullspan
         push!(neq, x)
     end
     neq
@@ -501,11 +519,11 @@ end
 Attempt to get a string representation of a nodeless expression.
 """
 function str_value(x)
-    if typof(x) === IDENTIFIER || typof(x) === LITERAL
+    if headof(x) === :Identifier || isliteral(x)
         return valof(x)
     elseif isidentifier(x)
         valof(x.args[2])
-    elseif typof(x) === OPERATOR || typof(x) === MacroName
+    elseif headof(x) === :Operator || headof(x) === :MacroName
         return string(Expr(x))
     else
         return ""
@@ -626,7 +644,7 @@ end
 
 Is this an expression of the form `a.b`.
 """
-is_getfield(x::EXPR) = isbinarycall(x) && length(x) == 3 && kindof(x[2]) === Tokens.DOT
+is_getfield(x::EXPR) = x.head isa EXPR && isoperator(x.head) && valof(x.head) == "."
 
 """
     disallowednumberjuxt(ret::EXPR)
@@ -634,7 +652,7 @@ is_getfield(x::EXPR) = isbinarycall(x) && length(x) == 3 && kindof(x[2]) === Tok
 Does this number literal end in a decimal and so cannot precede a paren for
 implicit multiplication?
 """
-disallowednumberjuxt(ret::EXPR) = is_number(ret) && last(valof(ret)) == '.'
+disallowednumberjuxt(ret::EXPR) = isnumber(ret) && last(valof(ret)) == '.'
 
 
 nexttokenstartsdocstring(ps::ParseState) = isidentifier(ps.nt) && val(ps.nt, ps) == "doc" && (kindof(ps.nnt) === Tokens.STRING || kindof(ps.nnt) === Tokens.TRIPLE_STRING)
@@ -646,12 +664,6 @@ Is `x` an assignment expression, ignoring any surrounding parentheses.
 """
 is_wrapped_assignment(x::EXPR) = is_assignment(x) || (isbracketed(x) && is_wrapped_assignment(x.args[2]))
 
-"""
-    is_range(x::EXPR)
-
-Is `x` a valid iterator for use in `for` loops or generators?
-"""
-is_range(x::EXPR) = isbinarycall(x) && (is_eq(x.args[2]) || is_in(x.args[2]) || is_elof(x.args[2]))
 
 """
     _do_kw_convert(ps::ParseState, a::EXPR)
@@ -665,14 +677,14 @@ _do_kw_convert(ps::ParseState, a::EXPR) = !ps.closer.brace && is_assignment(a)
 
 Converted an assignment expression to a keyword-argument expression.
 """
-_kw_convert(a::EXPR) = EXPR(Kw, EXPR[a.args[1], a.args[2], a.args[3]], a.fullspan, a.span)
+_kw_convert(x::EXPR) = EXPR(:Kw, EXPR[x.args[1], x.args[2]], EXPR[x.head], x.fullspan, x.span)
 
 """
     convertsigtotuple(sig::EXPR)
 
 When parsing a function or macro signature, should it be converted to a tuple?
 """
-convertsigtotuple(sig::EXPR) = isbracketed(sig) && !(istuple(sig.args[2]) || (typof(sig.args[2]) === Block) || is_splat(sig.args[2]))
+convertsigtotuple(sig::EXPR) = isbracketed(sig) && !(istuple(sig.args[1]) || (headof(sig.args[1]) === :Block) || is_splat(sig.args[1]))
 
 """
     docable(head)
@@ -680,16 +692,16 @@ convertsigtotuple(sig::EXPR) = isbracketed(sig) && !(istuple(sig.args[2]) || (ty
 When parsing a block of expressions, can documentation be attached? Prefixed docs at the
 top-level are handled within `parse(ps::ParseState, cont = false)`.
 """
-docable(head) = head === Begin || head === ModuleH || head === BareModule
+docable(head) = head === :Begin || head === :Module || head === :BareModule
 
 
 should_negate_number_literal(ps::ParseState, op::EXPR) = (is_plus(op) || is_minus(op)) && (kindof(ps.nt) === Tokens.INTEGER || kindof(ps.nt) === Tokens.FLOAT) && isemptyws(ps.ws) && kindof(ps.nnt) != Tokens.CIRCUMFLEX_ACCENT
 
-isbracketed(x::EXPR) = typof(x) === InvisBrackets # Assumption that x has 3 args, doesn't need checking?
+isbracketed(x::EXPR) = headof(x) === :Brackets # Assumption that x has 3 args, doesn't need checking?
 
-unwrapbracket(x::EXPR) = isbracketed(x) ? unwrapbracket(x[2]) : x
+unwrapbracket(x::EXPR) = isbracketed(x) ? unwrapbracket(x.args[1]) : x
 
-isbeginorblock(x::EXPR) = typof(x) === Begin || typof(unwrapbracket(x)) == Block
+isbeginorblock(x::EXPR) = headof(x) === :Begin || headof(unwrapbracket(x)) == :Block
 
 """
     can_become_comparison(x::EXPR)
@@ -697,7 +709,7 @@ isbeginorblock(x::EXPR) = typof(x) === Begin || typof(unwrapbracket(x)) == Block
 Is `x` a binary comparison call (e.g. `a < b`) that can be extended to include more
 arguments?
 """
-can_become_comparison(x::EXPR) = isbinarycall(x) && (precedence(x.args[2]) == ComparisonOp || is_issubt(x.args[2]) || is_issupt(x.args[2]))
+can_become_comparison(x::EXPR) = (isoperator(x.head) && comp_prec(valof(x.head))) || (x.head === :Call && isoperator(x.args[1]) && comp_prec(valof(x.args[1])))
 
 """
     can_become_chain(x::EXPR, op::EXPR)
@@ -705,4 +717,9 @@ can_become_comparison(x::EXPR) = isbinarycall(x) && (precedence(x.args[2]) == Co
 Is `x` a binary call for `+` or `*` that can be extended to include more
 arguments?
 """
-can_become_chain(x::EXPR, op::EXPR) = isbinarycall(x) && (is_star(op) || is_plus(op)) && kindof(op) == kindof(x.args[2]) && !x.args[2].dot && x.args[2].span > 0
+can_become_chain(x::EXPR, op::EXPR) = isbinarycall(x) && (is_star(op) || is_plus(op)) && valof(op) == valof(x.args[2]) && !isdotted(x.args[2]) && x.args[2].span > 0
+
+
+macro cst_str(x)
+    CSTParser.parse(x)
+end

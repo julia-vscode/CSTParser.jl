@@ -185,7 +185,7 @@ isliteral(t::AbstractToken) = Tokens.begin_literal < kindof(t) < Tokens.end_lite
 isbool(t::AbstractToken) =  Tokens.TRUE ≤ kindof(t) ≤ Tokens.FALSE
 iscomma(t::AbstractToken) =  kindof(t) === Tokens.COMMA
 iscolon(t::AbstractToken) =  kindof(t) === Tokens.COLON
-iskw(t::AbstractToken) = Tokens.iskeyword(kindof(t))
-isinstance(t::AbstractToken) = isidentifier(t) || isliteral(t) || isbool(t) || iskw(t)
+iskeyword(t::AbstractToken) = Tokens.iskeyword(kindof(t))
+isinstance(t::AbstractToken) = isidentifier(t) || isliteral(t) || isbool(t) || iskeyword(t)
 ispunctuation(t::AbstractToken) = iscomma(t) || kindof(t) === Tokens.END || Tokens.LSQUARE ≤ kindof(t) ≤ Tokens.RPAREN || kindof(t) === Tokens.AT_SIGN
 
