@@ -88,17 +88,17 @@ using
 while
 
 ### Literals
-:integer,
-:bin_int,
-:hexint,
-:octint,
-:float,
-:string,
-:triplestring,
-:char,
-:cmd,
-:triplecmd,
-:nothing,
+:INTEGER,
+:BININT,
+:HEXINT,
+:OCTINT,
+:FLOAT,
+:STRING,
+:TRIPLESTRING,
+:CHAR,
+:CMD,
+:TRIPLECMD,
+:NOTHING,
 :true,
 :false,
 

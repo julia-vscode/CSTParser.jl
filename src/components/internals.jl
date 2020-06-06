@@ -47,7 +47,7 @@ end
 function adjust_iter(x::EXPR)
     # Assumes x is a valid iterator
     if x.head === :Call # isoperator(x.args[1]) && x.args[1].val in ("in", "∈")
-        EXPR(EXPR(:Operator, 0, 0, "="), EXPR[x.args[2], x.args[3]], EXPR[x.args[1]])
+        EXPR(EXPR(:OPERATOR, 0, 0, "="), EXPR[x.args[2], x.args[3]], EXPR[x.args[1]])
     else 
         x
     end
@@ -135,7 +135,7 @@ function parse_call(ps::ParseState, ret::EXPR, ismacro = false)
         ret = EXPR(ret, arg.args, arg.trivia)
     else
         !ismacro && headof(ret) === :MacroName && (ismacro = true)
-        args = ismacro ? EXPR[ret, EXPR(:nothing, 0, 0)] : EXPR[ret] 
+        args = ismacro ? EXPR[ret, EXPR(:NOTHING, 0, 0)] : EXPR[ret] 
         trivia = EXPR[EXPR(next(ps))]
         @closeparen ps @default ps parse_comma_sep(ps, args, trivia, !ismacro)
         accept_rparen(ps, trivia)
@@ -238,14 +238,14 @@ function parse_macrocall(ps::ParseState)
     if !isemptyws(ps.ws)
         mname = mErrorToken(ps, INSTANCE(next(ps)), UnexpectedWhiteSpace)
     else
-        mname = EXPR(:MacroName, EXPR[at, EXPR(:Identifier, next(ps))], nothing)
+        mname = EXPR(:MacroName, EXPR[at, EXPR(:IDENTIFIER, next(ps))], nothing)
     end
 
     # Handle cases with @ at start of dotted expressions
     if kindof(ps.nt) === Tokens.DOT && isemptyws(ps.ws)
         while kindof(ps.nt) === Tokens.DOT
-            op = EXPR(:Operator, next(ps))
-            nextarg = EXPR(:Identifier, next(ps))
+            op = EXPR(:OPERATOR, next(ps))
+            nextarg = EXPR(:IDENTIFIER, next(ps))
             mname = EXPR(op, EXPR[mname, EXPR(:Quotenode, EXPR[nextarg], nothing)], nothing)
         end
     end
@@ -255,7 +255,7 @@ function parse_macrocall(ps::ParseState)
     elseif isemptyws(ps.ws) && kindof(ps.nt) === Tokens.LPAREN
         return parse_call(ps, mname, true)
     else
-        args = EXPR[mname, EXPR(:nothing, 0, 0)]
+        args = EXPR[mname, EXPR(:NOTHING, 0, 0)]
         insquare = ps.closer.insquare
         @default ps while !closer(ps)
             if insquare
@@ -331,7 +331,7 @@ function parse_importexport_item(ps, is_colon = false)
         a
     elseif !is_colon && isoperator(ps.nt)
         next(ps)
-        EXPR(:Operator, ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, val(ps.t, ps))
+        EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, val(ps.t, ps))
     elseif VERSION > v"1.3.0-" && isidentifier(ps.nt) && isemptyws(ps.nws) && (kindof(ps.nnt) === Tokens.STRING || kindof(ps.nnt) === Tokens.TRIPLE_STRING)
         EXPR(:NonStdIdentifier, EXPR[INSTANCE(next(ps)), INSTANCE(next(ps))])
         #TODO fix nonstdid handling
@@ -343,20 +343,20 @@ end
 Helper function for parsing import/using statements.
 """
 function parse_dot_mod(ps::ParseState, is_colon = false)
-    ret = EXPR(EXPR(:Operator, 0, 0, "."), EXPR[], EXPR[])
+    ret = EXPR(EXPR(:OPERATOR, 0, 0, "."), EXPR[], EXPR[])
 
     while kindof(ps.nt) === Tokens.DOT || kindof(ps.nt) === Tokens.DDOT || kindof(ps.nt) === Tokens.DDDOT
-        d = EXPR(:Operator, next(ps))
+        d = EXPR(:OPERATOR, next(ps))
         trailing_ws = d.fullspan - d.span
         if is_dot(d)
-            push!(ret, EXPR(:Operator, 1 + trailing_ws, 1, "."))
+            push!(ret, EXPR(:OPERATOR, 1 + trailing_ws, 1, "."))
         elseif is_ddot(d)
-            push!(ret, EXPR(:Operator, 1, 1, "."))
-            push!(ret, EXPR(:Operator, 1 + trailing_ws, 1, "."))
+            push!(ret, EXPR(:OPERATOR, 1, 1, "."))
+            push!(ret, EXPR(:OPERATOR, 1 + trailing_ws, 1, "."))
         elseif is_dddot(d)
-            push!(ret, EXPR(:Operator, 1, 1, "."))
-            push!(ret, EXPR(:Operator, 1, 1, "."))
-            push!(ret, EXPR(:Operator, 1 + trailing_ws, 1, "."))
+            push!(ret, EXPR(:OPERATOR, 1, 1, "."))
+            push!(ret, EXPR(:OPERATOR, 1, 1, "."))
+            push!(ret, EXPR(:OPERATOR, 1 + trailing_ws, 1, "."))
         end
     end
 
@@ -366,7 +366,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
         if kindof(ps.nt) === Tokens.DOT
             pushtotrivia!(ret, EXPR(next(ps)))
         elseif isoperator(ps.nt) && (ps.nt.dotop || kindof(ps.nt) === Tokens.DOT)
-            push!(ret, EXPR(:Dot, 1, 1))
+            push!(ret, EXPR(:DOT, 1, 1))
             ps.nt = RawToken(kindof(ps.nt), ps.nt.startpos, ps.nt.endpos, ps.nt.startbyte + 1, ps.nt.endbyte, ps.nt.token_error, false, ps.nt.suffix)
         else
             break
@@ -384,9 +384,9 @@ Parse prefixed strings and commands such as `pre"text"`.
 function parse_prefixed_string_cmd(ps::ParseState, ret::EXPR)
     arg = parse_string_or_cmd(next(ps), ret)
     
-    if ret.head === :Identifier && valof(ret) == "var" && VERSION > v"1.3.0-"
+    if ret.head === :IDENTIFIER && valof(ret) == "var" && VERSION > v"1.3.0-"
         EXPR(:NonStdIdentifier, EXPR[ret, arg], nothing)
     else
-        EXPR(:MacroCall, EXPR[EXPR(:Identifier, 0, 0, string("@", valof(ret), iscmd(arg) ? "_cmd" : "_str")), EXPR(:nothing, 0, 0), arg], EXPR[ret])
+        EXPR(:MacroCall, EXPR[EXPR(:IDENTIFIER, 0, 0, string("@", valof(ret), iscmd(arg) ? "_cmd" : "_str")), EXPR(:NOTHING, 0, 0), arg], EXPR[ret])
     end
 end

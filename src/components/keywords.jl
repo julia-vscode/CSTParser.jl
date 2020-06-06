@@ -57,23 +57,23 @@ function parse_kw(ps::ParseState)
         if ps.closer.square
             ret = EXPR(ps)
         else
-            ret = mErrorToken(ps, EXPR(:Identifier, ps), UnexpectedToken)
+            ret = mErrorToken(ps, EXPR(:IDENTIFIER, ps), UnexpectedToken)
         end
         return ret
     elseif k === Tokens.ELSE || k === Tokens.ELSEIF || k === Tokens.CATCH || k === Tokens.FINALLY
-        return mErrorToken(ps, EXPR(:Identifier, ps), UnexpectedToken)
+        return mErrorToken(ps, EXPR(:IDENTIFIER, ps), UnexpectedToken)
     elseif k === Tokens.ABSTRACT
         return @default ps parse_abstract(ps)
     elseif k === Tokens.PRIMITIVE
         return @default ps parse_primitive(ps)
     elseif k === Tokens.TYPE
-        return EXPR(:Identifier, ps)
+        return EXPR(:IDENTIFIER, ps)
     elseif k === Tokens.STRUCT
         return @default ps @closer ps :block parse_blockexpr(ps, :Struct)
     elseif k === Tokens.MUTABLE
         return @default ps @closer ps :block parse_mutable(ps)
     elseif k === Tokens.OUTER
-        return EXPR(:Identifier, ps)
+        return EXPR(:IDENTIFIER, ps)
     else
         return mErrorToken(ps, Unknown)
     end
@@ -107,7 +107,7 @@ function parse_return(ps::ParseState)
     kw = EXPR(ps)
     # Note to self: Nothing could be treated as implicit and added
     # during conversion to Expr.
-    arg = closer(ps) ? EXPR(:nothing, 0, 0, "") : parse_expression(ps)
+    arg = closer(ps) ? EXPR(:NOTHING, 0, 0, "") : parse_expression(ps)
 
     return EXPR(:Return, EXPR[arg], EXPR[kw])
 end
@@ -119,7 +119,7 @@ function parse_abstract(ps::ParseState)
         sig = @closer ps :block parse_expression(ps)
         ret = EXPR(:Abstract, EXPR[sig], EXPR[kw1, kw2, accept_end(ps)])
     else
-        ret = EXPR(:Identifier, ps)
+        ret = EXPR(:IDENTIFIER, ps)
     end
     return ret
 end
@@ -132,7 +132,7 @@ function parse_primitive(ps::ParseState)
         arg = @closer ps :block parse_expression(ps)
         ret = EXPR(:Primitive, EXPR[sig, arg], EXPR[kw1, kw2, accept_end(ps)])
     else
-        ret = EXPR(:Identifier, ps)
+        ret = EXPR(:IDENTIFIER, ps)
     end
     return ret
 end
@@ -145,7 +145,7 @@ function parse_mutable(ps::ParseState)
         pushfirst!(ret.trivia, setparent!(kw, ret))
         update_span!(ret)
     else
-        ret = EXPR(:Identifier, ps)
+        ret = EXPR(:IDENTIFIER, ps)
     end
     return ret
 end
@@ -158,7 +158,7 @@ function parse_imports(ps::ParseState)
     if !iscomma(ps.nt) && !iscolon(ps.nt)
         ret = EXPR(kwt, EXPR[arg], EXPR[kw])
     elseif iscolon(ps.nt)
-        ret = EXPR(kwt, EXPR[EXPR(EXPR(:Operator, next(ps)), EXPR[arg])], EXPR[kw])
+        ret = EXPR(kwt, EXPR[EXPR(EXPR(:OPERATOR, next(ps)), EXPR[arg])], EXPR[kw])
         
         arg = parse_dot_mod(ps, true)
         push!(ret.args[1], arg)
@@ -242,7 +242,7 @@ function parse_blockexpr_sig(ps::ParseState, head)
         end
         return EXPR(:Tuple, args, trivia)
     elseif head === :Module || head === :BareModule
-        return isidentifier(ps.nt) ? EXPR(:Identifier, next(ps)) :
+        return isidentifier(ps.nt) ? EXPR(:IDENTIFIER, next(ps)) :
             @precedence ps 15 @closer ps :ws parse_expression(ps)
     end
     return nothing
@@ -260,7 +260,7 @@ function parse_do(ps::ParseState, pre::EXPR)
         end
     end
     blockargs = parse_block(ps, EXPR[], (Tokens.END,))
-    push!(args, (EXPR(EXPR(:Operator, 0, 0, "->"), EXPR[EXPR(:Tuple, args1, trivia1), EXPR(:Block, blockargs, nothing)])))
+    push!(args, (EXPR(EXPR(:OPERATOR, 0, 0, "->"), EXPR[EXPR(:Tuple, args1, trivia1), EXPR(:Block, blockargs, nothing)])))
     push!(trivia, accept_end(ps))
     return EXPR(:Do, args, trivia)
 end
@@ -282,13 +282,13 @@ function parse_blockexpr(ps::ParseState, head)
     elseif (head === :Function || head === :Macro) && is_either_id_op_interp(sig)
         EXPR(head, EXPR[sig], EXPR[kw, accept_end(ps)])
     elseif head === :Mutable
-        EXPR(:Struct, EXPR[EXPR(:(var"true"), 0, 0), sig, EXPR(:Block, blockargs, nothing)], EXPR[kw, accept_end(ps)])
+        EXPR(:Struct, EXPR[EXPR(:TRUE, 0, 0), sig, EXPR(:Block, blockargs, nothing)], EXPR[kw, accept_end(ps)])
     elseif head === :Module
-        EXPR(head, EXPR[EXPR(:(var"true"), 0, 0), sig, EXPR(:Block, blockargs, nothing)], EXPR[kw, accept_end(ps)])
+        EXPR(head, EXPR[EXPR(:TRUE, 0, 0), sig, EXPR(:Block, blockargs, nothing)], EXPR[kw, accept_end(ps)])
     elseif head === :BareModule
-        EXPR(:Module, EXPR[EXPR(:(var"false"), 0, 0), sig, EXPR(:Block, blockargs, nothing)], EXPR[kw, accept_end(ps)])
+        EXPR(:Module, EXPR[EXPR(:FALSE, 0, 0), sig, EXPR(:Block, blockargs, nothing)], EXPR[kw, accept_end(ps)])
     elseif head === :Struct
-        EXPR(head, EXPR[EXPR(:(var"false"), 0, 0), sig, EXPR(:Block, blockargs, nothing)], EXPR[kw, accept_end(ps)])
+        EXPR(head, EXPR[EXPR(:FALSE, 0, 0), sig, EXPR(:Block, blockargs, nothing)], EXPR[kw, accept_end(ps)])
     else
         EXPR(head, EXPR[sig, EXPR(:Block, blockargs, nothing)], EXPR[kw, accept_end(ps)])
     end
@@ -339,24 +339,24 @@ function parse_try(ps::ParseState)
         push!(trivia, EXPR(next(ps)))
         # catch closing early
         if kindof(ps.nt) === Tokens.FINALLY || kindof(ps.nt) === Tokens.END
-            caught = EXPR(:(var"false"), 0, 0, "")
+            caught = EXPR(:FALSE, 0, 0, "")
             catchblock = EXPR(:Block, EXPR[])
         else
             if isendoflinews(ps.ws)
-                caught = EXPR(:(var"false"), 0, 0, "")
+                caught = EXPR(:FALSE, 0, 0, "")
             else
                 caught = @closer ps :ws parse_expression(ps)
             end
 
             catchblockargs = parse_block(ps, EXPR[], (Tokens.END, Tokens.FINALLY))
-            if !(is_either_id_op_interp(caught) || headof(caught) === :(var"false"))
+            if !(is_either_id_op_interp(caught) || headof(caught) === :FALSE)
                 pushfirst!(catchblockargs, caught)
-                caught = EXPR(:(var"false"), 0, 0, "")
+                caught = EXPR(:FALSE, 0, 0, "")
             end
             catchblock = EXPR(:Block, catchblockargs, nothing)
         end
     else
-        caught = EXPR(:(var"false"), 0, 0, "")
+        caught = EXPR(:FALSE, 0, 0, "")
         catchblock = EXPR(:Block, EXPR[], nothing)
     end
     push!(args, caught)
@@ -365,7 +365,7 @@ function parse_try(ps::ParseState)
     # finally block
     if kindof(ps.nt) === Tokens.FINALLY
         if isempty(catchblock.args)
-            args[3] = EXPR(:(var"false"), 0, 0, "")
+            args[3] = EXPR(:FALSE, 0, 0, "")
         end
         push!(trivia, EXPR(next(ps)))
         finallyblockargs = parse_block(ps)

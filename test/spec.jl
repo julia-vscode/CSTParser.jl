@@ -219,7 +219,7 @@ end
     test_expr("(arg for x in X for y in Y for z in Z)", :Brackets, 3, true) 
 end
 
-@testset ":cmd" begin
+@testset ":CMD" begin
     let s = "``"
         x = CSTParser.parse(s)
         x1 = jl_parse(s)

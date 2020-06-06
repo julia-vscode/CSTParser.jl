@@ -11,7 +11,7 @@ function accept_rsquare(ps)
     if kindof(ps.nt) === Tokens.RSQUARE
         return EXPR(next(ps))
     else
-        return mErrorToken(ps, EXPR(:RSquare, 0, 0), UnexpectedToken)
+        return mErrorToken(ps, EXPR(:RSQUARE, 0, 0), UnexpectedToken)
     end
 end
 accept_rsquare(ps::ParseState, args) = push!(args, accept_rsquare(ps))
@@ -20,7 +20,7 @@ function accept_rbrace(ps)
     if kindof(ps.nt) === Tokens.RBRACE
         return EXPR(next(ps))
     else
-        return mErrorToken(ps, EXPR(:RBrace, 0, 0), UnexpectedToken)
+        return mErrorToken(ps, EXPR(:RBRACE, 0, 0), UnexpectedToken)
     end
 end
 accept_rbrace(ps::ParseState, args) = push!(args, accept_rbrace(ps))
@@ -29,7 +29,7 @@ function accept_end(ps::ParseState)
     if kindof(ps.nt) === Tokens.END
         return EXPR(next(ps))
     else
-        return mErrorToken(ps, EXPR(:end, 0, 0), UnexpectedToken)
+        return mErrorToken(ps, EXPR(:END, 0, 0), UnexpectedToken)
     end
 end
 accept_end(ps::ParseState, args) = push!(args, accept_end(ps))

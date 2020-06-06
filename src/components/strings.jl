@@ -65,9 +65,9 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     # there are interpolations in the string
     t_str = val(ps.t, ps)
     if istrip && length(t_str) == 6
-        return EXPR(iscmd ? :triplecmd : :triplestring, sfullspan, sspan, "")
+        return EXPR(iscmd ? :TRIPLECMD : :TRIPLESTRING, sfullspan, sspan, "")
     elseif length(t_str) == 2
-        return EXPR(iscmd ? :cmd : :string, sfullspan, sspan, "")
+        return EXPR(iscmd ? :CMD : :STRING, sfullspan, sspan, "")
     elseif prefixed != false || iscmd
         _val = istrip ? t_str[4:prevind(t_str, sizeof(t_str), 3)] : t_str[2:prevind(t_str, sizeof(t_str))]
         if iscmd
@@ -100,14 +100,14 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             elseif c == '$'
                 lspan = position(b)
                 str = tostr(b)
-                ex = EXPR(:string, lspan + startbytes, lspan + startbytes, str)
+                ex = EXPR(:STRING, lspan + startbytes, lspan + startbytes, str)
                 !isempty(str) && push!(ret, ex)
                 istrip && adjust_lcp(ex)
                 startbytes = 0
-                op = EXPR(:Operator, 1, 1, "\$")
+                op = EXPR(:OPERATOR, 1, 1, "\$")
                 if peekchar(input) == '('
-                    lparen = EXPR(:LParen, 1, 1)
-                    rparen = EXPR(:RParen, 1, 1)
+                    lparen = EXPR(:LPAREN, 1, 1)
+                    rparen = EXPR(:RPAREN, 1, 1)
                     skip(input, 1)
                     ps1 = ParseState(input)
 
@@ -156,11 +156,11 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             if istrip
                 str = str[1:prevind(str, lastindex(str), 3)]
                 # only mark non-interpolated triple strings
-                ex = EXPR(length(ret) == 0 ? :triplestring : :string, lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str)
+                ex = EXPR(length(ret) == 0 ? :TRIPLESTRING : :STRING, lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str)
                 adjust_lcp(ex, true)
             else
                 str = str[1:prevind(str, lastindex(str))]
-                ex = EXPR(:string, lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str)
+                ex = EXPR(:STRING, lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str)
             end
             !isempty(str) && push!(ret, ex)
         end
@@ -168,7 +168,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
 
     end
 
-    single_string_T = (:string, literalmap(kindof(ps.t)))
+    single_string_T = (:STRING, literalmap(kindof(ps.t)))
     if istrip
         if lcp !== nothing && !isempty(lcp)
             for expr in exprs_to_adjust

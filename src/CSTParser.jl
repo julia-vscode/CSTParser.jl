@@ -52,7 +52,7 @@ function parse_expression(ps::ParseState)
             ret = @default ps @closebrace ps parse_braces(ps)
         elseif isinstance(ps.t) || isoperator(ps.t)
             if both_symbol_and_op(ps.t)
-                ret = EXPR(:Identifier, ps)
+                ret = EXPR(:IDENTIFIER, ps)
             else
                 ret = INSTANCE(ps)
             end
@@ -87,10 +87,10 @@ function parse_compound(ps::ParseState, ret::EXPR)
         if disallowednumberjuxt(ret)
             ret = mErrorToken(ps, ret, CannotJuxtapose)
         end
-        ret = parse_operator(ps, ret, EXPR(:Operator, 0, 0, "*"))
+        ret = parse_operator(ps, ret, EXPR(:OPERATOR, 0, 0, "*"))
     elseif (headof(ret) === :x_Str || headof(ret) === :x_Cmd) && isidentifier(ps.nt)
-        arg = EXPR(:Identifier, next(ps))
-        push!(ret, EXPR(:string, arg.fullspan, arg.span, val(ps.t, ps)))
+        arg = EXPR(:IDENTIFIER, next(ps))
+        push!(ret, EXPR(:STRING, arg.fullspan, arg.span, val(ps.t, ps)))
     elseif (isidentifier(ret) || is_getfield(ret)) && isprefixableliteral(ps.nt)
         ret = parse_prefixed_string_cmd(ps, ret)
     elseif kindof(ps.nt) === Tokens.LPAREN
@@ -112,12 +112,12 @@ function parse_compound(ps::ParseState, ret::EXPR)
     elseif isunaryop(ret) && kindof(ps.nt) != Tokens.EQ
         ret = parse_unary(ps, ret)
     elseif isoperator(ps.nt)
-        op = EXPR(:Operator, next(ps))
+        op = EXPR(:OPERATOR, next(ps))
         ret = parse_operator(ps, ret, op)
     elseif is_prime(ret.head)
         # prime operator followed by an identifier has an implicit multiplication
         nextarg = @precedence ps TimesOp parse_expression(ps)
-        ret = EXPR(:Call, EXPR[EXPR(:Operator, 0, 0, "*"), ret, nextarg], nothing)
+        ret = EXPR(:Call, EXPR[EXPR(:OPERATOR, 0, 0, "*"), ret, nextarg], nothing)
 # ###############################################################################
 # Everything below here is an error
 # ###############################################################################
@@ -179,13 +179,13 @@ function parse_doc(ps::ParseState)
         end
 
         ret = parse_expression(ps)
-        ret = EXPR(:MacroCall, EXPR[EXPR(:GlobalRefDoc, 0, 0), EXPR(:nothing, 0, 0), doc, ret], nothing)
+        ret = EXPR(:MacroCall, EXPR[EXPR(:GlobalRefDoc, 0, 0), EXPR(:NOTHING, 0, 0), doc, ret], nothing)
     elseif nexttokenstartsdocstring(ps)
-        doc = EXPR(:Identifier, next(ps))
+        doc = EXPR(:IDENTIFIER, next(ps))
         arg = parse_string_or_cmd(next(ps), doc)
         doc = EXPR(:x_Str, EXPR[doc, arg], nothing)
         ret = parse_expression(ps)
-        ret = EXPR(:MacroCall, EXPR[EXPR(:GlobalRefDoc, 0, 0), EXPR(:nothing, 0, 0), doc, ret], nothing)
+        ret = EXPR(:MacroCall, EXPR[EXPR(:GlobalRefDoc, 0, 0), EXPR(:NOTHING, 0, 0), doc, ret], nothing)
     else
         ret = parse_expression(ps)
     end
@@ -203,7 +203,7 @@ function parse(ps::ParseState, cont = false)
         top = EXPR(:File, EXPR[], nothing)
         if kindof(ps.nt) === Tokens.WHITESPACE || kindof(ps.nt) === Tokens.COMMENT
             next(ps)
-            push!(top, EXPR(:nothing, ps.nt.startbyte, ps.nt.startbyte, ""))
+            push!(top, EXPR(:NOTHING, ps.nt.startbyte, ps.nt.startbyte, ""))
         end
 
         while !ps.done
@@ -227,7 +227,7 @@ function parse(ps::ParseState, cont = false)
     else
         if kindof(ps.nt) === Tokens.WHITESPACE || kindof(ps.nt) === Tokens.COMMENT
             next(ps)
-            top = EXPR(:nothing, ps.nt.startbyte, ps.nt.startbyte, "")
+            top = EXPR(:NOTHING, ps.nt.startbyte, ps.nt.startbyte, "")
         else
             curr_line = ps.nt.startpos[1]
             top = parse_doc(ps)

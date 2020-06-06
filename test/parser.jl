@@ -549,8 +549,8 @@ end
         "\"\"\"\n$(ws1)a\n\n$(ws1)b\n\n$(ws2)c\n\n$(ws2)d\n\n$(ws2)\"\"\"" |> test_expr
         @test "\"\"\"\n$(ws1)α\n$(ws1)β\n$(ws2)γ\n$(ws2)δ\n$(ws2)\"\"\"" |> test_expr
         @test "\"\"\"Float\$(bit)\"\"\"" |> test_expr
-        @test headof(CSTParser.parse("\"\"\"abc\$(de)fg\"\"\"").args[3]) == :string
-        @test headof(CSTParser.parse("\"\"\"abc(de)fg\"\"\"")) == :triplestring
+        @test headof(CSTParser.parse("\"\"\"abc\$(de)fg\"\"\"").args[3]) == :STRING
+        @test headof(CSTParser.parse("\"\"\"abc(de)fg\"\"\"")) == :TRIPLESTRING
     end
 
     @testset "No longer broken things" begin
@@ -708,7 +708,7 @@ end""" |> test_expr
         @test "\$\$(x)" |> test_expr
         @test "\$\$(x)" |> test_expr
         @test CSTParser.headof(CSTParser.parse("=")) === :ErrorToken
-        @test CSTParser.headof(CSTParser.parse("~")) === :Operator
+        @test CSTParser.headof(CSTParser.parse("~")) === :OPERATOR
         @test "(1:\n2)" |> test_expr
         @test "a[: ]" |> test_expr
     end

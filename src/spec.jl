@@ -30,70 +30,69 @@ const AnonFuncOp    = 14
 Expression types. All-caps indicates a terminal node.
 """
 # Terminals
-    :Identifier,
+    :IDENTIFIER,
     :NonStdIdentifier,
-    :Operator
+    :OPERATOR
     # Punctuation
-        :Comma,
-        :LParen,
-        :RParen,
-        :LSquare,
-        :RSquare,
-        :LBrace,
-        :RBrace,
-        :AtSign,
-        :Dot,
+        :COMMA,
+        :LPAREN,
+        :RPAREN,
+        :LSQUARE,
+        :RSQUARE,
+        :LBRACE,
+        :RBRACE,
+        :ATSIGN,
+        :DOT,
         
     # Keywords
         :ABSTRACT,
-        :baremodule,
-        :begin,
-        :break,
-        :catch,
-        :const,
-        :continue,
-        :do,
-        :else,
-        :elseif,
-        :end,
-        :export,
-        :finally,
-        :for,
-        :function,
-        :global,
-        :if,
-        :import,
-        :importall,
-        :let,
-        :local,
-        :macro,
-        :module,
-        :mutable,
-        :new,
-        :outer,
-        :primitive,
-        :quote,
-        :return,
-        :struct,
-        :try,
-        :type,
-        :using,
-        :while,
+        :BAREMODULE,
+        :BEGIN,
+        :BREAK,
+        :CATCH,
+        :CONST,
+        :CONTINUE,
+        :DO,
+        :ELSE,
+        :ELSEIF,
+        :END,
+        :EXPORT,
+        :FINALLY,
+        :FOR,
+        :FUNCTION,
+        :GLOBAL,
+        :IF,
+        :IMPORT,
+        :LET,
+        :LOCAL,
+        :MACRO,
+        :MODULE,
+        :MUTABLE,
+        :NEW,
+        :OUTER,
+        :PRIMITIVE,
+        :QUOTE,
+        :RETURN,
+        :STRUCT,
+        :TRY,
+        :TYPE,
+        :USING,
+        :WHILE,
 
     # Literals
-        :integer,
-        :bin_int,
-        :hexint,
-        :octint,
-        :float,
-        :string,
-        :triplestring,
-        :char,
-        :cmd,
-        :triplecmd,
-        :nothing,
-        :true,
-        :false,
+        :INTEGER,
+        :BININT,
+        :HEXINT,
+        :OCTINT,
+        :FLOAT,
+        :STRING,
+        :TRIPLESTRING,
+        :CHAR,
+        :CMD,
+        :TRIPLECMD,
+        :NOTHING,
+        :TRUE,
+        :FALSE,
 
 # Expressions
 :Call,
@@ -215,7 +214,7 @@ end
     else
         v = val(ps.t, ps)
         if kindof(ps.t) === Tokens.CHAR && length(v) > 3 && !(v[2] == '\\' && valid_escaped_seq(v[2:prevind(v, length(v))]))
-            return mErrorToken(ps, EXPR(:char, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, string(v[1:2], '\'')), TooLongChar)
+            return mErrorToken(ps, EXPR(:CHAR, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, string(v[1:2], '\'')), TooLongChar)
         end
         return EXPR(literalmap(kindof(ps.t)), ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, v)
     end
@@ -302,13 +301,13 @@ end
 
 function INSTANCE(ps::ParseState)
     if isidentifier(ps.t)
-        return EXPR(:Identifier, ps)
+        return EXPR(:IDENTIFIER, ps)
     elseif isliteral(ps.t)
         return mLITERAL(ps)
     elseif iskeyword(ps.t)
         return EXPR(ps)
     elseif isoperator(ps.t)
-        return EXPR(:Operator, ps)
+        return EXPR(:OPERATOR, ps)
     elseif ispunctuation(ps.t)
         return EXPR(ps)
     elseif kindof(ps.t) === Tokens.ERROR
@@ -365,7 +364,7 @@ end
 hastrivia(x::EXPR) = x.trivia !== nothing && length(x.trivia) > 0
 
 function lastchildistrivia(x::EXPR)
-    return hastrivia(x) && (last(x.trivia).head in (:end, :RParen, :RSquare, :RBrace) || (x.head in (:Parameters, :Tuple) && length(x.args) <= length(x.trivia)))
+    return hastrivia(x) && (last(x.trivia).head in (:END, :RPAREN, :RSQUARE, :RBRACE) || (x.head in (:Parameters, :Tuple) && length(x.args) <= length(x.trivia)))
 end
 
 function Base.length(x::EXPR) 
@@ -375,238 +374,146 @@ function Base.length(x::EXPR)
     return n
 end
 
-function keywordmap(k::Tokens.Kind)
-    if k === Tokens.ABSTRACT
-        return :abstract
-    elseif k === Tokens.BAREMODULE
-        return :baremodule
-    elseif k === Tokens.BEGIN
-        return :begin
-    elseif k === Tokens.BREAK
-        return :break
-    elseif k === Tokens.CATCH
-        return :catch
-    elseif k === Tokens.CONST
-        return :const
-    elseif k === Tokens.CONTINUE
-        return :continue
-    elseif k === Tokens.DO
-        return :do
-    elseif k === Tokens.ELSE
-        return :else
-    elseif k === Tokens.ELSEIF
-        return :elseif
-    elseif k === Tokens.END
-        return :end
-    elseif k === Tokens.EXPORT
-        return :export
-    elseif k === Tokens.FINALLY
-        return :finally
-    elseif k === Tokens.FOR
-        return :for
-    elseif k === Tokens.FUNCTION
-        return :function
-    elseif k === Tokens.GLOBAL
-        return :global
-    elseif k === Tokens.IF
-        return :if
-    elseif k === Tokens.IMPORT
-        return :import
-    elseif k === Tokens.IMPORTALL
-        return :importall
-    elseif k === Tokens.LET
-        return :let
-    elseif k === Tokens.LOCAL
-        return :local
-    elseif k === Tokens.MACRO
-        return :macro
-    elseif k === Tokens.MODULE
-        return :module
-    elseif k === Tokens.MUTABLE
-        return :mutable
-    elseif k === Tokens.NEW
-        return :new
-    elseif k === Tokens.OUTER
-        return :outer
-    elseif k === Tokens.PRIMITIVE
-        return :primitive
-    elseif k === Tokens.QUOTE
-        return :quote
-    elseif k === Tokens.RETURN
-        return :return
-    elseif k === Tokens.STRUCT
-        return :struct
-    elseif k === Tokens.TRY
-        return :try
-    elseif k === Tokens.TYPE
-        return :type
-    elseif k === Tokens.USING
-        return :using
-    elseif k === Tokens.WHILE
-        return :while
-    end
-end
-
 function literalmap(k::Tokens.Kind)
     if k === Tokens.INTEGER
-        return :integer
+        return :INTEGER
     elseif k === Tokens.BIN_INT
-        return :bin_int
+        return :BININT
     elseif k === Tokens.HEX_INT
-        return :hexint
+        return :HEXINT
     elseif k === Tokens.OCT_INT
-        return :octint
+        return :OCTINT
     elseif k === Tokens.FLOAT
-        return :float
+        return :FLOAT
     elseif k === Tokens.STRING
-        return :string
+        return :STRING
     elseif k === Tokens.TRIPLE_STRING
-        return :triplestring
+        return :TRIPLESTRING
     elseif k === Tokens.CHAR
-        return :char
+        return :CHAR
     elseif k === Tokens.CMD
-        return :cmd
+        return :CMD
     elseif k === Tokens.TRIPLE_CMD
-        return :triplecmd
+        return :TRIPLECMD
     elseif k === Tokens.TRUE
-        return :(var"true")
+        return :TRUE
     elseif k === Tokens.FALSE
-        return :(var"false")
+        return :FALSE
     end
 end
 
-function punctuationmap(k::Tokens.Kind)
-    if k == Tokens.COMMA
-        :Comma
-    elseif k == Tokens.LPAREN
-        :LParen
-    elseif k == Tokens.RPAREN
-        :RParen
-    elseif k == Tokens.LSQUARE
-        :LSquare
-    elseif k == Tokens.RSQUARE
-        :RSquare
-    elseif k == Tokens.LBRACE
-        :LBrace
-    elseif k == Tokens.RBRACE
-        :RBrace
-    elseif k == Tokens.AT_SIGN
-        :AtSign
-    elseif k == Tokens.DOT
-        :Dot
-    end
-end
+
 
 function tokenkindtoheadmap(k::Tokens.Kind)
     if k == Tokens.COMMA
-        :Comma
+        :COMMA
     elseif k == Tokens.LPAREN
-        :LParen
+        :LPAREN
     elseif k == Tokens.RPAREN
-        :RParen
+        :RPAREN
     elseif k == Tokens.LSQUARE
-        :LSquare
+        :LSQUARE
     elseif k == Tokens.RSQUARE
-        :RSquare
+        :RSQUARE
     elseif k == Tokens.LBRACE
-        :LBrace
+        :LBRACE
     elseif k == Tokens.RBRACE
-        :RBrace
+        :RBRACE
     elseif k == Tokens.AT_SIGN
-        :AtSign
+        :ATSIGN
     elseif k == Tokens.DOT
-        :Dot
+        :DOT
     elseif k === Tokens.ABSTRACT
-        return :abstract
+        return :ABSTRACT
     elseif k === Tokens.BAREMODULE
-        return :baremodule
+        return :BAREMODULE
     elseif k === Tokens.BEGIN
-        return :begin
+        return :BEGIN
     elseif k === Tokens.BREAK
-        return :break
+        return :BREAK
     elseif k === Tokens.CATCH
-        return :catch
+        return :CATCH
     elseif k === Tokens.CONST
-        return :const
+        return :CONST
     elseif k === Tokens.CONTINUE
-        return :continue
+        return :CONTINUE
     elseif k === Tokens.DO
-        return :do
+        return :DO
     elseif k === Tokens.ELSE
-        return :else
+        return :ELSE
     elseif k === Tokens.ELSEIF
-        return :elseif
+        return :ELSEIF
     elseif k === Tokens.END
-        return :end
+        return :END
     elseif k === Tokens.EXPORT
-        return :export
+        return :EXPORT
     elseif k === Tokens.FINALLY
-        return :finally
+        return :FINALLY
     elseif k === Tokens.FOR
-        return :for
+        return :FOR
     elseif k === Tokens.FUNCTION
-        return :function
+        return :FUNCTION
     elseif k === Tokens.GLOBAL
-        return :global
+        return :GLOBAL
     elseif k === Tokens.IF
-        return :if
+        return :IF
     elseif k === Tokens.IMPORT
-        return :import
+        return :IMPORT
     elseif k === Tokens.IMPORTALL
         return :importall
     elseif k === Tokens.LET
-        return :let
+        return :LET
     elseif k === Tokens.LOCAL
-        return :local
+        return :LOCAL
     elseif k === Tokens.MACRO
-        return :macro
+        return :MACRO
     elseif k === Tokens.MODULE
-        return :module
+        return :MODULE
     elseif k === Tokens.MUTABLE
-        return :mutable
+        return :MUTABLE
     elseif k === Tokens.NEW
-        return :new
+        return :NEW
     elseif k === Tokens.OUTER
-        return :outer
+        return :OUTER
     elseif k === Tokens.PRIMITIVE
-        return :primitive
+        return :PRIMITIVE
     elseif k === Tokens.QUOTE
-        return :quote
+        return :QUOTE
     elseif k === Tokens.RETURN
-        return :return
+        return :RETURN
     elseif k === Tokens.STRUCT
-        return :struct
+        return :STRUCT
     elseif k === Tokens.TRY
-        return :try
+        return :TRY
     elseif k === Tokens.TYPE
-        return :type
+        return :TYPE
     elseif k === Tokens.USING
-        return :using
+        return :USING
     elseif k === Tokens.WHILE
-        return :while
+        return :WHILE
     elseif k === Tokens.INTEGER
-        return :integer
+        return :INTEGER
     elseif k === Tokens.BIN_INT
-        return :bin_int
+        return :BININT
     elseif k === Tokens.HEX_INT
-        return :hexint
+        return :HEXINT
     elseif k === Tokens.OCT_INT
-        return :octint
+        return :OCTINT
     elseif k === Tokens.FLOAT
-        return :float
+        return :FLOAT
     elseif k === Tokens.STRING
-        return :string
+        return :STRING
     elseif k === Tokens.TRIPLE_STRING
-        return :triplestring
+        return :TRIPLESTRING
     elseif k === Tokens.CHAR
-        return :char
+        return :CHAR
     elseif k === Tokens.CMD
-        return :cmd
+        return :CMD
     elseif k === Tokens.TRIPLE_CMD
-        return :triplecmd
+        return :TRIPLECMD
     elseif k === Tokens.TRUE
-        return :(var"true")
+        return :TRUE
     elseif k === Tokens.FALSE
-        return :(var"false")
+        return :FALSE
     end
 end

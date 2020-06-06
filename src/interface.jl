@@ -40,17 +40,17 @@ is_cond(x) = isoperator(x) && valof(x) == "?"
 is_where(x) = isoperator(x) && valof(x) == "where"
 is_anon_func(x) = isoperator(x) && valof(x) == "->"
 
-is_comma(x) = headof(x) === :Comma
-is_lparen(x) = headof(x) === :LParen
+is_comma(x) = headof(x) === :COMMA
+is_lparen(x) = headof(x) === :LPAREN
 is_rparen(x) = headof(x) === :Rparen
-is_lbrace(x) = headof(x) === :LBrace
-is_rbrace(x) = headof(x) === :RBrace
-is_lsquare(x) = headof(x) === :LSquare
-is_rsquare(x) = headof(x) === :RSquare
+is_lbrace(x) = headof(x) === :LBRACE
+is_rbrace(x) = headof(x) === :RBRACE
+is_lsquare(x) = headof(x) === :LSQUARE
+is_rsquare(x) = headof(x) === :RSQUARE
 
 # KEYWORD
-is_if(x) = iskeyword(x) && headof(x) === :if
-is_import(x) = iskeyword(x) && headof(x) === :import
+is_if(x) = iskeyword(x) && headof(x) === :IF
+is_import(x) = iskeyword(x) && headof(x) === :IMPORT
 
 
 # Literals
@@ -78,7 +78,7 @@ defines_function(x::EXPR) = headof(x) === :Function || (is_assignment(x) && is_e
 defines_macro(x) = headof(x) == :Macro
 defines_datatype(x) = defines_struct(x) || defines_abstract(x) || defines_primitive(x)
 defines_struct(x) = headof(x) === :Struct
-defines_mutable(x) = defines_struct(x) && x.args[1].head == :(var"true")
+defines_mutable(x) = defines_struct(x) && x.args[1].head == :TRUE
 defines_abstract(x) = headof(x) === :Abstract
 defines_primitive(x) = headof(x) === :Primitive
 defines_module(x) = headof(x) === :Module
@@ -93,7 +93,7 @@ Returns the full signature of function, macro and datatype definitions.
 Should only be called when has_sig(x) == true.
 """
 function get_sig(x::EXPR)
-    if headof(x) isa EXPR # headof(headof(x)) === :Operator valof(headof(x)) == "="
+    if headof(x) isa EXPR # headof(headof(x)) === :OPERATOR valof(headof(x)) == "="
         return x.args[1]
     elseif headof(x) === :Struct || headof(x) === :Mutable 
         return x.args[2]

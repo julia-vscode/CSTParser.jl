@@ -44,7 +44,7 @@ precedence(x::EXPR) = error()#precedence(kindof(x))
 
 isoperator(x) = false
 isoperator(t::AbstractToken) = isoperator(kindof(t))
-isoperator(x::EXPR) = headof(x) === :Operator
+isoperator(x::EXPR) = headof(x) === :OPERATOR
 
 
 isunaryop(op) = false
@@ -206,7 +206,7 @@ end
 function parse_unary_colon(ps::ParseState, op::EXPR)
     op = requires_no_ws(op, ps)
     if Tokens.iskeyword(kindof(ps.nt))
-        ret = EXPR(:Quotenode, EXPR[EXPR(:Identifier, next(ps))], EXPR[op])
+        ret = EXPR(:Quotenode, EXPR[EXPR(:IDENTIFIER, next(ps))], EXPR[op])
     elseif Tokens.begin_literal < kindof(ps.nt) < Tokens.CHAR ||
         isoperator(kindof(ps.nt)) || isidentifier(ps.nt) || kindof(ps.nt) === Tokens.TRUE || kindof(ps.nt) === Tokens.FALSE
         ret = EXPR(:Quotenode, EXPR[INSTANCE(next(ps))], EXPR[op])
@@ -253,11 +253,11 @@ function parse_operator_cond(ps::ParseState, ret::EXPR, op::EXPR)
     op = requires_ws(op, ps)
     nextarg = @closer ps :ifop parse_expression(ps)
     if kindof(ps.nt) !== Tokens.COLON
-        op2 = mErrorToken(ps, EXPR(:Operator, 0, 0, ":"), MissingColon)
+        op2 = mErrorToken(ps, EXPR(:OPERATOR, 0, 0, ":"), MissingColon)
         nextarg2 = mErrorToken(ps, Unknown)
         return EXPR(:If, EXPR[ret, nextarg, nextarg2], EXPR[op, op2])
     else
-        op2 = requires_ws(EXPR(:Operator, next(ps)), ps)
+        op2 = requires_ws(EXPR(:OPERATOR, next(ps)), ps)
     end
 
     nextarg2 = @closer ps :comma @precedence ps 0 parse_expression(ps)
@@ -342,9 +342,9 @@ function parse_operator_dot(ps::ParseState, ret::EXPR, op::EXPR)
             nextarg = EXPR(:Tuple, sig.args[2:end], sig.trivia)
         end
     elseif iskeyword(ps.nt) || both_symbol_and_op(ps.nt)
-        nextarg = EXPR(:Identifier, next(ps))
+        nextarg = EXPR(:IDENTIFIER, next(ps))
     elseif kindof(ps.nt) === Tokens.COLON
-        op2 = EXPR(:Operator, next(ps))
+        op2 = EXPR(:OPERATOR, next(ps))
         if kindof(ps.nt) === Tokens.LPAREN
             nextarg = @closeparen ps @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)
             nextarg = EXPR(:Quotenode, EXPR[nextarg], EXPR[op2])
@@ -352,7 +352,7 @@ function parse_operator_dot(ps::ParseState, ret::EXPR, op::EXPR)
             nextarg = @precedence ps DotOp - LtoR(DotOp) parse_unary(ps, op2)
         end
     elseif kindof(ps.nt) === Tokens.EX_OR && kindof(ps.nnt) === Tokens.LPAREN
-        op2 = EXPR(:Operator, next(ps))
+        op2 = EXPR(:OPERATOR, next(ps))
         nextarg = parse_call(ps, op2)
     else
         nextarg = @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)

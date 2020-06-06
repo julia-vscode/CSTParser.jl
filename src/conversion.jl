@@ -55,25 +55,25 @@ function sized_uint_oct_literal(s::AbstractString)
 end
 
 function _literal_expr(x)
-    if headof(x) === :(var"true")
+    if headof(x) === :TRUE
         return true
-    elseif headof(x) === :(var"false")
+    elseif headof(x) === :FALSE
         return false
     elseif is_nothing(x)
         return nothing
-    elseif headof(x) === :integer || headof(x) === :bin_int || headof(x) === :hexint || headof(x) === :octint
+    elseif headof(x) === :INTEGER || headof(x) === :BININT || headof(x) === :HEXINT || headof(x) === :OCTINT
         return Expr_int(x)
     elseif isfloat(x)
         return Expr_float(x)
     elseif ischar(x)
         return Expr_char(x)
-    elseif headof(x) === :macro
+    elseif headof(x) === :MACRO
         return Symbol(valof(x))
-    elseif headof(x) === :string || headof(x) === :triplestring
+    elseif headof(x) === :STRING || headof(x) === :TRIPLESTRING
         return valof(x)
-    elseif headof(x) === :cmd
+    elseif headof(x) === :CMD
         return Expr_cmd(x)
-    elseif headof(x) === :triplecmd
+    elseif headof(x) === :TRIPLECMD
         return Expr_tcmd(x)
     end
 end
@@ -127,9 +127,9 @@ function Expr(x::EXPR)
             return Symbol(normalize_julia_identifier(valof(x)))
         end
     elseif iskeyword(x)
-        if headof(x) === :break
+        if headof(x) === :BREAK
             return Expr(:break)
-        elseif headof(x) === :continue
+        elseif headof(x) === :CONTINUE
             return Expr(:continue)
         else
             return Symbol(lowercase(string(headof(x))))
@@ -159,45 +159,6 @@ function Expr(x::EXPR)
     end
 end
 
-# Op. expressions
-
-function _unary_expr(x)
-    if isoperator(x.args[1]) && issyntaxunarycall(x.args[1])
-        Expr(Expr(x.args[1]), Expr(x.args[2]))
-    elseif isoperator(x.args[2]) && issyntaxunarycall(x.args[2])
-        Expr(Expr(x.args[2]), Expr(x.args[1]))
-    else
-        Expr(:call, Expr(x.args[1]), Expr(x.args[2]))
-    end
-end
-function _binary_expr(x)
-    if issyntaxcall(x.args[2]) && !(valof(x[2]) == ":")
-        if valof(x[2]) == "."
-            arg1, arg2 = Expr(x.args[1]), Expr(x.args[3])
-            if arg2 isa Expr && arg2.head === :macrocall && endswith(string(arg2.args[1]), "_cmd")
-                return Expr(:macrocall, Expr(:., arg1, QuoteNode(arg2.args[1])), nothing, arg2.args[3])
-            elseif arg2 isa Expr && arg2.head === :braces
-                return Expr(:., arg1, Expr(:quote, arg2))
-            end
-        end
-        Expr(Expr(x.args[2]), Expr(x.args[1]), Expr(x.args[3]))
-    else
-        Expr(:call, Expr(x.args[2]), Expr(x.args[1]), Expr(x.args[3]))
-    end
-end
-
-function _where_expr(x)
-    ret = Expr(:where, Expr(x.args[1]))
-    for i = 3:length(x.args)
-        a = x.args[i]
-        if headof(a) === :Parameters
-            insert!(ret.args, 2, Expr(a))
-        elseif !(ispunctuation(a) || iskeyword(a))
-            push!(ret.args, Expr(a))
-        end
-    end
-    return ret
-end
 
 
 # cross compatability for line number insertion in macrocalls
@@ -251,135 +212,5 @@ function remlineinfo!(x)
     x
 end
 
-function _if_expr(x)
-    ret = Expr(:if)
-    iselseif = false
-    n = length(x.args)
-    i = 0
-    while i < n
-        i += 1
-        a = x.args[i]
-        if iskeyword(a) && headof(a) === :elseif
-            i += 1
-            r1 = Expr(x.args[i].args[1])
-            push!(ret.args, Expr(:elseif, r1.args...))
-        elseif !(ispunctuation(a) || iskeyword(a))
-            push!(ret.args, Expr(a))
-        end
-    end
-    ret
-end
 
-function _let_expr(x)
-    ret = Expr(:let)
-    if length(x.args) == 3
-        push!(ret.args, Expr(:block))
-        push!(ret.args, Expr(x.args[2]))
-        return ret
-    elseif headof(x.args[2]) === :Block
-        arg = Expr(:block)
-        for a in x.args[2].args
-            if !(ispunctuation(a))
-                push!(arg.args, fix_range(a))
-            end
-        end
-        push!(ret.args, arg)
-    else
-        push!(ret.args, fix_range(x.args[2]))
-    end
-    push!(ret.args, Expr(x.args[3]))
-    ret
-end
-
-function fix_range(a)
-    if isbinarycall(a) && (is_in(a.args[2]) || is_elof(a.args[2]))
-        Expr(:(=), Expr(a.args[1]), Expr(a.args[3]))
-    else
-        Expr(a)
-    end
-end
-
-function get_inner_gen(x, iters = [], arg = [])
-    if headof(x) == :Flatten
-        get_inner_gen(x.args[1], iters, arg)
-    elseif headof(x) === :Generator
-        # push!(iters, get_iter(x))
-        get_iters(x, iters)
-        if headof(x.args[1]) === :Generator || headof(x.args[1]) === :Flatten
-            get_inner_gen(x.args[1], iters, arg)
-        else
-            push!(arg, x.args[1])
-        end
-    end
-    return iters, arg
-end
-
-function get_iter(x)
-    if headof(x) === :Generator
-        return x.args[3]
-    end
-end
-
-function get_iters(x, iters)
-    iters1 = []
-    if headof(x) === :Generator
-
-        for i = 3:length(x.args)
-            if !ispunctuation(x.args[i])
-                push!(iters1, x.args[i])
-            end
-        end
-    end
-    push!(iters, iters1)
-end
-
-function convert_iter_assign(a)
-    if isbinarycall(a) && (is_in(a.args[2]) || is_elof(a.args[2]))
-        return Expr(:(=), Expr(a.args[1]), Expr(a.args[3]))
-    else
-        return Expr(a)
-    end
-end
-
-function _get_import_block(x, i, ret)
-    while is_dot(x.args[i + 1])
-        i += 1
-        push!(ret.args, :.)
-    end
-    while i < length(x.args) && !(is_comma(x.args[i + 1]))
-        i += 1
-        a = x.args[i]
-        if !(ispunctuation(a)) && !(is_dot(a) || is_colon(a))
-            push!(ret.args, Expr(a))
-        end
-    end
-
-    return i
-end
-
-function expr_import(x, kw)
-    col = findall(a->isoperator(a) && valof(a) == ":", x.args)
-    comma = findall(is_comma, x.args)
-
-    header = []
-    args = [Expr(:.)]
-    i = 1 # skip keyword
-    while i < length(x.args)
-        i += 1
-        a = x.args[i]
-        if is_colon(a)
-            push!(header, popfirst!(args))
-            push!(args, Expr(:.))
-        elseif is_comma(a)
-            push!(args, Expr(:.))
-        elseif !(ispunctuation(a))
-            push!(last(args).args, Expr(a))
-        end
-    end
-    if isempty(header)
-        return Expr(kw, args...)
-    else
-        return Expr(kw, Expr(:(:), header..., args...))
-    end
-end
 

@@ -32,12 +32,12 @@ function Base.show(io::IO, x::EXPR, offset = 0, d = 0, er = false)
     end
 end
 
-const punctuationprinting = Dict(:Comma => ",",
-:LParen => "(",
-:RParen => ")",
-:LSquare => "[",
-:RSquare => "]",
-:LBrace => "{",
-:RBrace => "}",
-:AtSign => "@",
-:Dot => ".")
+const punctuationprinting = Dict(:COMMA => ",",
+:LPAREN => "(",
+:RPAREN => ")",
+:LSQUARE => "[",
+:RSQUARE => "]",
+:LBRACE => "{",
+:RBRACE => "}",
+:ATSIGN => "@",
+:DOT => ".")

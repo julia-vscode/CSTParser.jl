@@ -202,7 +202,7 @@ end
 
 
 
-isidentifier(x::EXPR) = headof(x) === :Identifier || headof(x) === :NonStdIdentifier
+isidentifier(x::EXPR) = headof(x) === :IDENTIFIER || headof(x) === :NonStdIdentifier
 
 isunarycall(x::EXPR) = (headof(x) === :Call && length(x) == 2 && (isoperator(x.args[1]) || isoperator(x.args[2]))) || (isoperator(x.head) && length(x.args) == 1)
 isbinarycall(x::EXPR) = headof(x) === :Call && length(x) == 3 && isoperator(x.args[1])
@@ -215,21 +215,21 @@ is_splat(x::EXPR) = isoperator(x.head) && valof(x.head) == "..."
 
 
 
-iskeyword(x::EXPR) = headof(x) in (:abstract, :baremodule, :begin, :break, :catch, :const, :continue, :do, :else, :elseif, :end, :export, :finally, :for, :function, :global, :if, :import, :importall, :let, :local, :macro, :module, :mutable, :new, :outer, :primitive, :quote, :return, :struct, :try, :type, :using, :while)
+iskeyword(x::EXPR) = headof(x) in (:ABSTRACT, :BAREMODULE, :BEGIN, :BREAK, :CATCH, :CONST, :CONTINUE, :DO, :ELSE, :ELSEIF, :END, :EXPORT, :FINALLY, :FOR, :FUNCTION, :GLOBAL, :IF, :IMPORT, :importall, :LET, :LOCAL, :MACRO, :MODULE, :MUTABLE, :NEW, :OUTER, :PRIMITIVE, :QUOTE, :RETURN, :STRUCT, :TRY, :TYPE, :USING, :WHILE)
 
-ispunctuation(x::EXPR) = is_comma(x) || is_lparen(x) || is_rparen(x) || is_lsquare(x) || is_rsquare(x) || is_lbrace(x) || is_rbrace(x) || headof(x) === :AtSign  || headof(x) === :Dot
+ispunctuation(x::EXPR) = is_comma(x) || is_lparen(x) || is_rparen(x) || is_lsquare(x) || is_rsquare(x) || is_lbrace(x) || is_rbrace(x) || headof(x) === :ATSIGN  || headof(x) === :DOT
 
 
-isstringliteral(x) = headof(x) === :string || headof(x) === :triplestring
+isstringliteral(x) = headof(x) === :STRING || headof(x) === :TRIPLESTRING
 isstring(x) = headof(x) === :String || isstringliteral(x)
-iscmd(x) = headof(x) === :cmd || headof(x) === :triplecmd
-ischar(x) = headof(x) === :char
-isinteger(x) = headof(x) === :integer
-isfloat(x) = headof(x) === :float
+iscmd(x) = headof(x) === :CMD || headof(x) === :TRIPLECMD
+ischar(x) = headof(x) === :CHAR
+isinteger(x) = headof(x) === :INTEGER
+isfloat(x) = headof(x) === :FLOAT
 isnumber(x) = isinteger(x) || isfloat(x)
-is_nothing(x) = headof(x) === :nothing
+is_nothing(x) = headof(x) === :NOTHING
 
-isliteral(x::EXPR) = isstringliteral(x) || iscmd(x) || ischar(x) || headof(x) in (:integer, :bin_int, :hexint, :octint, :float,  :nothing, :(var"true"), :(var"false"))
+isliteral(x::EXPR) = isstringliteral(x) || iscmd(x) || ischar(x) || headof(x) in (:INTEGER, :BININT, :HEXINT, :OCTINT, :FLOAT,  :NOTHING, :TRUE, :FALSE)
 
 isajuxtaposition(ps::ParseState, ret::EXPR) = ((isnumber(ret) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.LPAREN || kindof(ps.nt) === Tokens.CMD || kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)) ||
         ((is_prime(ret.head) && isidentifier(ps.nt)) ||
@@ -519,11 +519,11 @@ end
 Attempt to get a string representation of a nodeless expression.
 """
 function str_value(x)
-    if headof(x) === :Identifier || isliteral(x)
+    if headof(x) === :IDENTIFIER || isliteral(x)
         return valof(x)
     elseif isidentifier(x)
         valof(x.args[2])
-    elseif headof(x) === :Operator || headof(x) === :MacroName
+    elseif isoperator(x) || headof(x) === :MacroName
         return string(Expr(x))
     else
         return ""
