@@ -37,10 +37,20 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             (isempty(str) || (lcp !== nothing && isempty(lcp))) && return
             (last && str[end] == '\n') && return (lcp = "")
             idxstart, idxend = 2, 1
+            safetytrip = 0
             while nextind(str, idxend) - 1 < sizeof(str) && (lcp === nothing || !isempty(lcp))
+                safetytrip += 1
+                if safetytrip > 10_000
+                    error("Inifinite loop.")
+                end
                 idxend = skip_to_nl(str, idxend)
                 idxstart = nextind(str, idxend)
+                safetytrip1 = 0
                 while nextind(str, idxend) - 1 < sizeof(str)
+                    safetytrip1 += 1
+                    if safetytrip1 > 10_000
+                        error("Inifinite loop.")
+                    end
                     c = str[nextind(str, idxend)]
                     if c == ' ' || c == '\t'
                         idxend += 1
@@ -88,7 +98,12 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         startbytes = istrip ? 3 : 1
         seek(input, startbytes)
         b = IOBuffer()
+        safetytrip = 0
         while !eof(input)
+            safetytrip += 1
+            if safetytrip > 10_000
+                error("Infinite loop.")
+            end
             c = read(input, Char)
             if c == '\\'
                 write(b, c)

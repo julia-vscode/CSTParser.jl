@@ -164,14 +164,24 @@ function parse_imports(ps::ParseState)
 
         arg = parse_dot_mod(ps, true)
         append!(ret, arg)
+        safetytrip = 0
         while iscomma(ps.nt)
+            safetytrip += 1
+            if safetytrip > 10_000
+                error("Inifinite loop.")
+            end
             accept_comma(ps, ret)
             arg = parse_dot_mod(ps, true)
             append!(ret, arg)
         end
     else
         ret = EXPR(kwt, vcat(kw, arg))
+        safetytrip = 0
         while iscomma(ps.nt)
+            safetytrip += 1
+            if safetytrip > 10_000
+                error("Inifinite loop.")
+            end
             accept_comma(ps, ret)
             arg = parse_dot_mod(ps)
             append!(ret, arg)
@@ -185,7 +195,12 @@ function parse_export(ps::ParseState)
     args = EXPR[mKEYWORD(ps)]
     append!(args, parse_dot_mod(ps))
 
+    safetytrip = 0
     while iscomma(ps.nt)
+        safetytrip += 1
+        if safetytrip > 10_000
+            error("Inifinite loop.")
+        end
         push!(args, mPUNCTUATION(next(ps)))
         arg = parse_dot_mod(ps)[1]
         push!(args, arg)
@@ -210,7 +225,12 @@ function parse_blockexpr_sig(ps::ParseState, head)
         if convertsigtotuple(sig)
             sig = EXPR(TupleH, sig.args)
         end
+        safetytrip = 0
         while kindof(ps.nt) === Tokens.WHERE && kindof(ps.ws) != Tokens.NEWLINE_WS
+            safetytrip += 1
+            if safetytrip > 10_000
+                error("Inifinite loop.")
+            end
             sig = @closer ps :inwhere @closer ps :ws parse_operator_where(ps, sig, INSTANCE(next(ps)), false)
         end
         return sig
@@ -221,7 +241,12 @@ function parse_blockexpr_sig(ps::ParseState, head)
             arg = @closer ps :comma @closer ps :ws  parse_expression(ps)
             if iscomma(ps.nt) || !(is_wrapped_assignment(arg) || isidentifier(arg))
                 arg = EXPR(Block, EXPR[arg])
+                safetytrip = 0
                 while iscomma(ps.nt)
+                    safetytrip += 1
+                    if safetytrip > 10_000
+                        error("Inifinite loop.")
+                    end
                     accept_comma(ps, arg)
                     startbyte = ps.nt.startbyte
                     nextarg = @closer ps :comma @closer ps :ws parse_expression(ps)
@@ -232,7 +257,12 @@ function parse_blockexpr_sig(ps::ParseState, head)
         end
     elseif head === Do
         sig = EXPR(TupleH, EXPR[])
+        safetytrip = 0
         @closer ps :comma @closer ps :block while !closer(ps)
+            safetytrip += 1
+            if safetytrip > 10_000
+                error("Inifinite loop.")
+            end
             @closer ps :ws a = parse_expression(ps)
             push!(sig, a)
             if kindof(ps.nt) === Tokens.COMMA
