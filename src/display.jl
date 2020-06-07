@@ -43,3 +43,11 @@ function Base.show(io::IO, x::EXPR, offset = 0, d = 0, er = false)
         end
     end
 end
+
+struct CSTInfiniteLoop <: Exception
+    msg::AbstractString
+end
+
+function Base.showerror(io::IO, ex::CSTInfiniteLoop)
+    print(io, ex.msg)
+end
