@@ -680,7 +680,7 @@ convertsigtotuple(sig::EXPR) = isbracketed(sig) && !(istuple(sig.args[2]) || (ty
 When parsing a block of expressions, can documentation be attached? Prefixed docs at the
 top-level are handled within `parse(ps::ParseState, cont = false)`.
 """
-docable(head) = head === Begin || head === ModuleH || head === BareModule
+docable(head) = head === Begin || head === ModuleH || head === BareModule || head === Quote
 
 
 should_negate_number_literal(ps::ParseState, op::EXPR) = (is_plus(op) || is_minus(op)) && (kindof(ps.nt) === Tokens.INTEGER || kindof(ps.nt) === Tokens.FLOAT) && isemptyws(ps.ws) && kindof(ps.nnt) != Tokens.CIRCUMFLEX_ACCENT
