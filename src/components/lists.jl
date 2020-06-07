@@ -112,7 +112,12 @@ function parse_array(ps::ParseState, isref = false)
             ps.closer.inref = false
             ret = EXPR(Vcat, args)
             push!(ret, first_arg)
+            safetytrip = 0
             while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.nt) !== Tokens.ENDMARKER
+                safetytrip += 1
+                if safetytrip > 10_000
+                    throw(CSTInfiniteLoop("Inifite loop."))
+                end
                 a = @closesquare ps  parse_expression(ps)
                 push!(ret, a)
             end
@@ -122,7 +127,12 @@ function parse_array(ps::ParseState, isref = false)
         elseif kindof(ps.ws) == WS || kindof(ps.ws) == SemiColonWS
             ps.closer.inref = false
             first_row = EXPR(Hcat, EXPR[first_arg])
+            safetytrip = 0
             while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
+                safetytrip += 1
+                if safetytrip > 10_000
+                    throw(CSTInfiniteLoop("Inifite loop."))
+                end
                 a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                 push!(first_row, a)
             end
@@ -141,11 +151,21 @@ function parse_array(ps::ParseState, isref = false)
                     first_row = EXPR(Row, first_row.args)
                 end
                 ret = EXPR(Vcat, EXPR[args[1], first_row])
+                safetytrip = 0
                 while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.nt) !== Tokens.ENDMARKER
+                    safetytrip += 1
+                    if safetytrip > 10_000
+                        throw(CSTInfiniteLoop("Inifite loop."))
+                    end
                     first_arg = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                     push!(ret, EXPR(Row, EXPR[first_arg]))
+                    safetytrip1 = 0
                     while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
-                        a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
+                        safetytrip1 += 1
+                        if safetytrip1 > 10_000
+                            throw(CSTInfiniteLoop("Inifite loop."))
+                        end
+                                    a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                         push!(last(ret.args), a)
                     end
                     # if only one entry dont use :row
@@ -249,7 +269,12 @@ function parse_barray(ps::ParseState)
         elseif kindof(ps.ws) == NewLineWS
             ret = EXPR(BracesCat, args)
             push!(ret, first_arg)
+            safetytrip = 0
             while kindof(ps.nt) != Tokens.RBRACE && kindof(ps.nt) !== Tokens.ENDMARKER
+                safetytrip += 1
+                if safetytrip > 10_000
+                    throw(CSTInfiniteLoop("Inifite loop."))
+                end
                 a = @closebrace ps  parse_expression(ps)
                 push!(ret, a)
             end
@@ -258,7 +283,12 @@ function parse_barray(ps::ParseState)
             return ret
         elseif kindof(ps.ws) == WS || kindof(ps.ws) == SemiColonWS
             first_row = EXPR(Row, EXPR[first_arg])
+            safetytrip = 0
             while kindof(ps.nt) !== Tokens.RBRACE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
+                safetytrip += 1
+                if safetytrip > 10_000
+                    throw(CSTInfiniteLoop("Inifite loop."))
+                end
                 a = @closebrace ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                 push!(first_row, a)
             end
@@ -276,13 +306,23 @@ function parse_barray(ps::ParseState)
                     first_row = EXPR(Row, first_row.args)
                 end
                 ret = EXPR(BracesCat, EXPR[args[1], first_row])
+                safetytrip = 0
                 while kindof(ps.nt) != Tokens.RBRACE
+                    safetytrip += 1
+                    if safetytrip > 10_000
+                        throw(CSTInfiniteLoop("Inifite loop."))
+                    end
                     if kindof(ps.nt) === Tokens.ENDMARKER
                         break
                     end
                     first_arg = @closebrace ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                     push!(ret, EXPR(Row, EXPR[first_arg]))
+                    safetytrip1 = 0
                     while kindof(ps.nt) !== Tokens.RBRACE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
+                        safetytrip1 += 1
+                        if safetytrip1 > 10_000
+                            throw(CSTInfiniteLoop("Inifite loop."))
+                        end
                         a = @closebrace ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                         push!(last(ret.args), a)
                     end
