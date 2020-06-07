@@ -137,23 +137,25 @@ function Expr(x::EXPR)
     elseif isoperator(x)
         return Symbol(valof(x))
     elseif ispunctuation(x)
-        return string(kindof(x))
+        if headof(x) === :DOT
+            return :(.)
+        else 
+            error()
+        end
     elseif isliteral(x)
         return _literal_expr(x)
-    elseif x.head === :Brackets
+    elseif isbracketed(x)
         return Expr(x.args[1])
     elseif x.head isa EXPR
         Expr(Expr(x.head), Expr.(x.args)...)
-    elseif x.head === :Quotenode
+    elseif x.head === :quotenode
         QuoteNode(Expr(x.args[1]))
-    elseif x.head === :MacroName
+    elseif x.head === :macroname
         Symbol("@", x.args[2].val)
-    elseif x.head === :x_Cmd
-        Expr(:macrocall, Symbol("@", Expr(x.args[1]), "_cmd"), nothing, valof(x.args[2]))
-    elseif x.head === :x_Str
-        Expr(:macrocall, Symbol("@", Expr(x.args[1]), "_str"), nothing, valof(x.args[2]))
-    elseif x.head === :GlobalRefDoc
+    elseif x.head === :globalrefdoc
         GlobalRef(Core, :(var"@doc"))
+    elseif x.head === :globalrefcmd
+        GlobalRef(Core, :(var"@cmd"))
     else
         Expr(Symbol(lowercase(String(x.head))), Expr.(x.args)...)
     end

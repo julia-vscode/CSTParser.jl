@@ -62,8 +62,6 @@ function _precompile()
 
     precompile(CSTParser.parse_kw, (ParseState,))
     precompile(CSTParser.parse_const, (ParseState,))
-    precompile(CSTParser.parse_global, (ParseState,))
-    precompile(CSTParser.parse_local, (ParseState,))
     precompile(CSTParser.parse_return, (ParseState,))
     precompile(CSTParser.parse_abstract, (ParseState,))
     precompile(CSTParser.parse_primitive, (ParseState,))

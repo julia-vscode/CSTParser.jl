@@ -204,12 +204,12 @@ end
 
 isidentifier(x::EXPR) = headof(x) === :IDENTIFIER || headof(x) === :NonStdIdentifier
 
-isunarycall(x::EXPR) = (headof(x) === :Call && length(x) == 2 && (isoperator(x.args[1]) || isoperator(x.args[2]))) || (isoperator(x.head) && length(x.args) == 1)
-isbinarycall(x::EXPR) = headof(x) === :Call && length(x) == 3 && isoperator(x.args[1])
+isunarycall(x::EXPR) = (headof(x) === :call && length(x) == 2 && (isoperator(x.args[1]) || isoperator(x.args[2]))) || (isoperator(x.head) && length(x.args) == 1)
+isbinarycall(x::EXPR) = headof(x) === :call && length(x) == 3 && isoperator(x.args[1])
 iswherecall(x::EXPR) = headof(x) === :Where
 isdeclaration(x::EXPR) = isoperator(x.head) && valof(x.head) == "::"
 isinterpolant(x::EXPR) = isoperator(x.head) && valof(x.head) == "\$"
-istuple(x::EXPR) = headof(x) === :Tuple
+istuple(x::EXPR) = headof(x) === :tuple
 is_either_id_op_interp(x::EXPR) = isidentifier(x) || isoperator(x) || isinterpolant(x)
 is_splat(x::EXPR) = isoperator(x.head) && valof(x.head) == "..."
 
@@ -221,7 +221,7 @@ ispunctuation(x::EXPR) = is_comma(x) || is_lparen(x) || is_rparen(x) || is_lsqua
 
 
 isstringliteral(x) = headof(x) === :STRING || headof(x) === :TRIPLESTRING
-isstring(x) = headof(x) === :String || isstringliteral(x)
+isstring(x) = headof(x) === :string || isstringliteral(x)
 iscmd(x) = headof(x) === :CMD || headof(x) === :TRIPLECMD
 ischar(x) = headof(x) === :CHAR
 isinteger(x) = headof(x) === :INTEGER
@@ -244,7 +244,7 @@ Determine whether a parsing error occured while processing text with the given
 `ParseState`, or exists as a (sub) expression of `x`.
 """
 function has_error(x::EXPR)
-    return headof(x) == :ErrorToken || (x.args !== nothing && any(has_error, x.args))
+    return headof(x) == :errortoken || (x.args !== nothing && any(has_error, x.args))
 end
 has_error(ps::ParseState) = ps.errored
 
@@ -481,7 +481,7 @@ Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
 function check_span(x::EXPR, neq = [])
-    (ispunctuation(x) || isidentifier(x) || iskeyword(x) || isoperator(x) || isliteral(x) || headof(x) == :String) && return neq
+    (ispunctuation(x) || isidentifier(x) || iskeyword(x) || isoperator(x) || isliteral(x) || headof(x) == :string) && return neq
 
     s = 0
     if x.args !== nothing
@@ -523,7 +523,7 @@ function str_value(x)
         return valof(x)
     elseif isidentifier(x)
         valof(x.args[2])
-    elseif isoperator(x) || headof(x) === :MacroName
+    elseif isoperator(x) || headof(x) === :macroname
         return string(Expr(x))
     else
         return ""
@@ -646,6 +646,15 @@ Is this an expression of the form `a.b`.
 """
 is_getfield(x::EXPR) = x.head isa EXPR && isoperator(x.head) && valof(x.head) == "."
 
+
+function get_rhs_of_getfield(ret::EXPR)
+    if headof(ret.args[2]) === :quotenode || headof(ret.args[2]) === :quote
+        ret.args[2].args[1]
+    else
+        ret.args[2]
+    end
+end
+
 """
     disallowednumberjuxt(ret::EXPR)
 
@@ -677,14 +686,14 @@ _do_kw_convert(ps::ParseState, a::EXPR) = !ps.closer.brace && is_assignment(a)
 
 Converted an assignment expression to a keyword-argument expression.
 """
-_kw_convert(x::EXPR) = EXPR(:Kw, EXPR[x.args[1], x.args[2]], EXPR[x.head], x.fullspan, x.span)
+_kw_convert(x::EXPR) = EXPR(:kw, EXPR[x.args[1], x.args[2]], EXPR[x.head], x.fullspan, x.span)
 
 """
     convertsigtotuple(sig::EXPR)
 
 When parsing a function or macro signature, should it be converted to a tuple?
 """
-convertsigtotuple(sig::EXPR) = isbracketed(sig) && !(istuple(sig.args[1]) || (headof(sig.args[1]) === :Block) || is_splat(sig.args[1]))
+convertsigtotuple(sig::EXPR) = isbracketed(sig) && !(istuple(sig.args[1]) || (headof(sig.args[1]) === :block) || is_splat(sig.args[1]))
 
 """
     docable(head)
@@ -692,16 +701,16 @@ convertsigtotuple(sig::EXPR) = isbracketed(sig) && !(istuple(sig.args[1]) || (he
 When parsing a block of expressions, can documentation be attached? Prefixed docs at the
 top-level are handled within `parse(ps::ParseState, cont = false)`.
 """
-docable(head) = head === :Begin || head === :Module || head === :BareModule
+docable(head) = head === :begin || head === :module || head === :baremodule || head === :quote
 
 
 should_negate_number_literal(ps::ParseState, op::EXPR) = (is_plus(op) || is_minus(op)) && (kindof(ps.nt) === Tokens.INTEGER || kindof(ps.nt) === Tokens.FLOAT) && isemptyws(ps.ws) && kindof(ps.nnt) != Tokens.CIRCUMFLEX_ACCENT
 
-isbracketed(x::EXPR) = headof(x) === :Brackets # Assumption that x has 3 args, doesn't need checking?
+isbracketed(x::EXPR) = headof(x) === :brackets
 
 unwrapbracket(x::EXPR) = isbracketed(x) ? unwrapbracket(x.args[1]) : x
 
-isbeginorblock(x::EXPR) = headof(x) === :Begin || headof(unwrapbracket(x)) == :Block
+isbeginorblock(x::EXPR) = headof(x) === :begin || headof(unwrapbracket(x)) == :block
 
 """
     can_become_comparison(x::EXPR)
@@ -709,7 +718,7 @@ isbeginorblock(x::EXPR) = headof(x) === :Begin || headof(unwrapbracket(x)) == :B
 Is `x` a binary comparison call (e.g. `a < b`) that can be extended to include more
 arguments?
 """
-can_become_comparison(x::EXPR) = (isoperator(x.head) && comp_prec(valof(x.head))) || (x.head === :Call && isoperator(x.args[1]) && comp_prec(valof(x.args[1])))
+can_become_comparison(x::EXPR) = (isoperator(x.head) && comp_prec(valof(x.head))) || (x.head === :call && isoperator(x.args[1]) && comp_prec(valof(x.args[1])))
 
 """
     can_become_chain(x::EXPR, op::EXPR)
@@ -722,4 +731,8 @@ can_become_chain(x::EXPR, op::EXPR) = isbinarycall(x) && (is_star(op) || is_plus
 
 macro cst_str(x)
     CSTParser.parse(x)
+end
+
+function issuffixableliteral(ps::ParseState, x::EXPR) 
+    isidentifier(ps.nt) && isemptyws(ps.ws) && headof(x) === :macrocall && (endswith(valof(x.args[1].args[2]), "_str") || endswith(valof(x.args[1].args[2]), "_cmd"))
 end

@@ -88,7 +88,7 @@ function parse_compound(ps::ParseState, ret::EXPR)
             ret = mErrorToken(ps, ret, CannotJuxtapose)
         end
         ret = parse_operator(ps, ret, EXPR(:OPERATOR, 0, 0, "*"))
-    elseif (headof(ret) === :x_Str || headof(ret) === :x_Cmd) && isidentifier(ps.nt)
+    elseif issuffixableliteral(ps, ret)
         arg = EXPR(:IDENTIFIER, next(ps))
         push!(ret, EXPR(:STRING, arg.fullspan, arg.span, val(ps.t, ps)))
     elseif (isidentifier(ret) || is_getfield(ret)) && isprefixableliteral(ps.nt)
@@ -117,7 +117,7 @@ function parse_compound(ps::ParseState, ret::EXPR)
     elseif is_prime(ret.head)
         # prime operator followed by an identifier has an implicit multiplication
         nextarg = @precedence ps TimesOp parse_expression(ps)
-        ret = EXPR(:Call, EXPR[EXPR(:OPERATOR, 0, 0, "*"), ret, nextarg], nothing)
+        ret = EXPR(:call, EXPR[EXPR(:OPERATOR, 0, 0, "*"), ret, nextarg], nothing)
 # ###############################################################################
 # Everything below here is an error
 # ###############################################################################
@@ -128,7 +128,7 @@ function parse_compound(ps::ParseState, ret::EXPR)
         else
             nextarg = parse_expression(ps)
         end
-        ret = EXPR(:ErrorToken, EXPR[ret, nextarg], nothing)
+        ret = EXPR(:errortoken, EXPR[ret, nextarg], nothing)
     end
     return ret
 end
@@ -142,12 +142,12 @@ function parse_paren(ps::ParseState)
     args = EXPR[]
     trivia = EXPR[EXPR(ps)]
     @closeparen ps @default ps @nocloser ps :inwhere parse_comma_sep(ps, args, trivia, false, true, true, insertfirst = true)
-    if length(args) == 1 && length(trivia) == 1 && ((kindof(ps.ws) !== SemiColonWS || headof(args[1]) === :Block) && headof(args[1]) !== :Parameters)
+    if length(args) == 1 && length(trivia) == 1 && ((kindof(ps.ws) !== SemiColonWS || headof(args[1]) === :block) && headof(args[1]) !== :parameters)
         accept_rparen(ps, trivia)
-        ret = EXPR(:Brackets, args, trivia)
+        ret = EXPR(:brackets, args, trivia)
     else
         accept_rparen(ps, trivia)
-        ret = EXPR(:Tuple, args, trivia)
+        ret = EXPR(:tuple, args, trivia)
     end
     return ret
 end
@@ -179,13 +179,13 @@ function parse_doc(ps::ParseState)
         end
 
         ret = parse_expression(ps)
-        ret = EXPR(:MacroCall, EXPR[EXPR(:GlobalRefDoc, 0, 0), EXPR(:NOTHING, 0, 0), doc, ret], nothing)
+        ret = EXPR(:macrocall, EXPR[EXPR(:globalrefdoc, 0, 0), EXPR(:NOTHING, 0, 0), doc, ret], nothing)
     elseif nexttokenstartsdocstring(ps)
         doc = EXPR(:IDENTIFIER, next(ps))
         arg = parse_string_or_cmd(next(ps), doc)
         doc = EXPR(:x_Str, EXPR[doc, arg], nothing)
         ret = parse_expression(ps)
-        ret = EXPR(:MacroCall, EXPR[EXPR(:GlobalRefDoc, 0, 0), EXPR(:NOTHING, 0, 0), doc, ret], nothing)
+        ret = EXPR(:macrocall, EXPR[EXPR(:globalrefdoc, 0, 0), EXPR(:NOTHING, 0, 0), doc, ret], nothing)
     else
         ret = parse_expression(ps)
     end
@@ -194,13 +194,13 @@ end
 
 function parse(ps::ParseState, cont = false)
     if ps.l.io.size == 0
-        return (cont ? EXPR(:File, EXPR[]) : nothing), ps
+        return (cont ? EXPR(:file, EXPR[]) : nothing), ps
     end
     last_line = 0
     curr_line = 0
 
     if cont
-        top = EXPR(:File, EXPR[], nothing)
+        top = EXPR(:file, EXPR[], nothing)
         if kindof(ps.nt) === Tokens.WHITESPACE || kindof(ps.nt) === Tokens.COMMENT
             next(ps)
             push!(top, EXPR(:NOTHING, ps.nt.startbyte, ps.nt.startbyte, ""))
@@ -250,11 +250,11 @@ function parse(ps::ParseState, cont = false)
 end
 
 function _continue_doc_parse(ps::ParseState, x::EXPR)
-    headof(x) === :MacroCall &&
-    headof(x.args[1]) === :MacroName &&
+    headof(x) === :macrocall &&
+    headof(x.args[1]) === :macroname &&
     length(x.args[1]) == 2 &&
     valof(x.args[1].args[2]) == "doc" &&
-    length(x.args) < 3 &&
+    length(x.args) < 4 &&
     ps.t.endpos[1] + 1 <= ps.nt.startpos[1]
 end
 

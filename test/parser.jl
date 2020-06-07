@@ -191,7 +191,7 @@ end
 
     @testset "Tuples" begin
         @static if VERSION > v"1.1-"
-            @test headof(CSTParser.parse("1,")) === :ErrorToken
+            @test headof(CSTParser.parse("1,")) === :errortoken
         else
             @test "1," |> test_expr
         end
@@ -564,7 +564,7 @@ end
         @test "isa(a,a) != isa(a,a)" |> test_expr
         @test "@mac return x" |> test_expr
         @static if VERSION > v"1.1-"
-            @test headof(CSTParser.parse("a,b,").trivia[2]) === :ErrorToken
+            @test headof(CSTParser.parse("a,b,").trivia[2]) === :errortoken
         else
             @test "a,b," |> test_expr
         end
@@ -707,7 +707,7 @@ end""" |> test_expr
         @test "@~" |> test_expr
         @test "\$\$(x)" |> test_expr
         @test "\$\$(x)" |> test_expr
-        @test CSTParser.headof(CSTParser.parse("=")) === :ErrorToken
+        @test CSTParser.headof(CSTParser.parse("=")) === :errortoken
         @test CSTParser.headof(CSTParser.parse("~")) === :OPERATOR
         @test "(1:\n2)" |> test_expr
         @test "a[: ]" |> test_expr
@@ -716,10 +716,10 @@ end""" |> test_expr
     @testset "interpolation error catching" begin
         x = CSTParser.parse("\"a \$ b\"")
         @test x.fullspan == 7
-        @test CSTParser.headof(x.args[2]) === :ErrorToken
+        @test CSTParser.headof(x.args[2]) === :errortoken
         x = CSTParser.parse("\"a \$# b\"")
         @test x.fullspan == 8
-        @test CSTParser.headof(x.args[2]) === :ErrorToken
+        @test CSTParser.headof(x.args[2]) === :errortoken
     end
 
     @testset "Broken things" begin
@@ -772,15 +772,15 @@ end""" |> test_expr
     end
 
     @testset "errors" begin
-        @test headof(CSTParser.parse("1? b : c ").args[1]) === :ErrorToken
-        @test headof(CSTParser.parse("1 ?b : c ").trivia[1]) === :ErrorToken
-        @test headof(CSTParser.parse("1 ? b :c ").trivia[2]) === :ErrorToken
-        @test headof(CSTParser.parse("1:\n2").args[1]) === :ErrorToken
-        @test headof(CSTParser.parse("1.a").args[2]) === :ErrorToken
-        @test headof(CSTParser.parse("f ()")) === :ErrorToken
-        @test headof(CSTParser.parse("f{t} ()")) === :ErrorToken
-        @test headof(CSTParser.parse(": a").trivia[1]) === :ErrorToken
-        @test headof(CSTParser.parse("const a").args[1]) === :ErrorToken
+        @test headof(CSTParser.parse("1? b : c ").args[1]) === :errortoken
+        @test headof(CSTParser.parse("1 ?b : c ").trivia[1]) === :errortoken
+        @test headof(CSTParser.parse("1 ? b :c ").trivia[2]) === :errortoken
+        @test headof(CSTParser.parse("1:\n2").args[1]) === :errortoken
+        @test headof(CSTParser.parse("1.a").args[2]) === :errortoken
+        @test headof(CSTParser.parse("f ()")) === :errortoken
+        @test headof(CSTParser.parse("f{t} ()")) === :errortoken
+        @test headof(CSTParser.parse(": a").trivia[1]) === :errortoken
+        @test headof(CSTParser.parse("const a").args[1]) === :errortoken
     end
 
     @testset "tuple params" begin
@@ -835,7 +835,7 @@ end""" |> test_expr
     a ? b 
     function f end""")
         @test length(x) == 5 # make sure we always give out an EXPR of the right length
-        @test headof(x.args[3]) === :ErrorToken
+        @test headof(x.args[3]) === :errortoken
     end
 
 

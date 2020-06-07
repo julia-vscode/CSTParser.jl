@@ -37,7 +37,7 @@ function parse_iterator(ps::ParseState, outer = parse_outer(ps))
         arg = adjust_iter(arg)
     end
     if outer !== nothing
-        arg.args[1] = setparent!(EXPR(:Outer, EXPR[arg.args[1]], EXPR[outer]), arg)
+        arg.args[1] = setparent!(EXPR(:outer, EXPR[arg.args[1]], EXPR[outer]), arg)
         arg.fullspan += outer.fullspan
         arg.span = outer.fullspan + arg.span
     end
@@ -46,7 +46,7 @@ end
 
 function adjust_iter(x::EXPR)
     # Assumes x is a valid iterator
-    if x.head === :Call # isoperator(x.args[1]) && x.args[1].val in ("in", "∈")
+    if x.head === :call # isoperator(x.args[1]) && x.args[1].val in ("in", "∈")
         EXPR(EXPR(:OPERATOR, 0, 0, "="), EXPR[x.args[2], x.args[3]], EXPR[x.args[1]])
     else 
         x
@@ -58,7 +58,7 @@ end
 
 Is `x` a valid iterator for use in `for` loops or generators?
 """
-is_range(x::EXPR) = (isoperator(x.head) && is_eq(x.head)) || (x.head === :Call && (is_in(x.args[1]) || is_elof(x.args[1])))
+is_range(x::EXPR) = (isoperator(x.head) && is_eq(x.head)) || (x.head === :call && (is_in(x.args[1]) || is_elof(x.args[1])))
 
 function parse_outer(ps)
     if kindof(ps.nt) === Tokens.OUTER && kindof(ps.nws) !== EmptyWS && !Tokens.isoperator(kindof(ps.nnt))
@@ -75,7 +75,7 @@ for a succeeding `Filter` expression.
 function parse_iterators(ps::ParseState, allowfilter = false)
     arg = parse_iterator(ps)
     if iscomma(ps.nt) # we've hit a comma separated list of iterators.
-        arg = EXPR(:Block, EXPR[arg])
+        arg = EXPR(:block, EXPR[arg])
         while iscomma(ps.nt)
             pushtotrivia!(arg, accept_comma(ps))
             nextarg = parse_iterator(ps)
@@ -98,10 +98,10 @@ function parse_filter(ps::ParseState, arg)
     if kindof(ps.nt) === Tokens.IF # assumes we're inside a generator
         trivia = EXPR[EXPR(next(ps))]
         cond = @closer ps :range parse_expression(ps)
-        if headof(arg) === :Block
-            arg = EXPR(:Filter, EXPR[cond; arg.args], trivia)
+        if headof(arg) === :block
+            arg = EXPR(:filter, EXPR[cond; arg.args], trivia)
         else
-            arg = EXPR(:Filter, EXPR[cond, arg], trivia)
+            arg = EXPR(:filter, EXPR[cond, arg], trivia)
         end
     end
     return arg
@@ -117,16 +117,16 @@ function parse_call(ps::ParseState, ret::EXPR, ismacro = false)
         arg = @closer ps :unary @closer ps :inwhere @precedence ps PowerOp parse_expression(ps)
         if istuple(arg)
             pushfirst!(arg.args, ret)
-            ret = EXPR(:Call, arg.args, arg.trivia)
+            ret = EXPR(:call, arg.args, arg.trivia)
         elseif iswherecall(arg) && istuple(arg.args[1])
-            ret = mWhereOpCall(EXPR(:Call, EXPR[ret; arg.args[1].args]), arg.args[2], arg.args[3:end])
+            ret = mWhereOpCall(EXPR(:call, EXPR[ret; arg.args[1].args]), arg.args[2], arg.args[3:end])
         else
             ret = mUnaryOpCall(ret, arg)
         end
     elseif is_and(ret) || is_decl(ret) || is_exor(ret)
         arg = @precedence ps 20 parse_expression(ps)
         if is_exor(ret) && istuple(arg) && length(arg) == 3 && is_splat(arg.args[2])
-            arg = EXPR(:Brackets, arg.args)
+            arg = EXPR(:brackets, arg.args)
         end
         # ret = mUnaryOpCall(ret, arg)
         ret = EXPR(ret, EXPR[arg], nothing)
@@ -134,12 +134,12 @@ function parse_call(ps::ParseState, ret::EXPR, ismacro = false)
         arg = @precedence ps PowerOp parse_expression(ps)
         ret = EXPR(ret, arg.args, arg.trivia)
     else
-        !ismacro && headof(ret) === :MacroName && (ismacro = true)
+        !ismacro && headof(ret) === :macroname && (ismacro = true)
         args = ismacro ? EXPR[ret, EXPR(:NOTHING, 0, 0)] : EXPR[ret] 
         trivia = EXPR[EXPR(next(ps))]
         @closeparen ps @default ps parse_comma_sep(ps, args, trivia, !ismacro)
         accept_rparen(ps, trivia)
-        ret = EXPR(ismacro ? :MacroCall : :Call, args, trivia)
+        ret = EXPR(ismacro ? :macrocall : :call, args, trivia)
     end
     return ret
 end
@@ -168,9 +168,9 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR
     if kindof(ps.ws) == SemiColonWS
         if @nocloser ps :newline @closer ps :comma @nocloser ps :semicolon closer(ps)
             if block && !(length(args) == 0 && ispunctuation(trivia[1])) && !(isunarycall(last(args)) && is_dddot(last(args).args[2]))
-                push!(args, EXPR(:Block, EXPR[pop!(args)]))
+                push!(args, EXPR(:block, EXPR[pop!(args)]))
             elseif kw && kindof(ps.nt) === Tokens.RPAREN
-                push!(args, EXPR(:Parameters, EXPR[], nothing, 0, 0))
+                push!(args, EXPR(:parameters, EXPR[], nothing, 0, 0))
             end
         else
             a = @nocloser ps :newline @closer ps :comma @nocloser ps :inwhere parse_expression(ps)
@@ -180,7 +180,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR
                     a = parse_expression(ps)
                     push!(args1, a)
                 end
-                body = EXPR(:Block, args1)
+                body = EXPR(:block, args1)
                 push!(args, body)
                 args = body
             else
@@ -223,7 +223,7 @@ function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR
         isfirst = true
     end
     if !isempty(args1)
-        insert!(args, insertfirst ? 1 : 2, EXPR(:Parameters, args1, trivia))
+        insert!(args, insertfirst ? 1 : 2, EXPR(:parameters, args1, trivia))
     end
     return
 end
@@ -238,7 +238,7 @@ function parse_macrocall(ps::ParseState)
     if !isemptyws(ps.ws)
         mname = mErrorToken(ps, INSTANCE(next(ps)), UnexpectedWhiteSpace)
     else
-        mname = EXPR(:MacroName, EXPR[at, EXPR(:IDENTIFIER, next(ps))], nothing)
+        mname = EXPR(:macroname, EXPR[at, EXPR(:IDENTIFIER, next(ps))], nothing)
     end
 
     # Handle cases with @ at start of dotted expressions
@@ -246,12 +246,12 @@ function parse_macrocall(ps::ParseState)
         while kindof(ps.nt) === Tokens.DOT
             op = EXPR(:OPERATOR, next(ps))
             nextarg = EXPR(:IDENTIFIER, next(ps))
-            mname = EXPR(op, EXPR[mname, EXPR(:Quotenode, EXPR[nextarg], nothing)], nothing)
+            mname = EXPR(op, EXPR[mname, EXPR(:quotenode, EXPR[nextarg], nothing)], nothing)
         end
     end
 
     if iscomma(ps.nt)
-        return EXPR(:MacroCall, EXPR[mname], nothing, mname.fullspan, mname.span)
+        return EXPR(:macrocall, EXPR[mname, EXPR(:NOTHING, 0, 0)], nothing, mname.fullspan, mname.span)
     elseif isemptyws(ps.ws) && kindof(ps.nt) === Tokens.LPAREN
         return parse_call(ps, mname, true)
     else
@@ -268,7 +268,7 @@ function parse_macrocall(ps::ParseState)
                 break
             end
         end
-        return EXPR(:MacroCall, args, nothing)
+        return EXPR(:macrocall, args, nothing)
     end
 end
 
@@ -281,23 +281,27 @@ Comprehensions are parsed as SQUAREs containing a generator.
 function parse_generator(ps::ParseState, arg::EXPR)
     kw = EXPR(next(ps))
     ranges = @closesquare ps parse_iterators(ps, true)
-    if headof(arg) === :Generator && !(headof(arg.args[1]) in (:Generator, :Flatten))
-        arg.args[1] = EXPR(:Generator, EXPR[arg.args[1], ranges], EXPR[kw])
+    if headof(arg) === :generator && !(headof(arg.args[1]) in (:generator, :flatten))
+        arg.args[1] = setparent!(EXPR(:generator, EXPR[arg.args[1], ranges], EXPR[kw]), arg)
         update_span!(arg)
-        ret = EXPR(:Flatten, EXPR[arg], nothing)
-    elseif headof(arg) === :Generator || headof(arg) === :Flatten
+        ret = EXPR(:flatten, EXPR[arg], nothing)
+    elseif headof(arg) === :generator || headof(arg) === :flatten
         arg1, arg2 = get_appropriate_child_to_expand(arg)
-        arg2.args[1] = EXPR(:Generator, EXPR[arg2.args[1], ranges], EXPR[kw])
+        arg2.args[1] = setparent!(EXPR(:generator, EXPR[arg2.args[1], ranges], EXPR[kw]), arg2)
         update_span!(arg2)
-        arg1.args[1] = EXPR(:Flatten, EXPR[arg2], nothing)
+        arg1.args[1] = setparent!(EXPR(:flatten, EXPR[arg2], nothing), arg1)
         update_span!(arg1)
         update_span!(arg)
         ret = arg
     else
-        ret = EXPR(:Generator, EXPR[arg], EXPR[kw])
-        if headof(ranges) === :Block
-            append!(ret.args, ranges.args)
-            append!(ret.trivia, ranges.trivia)
+        ret = EXPR(:generator, EXPR[arg], EXPR[kw])
+        if headof(ranges) === :block
+            for a in ranges.args
+                push!(ret.args, setparent!(a, ret))
+            end
+            for a in ranges.trivia
+                push!(ret.trivia, setparent!(a, ret))
+            end
             update_span!(ret)
         else
             push!(ret, ranges)
@@ -307,9 +311,9 @@ function parse_generator(ps::ParseState, arg::EXPR)
 end
 
 function get_appropriate_child_to_expand(x)
-    if headof(x) === :Generator && !(headof(x.args[1]) in (:Generator, :Flatten))
+    if headof(x) === :generator && !(headof(x.args[1]) in (:generator, :flatten))
         return x, x.args[1]
-    elseif headof(x) === :Flatten &&  headof(x.args[1]) === :Generator && headof(x.args[1].args[1]) === :Generator
+    elseif headof(x) === :flatten &&  headof(x.args[1]) === :generator && headof(x.args[1].args[1]) === :generator
         x.args[1], x.args[1].args[1]
     else
         get_appropriate_child_to_expand(x.args[1])
@@ -320,9 +324,9 @@ function parse_importexport_item(ps, is_colon = false)
     if kindof(ps.nt) === Tokens.AT_SIGN
         at = EXPR(next(ps))
         a = INSTANCE(next(ps))
-        EXPR(:MacroName, EXPR[at, a],nothing)
+        EXPR(:macroname, EXPR[at, a],nothing)
     elseif kindof(ps.nt) === Tokens.LPAREN
-        a = EXPR(:Brackets, EXPR[], EXPR[EXPR(next(ps))])
+        a = EXPR(:brackets, EXPR[], EXPR[EXPR(next(ps))])
         push!(a, @closeparen ps parse_expression(ps))
         pushtotrivia!(a, accept_rparen(ps))
         a
@@ -366,27 +370,11 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
         if kindof(ps.nt) === Tokens.DOT
             pushtotrivia!(ret, EXPR(next(ps)))
         elseif isoperator(ps.nt) && (ps.nt.dotop || kindof(ps.nt) === Tokens.DOT)
-            push!(ret, EXPR(:DOT, 1, 1))
+            pushtotrivia!(ret, EXPR(:DOT, 1, 1))
             ps.nt = RawToken(kindof(ps.nt), ps.nt.startpos, ps.nt.endpos, ps.nt.startbyte + 1, ps.nt.endbyte, ps.nt.token_error, false, ps.nt.suffix)
         else
             break
         end
     end
     ret
-end
-
-
-"""
-    parse_prefixed_string_cmd(ps::ParseState, ret::EXPR)
-
-Parse prefixed strings and commands such as `pre"text"`.
-"""
-function parse_prefixed_string_cmd(ps::ParseState, ret::EXPR)
-    arg = parse_string_or_cmd(next(ps), ret)
-    
-    if ret.head === :IDENTIFIER && valof(ret) == "var" && VERSION > v"1.3.0-"
-        EXPR(:NonStdIdentifier, EXPR[ret, arg], nothing)
-    else
-        EXPR(:MacroCall, EXPR[EXPR(:IDENTIFIER, 0, 0, string("@", valof(ret), iscmd(arg) ? "_cmd" : "_str")), EXPR(:NOTHING, 0, 0), arg], EXPR[ret])
-    end
 end

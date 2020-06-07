@@ -95,65 +95,62 @@ Expression types. All-caps indicates a terminal node.
         :FALSE,
 
 # Expressions
-:Call,
-:ChainOpCall,
-:ColonOpCall,
-:Abstract,
-:Begin,
-:Block,
-:Braces,
-:BracesCat,
-:Const,
-:Comparison,
-:Curly,
-:Do,
-:Filter,
-:Flatten,
-:For,
-:Function,
-:Generator,
-:Global,
-:GlobalRefDoc,
-:If,
-:Kw,
-:Let,
-:Local,
-:Macro,
-:MacroCall,
-:MacroName,
-:Mutable,
-:Outer,
-:Parameters,
-:Primitive,
-:Quote,
-:Quotenode,
-:Brackets,
-:String,
-:Struct,
-:Try,
-:Tuple,
-:File,
-:Return,
-:While,
-:x_Cmd,
-:x_Str,
-:Module,
-:BareModule,
+:call,
+:chainopcall,
+:abstract,
+:begin,
+:block,
+:braces,
+:bracescat,
+:const,
+:comparison,
+:curly,
+:do,
+:filter,
+:flatten,
+:for,
+:function,
+:generator,
+:global,
+:globalrefdoc,
+:if,
+:kw,
+:let,
+:local,
+:macro,
+:macrocall,
+:macroname,
+:mutable,
+:outer,
+:parameters,
+:primitive,
+:quote,
+:quotenode,
+:brackets,
+:string,
+:struct,
+:try,
+:tuple,
+:file,
+:return,
+:while,
+:module,
+:baremodule,
 :TopLevel,
-:Export,
-:Import,
-:Using,
-:Comprehension,
-:Dict_Comprehension,
-:Typed_Comprehension,
-:Hcat,
-:Typed_Hcat,
-:Ref,
-:Row,
-:Vcat,
-:Typed_Vcat,
-:Vect,
-:ErrorToken
+:export,
+:import,
+:using,
+:comprehension,
+:dict_comprehension,
+:typed_comprehension,
+:hcat,
+:typed_Hcat,
+:ref,
+:row,
+:vcat,
+:typed_vcat,
+:vect,
+:errortoken
 
 @enum(ErrorKind,
     UnexpectedToken,
@@ -312,7 +309,7 @@ function INSTANCE(ps::ParseState)
         return EXPR(ps)
     elseif kindof(ps.t) === Tokens.ERROR
         ps.errored = true
-        return EXPR(:ErrorToken, nothing, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), nothing, Unknown)
+        return EXPR(:errortoken, nothing, nothing, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps), nothing, Unknown)
     else
         return mErrorToken(ps, Unknown)
     end
@@ -320,14 +317,14 @@ end
 
 function mUnaryOpCall(op::EXPR, arg::EXPR)
     fullspan = op.fullspan + arg.fullspan
-    ex = EXPR(:Call, EXPR[op, arg], nothing, fullspan, fullspan - arg.fullspan + arg.span)
+    ex = EXPR(:call, EXPR[op, arg], nothing, fullspan, fullspan - arg.fullspan + arg.span)
     setparent!(op, ex)
     setparent!(op, ex)
     return ex
 end
 
 function mWhereOpCall(arg1::EXPR, op::EXPR, args::Vector{EXPR})
-    ex = EXPR(:Call, EXPR[arg1; op; args], nothing,  arg1.fullspan + op.fullspan, 0)
+    ex = EXPR(:call, EXPR[arg1; op; args], nothing,  arg1.fullspan + op.fullspan, 0)
     setparent!(arg1, ex)
     setparent!(op, ex)
     for a in args
@@ -340,11 +337,11 @@ end
 
 function mErrorToken(ps::ParseState, k::ErrorKind)
     ps.errored = true
-    return EXPR(:ErrorToken, EXPR[], nothing, 0, 0, nothing, nothing, k)
+    return EXPR(:errortoken, EXPR[], nothing, 0, 0, nothing, nothing, k)
 end
 function mErrorToken(ps::ParseState, x::EXPR, k)
     ps.errored = true
-    ret = EXPR(:ErrorToken, EXPR[x], nothing, x.fullspan, x.span, nothing, nothing, k)
+    ret = EXPR(:errortoken, EXPR[x], nothing, x.fullspan, x.span, nothing, nothing, k)
     setparent!(ret.args[1], ret)
     return ret
 end
@@ -364,7 +361,7 @@ end
 hastrivia(x::EXPR) = x.trivia !== nothing && length(x.trivia) > 0
 
 function lastchildistrivia(x::EXPR)
-    return hastrivia(x) && (last(x.trivia).head in (:END, :RPAREN, :RSQUARE, :RBRACE) || (x.head in (:Parameters, :Tuple) && length(x.args) <= length(x.trivia)))
+    return hastrivia(x) && (last(x.trivia).head in (:END, :RPAREN, :RSQUARE, :RBRACE) || (x.head in (:parameters, :tuple) && length(x.args) <= length(x.trivia)))
 end
 
 function Base.length(x::EXPR) 

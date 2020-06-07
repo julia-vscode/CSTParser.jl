@@ -1,6 +1,6 @@
 function Base.show(io::IO, x::EXPR, offset = 0, d = 0, er = false)
     T = headof(x)
-    c =  T === :ErrorToken || er ? :red : :normal
+    c =  T === :errortoken || er ? :red : :normal
     # Print span as 1-based range of the source string. This presentation is
     # simple to understand when strings are presented to CSTParser.parse().
     print(io, lpad(offset + 1, 3), ":", rpad(offset + x.fullspan, 3), " ")

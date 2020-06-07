@@ -109,6 +109,7 @@ Trivia: `const`
 Length: 2
 Trivia: `global`
 Iter order: t, a
+Special handling: `global const expr` is parsed as `const global expr`. In this case both the `const` and `global` keywords are stored wihin the `:const` expression's trivia (the `:global` expression has no trivia).
 ##### Local
 Length: 2
 Trivia: `local`
@@ -135,7 +136,7 @@ Trivia: `function`, `end`
 ##### ChainOpCall
 ##### ColonOpCall
 ##### Braces
-##### BracesCat
+##### Bracescat
 ##### Comparison
 ##### Curly
 ##### Do
@@ -164,8 +165,6 @@ Trivia: nothing
 ##### File
 
 ##### While
-##### x_Cmd
-##### x_Str
 ##### Module
 Trivia: `module`, `end`
 ##### BareModule

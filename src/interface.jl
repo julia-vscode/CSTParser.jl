@@ -5,7 +5,7 @@ function is_func_call(x::EXPR)
         elseif length(x.args) == 1
             return !(is_exor(x.head) || is_decl(x.head))
         end
-    elseif x.head === :Call
+    elseif x.head === :call
         return true
     elseif x.head === :Where || isbracketed(x)
         return is_func_call(x.args[1])
@@ -60,8 +60,8 @@ issubtypedecl(x::EXPR) = isoperator(x.head) && valof(x.head) == "<:"
 
 rem_subtype(x::EXPR) = issubtypedecl(x) ? x.args[1] : x
 rem_decl(x::EXPR) = isdeclaration(x) ? x.args[1] : x
-rem_curly(x::EXPR) = headof(x) === :Curly ? x.args[1] : x
-rem_call(x::EXPR) = headof(x) === :Call ? x.args[1] : x
+rem_curly(x::EXPR) = headof(x) === :curly ? x.args[1] : x
+rem_call(x::EXPR) = headof(x) === :call ? x.args[1] : x
 rem_where(x::EXPR) = iswherecall(x) ? x.args[1] : x
 rem_wheres(x::EXPR) = iswherecall(x) ? rem_wheres(x.args[1]) : x
 rem_where_subtype(x::EXPR) = (iswherecall(x) || issubtypedecl(x)) ? x.args[1] : x
@@ -69,19 +69,19 @@ rem_where_decl(x::EXPR) = (iswherecall(x) || isdeclaration(x)) ? x.args[1] : x
 rem_invis(x::EXPR) = isbracketed(x) ? rem_invis(x.args[1]) : x
 rem_dddot(x::EXPR) = is_splat(x) ? x.args[1] : x
 const rem_splat = rem_dddot
-rem_kw(x::EXPR) = headof(x) === :Kw ? x.args[1] : x
+rem_kw(x::EXPR) = headof(x) === :kw ? x.args[1] : x
 
-is_some_call(x) = headof(x) === :Call || isunarycall(x)
+is_some_call(x) = headof(x) === :call || isunarycall(x)
 is_eventually_some_call(x) = is_some_call(x) || ((isdeclaration(x) || iswherecall(x)) && is_eventually_some_call(x.args[1]))
 
-defines_function(x::EXPR) = headof(x) === :Function || (is_assignment(x) && is_eventually_some_call(x.args[1]))
-defines_macro(x) = headof(x) == :Macro
+defines_function(x::EXPR) = headof(x) === :function || (is_assignment(x) && is_eventually_some_call(x.args[1]))
+defines_macro(x) = headof(x) == :macro
 defines_datatype(x) = defines_struct(x) || defines_abstract(x) || defines_primitive(x)
-defines_struct(x) = headof(x) === :Struct
+defines_struct(x) = headof(x) === :struct
 defines_mutable(x) = defines_struct(x) && x.args[1].head == :TRUE
-defines_abstract(x) = headof(x) === :Abstract
-defines_primitive(x) = headof(x) === :Primitive
-defines_module(x) = headof(x) === :Module
+defines_abstract(x) = headof(x) === :abstract
+defines_primitive(x) = headof(x) === :primitive
+defines_module(x) = headof(x) === :module
 defines_anon_function(x) = isoperator(x.head) && valof(x.head) == "->"
 
 has_sig(x::EXPR) = defines_datatype(x) || defines_function(x) || defines_macro(x) || defines_anon_function(x)
@@ -95,9 +95,9 @@ Should only be called when has_sig(x) == true.
 function get_sig(x::EXPR)
     if headof(x) isa EXPR # headof(headof(x)) === :OPERATOR valof(headof(x)) == "="
         return x.args[1]
-    elseif headof(x) === :Struct || headof(x) === :Mutable 
+    elseif headof(x) === :struct || headof(x) === :mutable 
         return x.args[2]
-    elseif  headof(x) === :Abstract || headof(x) === :Primitive || headof(x) === :Function || headof(x) === :Macro
+    elseif  headof(x) === :abstract || headof(x) === :primitive || headof(x) === :function || headof(x) === :macro
         return x.args[1]
     end
 end
@@ -127,7 +127,7 @@ function get_name(x::EXPR)
     elseif isbinarycall(x)
         length(x.args) < 2 && return x
         if is_dot(x.args[2])
-            if length(x.args) > 2 && headof(x.args[3]) === :Quotenode && x.args[3].args isa Vector{EXPR} && length(x.args[3].args) > 0
+            if length(x.args) > 2 && headof(x.args[3]) === :quotenode && x.args[3].args isa Vector{EXPR} && length(x.args[3].args) > 0
                 return get_name(x.args[3].args[1])
             else
                 return x

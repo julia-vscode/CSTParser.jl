@@ -197,7 +197,7 @@ function parse_unary(ps::ParseState, op::EXPR)
         if issyntaxunarycall(op)
             ret = EXPR(op, EXPR[arg], nothing)
         else
-            ret = EXPR(:Call, EXPR[op, arg], nothing)
+            ret = EXPR(:call, EXPR[op, arg], nothing)
         end
     end
     return ret
@@ -206,16 +206,16 @@ end
 function parse_unary_colon(ps::ParseState, op::EXPR)
     op = requires_no_ws(op, ps)
     if Tokens.iskeyword(kindof(ps.nt))
-        ret = EXPR(:Quotenode, EXPR[EXPR(:IDENTIFIER, next(ps))], EXPR[op])
+        ret = EXPR(:quotenode, EXPR[EXPR(:IDENTIFIER, next(ps))], EXPR[op])
     elseif Tokens.begin_literal < kindof(ps.nt) < Tokens.CHAR ||
         isoperator(kindof(ps.nt)) || isidentifier(ps.nt) || kindof(ps.nt) === Tokens.TRUE || kindof(ps.nt) === Tokens.FALSE
-        ret = EXPR(:Quotenode, EXPR[INSTANCE(next(ps))], EXPR[op])
+        ret = EXPR(:quotenode, EXPR[INSTANCE(next(ps))], EXPR[op])
     elseif closer(ps)
         ret = op
     else
         prev_errored = ps.errored
         arg = @precedence ps 20 parse_expression(ps)
-        if isbracketed(arg) && headof(arg.args[1]) === :ErrorToken && errorof(arg.args[1]) === UnexpectedAssignmentOp
+        if isbracketed(arg) && headof(arg.args[1]) === :errortoken && errorof(arg.args[1]) === UnexpectedAssignmentOp
             ps.errored = prev_errored
             arg.args[1] = arg.args[1].args[1]
             setparent!(arg.args[1], arg)
@@ -223,9 +223,9 @@ function parse_unary_colon(ps::ParseState, op::EXPR)
         # TODO: need special conversion where arg is a n-bracketed terminal (not keywords)
         unwrapped = unwrapbracket(arg)
         if isoperator(unwrapped) || isidentifier(unwrapped) || isliteral(unwrapped)
-            ret = EXPR(:Quotenode, EXPR[arg], EXPR[op])
+            ret = EXPR(:quotenode, EXPR[arg], EXPR[op])
         else
-            ret = EXPR(:Quote, EXPR[arg], EXPR[op])
+            ret = EXPR(:quote, EXPR[arg], EXPR[op])
         end
     end
     return ret
@@ -235,19 +235,19 @@ function parse_operator_eq(ps::ParseState, ret::EXPR, op::EXPR)
     nextarg = @precedence ps AssignmentOp - LtoR(AssignmentOp) parse_expression(ps)
 
     if is_func_call(ret) && !(isbeginorblock(nextarg))
-        nextarg = EXPR(:Block, EXPR[nextarg], nothing)
+        nextarg = EXPR(:block, EXPR[nextarg], nothing)
     end
     if issyntaxcall(op)
         ret = EXPR(op, EXPR[ret, nextarg], nothing)
     else
-        ret = EXPR(:Call, EXPR[op, ret, nextarg], nothing)
+        ret = EXPR(:call, EXPR[op, ret, nextarg], nothing)
     end
     return ret
 end
 
 # Parse conditionals
 
-isconditional(x::EXPR) = headof(x) === :If && hastrivia(x) && isoperator(first(x.trivia))
+isconditional(x::EXPR) = headof(x) === :if && hastrivia(x) && isoperator(first(x.trivia))
 function parse_operator_cond(ps::ParseState, ret::EXPR, op::EXPR)
     ret = requires_ws(ret, ps)
     op = requires_ws(op, ps)
@@ -255,33 +255,33 @@ function parse_operator_cond(ps::ParseState, ret::EXPR, op::EXPR)
     if kindof(ps.nt) !== Tokens.COLON
         op2 = mErrorToken(ps, EXPR(:OPERATOR, 0, 0, ":"), MissingColon)
         nextarg2 = mErrorToken(ps, Unknown)
-        return EXPR(:If, EXPR[ret, nextarg, nextarg2], EXPR[op, op2])
+        return EXPR(:if, EXPR[ret, nextarg, nextarg2], EXPR[op, op2])
     else
         op2 = requires_ws(EXPR(:OPERATOR, next(ps)), ps)
     end
 
     nextarg2 = @closer ps :comma @precedence ps 0 parse_expression(ps)
 
-    return EXPR(:If, EXPR[ret, nextarg, nextarg2], EXPR[op, op2])
+    return EXPR(:if, EXPR[ret, nextarg, nextarg2], EXPR[op, op2])
 end
 
 # Parse comparisons
 function parse_comp_operator(ps::ParseState, ret::EXPR, op::EXPR)
     nextarg = @precedence ps ComparisonOp - LtoR(ComparisonOp) parse_expression(ps)
 
-    if headof(ret) === :Comparison
+    if headof(ret) === :comparison
         push!(ret, op)
         push!(ret, nextarg)
     elseif can_become_comparison(ret)
         if isoperator(headof(ret))
-            ret = EXPR(:Comparison, EXPR[ret.args[1], ret.head, ret.args[2], op, nextarg], nothing)
+            ret = EXPR(:comparison, EXPR[ret.args[1], ret.head, ret.args[2], op, nextarg], nothing)
         else
-            ret = EXPR(:Comparison, EXPR[ret.args[2], ret.args[1], ret.args[3], op, nextarg], nothing)
+            ret = EXPR(:comparison, EXPR[ret.args[2], ret.args[1], ret.args[3], op, nextarg], nothing)
         end
     elseif issyntaxcall(op)
         ret = EXPR(op, EXPR[ret, nextarg], nothing)
     else
-        ret = EXPR(:Call, EXPR[op, ret, nextarg], nothing)
+        ret = EXPR(:call, EXPR[op, ret, nextarg], nothing)
     end
     return ret
 end
@@ -298,7 +298,7 @@ function parse_operator_colon(ps::ParseState, ret::EXPR, op::EXPR)
         pushtotrivia!(ret, op)
         push!(ret, nextarg)
     else
-        ret = EXPR(:Call, EXPR[op, ret, nextarg], nothing)
+        ret = EXPR(:call, EXPR[op, ret, nextarg], nothing)
     end
     return ret
 end
@@ -309,10 +309,10 @@ function parse_operator_power(ps::ParseState, ret::EXPR, op::EXPR)
 
     if isunarycall(ret)
         # TODO: this smells wrong
-        nextarg = EXPR(:Call, EXPR[op, ret.args[2], nextarg], nothing)
-        ret = EXPR(:Call, EXPR[ret.args[1], nextarg], nothing)
+        nextarg = EXPR(:call, EXPR[op, ret.args[2], nextarg], nothing)
+        ret = EXPR(:call, EXPR[ret.args[1], nextarg], nothing)
     else
-        ret = EXPR(:Call, EXPR[op, ret, nextarg], nothing)
+        ret = EXPR(:call, EXPR[op, ret, nextarg], nothing)
     end
     return ret
 end
@@ -320,7 +320,7 @@ end
 # parse where
 function parse_operator_where(ps::ParseState, ret::EXPR, op::EXPR, setscope = true)
     nextarg = @precedence ps LazyAndOp @closer ps :inwhere parse_expression(ps)
-    if headof(nextarg) === :Braces
+    if headof(nextarg) === :braces
         ret = EXPR(:Where, EXPR[ret; nextarg.args], EXPR[op; nextarg.trivia])
     else
         ret = EXPR(:Where, EXPR[ret, nextarg], EXPR[op])
@@ -333,13 +333,13 @@ function parse_operator_dot(ps::ParseState, ret::EXPR, op::EXPR)
         @static if VERSION > v"1.1-"
             iserred = kindof(ps.ws) != Tokens.EMPTY_WS
             sig = @default ps parse_call(ps, ret)
-            nextarg = EXPR(:Tuple, sig.args[2:end], sig.trivia)
+            nextarg = EXPR(:tuple, sig.args[2:end], sig.trivia)
             if iserred
                 nextarg = mErrorToken(ps, nextarg, UnexpectedWhiteSpace)
             end
         else
             sig = @default ps parse_call(ps, ret)
-            nextarg = EXPR(:Tuple, sig.args[2:end], sig.trivia)
+            nextarg = EXPR(:tuple, sig.args[2:end], sig.trivia)
         end
     elseif iskeyword(ps.nt) || both_symbol_and_op(ps.nt)
         nextarg = EXPR(:IDENTIFIER, next(ps))
@@ -347,7 +347,7 @@ function parse_operator_dot(ps::ParseState, ret::EXPR, op::EXPR)
         op2 = EXPR(:OPERATOR, next(ps))
         if kindof(ps.nt) === Tokens.LPAREN
             nextarg = @closeparen ps @precedence ps DotOp - LtoR(DotOp) parse_expression(ps)
-            nextarg = EXPR(:Quotenode, EXPR[nextarg], EXPR[op2])
+            nextarg = EXPR(:quotenode, EXPR[nextarg], EXPR[op2])
         else
             nextarg = @precedence ps DotOp - LtoR(DotOp) parse_unary(ps, op2)
         end
@@ -359,13 +359,13 @@ function parse_operator_dot(ps::ParseState, ret::EXPR, op::EXPR)
     end
 
     if isidentifier(nextarg) || isinterpolant(nextarg)
-        ret = EXPR(op, EXPR[ret, EXPR(:Quotenode, EXPR[nextarg], nothing)], nothing)
-    elseif headof(nextarg) === :Vect || headof(nextarg) === :Braces
-        ret = EXPR(op, EXPR[ret, EXPR(:Quote, EXPR[nextarg], nothing)], nothing)
-    elseif headof(nextarg) === :MacroCall
+        ret = EXPR(op, EXPR[ret, EXPR(:quotenode, EXPR[nextarg], nothing)], nothing)
+    elseif headof(nextarg) === :vect || headof(nextarg) === :braces
+        ret = EXPR(op, EXPR[ret, EXPR(:quote, EXPR[nextarg], nothing)], nothing)
+    elseif headof(nextarg) === :macrocall
         # TODO : ?
-        mname = EXPR(op, EXPR[ret, EXPR(:Quotenode, EXPR[nextarg.args[1]], nothing)], nothing)
-        ret = EXPR(:MacroCall, EXPR[mname], nothing)
+        mname = EXPR(op, EXPR[ret, EXPR(:quotenode, EXPR[nextarg.args[1]], nothing)], nothing)
+        ret = EXPR(:macrocall, EXPR[mname], nothing)
         for i = 2:length(nextarg.args)
             push!(ret, nextarg.args[i])
         end
@@ -378,7 +378,7 @@ end
 function parse_operator_anon_func(ps::ParseState, ret::EXPR, op::EXPR)
     arg = @closer ps :comma @precedence ps 0 parse_expression(ps)
     if !isbeginorblock(arg)
-        arg = EXPR(:Block, EXPR[arg], nothing)
+        arg = EXPR(:block, EXPR[arg], nothing)
     end
     return EXPR(op, EXPR[ret, arg], nothing)
 end
@@ -387,16 +387,17 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
     dot = isdotted(op)
     P = isdotted(op) ? AllPrecs[valof(op)[2:end]] : AllPrecs[valof(op)]
 
-    if headof(ret) === :Call && (is_plus(ret.args[1]) || is_star(ret.args[1])) && valof(ret.args[1]) == valof(op) && ret.args[1].span > 0
+    if headof(ret) === :call && (is_plus(ret.args[1]) || is_star(ret.args[1])) && valof(ret.args[1]) == valof(op) && ret.args[1].span > 0
         # a + b -> a + b + c
         nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
-        ret.trivia = EXPR[]
+        !hastrivia(ret) && (ret.trivia = EXPR[])
         pushtotrivia!(ret, op)
         push!(ret, nextarg)
         ret = ret
     elseif can_become_chain(ret, op)
+        # TODO: redundant?
         nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
-        ret = EXPR(:ChainOpCall, EXPR[ret.args[1], ret.args[2], ret.args[3], op, nextarg])
+        ret = EXPR(:chainopcall, EXPR[ret.args[1], ret.args[2], ret.args[3], op, nextarg])
     elseif is_eq(op)
         ret = parse_operator_eq(ps, ret, op)
     elseif is_cond(op)
@@ -421,7 +422,7 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
         if issyntaxcall(op)
             ret = EXPR(op, EXPR[ret, nextarg], nothing)
         else
-            ret = EXPR(:Call, EXPR[op, ret, nextarg], nothing)
+            ret = EXPR(:call, EXPR[op, ret, nextarg], nothing)
         end
     end
     return ret

@@ -65,9 +65,17 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     # there are interpolations in the string
     t_str = val(ps.t, ps)
     if istrip && length(t_str) == 6
-        return EXPR(iscmd ? :TRIPLECMD : :TRIPLESTRING, sfullspan, sspan, "")
+        if iscmd
+            return wrapwithcmdmacro(EXPR(:TRIPLESTRING , sfullspan, sspan, ""))
+        else
+            return EXPR(:TRIPLESTRING, sfullspan, sspan, "")
+        end
     elseif length(t_str) == 2
-        return EXPR(iscmd ? :CMD : :STRING, sfullspan, sspan, "")
+        if iscmd
+            return wrapwithcmdmacro(EXPR(:STRING , sfullspan, sspan, ""))
+        else
+            return EXPR(:STRING, sfullspan, sspan, "")
+        end
     elseif prefixed != false || iscmd
         _val = istrip ? t_str[4:prevind(t_str, sizeof(t_str), 3)] : t_str[2:prevind(t_str, sizeof(t_str))]
         if iscmd
@@ -79,15 +87,15 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             end
             _val = replace(_val, "\\\"" => "\"")
         end
-        expr = EXPR(literalmap(kindof(ps.t)), sfullspan, sspan, _val)
+        expr = EXPR(istrip ? :TRIPLESTRING : :STRING, sfullspan, sspan, _val)
         if istrip
             adjust_lcp(expr)
-            ret = EXPR(:String, EXPR[expr], nothing, sfullspan, sspan)
+            ret = EXPR(:string, EXPR[expr], nothing, sfullspan, sspan)
         else
-            return expr
+            return iscmd ? wrapwithcmdmacro(expr) : expr
         end
     else
-        ret = EXPR(:String, EXPR[], EXPR[], sfullspan, sspan)
+        ret = EXPR(:string, EXPR[], EXPR[], sfullspan, sspan)
         input = IOBuffer(t_str)
         startbytes = istrip ? 3 : 1
         seek(input, startbytes)
@@ -112,12 +120,12 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     ps1 = ParseState(input)
 
                     if kindof(ps1.nt) === Tokens.RPAREN
-                        call = EXPR(op, EXPR(:Brackets, EXPR[], EXPR[lparen, rparen]), nothing)
+                        call = EXPR(op, EXPR(:brackets, EXPR[], EXPR[lparen, rparen]), nothing)
                         push!(ret, call)
                         skip(input, 1)
                     else
                         interp_val = @closer ps1 :paren parse_expression(ps1)
-                        inter_call = EXPR(op, EXPR[EXPR(:Brackets, EXPR[], EXPR[lparen, rparen])], nothing)
+                        inter_call = EXPR(op, EXPR[EXPR(:brackets, EXPR[], EXPR[lparen, rparen])], nothing)
                         push!(ret, interp_val)
                         pushtotrivia!(ret, inter_call)
                         seek(input, ps1.nt.startbyte + 1)
@@ -168,7 +176,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
 
     end
 
-    single_string_T = (:STRING, literalmap(kindof(ps.t)))
+    single_string_T = (:STRING, :TRIPLESTRING, literalmap(kindof(ps.t)))
     if istrip
         if lcp !== nothing && !isempty(lcp)
             for expr in exprs_to_adjust
@@ -192,7 +200,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
     end
     update_span!(ret)
 
-    return ret
+    return iscmd ? wrapwithcmdmacro(ret) : ret
 end
 
 function adjustspan(x::EXPR)
@@ -201,3 +209,32 @@ function adjustspan(x::EXPR)
 end
 
 dropleadlingnewline(x::EXPR) = EXPR(headof(x), x.fullspan, x.span, valof(x)[2:end])
+
+wrapwithcmdmacro(x) =EXPR(:macrocall, EXPR[EXPR(:globalrefcmd, 0, 0), EXPR(:NOTHING, 0, 0), x])
+
+"""
+    parse_prefixed_string_cmd(ps::ParseState, ret::EXPR)
+
+Parse prefixed strings and commands such as `pre"text"`.
+"""
+function parse_prefixed_string_cmd(ps::ParseState, ret::EXPR)
+    arg = parse_string_or_cmd(next(ps), ret)
+
+    if ret.head === :IDENTIFIER && valof(ret) == "var" && isstringliteral(arg) && VERSION > v"1.3.0-"
+        return EXPR(:NonStdIdentifier, EXPR[ret, arg], nothing)
+    elseif headof(arg) === :macrocall && headof(arg.args[1]) === :globalrefcmd
+        mname = EXPR(:macroname, EXPR[EXPR(:ATSIGN, 0, 0), EXPR(:IDENTIFIER, 0, 0, string(valof(ret), "_cmd"))], EXPR[ret])
+        return EXPR(:macrocall, EXPR[mname, EXPR(:NOTHING, 0, 0), arg.args[3]], nothing)
+    elseif is_getfield(ret)
+        if headof(ret.args[2]) === :quote || headof(ret.args[2]) === :quotenode
+            ret.args[2].args[1] = setparent!(EXPR(:macroname, EXPR[EXPR(:ATSIGN, 0, 0), EXPR(:IDENTIFIER, 0, 0, string(valof(ret.args[2].args[1]), "_str"))], EXPR[ret.args[2].args[1]]), ret.args[2])
+        else
+            ret.args[2] = setparent!(EXPR(:macroname, EXPR[EXPR(:ATSIGN, 0, 0), EXPR(:IDENTIFIER, 0, 0, string(valof(ret.args[2].args[1]), "_str"))], EXPR[ret.args[2]]), ret.args[2])
+        end
+
+        return EXPR(:macrocall, EXPR[ret, EXPR(:NOTHING, 0, 0), arg], nothing)
+    else
+        mname = EXPR(:macroname, EXPR[EXPR(:ATSIGN, 0, 0), EXPR(:IDENTIFIER, 0, 0, string(valof(ret), "_str"))], EXPR[ret])
+        return EXPR(:macrocall, EXPR[mname, EXPR(:NOTHING, 0, 0), arg], nothing)
+    end
+end
