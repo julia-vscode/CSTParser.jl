@@ -219,7 +219,7 @@ function parse(ps::ParseState, cont = false)
         while !ps.done
             safetytrip += 1
             if safetytrip > 10_000
-                error("Inifinite loop.")
+                throw(CSTInfiniteLoop("Inifite loop."))
             end
             curr_line = ps.nt.startpos[1]
             ret = parse_doc(ps)
@@ -255,7 +255,7 @@ function parse(ps::ParseState, cont = false)
                 while kindof(ps.ws) == SemiColonWS && ps.nt.startpos[1] == last_line && kindof(ps.nt) != Tokens.ENDMARKER
                     safetytrip += 1
                     if safetytrip > 10_000
-                        error("Inifinite loop.")
+                        throw(CSTInfiniteLoop("Inifite loop."))
                     end
                     ret = parse_doc(ps)
                     push!(top, ret)

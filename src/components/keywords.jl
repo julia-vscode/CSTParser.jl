@@ -168,7 +168,7 @@ function parse_imports(ps::ParseState)
         while iscomma(ps.nt)
             safetytrip += 1
             if safetytrip > 10_000
-                error("Inifinite loop.")
+                throw(CSTInfiniteLoop("Inifite loop."))
             end
             accept_comma(ps, ret)
             arg = parse_dot_mod(ps, true)
@@ -180,7 +180,7 @@ function parse_imports(ps::ParseState)
         while iscomma(ps.nt)
             safetytrip += 1
             if safetytrip > 10_000
-                error("Inifinite loop.")
+                throw(CSTInfiniteLoop("Inifite loop."))
             end
             accept_comma(ps, ret)
             arg = parse_dot_mod(ps)
@@ -199,7 +199,7 @@ function parse_export(ps::ParseState)
     while iscomma(ps.nt)
         safetytrip += 1
         if safetytrip > 10_000
-            error("Inifinite loop.")
+            throw(CSTInfiniteLoop("Inifite loop."))
         end
         push!(args, mPUNCTUATION(next(ps)))
         arg = parse_dot_mod(ps)[1]
@@ -229,7 +229,7 @@ function parse_blockexpr_sig(ps::ParseState, head)
         while kindof(ps.nt) === Tokens.WHERE && kindof(ps.ws) != Tokens.NEWLINE_WS
             safetytrip += 1
             if safetytrip > 10_000
-                error("Inifinite loop.")
+                throw(CSTInfiniteLoop("Inifite loop."))
             end
             sig = @closer ps :inwhere @closer ps :ws parse_operator_where(ps, sig, INSTANCE(next(ps)), false)
         end
@@ -245,7 +245,7 @@ function parse_blockexpr_sig(ps::ParseState, head)
                 while iscomma(ps.nt)
                     safetytrip += 1
                     if safetytrip > 10_000
-                        error("Inifinite loop.")
+                        throw(CSTInfiniteLoop("Inifite loop."))
                     end
                     accept_comma(ps, arg)
                     startbyte = ps.nt.startbyte
@@ -261,7 +261,7 @@ function parse_blockexpr_sig(ps::ParseState, head)
         @closer ps :comma @closer ps :block while !closer(ps)
             safetytrip += 1
             if safetytrip > 10_000
-                error("Inifinite loop.")
+                throw(CSTInfiniteLoop("Inifite loop."))
             end
             @closer ps :ws a = parse_expression(ps)
             push!(sig, a)
