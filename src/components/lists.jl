@@ -165,7 +165,7 @@ function parse_array(ps::ParseState, isref = false)
                         if safetytrip1 > 10_000
                             throw(CSTInfiniteLoop("Inifite loop."))
                         end
-                                    a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
+                        a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                         push!(last(ret.args), a)
                     end
                     # if only one entry dont use :row
