@@ -21,6 +21,7 @@ include("components/strings.jl")
 include("conversion.jl")
 include("display.jl")
 include("interface.jl")
+include("iterate.jl")
 
 """
     parse_expression(ps)

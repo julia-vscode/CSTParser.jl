@@ -103,42 +103,62 @@ while
 :false,
 
 # Expressions
-##### Const
-Trivia: `const`
-##### Global
-Length: 2
-Trivia: `global`
-Iter order: t, a
+
+##### :const
+
+##### :global
+`(args...) (global ,...)`
+`(args...) (,...)`
 Special handling: `global const expr` is parsed as `const global expr`. In this case both the `const` and `global` keywords are stored wihin the `:const` expression's trivia (the `:global` expression has no trivia).
-##### Local
-Length: 2
-Trivia: `local`
-Iter order: t, a
-##### Return
-Length: 2
-Trivia: `return`
-Iter order: t, a
-##### Abstract
-Trivia: `abstract`, `type`, `end`
-##### Begin
-Trivia: `begin`, `end`
-##### Block
-Trivia: nothing
-##### For
-Trivia: `for`, `end`
-##### Function
-Trivia: `function`, `end`
+##### :local
+`(args...) (local ,...)`
+##### :return
+`(body) (return)`
+## Datatype declarations
+##### :abstract
+`(name) (abstract type end)`
+##### :primitive
+`(name n) (primitive type end)`
+##### :struct
+`(mut name block) (struct end)`
+`(mut name block) (mutable struct end)`
+##### :block
+`(bodyargs...) (begin end)`
+`(bodyargs...) ()`
+##### :quote
+`(block) (quote end)`
+`(block) (:)`
+##### :for
+`(itrs block) (for end)`
+##### :function
+`(sig block) (function end)`
+`(name) (function end)`
+##### :outer
+`(arg) (outer)`
+##### :braces
+`(args...) ({ commas.. })`
+##### :curly
+`(args...) ({ commas... })`
+##### :comparison
+`(args...) (commas...)`
+##### :(:)
+Only used as the head of an expression within `using/import` calls.
+##### :if
+`(cond block) (if end)`
+`(cond block elseif) (if end)`
+`(cond block block) (if else end)`
+##### :elseif 
+`(cond block) (elseif)`
+`(cond block block) (elseif else)`
+##### :call
+##### :string
+`(args...)`
 
 
-
-##### Outer
-##### Call
 ##### ChainOpCall
 ##### ColonOpCall
-##### Braces
 ##### Bracescat
-##### Comparison
-##### Curly
+
 ##### Do
 ##### Filter
 ##### Flatten
@@ -151,15 +171,11 @@ Trivia: nothing
 ##### Macro
 ##### MacroCall
 ##### MacroName
-##### Mutable
 
 ##### Parameters
-##### Primitive
-##### Quote
 ##### Quotenode
 ##### InvisBrackets
 ##### String
-##### Struct
 ##### Try
 ##### Tuple
 ##### File

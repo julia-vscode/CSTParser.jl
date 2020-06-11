@@ -321,7 +321,9 @@ end
 function parse_operator_where(ps::ParseState, ret::EXPR, op::EXPR, setscope = true)
     nextarg = @precedence ps LazyAndOp @closer ps :inwhere parse_expression(ps)
     if headof(nextarg) === :braces
-        ret = EXPR(:Where, EXPR[ret; nextarg.args], EXPR[op; nextarg.trivia])
+        pushfirst!(nextarg.args, ret)
+        pushfirst!(nextarg.trivia, op)
+        ret = EXPR(:Where, nextarg.args,nextarg.trivia)
     else
         ret = EXPR(:Where, EXPR[ret, nextarg], EXPR[op])
     end
