@@ -94,7 +94,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         end
     else
         ret = EXPR(StringH, EXPR[], sfullspan, sspan)
-        input = IOBuffer(val(ps.t, ps))
+        str2 = val(ps.t, ps)
+        input = IOBuffer(str2)
         startbytes = istrip ? 3 : 1
         seek(input, startbytes)
         b = IOBuffer()
@@ -102,7 +103,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         while !eof(input)
             safetytrip += 1
             if safetytrip > 10_000
-                throw(CSTInfiniteLoop("Inifite loop."))
+                throw(CSTInfiniteLoop("Inifite loop parsing: \"$str2\""))
             end
             c = read(input, Char)
             if c == '\\'
