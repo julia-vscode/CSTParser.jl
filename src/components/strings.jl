@@ -102,7 +102,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         safetytrip = 0
         while !eof(input)
             safetytrip += 1
-            if safetytrip > 10_000
+            if safetytrip > length(str2) # This is iterating over characters, not parsed expressions - 10,000 was in inappropriate limit.
                 throw(CSTInfiniteLoop("Inifite loop parsing: \"$str2\""))
             end
             c = read(input, Char)
