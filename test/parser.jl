@@ -842,6 +842,14 @@ end""" |> test_expr
         @test typof(x[4][1]) === CSTParser.OPERATOR
     end
 
-
-
+    @testset "issue #182" begin
+        x = CSTParser.parse("""
+        quote 
+            \"\"\"
+            txt
+            \"\"\"
+            sym
+        end""")
+        @test typof(x[2][1][1]) === CSTParser.GlobalRefDoc
+    end
 end
