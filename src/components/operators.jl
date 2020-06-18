@@ -396,10 +396,6 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
         pushtotrivia!(ret, op)
         push!(ret, nextarg)
         ret = ret
-    elseif can_become_chain(ret, op)
-        # TODO: redundant?
-        nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
-        ret = EXPR(:chainopcall, EXPR[ret.args[1], ret.args[2], ret.args[3], op, nextarg])
     elseif is_eq(op)
         ret = parse_operator_eq(ps, ret, op)
     elseif is_cond(op)

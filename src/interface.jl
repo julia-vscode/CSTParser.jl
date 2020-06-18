@@ -42,7 +42,7 @@ is_anon_func(x) = isoperator(x) && valof(x) == "->"
 
 is_comma(x) = headof(x) === :COMMA
 is_lparen(x) = headof(x) === :LPAREN
-is_rparen(x) = headof(x) === :Rparen
+is_rparen(x) = headof(x) === :RPAREN
 is_lbrace(x) = headof(x) === :LBRACE
 is_rbrace(x) = headof(x) === :RBRACE
 is_lsquare(x) = headof(x) === :LSQUARE
@@ -54,7 +54,6 @@ is_import(x) = iskeyword(x) && headof(x) === :IMPORT
 
 
 # Literals
-is_lit_string(x) = kindof(x) === Tokens.STRING || kindof(x) === Tokens.TRIPLE_STRING
 
 issubtypedecl(x::EXPR) = isoperator(x.head) && valof(x.head) == "<:"
 

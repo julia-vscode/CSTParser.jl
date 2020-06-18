@@ -121,7 +121,7 @@ end
 # Fallback
 function Expr(x::EXPR)
     if isidentifier(x)
-        if headof(x) === :NonStdIdentifier
+        if headof(x) === :NONSTDIDENTIFIER
             Symbol(normalize_julia_identifier(valof(x.args[2])))
         else
             return Symbol(normalize_julia_identifier(valof(x)))

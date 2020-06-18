@@ -120,14 +120,17 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                     ps1 = ParseState(input)
 
                     if kindof(ps1.nt) === Tokens.RPAREN
-                        call = EXPR(op, EXPR(:brackets, EXPR[], EXPR[lparen, rparen]), nothing)
-                        push!(ret, call)
+                        push!(ret, EXPR(:ERRORTOKEN, EXPR[], nothing))
+                        pushtotrivia!(ret, op)
+                        pushtotrivia!(ret, lparen)
+                        pushtotrivia!(ret, rparen)
                         skip(input, 1)
                     else
                         interp_val = @closer ps1 :paren parse_expression(ps1)
-                        inter_call = EXPR(op, EXPR[EXPR(:brackets, EXPR[], EXPR[lparen, rparen])], nothing)
                         push!(ret, interp_val)
-                        pushtotrivia!(ret, inter_call)
+                        pushtotrivia!(ret, op)
+                        pushtotrivia!(ret, lparen)
+                        pushtotrivia!(ret, rparen)
                         seek(input, ps1.nt.startbyte + 1)
                     end
                     # Compared to flisp/JuliaParser, we have an extra lookahead token,
@@ -221,7 +224,7 @@ function parse_prefixed_string_cmd(ps::ParseState, ret::EXPR)
     arg = parse_string_or_cmd(next(ps), ret)
 
     if ret.head === :IDENTIFIER && valof(ret) == "var" && isstringliteral(arg) && VERSION > v"1.3.0-"
-        return EXPR(:NonStdIdentifier, EXPR[ret, arg], nothing)
+        return EXPR(:NONSTDIDENTIFIER, EXPR[ret, arg], nothing)
     elseif headof(arg) === :macrocall && headof(arg.args[1]) === :globalrefcmd
         mname = EXPR(:macroname, EXPR[EXPR(:ATSIGN, 0, 0), EXPR(:IDENTIFIER, 0, 0, string(valof(ret), "_cmd"))], EXPR[ret])
         return EXPR(:macrocall, EXPR[mname, EXPR(:NOTHING, 0, 0), arg.args[3]], nothing)

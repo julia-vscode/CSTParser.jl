@@ -5,7 +5,7 @@ function Base.show(io::IO, x::EXPR, offset = 0, d = 0, er = false)
     # simple to understand when strings are presented to CSTParser.parse().
     print(io, lpad(offset + 1, 3), ":", rpad(offset + x.fullspan, 3), " ")
     if isidentifier(x)
-        printstyled(io, " "^d, headof(x) == :NonStdIdentifier ? valof(x.args[2]) : valof(x), color = :yellow)
+        printstyled(io, " "^d, headof(x) == :NONSTDIDENTIFIER ? valof(x.args[2]) : valof(x), color = :yellow)
         x.meta !== nothing && show(io, x.meta)
         println(io)
     elseif isoperator(x)

@@ -1,4 +1,4 @@
-using CSTParser: @cst_str, headof, EXPR
+using CSTParser: @cst_str, headof, EXPR, valof
 
 function test_iter_spans(x)
     n = 0
@@ -264,16 +264,38 @@ end
 
         @testset "." begin
             x = cst"using a".args[1]
-            @test length(x) == 2
-            @test x[1] === x.head
-            @test x[2] === x.args[1]
+            @test length(x) == 1
+            @test x[1] === x.args[1]
 
             x = cst"using a.b".args[1]
+            @test length(x) == 3
+            @test x[1] === x.args[1]
+            @test x[2] === x.trivia[1]
+            @test x[3] === x.args[2]
+
+            x = cst"using ..a.b".args[1]
+            @test length(x) == 5
+            @test x[1] === x.args[1]
+            @test x[2] === x.args[2]
+            @test x[3] === x.args[3]
+            @test x[4] === x.trivia[1]
+            @test x[5] === x.args[4]
+
+            x = cst"using .a.b".args[1]
             @test length(x) == 4
-            @test x[1] === x.head
-            @test x[2] === x.args[1]
+            @test x[1] === x.args[1]
+            @test x[2] === x.args[2]
             @test x[3] === x.trivia[1]
-            @test x[4] === x.args[2]
+            @test x[4] === x.args[3]
+
+            x = cst"using ...a.b".args[1]
+            @test length(x) == 6
+            @test x[1] === x.args[1]
+            @test x[2] === x.args[2]
+            @test x[3] === x.args[3]
+            @test x[4] === x.args[4]
+            @test x[5] === x.trivia[1]
+            @test x[6] === x.args[5]
         end
     end
 
@@ -422,16 +444,251 @@ end
         @test x[3] === x.args[2]
         @test x[4] === x.args[3]
 
-        x = cst"\"txt $interp1 txt1 $interp2 txt3\""
+        x = cst"\"txt1 $interp1 txt2 $interp2 txt3\""
         @test length(x) == 7
         @test x[1] === x.args[1]
         @test x[2] === x.trivia[1]
         @test x[3] === x.args[2]
         @test x[4] === x.args[3]
+        @test x[5] === x.trivia[2]
+        @test x[6] === x.args[4]
+        @test x[7] === x.args[5]
+
+        x = cst"\"$interp\""
+        @test length(x) == 2
+        @test x[1] === x.trivia[1]
+        @test x[2] === x.args[1]
+
+        x = cst"\"$interp txt\""
+        @test length(x) == 3
+        @test x[1] === x.trivia[1]
+        @test x[2] === x.args[1]
+        @test x[3] === x.args[2]
+
+        x = cst"\"$(interp)\""
+        @test length(x) == 4
+        @test x[1] === x.trivia[1]
+        @test x[2] === x.trivia[2]
+        @test x[3] === x.args[1]
+        @test x[4] === x.trivia[3]
     end
+
+    @testset ":macrocall" begin
+        x = cst"@mac a"
+        @test length(x) == 3
+        @test x[1] === x.args[1]
+        @test x[2] === x.args[2]
+        @test x[3] === x.args[3]
+
+        x = cst"@mac(a)"
+        @test length(x) == 5
+        @test x[1] === x.args[1]
+        @test x[2] === x.args[2]
+        @test x[3] === x.trivia[1]
+        @test x[4] === x.args[3]
+        @test x[5] === x.trivia[2]
+
+        x = cst"@mac(a, b)"
+        @test length(x) == 7
+        @test x[1] === x.args[1]
+        @test x[2] === x.args[2]
+        @test x[3] === x.trivia[1]
+        @test x[4] === x.args[3]
+        @test x[5] === x.trivia[2]
+        @test x[6] === x.args[4]
+        @test x[7] === x.trivia[3]
+        
+        x = cst"@mac(a; b = 1)"
+        @test length(x) == 6
+        @test x[1] === x.args[1]
+        @test x[2] === x.args[2]
+        @test x[3] === x.trivia[1]
+        @test x[4] === x.args[3]
+        @test x[5] === x.args[3]
+        @test x[6] === x.trivia[2]
+    end
+
+    @testset ":brackets" begin
+        x = cst"(x)"
+        @test length(x) == 3
+        @test x[1] === x.trivia[1]
+        @test x[2] === x.args[1]
+        @test x[3] === x.trivia[2]
+    end
+
+    @testset ":ref" begin
+        x = cst"x[i]"
+        @test length(x) == 4
+        @test x[1] === x.args[1]
+        @test x[2] === x.trivia[1]
+        @test x[3] === x.args[2]
+        @test x[4] === x.trivia[2]
+
+        x = cst"x[i, j]"
+        @test length(x) == 6
+        @test x[1] === x.args[1]
+        @test x[2] === x.trivia[1]
+        @test x[3] === x.args[2]
+        @test x[4] === x.trivia[2]
+        @test x[5] === x.args[3]
+        @test x[6] === x.trivia[3]
+
+        x = cst"x[i, j; k = 1]"
+        @test length(x) == 7
+        @test x[1] === x.args[1]
+        @test x[2] === x.trivia[1]
+        @test x[3] === x.args[3]
+        @test x[4] === x.trivia[2]
+        @test x[5] === x.args[4]
+        @test x[6] === x.args[2]
+        @test x[7] === x.trivia[3]
+    end
+    @testset ":typed_vcat" begin
+        x = cst"x[i;j]"
+        @test length(x) == 5
+        @test x[1] === x.args[1]
+        @test x[2] === x.trivia[1]
+        @test x[3] === x.args[2]
+        @test x[4] === x.args[3]
+        @test x[5] === x.trivia[2]
+    end
+
+    @testset ":row" begin
+        x = cst"[a b; c d ]".args[1]
+        @test length(x) == 2
+        @test x[1] === x.args[1]
+        @test x[2] === x.args[2] 
+    end
+
+    @testset ":module" begin
+        x = cst"module a end"
+        @test length(x) == 5
+        @test x[1] === x.trivia[1]
+        @test x[2] === x.args[1]
+        @test x[3] === x.args[2]
+        @test x[4] === x.args[3]
+        @test x[5] === x.trivia[2]
+    end
+    
+    @testset ":export" begin
+        x = cst"export a, b, c"
+        @test length(x) == 6
+        @test x[1] === x.trivia[1]
+        @test x[2] === x.args[1]
+        @test x[3] === x.trivia[2]
+        @test x[4] === x.args[2]
+        @test x[5] === x.trivia[3]
+        @test x[6] === x.args[3]
+    end
+
+    @testset ":parameters" begin
+        x = cst"f(a; b=1, c=1, d=1)"[4]
+        @test length(x) == 5
+        @test x[1] === x.args[1]
+        @test x[2] === x.trivia[1]
+        @test x[3] === x.args[2]
+        @test x[4] === x.trivia[2]
+        @test x[5] === x.args[3]
+    end
+
+    @testset "lowered iterator" begin
+        x = cst"for a in b end".args[1]
+        @test length(x) == 3
+        @test x[1] === x.args[1]
+        @test x[2] === x.trivia[1]
+        @test x[3] === x.args[2]
+    end
+
+    @testset ":do" begin
+        x = cst"f(x) do arg something end"
+        @test length(x) == 4
+        @test x[1] === x.args[1]
+        @test x[2] === x.trivia[1]
+        @test x[3] === x.args[2]
+        @test x[4] === x.trivia[2]
+    end
+
+    @testset ":generator" begin
+        x = cst"(a for a in A)".args[1]
+        @test length(x) == 3
+        @test x[1] === x.args[1]
+        @test x[2] === x.trivia[1]
+        @test x[3] === x.args[2]
+
+        x = cst"(a for a in A, b in B)".args[1]
+        @test length(x) == 5
+        @test x[1] === x.args[1]
+        @test x[2] === x.trivia[1]
+        @test x[3] === x.args[2]
+        @test x[4] === x.trivia[2]
+        @test x[5] === x.args[3]
+    end
+
+    @testset ":filter" begin
+        x = cst"(a for a in A if a)".args[1].args[2]
+        @test length(x) == 3
+        @test valof(headof(x[1])) == "="
+        @test headof(x[2]) === :IF
+        @test valof(x[3]) == "a"
+    end
+
+    @testset ":try" begin
+        x = cst"try expr catch e end"
+        @test length(x) == 6
+        @test headof(x[1]) === :TRY
+        @test headof(x[2]) === :block
+        @test headof(x[3]) === :CATCH
+        @test valof(x[4]) == "e"
+        @test headof(x[5]) === :block
+        @test headof(x[6]) === :END
+
+        x = cst"try expr finally expr2 end"
+        @test length(x) == 7
+        @test headof(x[1]) === :TRY
+        @test headof(x[2]) === :block
+        @test headof(x[3]) === :FALSE
+        @test headof(x[4]) === :FALSE
+        @test headof(x[5]) === :FINALLY
+        @test headof(x[6]) === :block
+        @test headof(x[7]) === :END
+
+        x = cst"try expr catch err expr2 finally expr3 end"
+        @test length(x) == 8
+        @test headof(x[1]) === :TRY
+        @test headof(x[2]) === :block
+        @test headof(x[3]) === :CATCH
+        @test valof(x[4]) == "err"
+        @test headof(x[5]) === :block
+        @test headof(x[6]) === :FINALLY
+        @test headof(x[7]) === :block
+        @test headof(x[8]) === :END
+    end
+
+    @testset ":comprehension" begin
+        x = cst"[a for a in A]"
+        @test length(x) == 3
+        @test headof(x[1]) === :LSQUARE
+        @test headof(x[2]) === :generator
+        @test headof(x[3]) === :RSQUARE
+    end
+
+    @testset ":typed_comprehension" begin
+        x = cst"T[a for a in A]"
+        @test length(x) == 4
+        @test headof(x[1]) === :IDENTIFIER
+        @test headof(x[2]) === :LSQUARE
+        @test headof(x[3]) === :generator
+        @test headof(x[4]) === :RSQUARE
+    end
+
 end
 
 @testset "self test" begin
-    x = CSTParser.parse(String(read("parser.jl")), true)
-    test_iter_spans(x)
+    test_iter_spans(CSTParser.parse(String(read("parser.jl")), true))
+    test_iter_spans(CSTParser.parse(String(read("../src/CSTParser.jl")), true))
+    test_iter_spans(CSTParser.parse(String(read("../src/components/internals.jl")), true))
+    test_iter_spans(CSTParser.parse(String(read("../src/components/keywords.jl")), true))
+    test_iter_spans(CSTParser.parse(String(read("../src/interface.jl")), true))
+    test_iter_spans(CSTParser.parse(String(read("../src/iterate.jl")), true))
+    [(@info f test_iter_spans(CSTParser.parse(String(read(f)), true))) for f in abspath.(readdir("../src/", join = true)) if endswith(f, ".jl")]
 end

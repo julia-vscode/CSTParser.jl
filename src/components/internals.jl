@@ -137,7 +137,7 @@ function parse_call(ps::ParseState, ret::EXPR, ismacro = false)
         !ismacro && headof(ret) === :macroname && (ismacro = true)
         args = ismacro ? EXPR[ret, EXPR(:NOTHING, 0, 0)] : EXPR[ret] 
         trivia = EXPR[EXPR(next(ps))]
-        @closeparen ps @default ps parse_comma_sep(ps, args, trivia, !ismacro)
+        @closeparen ps @default ps parse_comma_sep(ps, args, trivia, !ismacro, insert_params_at = ismacro ? 3 : 2)
         accept_rparen(ps, trivia)
         ret = EXPR(ismacro ? :macrocall : :call, args, trivia)
     end
@@ -148,7 +148,7 @@ end
 Parses a comma separated list, optionally allowing for conversion of 
 assignment (`=`) expressions to `Kw`.
 """
-function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR}, kw = true, block = false, istuple = false; insertfirst = false)
+function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR}, kw = true, block = false, istuple = false; insert_params_at = 2)
     @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma while !closer(ps)
         a = parse_expression(ps)
         if kw && _do_kw_convert(ps, a)
@@ -184,7 +184,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR
                 push!(args, body)
                 args = body
             else
-                parse_parameters(ps, args, EXPR[a], insertfirst)
+                parse_parameters(ps, args, EXPR[a], insert_params_at)
             end
         end
     end
@@ -196,7 +196,7 @@ end
 
 Parses parameter arguments for a function call (e.g. following a semicolon).
 """
-function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR} = EXPR[], insertfirst = false; usekw = true)
+function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR} = EXPR[], insert_params_at = 2; usekw = true)
     trivia = EXPR[]
     isfirst = isempty(args1)
     @nocloser ps :inwhere @nocloser ps :newline  @closer ps :comma while !isfirst || (@nocloser ps :semicolon !closer(ps))
@@ -223,7 +223,7 @@ function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR
         isfirst = true
     end
     if !isempty(args1)
-        insert!(args, insertfirst ? 1 : 2, EXPR(:parameters, args1, trivia))
+        insert!(args, insert_params_at, EXPR(:parameters, args1, trivia))
     end
     return
 end
@@ -337,7 +337,7 @@ function parse_importexport_item(ps, is_colon = false)
         next(ps)
         EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, val(ps.t, ps))
     elseif VERSION > v"1.3.0-" && isidentifier(ps.nt) && isemptyws(ps.nws) && (kindof(ps.nnt) === Tokens.STRING || kindof(ps.nnt) === Tokens.TRIPLE_STRING)
-        EXPR(:NonStdIdentifier, EXPR[INSTANCE(next(ps)), INSTANCE(next(ps))])
+        EXPR(:NONSTDIDENTIFIER, EXPR[INSTANCE(next(ps)), INSTANCE(next(ps))])
         #TODO fix nonstdid handling
     else
         INSTANCE(next(ps))

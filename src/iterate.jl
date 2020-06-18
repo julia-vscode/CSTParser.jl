@@ -1,54 +1,99 @@
 module Iterating
-using ..CSTParser: EXPR, headof, hastrivia, isoperator, valof
+using ..CSTParser: EXPR, headof, hastrivia, isoperator, valof, isstringliteral, is_exor, is_lparen, is_rparen
 
 function Base.getindex(x::EXPR, i)
-    if headof(x) === :const
-        _const(x, i)
-    elseif headof(x) === :local || headof(x) === :return
-        oddt_evena(x, i)
-    elseif headof(x) === :global
-        _global(x, i)
-    elseif headof(x) === :abstract
+    if headof(x) === :abstract
         _abstract(x, i)
-    elseif headof(x) === :primitive
-        _primitive(x, i)
-    elseif headof(x) === :struct
-        _struct(x, i)
     elseif headof(x) === :block
         _block(x, i)
+    elseif headof(x) === :braces
+        _braces(x, i)
+    elseif headof(x) === :brackets
+        oddt_evena(x, i)
+    elseif headof(x) === :call
+        _call(x, i)
+    elseif headof(x) === :comparison || headof(x) === :file
+        x.args[i]
+    elseif headof(x) === :comprehension
+        tat(x, i)
+    elseif headof(x) === :const
+        _const(x, i)
+    elseif headof(x) === :curly
+        _curly(x, i)
+    elseif headof(x) === :do
+        odda_event(x, i)
+    elseif headof(x) === :elseif
+        _elseif(x, i)
+    elseif headof(x) === :export
+        oddt_evena(x, i)
+    elseif headof(x) === :filter
+        _filter(x, i)
+    elseif headof(x) === :for
+        taat(x, i)
+    elseif headof(x) === :function || headof(x) === :macro
+        _function(x, i)
+    elseif headof(x) === :generator
+        odda_event(x, i)
+    elseif headof(x) === :global
+        _global(x, i)
+    elseif headof(x) === :if
+        _if(x, i)
+    elseif headof(x) === :kw
+        _kw(x, i)
+    elseif headof(x) === :local || headof(x) === :return
+        oddt_evena(x, i)
+    elseif headof(x) === :macrocall
+        _macrocall(x, i)
+    elseif headof(x) === :module
+        _module(x, i)
+    elseif headof(x) === :outer
+        ta(x, i)
+    elseif headof(x) === :parameters
+        odda_event(x, i)
+    elseif headof(x) === :primitive
+        _primitive(x, i)
     elseif headof(x) === :quote
         _quote(x, i)
     elseif headof(x) === :quotenode
         _quotenode(x, i)
-    elseif headof(x) === :for
-        taat(x, i)
-    elseif headof(x) === :if
-        _if(x, i)
-    elseif headof(x) === :elseif
-        _elseif(x, i)
-    elseif headof(x) === :function
-        _function(x, i)
-    elseif headof(x) === :outer
-        ta(x, i)
+    elseif headof(x) === :ref
+        _call(x, i)
+    elseif headof(x) === :row
+        x.args[i]
+    elseif headof(x) === :string
+        _string(x, i)
+    elseif headof(x) === :struct
+        _struct(x, i)
+    elseif headof(x) === :try
+        _try(x, i)
     elseif headof(x) === :tuple
         _tuple(x, i)
-    elseif headof(x) === :braces
-        _braces(x, i)
-    elseif headof(x) === :curly
-        _curly(x, i)
-    elseif headof(x) === :call
-        _call(x, i)
-    elseif headof(x) === :kw
-        _kw(x, i)
-    elseif headof(x) === :comparison || headof(x) === :file
-        x.args[i]
-    elseif headof(x) === :using
+    elseif headof(x) === :typed_comprehension
+        odda_event(x, i)
+    elseif headof(x) === :typed_vcat || headof(x) === :typed_hcat
+        _typed_vcat(x, i)
+    elseif headof(x) === :using || headof(x) === :import
         _using(x, i)
+    elseif headof(x) === :vcat || headof(x) === :hcat
+        _vcat(x, i)
+    elseif headof(x) === :vect
+        _vect(x, i)
+    elseif headof(x) === :while
+        taat(x, i)
     elseif isoperator(headof(x))
         if valof(headof(x)) == ":"
             _colon_in_using(x, i)
         elseif valof(headof(x)) == "."
             _dot(x, i)
+        elseif valof(headof(x)) == "=" && hastrivia(x) 
+            # a loop that has been lowered from in/∈ to = at parse time
+            if i == 1
+                x.args[1]
+            elseif i == 2
+                x.trivia[1]
+            elseif i == 3
+                x.args[2]
+            end
         elseif !hastrivia(x)
             if i == 1
                 x.args[1]
@@ -58,10 +103,6 @@ function Base.getindex(x::EXPR, i)
                 x.args[2]
             end
         end
-    elseif headof(x) === :string
-        _string(x, i)
-    elseif headof(x) === :vect
-        oddt_evena(x, i)
     end
 end
 Base.iterate(x::EXPR) = length(x) == 0 ? nothing : (x[1], 1)
@@ -135,7 +176,7 @@ function _const(x, i)
 end
 
 function _global(x, i) 
-    if hastrivia(x) && headof(first(x.trivia)) === :global
+    if hastrivia(x) && headof(first(x.trivia)) === :GLOBAL
         oddt_evena(x, i)
     else
         odda_event(x, i)
@@ -286,18 +327,36 @@ function _colon_in_using(x, i)
     elseif isodd(i)
         x.args[div(i + 1, 2)]
     else
-        x.trivia[div(i, 2)]
+        x.trivia[div(i, 2) - 1]
     end
+end
+
+function count_continuous(f, itr)
+    cnt = 0
+    for x in itr
+        !f(x) && break
+        cnt += 1
+    end
+    return cnt
 end
 
 function _dot(x, i)
     if x.head.span == 0 # Empty dot op, in using statement
-        if i == 1
-            x.head
-        elseif iseven(i)
-            x.args[div(i, 2)]
+        ndots = count_continuous(a -> valof(a) == ".", x.args)
+        if i <= ndots
+            x.args[i]
+        elseif iseven(ndots)
+            if isodd(i)
+                x.args[ndots + div(i - ndots + 1, 2)]
+            else
+                x.trivia[div(i - ndots, 2)]
+            end
         else
-            x.trivia[div(i + 1, 2) - 1]
+            if iseven(i)
+                x.args[ndots + div(i - ndots + 1, 2)]
+            else
+                x.trivia[div(i - ndots, 2)]
+            end
         end
     else
         if i == 1
@@ -406,20 +465,183 @@ function _elseif(x, i)
         elseif i == 5
             x.args[3]
         end
+    elseif length(x) == 4
+        if i == 1
+            x.trivia[1]
+        else
+            x.args[i - 1]
+        end
     end
 end
 
 function _string(x, i)
-    if i == length(x)
-        last(x.args)
+    # TODO: this is mega slow
+    ai, ti = 1,1
+    arg = isstringliteral(x.args[1])
+    isinterpolant = !arg
+    bracket = false
+    for j = 1:i
+        if j == i
+            return arg ? x.args[ai] : x.trivia[ti]
+        end
+
+        if arg
+            ai += 1
+            if isinterpolant
+                arg = !bracket
+                bracket = false
+                isinterpolant = false
+
+            else
+                arg = false
+            end
+        else
+            if is_exor(x.trivia[ti])
+                if ti < length(x.trivia) && is_lparen(x.trivia[ti + 1])
+                    # 
+                else
+                    isinterpolant = true
+                    arg = true
+                end
+            elseif is_lparen(x.trivia[ti])
+                isinterpolant = true
+                arg = true
+                bracket = true
+            elseif is_rparen(x.trivia[ti])
+                isinterpolant = false
+                arg = true
+                bracket = false
+            end
+            ti += 1
+        end
+    end
+end
+
+function _macrocall(x, i)
+    if !hastrivia(x)
+        x.args[i]
     else
-        n, r = divrem(i, 3)
-        if r == 1
+        if i < 3
             x.args[i]
-        elseif r == 2
-            x.trivia[n + 1]
-        elseif r == 0
-            x.args[(n)*3 - 1]
+        elseif i == length(x)
+            last(x.trivia)
+        elseif length(x.args) > 2 && headof(x.args[3]) === :parameters
+            if i == length(x) - 1
+                x.args[3]
+            elseif i == length(x) 
+                last(x.trivia)
+            elseif isodd(i)
+                x.trivia[div(i, 2)]
+            else
+                x.args[div(i + 1, 2) + 1]
+            end
+        else
+            if isodd(i)
+                x.trivia[div(i, 2)]
+            else
+                x.args[div(i + 1, 2) + 1]
+            end
+        end
+    end
+end
+
+function _vect(x, i)
+    if i == 1
+        x.trivia[1]
+    elseif i == length(x)
+        last(x.trivia)
+    else
+        oddt_evena(x, i)
+    end
+end
+
+function _vcat(x, i)
+    if i == 1
+        x.trivia[1]
+    elseif i == length(x)
+        x.trivia[2]
+    else
+        x.args[i - 1]
+    end
+end
+
+function _typed_vcat(x, i)
+    if i == 1
+        x.args[1]
+    elseif i == 2
+        x.trivia[1]
+    elseif i == length(x)
+        x.trivia[2]
+    else
+        x.args[i - 1]
+    end
+
+end
+
+function _module(x, i)
+    if i == 1
+        x.trivia[1]
+    elseif i == 2
+        x.args[1]
+    elseif i == 3
+        x.args[2]
+    elseif i == 4
+        x.args[3]
+    elseif i == 5
+        x.trivia[2]
+    end
+end
+
+function _filter(x, i)
+    if i == 1
+        x.args[2]
+    elseif i == 2
+        x.trivia[1]
+    elseif i == 3
+        x.args[1]
+    end
+end
+
+function _try(x, i)
+    if i == 1
+        x.trivia[1]
+    elseif i == 2
+        x.args[1]
+    elseif length(x) == 6 # try expr catch e expr end
+        if i == 3
+            x.trivia[2]
+        elseif i == 4
+            x.args[2]
+        elseif i == 5
+            x.args[3]
+        elseif i == 6
+            x.trivia[3]
+        end
+    elseif length(x) == 7 # try expr catch finally end
+        if i == 3
+            x.args[2]
+        elseif i == 4
+            x.args[3]
+        elseif i == 5
+            x.trivia[2]
+        elseif i == 6
+            x.args[4]
+        elseif i == 7
+            x.trivia[3]
+        end
+    elseif length(x) == 8 # try expr catch e expr finally expr end
+        if i == 3
+            x.trivia[2]
+        elseif i == 4
+            x.args[2]
+        elseif i == 5
+            x.args[3]
+        elseif i == 6
+            x.trivia[3]
+        elseif i == 7
+            x.args[4]
+        elseif i == 8
+            x.trivia[4]
         end
     end
 end

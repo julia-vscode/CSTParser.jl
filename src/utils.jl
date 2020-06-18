@@ -202,7 +202,7 @@ end
 
 
 
-isidentifier(x::EXPR) = headof(x) === :IDENTIFIER || headof(x) === :NonStdIdentifier
+isidentifier(x::EXPR) = headof(x) === :IDENTIFIER || headof(x) === :NONSTDIDENTIFIER
 
 isunarycall(x::EXPR) = (headof(x) === :call && length(x) == 2 && (isoperator(x.args[1]) || isoperator(x.args[2]))) || (isoperator(x.head) && length(x.args) == 1)
 isbinarycall(x::EXPR) = headof(x) === :call && length(x) == 3 && isoperator(x.args[1])

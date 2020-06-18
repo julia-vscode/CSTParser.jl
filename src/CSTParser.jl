@@ -142,7 +142,7 @@ Parses an expression starting with a `(`.
 function parse_paren(ps::ParseState)
     args = EXPR[]
     trivia = EXPR[EXPR(ps)]
-    @closeparen ps @default ps @nocloser ps :inwhere parse_comma_sep(ps, args, trivia, false, true, true, insertfirst = true)
+    @closeparen ps @default ps @nocloser ps :inwhere parse_comma_sep(ps, args, trivia, false, true, true, insert_params_at = 1)
     if length(args) == 1 && length(trivia) == 1 && ((kindof(ps.ws) !== SemiColonWS || headof(args[1]) === :block) && headof(args[1]) !== :parameters)
         accept_rparen(ps, trivia)
         ret = EXPR(:brackets, args, trivia)
@@ -253,7 +253,7 @@ end
 function _continue_doc_parse(ps::ParseState, x::EXPR)
     headof(x) === :macrocall &&
     headof(x.args[1]) === :macroname &&
-    length(x.args[1]) == 2 &&
+    length(x.args[1].args) == 2 &&
     valof(x.args[1].args[2]) == "doc" &&
     length(x.args) < 4 &&
     ps.t.endpos[1] + 1 <= ps.nt.startpos[1]

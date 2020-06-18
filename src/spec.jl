@@ -31,7 +31,7 @@ Expression types. All-caps indicates a terminal node.
 """
 # Terminals
     :IDENTIFIER,
-    :NonStdIdentifier,
+    :NONSTDIDENTIFIER,
     :OPERATOR
     # Punctuation
         :COMMA,
@@ -96,7 +96,6 @@ Expression types. All-caps indicates a terminal node.
 
 # Expressions
 :call,
-:chainopcall,
 :abstract,
 :begin,
 :block,
@@ -365,9 +364,10 @@ function lastchildistrivia(x::EXPR)
 end
 
 function Base.length(x::EXPR) 
+    (headof(x) === :macroname || headof(x) === :NONSTDIDENTIFIER) && return 0 
     n = x.args isa Nothing ? 0 : length(x.args)
     n += hastrivia(x) ? length(x.trivia) : 0
-    x.head isa EXPR && (n += 1)
+    x.head isa EXPR && !(x.head.span === 0) && (n += 1)
     return n
 end
 

@@ -153,6 +153,9 @@ Only used as the head of an expression within `using/import` calls.
 ##### :call
 ##### :string
 `(args...)`
+##### :if
+##### :kw
+
 
 
 ##### ChainOpCall
@@ -164,10 +167,10 @@ Only used as the head of an expression within `using/import` calls.
 ##### Flatten
 ##### Generator
 ##### GlobalRefDoc
-##### If
-##### Kw
-Trivia: nothing
 ##### Let
+##### Ref
+##### Row
+##### Vcat
 ##### Macro
 ##### MacroCall
 ##### MacroName
@@ -194,9 +197,6 @@ Trivia: `baremodule`, `end`
 ##### Typed_Comprehension
 ##### Hcat
 ##### Typed_Hcat
-##### Ref
-##### Row
-##### Vcat
 ##### Typed_Vcat
 ##### Vect
 
