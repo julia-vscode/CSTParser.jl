@@ -37,10 +37,20 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             (isempty(str) || (lcp !== nothing && isempty(lcp))) && return
             (last && str[end] == '\n') && return (lcp = "")
             idxstart, idxend = 2, 1
+            safetytrip = 0
             while nextind(str, idxend) - 1 < sizeof(str) && (lcp === nothing || !isempty(lcp))
+                safetytrip += 1
+                if safetytrip > 10_000
+                    throw(CSTInfiniteLoop("Inifite loop."))
+                end
                 idxend = skip_to_nl(str, idxend)
                 idxstart = nextind(str, idxend)
+                safetytrip1 = 0
                 while nextind(str, idxend) - 1 < sizeof(str)
+                    safetytrip1 += 1
+                    if safetytrip1 > 10_000
+                        throw(CSTInfiniteLoop("Inifite loop."))
+                    end
                     c = str[nextind(str, idxend)]
                     if c == ' ' || c == '\t'
                         idxend += 1
@@ -84,11 +94,17 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         end
     else
         ret = EXPR(StringH, EXPR[], sfullspan, sspan)
-        input = IOBuffer(val(ps.t, ps))
+        str2 = val(ps.t, ps)
+        input = IOBuffer(str2)
         startbytes = istrip ? 3 : 1
         seek(input, startbytes)
         b = IOBuffer()
+        safetytrip = 0
         while !eof(input)
+            safetytrip += 1
+            if safetytrip > length(str2) # This is iterating over characters, not parsed expressions - 10,000 was in inappropriate limit.
+                throw(CSTInfiniteLoop("Inifite loop parsing: \"$str2\""))
+            end
             c = read(input, Char)
             if c == '\\'
                 write(b, c)

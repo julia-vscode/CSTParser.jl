@@ -38,7 +38,7 @@ function accept_comma(ps)
     if iscomma(ps.nt)
         return mPUNCTUATION(next(ps))
     else
-        return mPUNCTUATION(Tokens.RPAREN, 0, 0)
+        return mErrorToken(mPUNCTUATION(Tokens.COMMA, 0, 0), UnexpectedToken)
     end
 end
 accept_comma(ps::ParseState, args) = push!(args, accept_comma(ps))

@@ -66,12 +66,12 @@ function parse_expression(ps::ParseState)
         else
             ret = mErrorToken(ps, INSTANCE(ps), UnexpectedToken)
         end
-        while !closer(ps)
-            ret = parse_compound(ps, ret)
-        end
+        ret = parse_compound_recur(ps, ret)
     end
     return ret
 end
+
+parse_compound_recur(ps, ret) = !closer(ps) ? parse_compound_recur(ps, parse_compound(ps, ret)) : ret
 
 """
     parse_compound(ps::ParseState, ret::EXPR)
@@ -215,7 +215,12 @@ function parse(ps::ParseState, cont = false)
             push!(top, mLITERAL(ps.nt.startbyte, ps.nt.startbyte, "", Tokens.NOTHING))
         end
 
+        safetytrip = 0
         while !ps.done
+            safetytrip += 1
+            if safetytrip > 10_000
+                throw(CSTInfiniteLoop("Inifite loop."))
+            end
             curr_line = ps.nt.startpos[1]
             ret = parse_doc(ps)
             if _continue_doc_parse(ps, ret)
@@ -246,7 +251,12 @@ function parse(ps::ParseState, cont = false)
             last_line = ps.nt.startpos[1]
             if kindof(ps.ws) == SemiColonWS
                 top = EXPR(TopLevel, EXPR[top])
+                safetytrip = 0
                 while kindof(ps.ws) == SemiColonWS && ps.nt.startpos[1] == last_line && kindof(ps.nt) != Tokens.ENDMARKER
+                    safetytrip += 1
+                    if safetytrip > 10_000
+                        throw(CSTInfiniteLoop("Inifite loop."))
+                    end
                     ret = parse_doc(ps)
                     push!(top, ret)
                     last_line = ps.nt.startpos[1]
