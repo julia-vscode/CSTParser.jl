@@ -241,17 +241,21 @@ function has_error(x::EXPR)
 end
 has_error(ps::ParseState) = ps.errored
 
-# When using the FancyDiagnostics package, Base.parse, is the
+# When using the FancyDiagnostics package, Meta.parse is the
 # same as CSTParser.parse. Manually call the flisp parser here
 # to make sure we test what we want, even when people load the
 # FancyDiagnostics package.
 function flisp_parse(str::AbstractString, pos::Int; greedy::Bool = true, raise::Bool = true)
-    # pos is one based byte offset.
-    # returns (expr, end_pos). expr is () in case of parse error.
-    bstr = String(str)
-    ex, pos = ccall(:jl_parse_string, Any,
-                    (Ptr{UInt8}, Csize_t, Int32, Int32),
-                    bstr, sizeof(bstr), pos - 1, greedy ? 1 : 0)
+    if VERSION < v"1.6-DEV"
+        bstr = String(str)
+        ex, pos = ccall(:jl_parse_string, Any,
+                        (Ptr{UInt8}, Csize_t, Int32, Int32),
+                        bstr, sizeof(bstr), pos - 1, greedy ? 1 : 0)
+    else
+        filename = "none"
+        rule = greedy ? :statement : :atom
+        ex, pos = Core.Compiler.fl_parse(str, filename, pos-1, rule)
+    end
     if raise && isa(ex, Expr) && ex.head === :error
         throw(Meta.ParseError(ex.args[1]))
     end
@@ -259,7 +263,8 @@ function flisp_parse(str::AbstractString, pos::Int; greedy::Bool = true, raise::
         raise && throw(Meta.ParseError("end of input"))
         ex = Expr(:error, "end of input")
     end
-    return ex, pos + 1 # C is zero-based, Julia is 1-based
+    # pos is zero-based byte offset
+    return ex, pos+1
 end
 
 function flisp_parse(str::AbstractString; raise::Bool = true)
@@ -282,7 +287,8 @@ function flisp_parse(stream::IO; greedy::Bool = true, raise::Bool = true)
 end
 
 using Base.Meta
-norm_ast(a::Any) = begin
+
+function norm_ast(a::Any)
     if isa(a, Expr)
         for (i, arg) in enumerate(a.args)
             a.args[i] = norm_ast(arg)
