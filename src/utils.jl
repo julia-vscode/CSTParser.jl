@@ -254,7 +254,7 @@ function flisp_parse(str::AbstractString, pos::Int; greedy::Bool = true, raise::
     else
         filename = "none"
         rule = greedy ? :statement : :atom
-        ex, pos = Core.Compiler.fl_parse(str, filename, pos-1, rule)
+        ex, pos = Core.Compiler.fl_parse(str, filename, pos - 1, rule)
     end
     if raise && isa(ex, Expr) && ex.head === :error
         throw(Meta.ParseError(ex.args[1]))
@@ -264,7 +264,7 @@ function flisp_parse(str::AbstractString, pos::Int; greedy::Bool = true, raise::
         ex = Expr(:error, "end of input")
     end
     # pos is zero-based byte offset
-    return ex, pos+1
+    return ex, pos + 1
 end
 
 function flisp_parse(str::AbstractString; raise::Bool = true)
