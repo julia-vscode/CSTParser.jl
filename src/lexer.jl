@@ -30,7 +30,7 @@ Closer() = Closer(true, true, false, false, false, false, false, false, false, f
 
 mutable struct ParseState
     l::Lexer{Base.GenericIOBuffer{Array{UInt8,1}},RawToken}
-    done::Bool
+    done::Bool # Remove this
     lt::RawToken
     t::RawToken
     nt::RawToken
@@ -53,7 +53,7 @@ function ParseState(str::Union{IO,String}, loc::Int)
     while ps.nt.startbyte < loc
         safetytrip += 1
         if safetytrip > 10_000
-            throw(CSTInfiniteLoop("Inifite loop."))
+            throw(CSTInfiniteLoop("Inifite loop at $ps"))
         end
         next(ps)
     end
@@ -61,7 +61,7 @@ function ParseState(str::Union{IO,String}, loc::Int)
 end
 
 function Base.show(io::IO, ps::ParseState)
-    println(io, "ParseState $(ps.done ? "finished " : "")at $(position(ps.l.io))")
+    println(io, "ParseState at $(position(ps.l.io))")
     println(io, "last    : ", kindof(ps.lt), " ($(ps.lt))", "    ($(wstype(ps.lws)))")
     println(io, "current : ", kindof(ps.t), " ($(ps.t))", "    ($(wstype(ps.ws)))")
     println(io, "next    : ", kindof(ps.nt), " ($(ps.nt))", "    ($(wstype(ps.nws)))")
@@ -80,13 +80,7 @@ function next(ps::ParseState)
     ps.ws = ps.nws
     ps.nws = ps.nnws
 
-    if ps.done
-        ps.nnt = ps.nt
-        ps.done = ps.done
-    else
-        ps.nnt = Tokenize.Lexers.next_token(ps.l)
-        ps.done = ps.nnt === Tokens.ENDMARKER
-    end
+    ps.nnt = Tokenize.Lexers.next_token(ps.l)
 
     # combines whitespace, comments and semicolons
     if iswhitespace(peekchar(ps.l)) || peekchar(ps.l) == '#' || peekchar(ps.l) == ';'
@@ -94,7 +88,7 @@ function next(ps::ParseState)
     else
         ps.nnws = EmptyWSToken
     end
-    ps.done = kindof(ps.nt) === Tokens.ENDMARKER
+
     return ps
 end
 

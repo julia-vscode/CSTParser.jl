@@ -5,6 +5,7 @@ A magical function determining whether the parsing of an expression should conti
 stop.
 """
 function closer(ps::ParseState)
+    kindof(ps.nt) === Tokens.ENDMARKER ||
     (ps.closer.newline && kindof(ps.ws) == NewLineWS && !iscomma(ps.t)) ||
     (ps.closer.semicolon && kindof(ps.ws) == SemiColonWS) ||
     (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence) ||
@@ -19,7 +20,6 @@ function closer(ps::ParseState)
         ((kindof(ps.nt) === Tokens.RPAREN || kindof(ps.nt) === Tokens.RSQUARE) && isidentifier(ps.nt))
     )) ||
     (iscomma(ps.nt) && ps.closer.precedence > 0) ||
-    kindof(ps.nt) === Tokens.ENDMARKER ||
     (ps.closer.comma && iscomma(ps.nt)) ||
     (ps.closer.tuple && (iscomma(ps.nt) || isassignment(ps.nt))) ||
     (kindof(ps.nt) === Tokens.FOR && ps.closer.precedence > -1) ||
