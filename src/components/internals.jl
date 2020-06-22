@@ -161,7 +161,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw = true, block = 
         push!(args, a)
         if iscomma(ps.nt)
             accept_comma(ps, args)
-        else#if kindof(ps.ws) == SemiColonWS
+        else# if kindof(ps.ws) == SemiColonWS
             break
         end
         if ps.t.startbyte == starting_offset
