@@ -116,7 +116,7 @@ function parse_array(ps::ParseState, isref = false)
             while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.nt) !== Tokens.ENDMARKER
                 safetytrip += 1
                 if safetytrip > 10_000
-                    throw(CSTInfiniteLoop("Inifite loop at $ps"))
+                    throw(CSTInfiniteLoop("Infinite loop at $ps"))
                 end
                 a = @closesquare ps  parse_expression(ps)
                 push!(ret, a)
@@ -131,7 +131,7 @@ function parse_array(ps::ParseState, isref = false)
             while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
                 safetytrip += 1
                 if safetytrip > 10_000
-                    throw(CSTInfiniteLoop("Inifite loop at $ps"))
+                    throw(CSTInfiniteLoop("Infinite loop at $ps"))
                 end
                 a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                 push!(first_row, a)
@@ -155,7 +155,7 @@ function parse_array(ps::ParseState, isref = false)
                 while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.nt) !== Tokens.ENDMARKER
                     safetytrip += 1
                     if safetytrip > 10_000
-                        throw(CSTInfiniteLoop("Inifite loop at $ps"))
+                        throw(CSTInfiniteLoop("Infinite loop at $ps"))
                     end
                     first_arg = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                     push!(ret, EXPR(Row, EXPR[first_arg]))
@@ -163,7 +163,7 @@ function parse_array(ps::ParseState, isref = false)
                     while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
                         safetytrip1 += 1
                         if safetytrip1 > 10_000
-                            throw(CSTInfiniteLoop("Inifite loop at $ps"))
+                            throw(CSTInfiniteLoop("Infinite loop at $ps"))
                         end
                         a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                         push!(last(ret.args), a)
@@ -273,7 +273,7 @@ function parse_barray(ps::ParseState)
             while kindof(ps.nt) != Tokens.RBRACE && kindof(ps.nt) !== Tokens.ENDMARKER
                 safetytrip += 1
                 if safetytrip > 10_000
-                    throw(CSTInfiniteLoop("Inifite loop at $ps"))
+                    throw(CSTInfiniteLoop("Infinite loop at $ps"))
                 end
                 a = @closebrace ps  parse_expression(ps)
                 push!(ret, a)
@@ -287,7 +287,7 @@ function parse_barray(ps::ParseState)
             while kindof(ps.nt) !== Tokens.RBRACE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
                 safetytrip += 1
                 if safetytrip > 10_000
-                    throw(CSTInfiniteLoop("Inifite loop at $ps"))
+                    throw(CSTInfiniteLoop("Infinite loop at $ps"))
                 end
                 a = @closebrace ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                 push!(first_row, a)
@@ -310,7 +310,7 @@ function parse_barray(ps::ParseState)
                 while kindof(ps.nt) != Tokens.RBRACE
                     safetytrip += 1
                     if safetytrip > 10_000
-                        throw(CSTInfiniteLoop("Inifite loop at $ps"))
+                        throw(CSTInfiniteLoop("Infinite loop at $ps"))
                     end
                     if kindof(ps.nt) === Tokens.ENDMARKER
                         break
@@ -321,7 +321,7 @@ function parse_barray(ps::ParseState)
                     while kindof(ps.nt) !== Tokens.RBRACE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
                         safetytrip1 += 1
                         if safetytrip1 > 10_000
-                            throw(CSTInfiniteLoop("Inifite loop at $ps"))
+                            throw(CSTInfiniteLoop("Infinite loop at $ps"))
                         end
                         a = @closebrace ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                         push!(last(ret.args), a)

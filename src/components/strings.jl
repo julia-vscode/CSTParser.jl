@@ -41,7 +41,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             while nextind(str, idxend) - 1 < sizeof(str) && (lcp === nothing || !isempty(lcp))
                 safetytrip += 1
                 if safetytrip > 10_000
-                    throw(CSTInfiniteLoop("Inifite loop."))
+                    throw(CSTInfiniteLoop("Infinite loop."))
                 end
                 idxend = skip_to_nl(str, idxend)
                 idxstart = nextind(str, idxend)
@@ -49,7 +49,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 while nextind(str, idxend) - 1 < sizeof(str)
                     safetytrip1 += 1
                     if safetytrip1 > 10_000
-                        throw(CSTInfiniteLoop("Inifite loop."))
+                        throw(CSTInfiniteLoop("Infinite loop."))
                     end
                     c = str[nextind(str, idxend)]
                     if c == ' ' || c == '\t'
@@ -103,7 +103,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         while !eof(input)
             safetytrip += 1
             if safetytrip > length(str2) # This is iterating over characters, not parsed expressions - 10,000 was in inappropriate limit.
-                throw(CSTInfiniteLoop("Inifite loop parsing: \"$str2\""))
+                throw(CSTInfiniteLoop("Infinite loop parsing: \"$str2\""))
             end
             c = read(input, Char)
             if c == '\\'

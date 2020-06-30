@@ -53,7 +53,7 @@ function ParseState(str::Union{IO,String}, loc::Int)
     while ps.nt.startbyte < loc
         safetytrip += 1
         if safetytrip > 10_000
-            throw(CSTInfiniteLoop("Inifite loop at $ps"))
+            throw(CSTInfiniteLoop("Infinite loop at $ps"))
         end
         next(ps)
     end
