@@ -49,12 +49,12 @@ end
 
 function ParseState(str::Union{IO,String}, loc::Int)
     ps = ParseState(str)
-    safetytrip = 0
+    prev_pos = -1  # TODO: remove
     while ps.nt.startbyte < loc
-        safetytrip += 1
-        if safetytrip > 10_000
-            throw(CSTInfiniteLoop("Infinite loop at $ps"))
-        end
+        if prev_pos == ps.nt.startbyte  # TODO: remove
+            throw(CSTInfiniteLoop("Inifite loop at $ps"))  # TODO: remove
+        end  # TODO: remove
+        prev_pos = ps.nt.startbyte # TODO: remove
         next(ps)
     end
     return ps
