@@ -214,12 +214,12 @@ function parse(ps::ParseState, cont = false)
                 push!(ret, parse_expression(ps))
             end
             # join semicolon sep items
-            if curr_line == last_line && headof(last(top.args)) === :TopLevel
+            if curr_line == last_line && headof(last(top.args)) === :toplevel
                 push!(last(top.args), ret)
                 top.fullspan += ret.fullspan
                 top.span = top.fullspan - (ret.fullspan - ret.span)
             elseif kindof(ps.ws) == SemiColonWS
-                push!(top, EXPR(:TopLevel, EXPR[ret]))
+                push!(top, EXPR(:toplevel, EXPR[ret]))
             else
                 push!(top, ret)
             end
@@ -229,7 +229,7 @@ function parse(ps::ParseState, cont = false)
         if kindof(ps.nt) === Tokens.WHITESPACE || kindof(ps.nt) === Tokens.COMMENT
             next(ps)
             top = EXPR(:NOTHING, ps.nt.startbyte, ps.nt.startbyte, "")
-        else
+        elseif !(ps.done || kindof(ps.nt) === Tokens.ENDMARKER)
             curr_line = ps.nt.startpos[1]
             top = parse_doc(ps)
             if _continue_doc_parse(ps, top)
@@ -237,13 +237,15 @@ function parse(ps::ParseState, cont = false)
             end
             last_line = ps.nt.startpos[1]
             if kindof(ps.ws) == SemiColonWS
-                top = EXPR(:TopLevel, EXPR[top], nothing)
+                top = EXPR(:toplevel, EXPR[top], nothing)
                 while kindof(ps.ws) == SemiColonWS && ps.nt.startpos[1] == last_line && kindof(ps.nt) != Tokens.ENDMARKER
                     ret = parse_doc(ps)
                     push!(top, ret)
                     last_line = ps.nt.startpos[1]
                 end
             end
+        else
+            top = EXPR(:errortoken, EXPR[], nothing, 0, 0)
         end
     end
 

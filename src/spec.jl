@@ -135,7 +135,7 @@ Expression types. All-caps indicates a terminal node.
 :while,
 :module,
 :baremodule,
-:TopLevel,
+:toplevel,
 :export,
 :import,
 :using,

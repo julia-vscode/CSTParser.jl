@@ -480,6 +480,11 @@ function _string(x, i)
     arg = isstringliteral(x.args[1])
     isinterpolant = !arg
     bracket = false
+    if i == 1 && hastrivia(x) && x.trivia[1].head === :STRING && isempty(x.trivia[1].val)
+        return x.trivia[1]
+    elseif i == length(x) && hastrivia(x) && last(x.trivia).head === :STRING && isempty(last(x.trivia).val)
+        return last(x.trivia)
+    end
     for j = 1:i
         if j == i
             return arg ? x.args[ai] : x.trivia[ti]

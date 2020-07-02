@@ -455,22 +455,27 @@ end
         @test x[7] === x.args[5]
 
         x = cst"\"$interp\""
-        @test length(x) == 2
-        @test x[1] === x.trivia[1]
-        @test x[2] === x.args[1]
-
-        x = cst"\"$interp txt\""
-        @test length(x) == 3
-        @test x[1] === x.trivia[1]
-        @test x[2] === x.args[1]
-        @test x[3] === x.args[2]
-
-        x = cst"\"$(interp)\""
         @test length(x) == 4
         @test x[1] === x.trivia[1]
         @test x[2] === x.trivia[2]
         @test x[3] === x.args[1]
         @test x[4] === x.trivia[3]
+
+        x = cst"\"$interp txt\""
+        @test length(x) == 4
+        @test x[1] === x.trivia[1]
+        @test x[2] === x.trivia[2]
+        @test x[3] === x.args[1]
+        @test x[4] === x.args[2]
+
+        x = cst"\"$(interp)\""
+        @test length(x) == 6
+        @test x[1] === x.trivia[1]
+        @test x[2] === x.trivia[2]
+        @test x[3] === x.trivia[3]
+        @test x[4] === x.args[1]
+        @test x[5] === x.trivia[4]
+        @test x[6] === x.trivia[5]
     end
 
     @testset ":macrocall" begin

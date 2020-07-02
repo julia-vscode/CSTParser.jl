@@ -109,7 +109,12 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 lspan = position(b)
                 str = tostr(b)
                 ex = EXPR(:STRING, lspan + startbytes, lspan + startbytes, str)
-                !isempty(str) && push!(ret, ex)
+                if position(input) == (istrip ? 3 : 1) + 1
+                    # Need to add empty :STRING at start to account for \"
+                    pushtotrivia!(ret, ex)
+                elseif !isempty(str)
+                    push!(ret, ex)
+                end
                 istrip && adjust_lcp(ex)
                 startbytes = 0
                 op = EXPR(:OPERATOR, 1, 1, "\$")
@@ -173,7 +178,11 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 str = str[1:prevind(str, lastindex(str))]
                 ex = EXPR(:STRING, lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str)
             end
-            !isempty(str) && push!(ret, ex)
+            if isempty(str)
+                pushtotrivia!(ret, ex)
+            else
+                push!(ret, ex)
+            end
         end
         
 

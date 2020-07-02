@@ -217,8 +217,8 @@ end
 
 
 @testset ":string" begin
-    test_expr("\"\$a\"", :string, 2, false)
-    test_expr("\" \$a\"", :string, 3, false)
+    test_expr("\"\$a\"", :string, 4, false)
+    test_expr("\" \$a\"", :string, 4, false)
     test_expr("\" \$a \"", :string, 4, false)
 end
 
