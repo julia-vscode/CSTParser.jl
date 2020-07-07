@@ -1,3 +1,72 @@
+# terminals
+isidentifier(x::EXPR) = headof(x) === :IDENTIFIER || headof(x) === :NONSTDIDENTIFIER
+isoperator(x::EXPR) = headof(x) === :OPERATOR
+isnonstdid(x::EXPR) = headof(x) === :NONSTDIDENTIFIER
+iskeyword(x::EXPR) = headof(x) in (:ABSTRACT, :BAREMODULE, :BEGIN, :BREAK, :CATCH, :CONST, :CONTINUE, :DO, :ELSE, :ELSEIF, :END, :EXPORT, :FINALLY, :FOR, :FUNCTION, :GLOBAL, :IF, :IMPORT, :importall, :LET, :LOCAL, :MACRO, :MODULE, :MUTABLE, :NEW, :OUTER, :PRIMITIVE, :QUOTE, :RETURN, :STRUCT, :TRY, :TYPE, :USING, :WHILE)
+isliteral(x::EXPR) = isstringliteral(x) || iscmd(x) || ischar(x) || headof(x) in (:INTEGER, :BININT, :HEXINT, :OCTINT, :FLOAT,  :NOTHING, :TRUE, :FALSE)
+ispunctuation(x::EXPR) = is_comma(x) || is_lparen(x) || is_rparen(x) || is_lsquare(x) || is_rsquare(x) || is_lbrace(x) || is_rbrace(x) || headof(x) === :ATSIGN  || headof(x) === :DOT
+isstringliteral(x) = headof(x) === :STRING || headof(x) === :TRIPLESTRING
+isstring(x) = headof(x) === :string || isstringliteral(x)
+iscmd(x) = headof(x) === :CMD || headof(x) === :TRIPLECMD
+ischar(x) = headof(x) === :CHAR
+isinteger(x) = headof(x) === :INTEGER
+isfloat(x) = headof(x) === :FLOAT
+isnumber(x) = isinteger(x) || isfloat(x)
+is_nothing(x) = headof(x) === :NOTHING
+is_either_id_op_interp(x::EXPR) = isidentifier(x) || isoperator(x) || isinterpolant(x)
+is_id_or_macroname(x::EXPR) = isidentifier(x) || ismacroname(x)
+
+# expressions
+iscall(x::EXPR) = headof(x) === :call
+isunarycall(x::EXPR) = (headof(x) === :call && length(x) == 2 && (isoperator(x.args[1]) || isoperator(x.args[2])))
+isunarysyntax(x::EXPR) =  (isoperator(x.head) && length(x.args) == 1)
+isbinarycall(x::EXPR) = headof(x) === :call && length(x) == 3 && isoperator(x.args[1])
+isbinarycall(x::EXPR, op) = headof(x) === :call && length(x) == 3 && isoperator(x.args[1]) && valof(x.args[1]) == op
+isbinarysyntax(x::EXPR) =  (isoperator(x.head) && length(x.args) == 2)
+iswhere(x::EXPR) = headof(x) === :where
+istuple(x::EXPR) = headof(x) === :tuple
+ismacrocall(x::EXPR) = headof(x) === :macrocall
+ismacroname(x::EXPR) = (headof(x) === :macroname && length(x.args) == 2) || (is_getfield_w_quotenode(x) && ismacroname(x.args[2].args[1]))
+iskwarg(x::EXPR) = headof(x) === :kw
+isparameters(x::EXPR) = headof(x) === :parameters
+iscurly(x::EXPR) = headof(x) === :curly
+isbracketed(x::EXPR) = headof(x) === :brackets
+
+
+isassignment(x::EXPR) = isbinarysyntax(x) && valof(x.head) == "="
+isdeclaration(x::EXPR) = isbinarysyntax(x) && valof(x.head) == "::"
+isinterpolant(x::EXPR) = isunarysyntax(x) && valof(x.head) == "\$"
+issplat(x::EXPR) = isunarysyntax(x) && valof(x.head) == "..."
+
+
+isbeginorblock(x::EXPR) = headof(x) === :begin || headof(unwrapbracket(x)) == :block
+
+
+"""
+    is_getfield(x::EXPR)
+
+Is this an expression of the form `a.b`.
+"""
+is_getfield(x::EXPR) = x.head isa EXPR && isoperator(x.head) && valof(x.head) == "." && length(x.args) == 2
+is_getfield_w_quotenode(x) = is_getfield(x) && headof(x.args[2]) === :quotenode && length(x.args[2].args) > 0
+
+function get_rhs_of_getfield(ret::EXPR)
+    if headof(ret.args[2]) === :quotenode || headof(ret.args[2]) === :quote
+        ret.args[2].args[1]
+    else
+        ret.args[2]
+    end
+end
+
+
+"""
+    is_wrapped_assignment(x::EXPR)
+    
+Is `x` an assignment expression, ignoring any surrounding parentheses.
+"""
+is_wrapped_assignment(x::EXPR) = isassignment(x) || (isbracketed(x) && is_wrapped_assignment(x.args[2]))
+
+
 function is_func_call(x::EXPR)
     if isoperator(x.head)
         if length(x.args) == 2
@@ -7,14 +76,16 @@ function is_func_call(x::EXPR)
         end
     elseif x.head === :call
         return true
-    elseif x.head === :Where || isbracketed(x)
+    elseif x.head === :where || isbracketed(x)
         return is_func_call(x.args[1])
     else
         return false
     end
 end
 
-is_assignment(x::EXPR) = isoperator(x.head) && valof(x.head) == "="
+
+fcall_name(x::EXPR) = iscall(x) && length(x.args) > 0 && valof(x.args[1])
+hasparent(x::EXPR) = parentof(x) isa EXPR
 
 # OPERATOR
 is_approx(x::EXPR) = isoperator(x) && valof(x) == "~"
@@ -61,19 +132,21 @@ rem_subtype(x::EXPR) = issubtypedecl(x) ? x.args[1] : x
 rem_decl(x::EXPR) = isdeclaration(x) ? x.args[1] : x
 rem_curly(x::EXPR) = headof(x) === :curly ? x.args[1] : x
 rem_call(x::EXPR) = headof(x) === :call ? x.args[1] : x
-rem_where(x::EXPR) = iswherecall(x) ? x.args[1] : x
-rem_wheres(x::EXPR) = iswherecall(x) ? rem_wheres(x.args[1]) : x
-rem_where_subtype(x::EXPR) = (iswherecall(x) || issubtypedecl(x)) ? x.args[1] : x
-rem_where_decl(x::EXPR) = (iswherecall(x) || isdeclaration(x)) ? x.args[1] : x
+rem_where(x::EXPR) = iswhere(x) ? x.args[1] : x
+rem_wheres(x::EXPR) = iswhere(x) ? rem_wheres(x.args[1]) : x
+rem_where_subtype(x::EXPR) = (iswhere(x) || issubtypedecl(x)) ? x.args[1] : x
+rem_where_decl(x::EXPR) = (iswhere(x) || isdeclaration(x)) ? x.args[1] : x
+rem_wheres_decls(x::EXPR) = (iswhere(x) || isdeclaration(x)) ? rem_wheres_decls(x.args[1]) : x
 rem_invis(x::EXPR) = isbracketed(x) ? rem_invis(x.args[1]) : x
-rem_dddot(x::EXPR) = is_splat(x) ? x.args[1] : x
+rem_dddot(x::EXPR) = issplat(x) ? x.args[1] : x
 const rem_splat = rem_dddot
 rem_kw(x::EXPR) = headof(x) === :kw ? x.args[1] : x
+unwrapbracket(x::EXPR) = isbracketed(x) ? unwrapbracket(x.args[1]) : x
 
 is_some_call(x) = headof(x) === :call || isunarycall(x)
-is_eventually_some_call(x) = is_some_call(x) || ((isdeclaration(x) || iswherecall(x)) && is_eventually_some_call(x.args[1]))
+is_eventually_some_call(x) = is_some_call(x) || ((isdeclaration(x) || iswhere(x)) && is_eventually_some_call(x.args[1]))
 
-defines_function(x::EXPR) = headof(x) === :function || (is_assignment(x) && is_eventually_some_call(x.args[1]))
+defines_function(x::EXPR) = headof(x) === :function || (isassignment(x) && is_eventually_some_call(x.args[1]))
 defines_macro(x) = headof(x) == :macro
 defines_datatype(x) = defines_struct(x) || defines_abstract(x) || defines_primitive(x)
 defines_struct(x) = headof(x) === :struct
@@ -117,21 +190,14 @@ function get_name(x::EXPR)
         sig = rem_call(sig)
         sig = rem_curly(sig)
         sig = rem_invis(sig)
-        if isbinarycall(sig) && is_dot(sig.args[2])
-            if length(sig.args) > 2 && sig.args[3].args isa Vector{EXPR} && length(sig.args[3].args) > 0
-                sig = sig.args[3].args[1]
-            end
+        # if isbinarysyntax(sig) && is_dot(sig.head)
+        if is_getfield_w_quotenode(sig)
+            sig = sig.args[2].args[1]
         end
         return sig
+    elseif is_getfield_w_quotenode(x)
+        return x.args[2].args[1]
     elseif isbinarycall(x)
-        length(x.args) < 2 && return x
-        if is_dot(x.args[2])
-            if length(x.args) > 2 && headof(x.args[3]) === :quotenode && x.args[3].args isa Vector{EXPR} && length(x.args[3].args) > 0
-                return get_name(x.args[3].args[1])
-            else
-                return x
-            end
-        end
         sig = x.args[1]
         if isunarycall(sig)
             return get_name(sig.args[1])
@@ -142,6 +208,10 @@ function get_name(x::EXPR)
         sig = rem_curly(sig)
         sig = rem_invis(sig)
         return get_name(sig)
+    elseif isbinarysyntax(x) && valof(x.head) == "<:"
+        return get_name(x.args[1])
+    elseif isunarysyntax(x) && valof(x.head) == "..."
+        return get_name(x.args[1])
     else
         sig = x
         if isunarycall(sig)

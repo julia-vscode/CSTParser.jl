@@ -21,7 +21,7 @@ function closer(ps::ParseState)
     (iscomma(ps.nt) && ps.closer.precedence > 0) ||
     kindof(ps.nt) === Tokens.ENDMARKER ||
     (ps.closer.comma && iscomma(ps.nt)) ||
-    (ps.closer.tuple && (iscomma(ps.nt) || isassignment(ps.nt))) ||
+    (ps.closer.tuple && (iscomma(ps.nt) || isassignmentop(ps.nt))) ||
     (kindof(ps.nt) === Tokens.FOR && ps.closer.precedence > -1) ||
     (ps.closer.block && kindof(ps.nt) === Tokens.END) ||
     (ps.closer.paren && kindof(ps.nt) === Tokens.RPAREN) ||
@@ -200,36 +200,6 @@ macro default(ps, body)
     end
 end
 
-
-
-isidentifier(x::EXPR) = headof(x) === :IDENTIFIER || headof(x) === :NONSTDIDENTIFIER
-
-isunarycall(x::EXPR) = (headof(x) === :call && length(x) == 2 && (isoperator(x.args[1]) || isoperator(x.args[2]))) || (isoperator(x.head) && length(x.args) == 1)
-isbinarycall(x::EXPR) = headof(x) === :call && length(x) == 3 && isoperator(x.args[1])
-iswherecall(x::EXPR) = headof(x) === :Where
-isdeclaration(x::EXPR) = isoperator(x.head) && valof(x.head) == "::"
-isinterpolant(x::EXPR) = isoperator(x.head) && valof(x.head) == "\$"
-istuple(x::EXPR) = headof(x) === :tuple
-is_either_id_op_interp(x::EXPR) = isidentifier(x) || isoperator(x) || isinterpolant(x)
-is_splat(x::EXPR) = isoperator(x.head) && valof(x.head) == "..."
-
-
-
-iskeyword(x::EXPR) = headof(x) in (:ABSTRACT, :BAREMODULE, :BEGIN, :BREAK, :CATCH, :CONST, :CONTINUE, :DO, :ELSE, :ELSEIF, :END, :EXPORT, :FINALLY, :FOR, :FUNCTION, :GLOBAL, :IF, :IMPORT, :importall, :LET, :LOCAL, :MACRO, :MODULE, :MUTABLE, :NEW, :OUTER, :PRIMITIVE, :QUOTE, :RETURN, :STRUCT, :TRY, :TYPE, :USING, :WHILE)
-
-ispunctuation(x::EXPR) = is_comma(x) || is_lparen(x) || is_rparen(x) || is_lsquare(x) || is_rsquare(x) || is_lbrace(x) || is_rbrace(x) || headof(x) === :ATSIGN  || headof(x) === :DOT
-
-
-isstringliteral(x) = headof(x) === :STRING || headof(x) === :TRIPLESTRING
-isstring(x) = headof(x) === :string || isstringliteral(x)
-iscmd(x) = headof(x) === :CMD || headof(x) === :TRIPLECMD
-ischar(x) = headof(x) === :CHAR
-isinteger(x) = headof(x) === :INTEGER
-isfloat(x) = headof(x) === :FLOAT
-isnumber(x) = isinteger(x) || isfloat(x)
-is_nothing(x) = headof(x) === :NOTHING
-
-isliteral(x::EXPR) = isstringliteral(x) || iscmd(x) || ischar(x) || headof(x) in (:INTEGER, :BININT, :HEXINT, :OCTINT, :FLOAT,  :NOTHING, :TRUE, :FALSE)
 
 isajuxtaposition(ps::ParseState, ret::EXPR) = ((isnumber(ret) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.LPAREN || kindof(ps.nt) === Tokens.CMD || kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)) ||
         ((is_prime(ret.head) && isidentifier(ps.nt)) ||
@@ -639,21 +609,8 @@ function valid_escaped_seq(s::AbstractString)
     return true
 end
 
-"""
-    is_getfield(x::EXPR)
-
-Is this an expression of the form `a.b`.
-"""
-is_getfield(x::EXPR) = x.head isa EXPR && isoperator(x.head) && valof(x.head) == "."
 
 
-function get_rhs_of_getfield(ret::EXPR)
-    if headof(ret.args[2]) === :quotenode || headof(ret.args[2]) === :quote
-        ret.args[2].args[1]
-    else
-        ret.args[2]
-    end
-end
 
 """
     disallowednumberjuxt(ret::EXPR)
@@ -666,12 +623,6 @@ disallowednumberjuxt(ret::EXPR) = isnumber(ret) && last(valof(ret)) == '.'
 
 nexttokenstartsdocstring(ps::ParseState) = isidentifier(ps.nt) && val(ps.nt, ps) == "doc" && (kindof(ps.nnt) === Tokens.STRING || kindof(ps.nnt) === Tokens.TRIPLE_STRING)
 
-"""
-    is_wrapped_assignment(x::EXPR)
-    
-Is `x` an assignment expression, ignoring any surrounding parentheses.
-"""
-is_wrapped_assignment(x::EXPR) = is_assignment(x) || (isbracketed(x) && is_wrapped_assignment(x.args[2]))
 
 
 """
@@ -679,7 +630,7 @@ is_wrapped_assignment(x::EXPR) = is_assignment(x) || (isbracketed(x) && is_wrapp
 
 Should `a` be converted to a keyword-argument expression?
 """
-_do_kw_convert(ps::ParseState, a::EXPR) = !ps.closer.brace && is_assignment(a)
+_do_kw_convert(ps::ParseState, a::EXPR) = !ps.closer.brace && isassignment(a)
 
 """
     _kw_convert(ps::ParseState, a::EXPR)
@@ -693,7 +644,7 @@ _kw_convert(x::EXPR) = EXPR(:kw, EXPR[x.args[1], x.args[2]], EXPR[x.head], x.ful
 
 When parsing a function or macro signature, should it be converted to a tuple?
 """
-convertsigtotuple(sig::EXPR) = isbracketed(sig) && !(istuple(sig.args[1]) || (headof(sig.args[1]) === :block) || is_splat(sig.args[1]))
+convertsigtotuple(sig::EXPR) = isbracketed(sig) && !(istuple(sig.args[1]) || (headof(sig.args[1]) === :block) || issplat(sig.args[1]))
 
 """
     docable(head)
@@ -706,11 +657,6 @@ docable(head) = head === :begin || head === :module || head === :baremodule || h
 
 should_negate_number_literal(ps::ParseState, op::EXPR) = (is_plus(op) || is_minus(op)) && (kindof(ps.nt) === Tokens.INTEGER || kindof(ps.nt) === Tokens.FLOAT) && isemptyws(ps.ws) && kindof(ps.nnt) != Tokens.CIRCUMFLEX_ACCENT
 
-isbracketed(x::EXPR) = headof(x) === :brackets
-
-unwrapbracket(x::EXPR) = isbracketed(x) ? unwrapbracket(x.args[1]) : x
-
-isbeginorblock(x::EXPR) = headof(x) === :begin || headof(unwrapbracket(x)) == :block
 
 """
     can_become_comparison(x::EXPR)

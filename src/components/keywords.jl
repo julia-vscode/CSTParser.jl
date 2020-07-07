@@ -82,7 +82,7 @@ end
 function parse_const(ps::ParseState)
     kw = EXPR(ps)
     arg = parse_expression(ps)
-    if !(is_assignment(unwrapbracket(arg)) || (headof(arg) === :global && is_assignment(unwrapbracket(arg.args[1]))))
+    if !(isassignment(unwrapbracket(arg)) || (headof(arg) === :global && isassignment(unwrapbracket(arg.args[1]))))
         arg = mErrorToken(ps, arg, ExpectedAssignment)
     end
     ret = EXPR(:const, EXPR[arg], EXPR[kw])

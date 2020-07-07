@@ -10,7 +10,7 @@ function parse_tuple end
     function parse_tuple(ps::ParseState, ret::EXPR)
         op = EXPR(next(ps))
         if istuple(ret)
-            if (isassignment(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
+            if (isassignmentop(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
                 pushtotrivia!(ret, op)
             elseif closer(ps)
                 pushtotrivia!(ret, mErrorToken(ps, op, Unknown))
@@ -24,7 +24,7 @@ function parse_tuple end
                 end
             end
         else
-            if (isassignment(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
+            if (isassignmentop(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
                 ret = EXPR(:tuple, EXPR[ret], EXPR[op])
             elseif closer(ps)
                 ret = mErrorToken(ps, EXPR(:tuple, EXPR[ret], EXPR[op]), Unknown)
@@ -39,7 +39,7 @@ else
     function parse_tuple(ps::ParseState, ret::EXPR)
         op = EXPR(next(ps))
         if istuple(ret)
-            if closer(ps) || (isassignment(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
+            if closer(ps) || (isassignmentop(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
                 push!(ret, op)
             else
                 nextarg = @closer ps :tuple parse_expression(ps)
@@ -51,7 +51,7 @@ else
                 end
             end
         else
-            if closer(ps) || (isassignment(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
+            if closer(ps) || (isassignmentop(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
                 ret = EXPR(:tuple, EXPR[ret, op])
             else
                 nextarg = @closer ps :tuple parse_expression(ps)

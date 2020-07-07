@@ -178,7 +178,7 @@ isendoflinews(t::AbstractToken) = kindof(t) == SemiColonWS || kindof(t) == NewLi
 @inline val(token::AbstractToken, ps::ParseState) = String(ps.l.io.data[token.startbyte + 1:token.endbyte + 1])
 both_symbol_and_op(t::AbstractToken) = kindof(t) === Tokens.WHERE || kindof(t) === Tokens.IN || kindof(t) === Tokens.ISA
 isprefixableliteral(t::AbstractToken) = (kindof(t) === Tokens.STRING || kindof(t) === Tokens.TRIPLE_STRING || kindof(t) === Tokens.CMD || kindof(t) === Tokens.TRIPLE_CMD)
-isassignment(t::AbstractToken) = Tokens.begin_assignments < kindof(t) < Tokens.end_assignments
+isassignmentop(t::AbstractToken) = Tokens.begin_assignments < kindof(t) < Tokens.end_assignments
 
 isidentifier(t::AbstractToken) = kindof(t) === Tokens.IDENTIFIER
 isliteral(t::AbstractToken) = Tokens.begin_literal < kindof(t) < Tokens.end_literal

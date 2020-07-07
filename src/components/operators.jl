@@ -44,7 +44,6 @@ precedence(x::EXPR) = error()#precedence(kindof(x))
 
 isoperator(x) = false
 isoperator(t::AbstractToken) = isoperator(kindof(t))
-isoperator(x::EXPR) = headof(x) === :OPERATOR
 
 
 isunaryop(op) = false
@@ -323,9 +322,9 @@ function parse_operator_where(ps::ParseState, ret::EXPR, op::EXPR, setscope = tr
     if headof(nextarg) === :braces
         pushfirst!(nextarg.args, ret)
         pushfirst!(nextarg.trivia, op)
-        ret = EXPR(:Where, nextarg.args,nextarg.trivia)
+        ret = EXPR(:where, nextarg.args,nextarg.trivia)
     else
-        ret = EXPR(:Where, EXPR[ret, nextarg], EXPR[op])
+        ret = EXPR(:where, EXPR[ret, nextarg], EXPR[op])
     end
     return ret
 end

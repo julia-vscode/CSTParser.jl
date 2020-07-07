@@ -58,7 +58,7 @@ end
 
 Is `x` a valid iterator for use in `for` loops or generators?
 """
-is_range(x::EXPR) = (isoperator(x.head) && is_eq(x.head)) || (x.head === :call && (is_in(x.args[1]) || is_elof(x.args[1])))
+is_range(x::EXPR) = isassignment(x) || (x.head === :call && (is_in(x.args[1]) || is_elof(x.args[1])))
 
 function parse_outer(ps)
     if kindof(ps.nt) === Tokens.OUTER && kindof(ps.nws) !== EmptyWS && !Tokens.isoperator(kindof(ps.nnt))
@@ -118,17 +118,14 @@ function parse_call(ps::ParseState, ret::EXPR, ismacro = false)
         if istuple(arg)
             pushfirst!(arg.args, ret)
             ret = EXPR(:call, arg.args, arg.trivia)
-        elseif iswherecall(arg) && istuple(arg.args[1])
-            ret = mWhereOpCall(EXPR(:call, EXPR[ret; arg.args[1].args]), arg.args[2], arg.args[3:end])
         else
-            ret = mUnaryOpCall(ret, arg)
+            ret = EXPR(:call, EXPR[ret, arg], nothing)
         end
     elseif is_and(ret) || is_decl(ret) || is_exor(ret)
         arg = @precedence ps 20 parse_expression(ps)
-        if is_exor(ret) && istuple(arg) && length(arg) == 3 && is_splat(arg.args[2])
+        if is_exor(ret) && istuple(arg) && length(arg) == 3 && issplat(arg.args[2])
             arg = EXPR(:brackets, arg.args)
         end
-        # ret = mUnaryOpCall(ret, arg)
         ret = EXPR(ret, EXPR[arg], nothing)
     elseif is_issubt(ret) || is_issupt(ret)
         arg = @precedence ps PowerOp parse_expression(ps)
@@ -174,7 +171,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR
             end
         else
             a = @nocloser ps :newline @closer ps :comma @nocloser ps :inwhere parse_expression(ps)
-            if block && !(length(args) == 0 && ispunctuation(trivia[1])) && !is_splat(last(args)) && !(istuple && iscomma(ps.nt))
+            if block && !(length(args) == 0 && ispunctuation(trivia[1])) && !issplat(last(args)) && !(istuple && iscomma(ps.nt))
                 args1 = EXPR[pop!(args), a]
                 @nocloser ps :newline @closer ps :comma while @nocloser ps :semicolon !closer(ps)
                     a = parse_expression(ps)

@@ -314,26 +314,6 @@ function INSTANCE(ps::ParseState)
     end
 end
 
-function mUnaryOpCall(op::EXPR, arg::EXPR)
-    fullspan = op.fullspan + arg.fullspan
-    ex = EXPR(:call, EXPR[op, arg], nothing, fullspan, fullspan - arg.fullspan + arg.span)
-    setparent!(op, ex)
-    setparent!(op, ex)
-    return ex
-end
-
-function mWhereOpCall(arg1::EXPR, op::EXPR, args::Vector{EXPR})
-    ex = EXPR(:call, EXPR[arg1; op; args], nothing,  arg1.fullspan + op.fullspan, 0)
-    setparent!(arg1, ex)
-    setparent!(op, ex)
-    for a in args
-        ex.fullspan += a.fullspan
-        setparent!(a, ex)
-    end
-    ex.span = ex.fullspan - last(args).fullspan + last(args).span
-    return ex
-end
-
 function mErrorToken(ps::ParseState, k::ErrorKind)
     ps.errored = true
     return EXPR(:errortoken, EXPR[], nothing, 0, 0, nothing, nothing, k)
