@@ -217,7 +217,6 @@ function parse_unary_colon(ps::ParseState, op::EXPR)
     elseif closer(ps)
         ret = op
     else
-        @info 1
         prev_errored = ps.errored
         arg = @precedence ps 20 parse_expression(ps)
         if isbracketed(arg)  && typof(arg.args[2]) === ErrorToken && errorof(arg.args[2]) === UnexpectedAssignmentOp
