@@ -147,13 +147,8 @@ Parses a comma separated list, optionally allowing for conversion of
 assignment (`=`) expressions to `Kw`.
 """
 function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw = true, block = false, istuple = false)
-    safetytrip = 0
     @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma while !closer(ps)
         starting_offset = ps.t.startbyte
-        safetytrip += 1
-        if safetytrip > 10_000
-            throw(CSTInfiniteLoop("Infinite loop at $ps"))
-        end
         a = parse_expression(ps)
         if kw && _do_kw_convert(ps, a)
             a = _kw_convert(a)
@@ -164,7 +159,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw = true, block = 
         else# if kindof(ps.ws) == SemiColonWS
             break
         end
-        if ps.t.startbyte == starting_offset
+        if ps.t.startbyte <= starting_offset
             # We've not progressed over the course of a loop.
             throw(CSTInfiniteLoop("Infinite loop at $ps"))
         end

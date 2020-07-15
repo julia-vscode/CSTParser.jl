@@ -92,7 +92,7 @@ function parse_compound(ps::ParseState, ret::EXPR)
     elseif (typof(ret) === x_Str || typof(ret) === x_Cmd) && isidentifier(ps.nt)
         arg = mIDENTIFIER(next(ps))
         push!(ret, mLITERAL(arg.fullspan, arg.span, val(ps.t, ps), Tokens.STRING))
-    elseif (isidentifier(ret) || is_getfield(ret)) && isprefixableliteral(ps.nt)
+    elseif (isidentifier(ret) || is_getfield(ret)) && isemptyws(ps.ws) && isprefixableliteral(ps.nt)
         next(ps)
         arg = parse_string_or_cmd(ps, ret)
         if kindof(arg) === Tokens.CMD || kindof(arg) === Tokens.TRIPLE_CMD
