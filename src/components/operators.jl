@@ -203,7 +203,7 @@ function parse_unary_colon(ps::ParseState, op::EXPR)
     op = requires_no_ws(op, ps)
     if Tokens.iskeyword(kindof(ps.nt))
         ret = EXPR(Quotenode, EXPR[op, mIDENTIFIER(next(ps))])
-    elseif isidentifier(ps.nt) 
+    elseif isidentifier(ps.nt)
         id = INSTANCE(next(ps))
         if VERSION > v"1.3.0-" && valof(id) == "var" && isemptyws(ps.ws) && (ps.nt.kind === Tokens.STRING || ps.nt.kind === Tokens.TRIPLE_STRING)
             # Special case for :var"sdf"
