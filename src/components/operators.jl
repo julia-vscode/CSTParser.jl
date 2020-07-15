@@ -203,12 +203,21 @@ function parse_unary_colon(ps::ParseState, op::EXPR)
     op = requires_no_ws(op, ps)
     if Tokens.iskeyword(kindof(ps.nt))
         ret = EXPR(Quotenode, EXPR[op, mIDENTIFIER(next(ps))])
+    elseif isidentifier(ps.nt) 
+        id = INSTANCE(next(ps))
+        if VERSION > v"1.3.0-" && valof(id) == "var" && isemptyws(ps.ws) && (ps.nt.kind === Tokens.STRING || ps.nt.kind === Tokens.TRIPLE_STRING)
+            # Special case for :var"sdf"
+            arg = parse_string_or_cmd(next(ps), id)
+            id = EXPR(NONSTDIDENTIFIER, EXPR[id, arg])
+        end
+        ret = EXPR(Quotenode, EXPR[op, id])
     elseif Tokens.begin_literal < kindof(ps.nt) < Tokens.CHAR ||
         isoperator(kindof(ps.nt)) || isidentifier(ps.nt) || kindof(ps.nt) === Tokens.TRUE || kindof(ps.nt) === Tokens.FALSE
         ret = EXPR(Quotenode, EXPR[op, INSTANCE(next(ps))])
     elseif closer(ps)
         ret = op
     else
+        @info 1
         prev_errored = ps.errored
         arg = @precedence ps 20 parse_expression(ps)
         if isbracketed(arg)  && typof(arg.args[2]) === ErrorToken && errorof(arg.args[2]) === UnexpectedAssignmentOp

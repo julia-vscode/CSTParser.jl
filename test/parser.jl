@@ -852,4 +852,8 @@ end""" |> test_expr
         end""")
         @test typof(x[2][1][1]) === CSTParser.GlobalRefDoc
     end
+
+    @testset "issue #198" begin
+        @test test_expr(":var\"id\"")
+    end
 end
