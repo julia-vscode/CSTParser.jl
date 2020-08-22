@@ -312,7 +312,7 @@ end
 
 Parse an `if` block.
 """
-function parse_if(ps::ParseState, nested = false)
+function parse_if(ps::ParseState, nested=false)
     # Parsing
     kw = mKEYWORD(ps)
     if isendoflinews(ps.ws)

@@ -1,7 +1,7 @@
 function longest_common_prefix(prefixa, prefixb)
     maxplength = min(sizeof(prefixa), sizeof(prefixb))
     maxplength == 0 && return ""
-    idx = findfirst(i->(prefixa[i] != prefixb[i]), 1:maxplength)
+    idx = findfirst(i -> (prefixa[i] != prefixb[i]), 1:maxplength)
     idx = idx === nothing ? maxplength : idx - 1
     prefixa[1:idx]
 end
@@ -21,7 +21,7 @@ parse_string_or_cmd(ps)
 When trying to make an `INSTANCE` from a string token we must check for
 interpolating opoerators.
 """
-function parse_string_or_cmd(ps::ParseState, prefixed = false)
+function parse_string_or_cmd(ps::ParseState, prefixed=false)
     sfullspan = ps.nt.startbyte - ps.t.startbyte
     sspan = 1 + ps.t.endbyte - ps.t.startbyte
 
@@ -30,7 +30,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
 
     lcp = nothing
     exprs_to_adjust = []
-    function adjust_lcp(expr::EXPR, last = false)
+    function adjust_lcp(expr::EXPR, last=false)
         if isliteral(expr)
             push!(exprs_to_adjust, expr)
             str = valof(expr)

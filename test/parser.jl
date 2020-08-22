@@ -16,7 +16,7 @@ randop() = rand(["-->", "→",
 
 test_expr_broken(str) = test_expr(str, false)
 
-function test_expr(str, show_data = true)
+function test_expr(str, show_data=true)
     x, ps = CSTParser.parse(ParseState(str))
 
     x0 = Expr(x)

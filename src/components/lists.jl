@@ -71,7 +71,7 @@ Having hit '[' return either:
 + A comprehension
 + An array (vcat of hcats)
 """
-function parse_array(ps::ParseState, isref = false)
+function parse_array(ps::ParseState, isref=false)
     args = EXPR[mPUNCTUATION(ps)]
 
     if kindof(ps.nt) === Tokens.RSQUARE
