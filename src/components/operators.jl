@@ -299,7 +299,7 @@ function parse_operator_power(ps::ParseState, ret::EXPR, op::EXPR)
 end
 
 # parse where
-function parse_operator_where(ps::ParseState, ret::EXPR, op::EXPR, setscope = true)
+function parse_operator_where(ps::ParseState, ret::EXPR, op::EXPR, setscope=true)
     nextarg = @precedence ps LazyAndOp @closer ps :inwhere parse_expression(ps)
 
     if typof(nextarg) === Braces

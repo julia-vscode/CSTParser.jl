@@ -4,7 +4,7 @@ const term_c = (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE, Tokens.END, Tokens
 Continue parsing statements until an element of `closers` is hit (usually
 `end`). Statements are grouped in a `Block` EXPR.
 """
-function parse_block(ps::ParseState, ret::Vector{EXPR} = EXPR[], closers = (Tokens.END,), docable = false)
+function parse_block(ps::ParseState, ret::Vector{EXPR}=EXPR[], closers=(Tokens.END,), docable=false)
     safetytrip = 0
     while kindof(ps.nt) ∉ closers # loop until an expected closer is hit
         safetytrip += 1
@@ -41,7 +41,7 @@ Parses an iterator, allowing for the preceding keyword `outer`. Returns an
 error expression if an invalid expression is parsed (anything other than
 `=`, `in`, `∈`).
 """
-function parse_iterator(ps::ParseState, outer = parse_outer(ps))
+function parse_iterator(ps::ParseState, outer=parse_outer(ps))
     arg = @closer ps :range @closer ps :ws parse_expression(ps)
     if !is_range(arg)
         arg = mErrorToken(ps, arg, InvalidIterator)
@@ -66,7 +66,7 @@ end
 Parses a group of iterators e.g. used in a `for` loop or generator. Can allow
 for a succeeding `Filter` expression.
 """
-function parse_iterators(ps::ParseState, allowfilter = false)
+function parse_iterators(ps::ParseState, allowfilter=false)
     arg = parse_iterator(ps)
     if iscomma(ps.nt) # we've hit a comma separated list of iterators.
         arg = EXPR(Block, EXPR[arg])
@@ -112,7 +112,7 @@ end
 
 Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
 """
-function parse_call(ps::ParseState, ret::EXPR, ismacro = false)
+function parse_call(ps::ParseState, ret::EXPR, ismacro=false)
     if is_minus(ret) || is_not(ret)
         arg = @closer ps :unary @closer ps :inwhere @precedence ps PowerOp parse_expression(ps)
         if istuple(arg)
@@ -146,7 +146,7 @@ end
 Parses a comma separated list, optionally allowing for conversion of 
 assignment (`=`) expressions to `Kw`.
 """
-function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw = true, block = false, istuple = false)
+function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw=true, block=false, istuple=false)
     @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma while !closer(ps)
         starting_offset = ps.t.startbyte
         a = parse_expression(ps)
@@ -204,7 +204,7 @@ end
 
 Parses parameter arguments for a function call (e.g. following a semicolon).
 """
-function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR} = EXPR[]; usekw = true)
+function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR}=EXPR[]; usekw=true)
     isfirst = isempty(args1)
     safetytrip = 0
     @nocloser ps :inwhere @nocloser ps :newline  @closer ps :comma while !isfirst || (@nocloser ps :semicolon !closer(ps))
@@ -230,7 +230,7 @@ function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR
             accept_comma(ps, args1)
         end
         if kindof(ps.ws) == SemiColonWS
-            parse_parameters(ps, args1; usekw = usekw)
+            parse_parameters(ps, args1; usekw=usekw)
         end
         isfirst = true
     end
@@ -322,7 +322,7 @@ end
 """
 Helper function for parsing import/using statements.
 """
-function parse_dot_mod(ps::ParseState, is_colon = false)
+function parse_dot_mod(ps::ParseState, is_colon=false)
     args = EXPR[]
 
     safetytrip = 0

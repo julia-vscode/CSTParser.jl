@@ -166,7 +166,7 @@ end
 
 Parses the passed string. If `cont` is true then will continue parsing until the end of the string returning the resulting expressions in a TOPLEVEL block.
 """
-function parse(str::String, cont = false)
+function parse(str::String, cont=false)
     ps = ParseState(str)
     x, ps = parse(ps, cont)
     return x
@@ -201,7 +201,7 @@ function parse_doc(ps::ParseState)
     return ret
 end
 
-function parse(ps::ParseState, cont = false)
+function parse(ps::ParseState, cont=false)
     if ps.l.io.size == 0
         return (cont ? EXPR(FileH, EXPR[]) : nothing), ps
     end

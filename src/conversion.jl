@@ -670,14 +670,14 @@ Removes line info expressions. (i.e. Expr(:line, 1))
 function remlineinfo!(x)
     if isa(x, Expr)
         if x.head == :macrocall && x.args[2] !== nothing
-            id = findall(map(x->(isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
+            id = findall(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
             deleteat!(x.args, id)
             for j in x.args
                 remlineinfo!(j)
             end
             insert!(x.args, 2, nothing)
         else
-            id = findall(map(x->(isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
+            id = findall(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
             deleteat!(x.args, id)
             for j in x.args
                 remlineinfo!(j)
@@ -738,7 +738,7 @@ function fix_range(a)
     end
 end
 
-function get_inner_gen(x, iters = [], arg = [])
+function get_inner_gen(x, iters=[], arg=[])
     if typof(x) == Flatten
         get_inner_gen(x.args[1], iters, arg)
     elseif typof(x) === Generator
@@ -797,7 +797,7 @@ function _get_import_block(x, i, ret)
 end
 
 function expr_import(x, kw)
-    col = findall(a->isoperator(a) && precedence(a) == ColonOp, x.args)
+    col = findall(a -> isoperator(a) && precedence(a) == ColonOp, x.args)
     comma = findall(is_comma, x.args)
 
     header = []
