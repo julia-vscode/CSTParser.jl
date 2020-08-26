@@ -389,6 +389,7 @@ end
             @test """[x;y
                   z]""" |> test_expr
             @test "[x,y;z]" |> test_expr
+            @test "[1,2;]" |> test_expr
         end
 
         @testset "typed_vcat" begin
@@ -551,6 +552,7 @@ end
         @test "\"\"\"Float\$(bit)\"\"\"" |> test_expr
         @test headof(CSTParser.parse("\"\"\"abc\$(de)fg\"\"\"").args[3]) == :STRING
         @test headof(CSTParser.parse("\"\"\"abc(de)fg\"\"\"")) == :TRIPLESTRING
+        @test "\"\"\"\n\t\"\"\"" |> test_expr # Change of behaviour from v1.5 -> v1.6
     end
 
     @testset "No longer broken things" begin
@@ -711,6 +713,13 @@ end""" |> test_expr
         @test CSTParser.headof(CSTParser.parse("~")) === :OPERATOR
         @test "(1:\n2)" |> test_expr
         @test "a[: ]" |> test_expr
+        @test ".~b" |> test_expr
+        @test "a .~ b" |> test_expr
+        @test "1 .< 2 .< 3" |> test_expr
+        @test "(;)" |> test_expr
+        @test "@M{a}-b" |> test_expr
+        @test "@M{a,b}-b" |> test_expr
+        @test "@M[a]-b" |> test_expr
     end
 
     @testset "interpolation error catching" begin

@@ -30,7 +30,7 @@ error expression if an invalid expression is parsed (anything other than
 `=`, `in`, `∈`).
 """
 function parse_iterator(ps::ParseState, outer = parse_outer(ps))
-    arg = @closer ps :range @closer ps :ws parse_expression(ps)
+    arg = @closer ps :range @closer ps :ws @nocloser ps :wsop parse_expression(ps)
     if !is_range(arg)
         arg = mErrorToken(ps, arg, InvalidIterator)
     else 
@@ -72,21 +72,29 @@ end
 Parses a group of iterators e.g. used in a `for` loop or generator. Can allow
 for a succeeding `Filter` expression.
 """
-function parse_iterators(ps::ParseState, allowfilter = false)
-    arg = parse_iterator(ps)
-    if iscomma(ps.nt) # we've hit a comma separated list of iterators.
-        arg = EXPR(:block, EXPR[arg])
-        while iscomma(ps.nt)
-            pushtotrivia!(arg, accept_comma(ps))
-            nextarg = parse_iterator(ps)
-            push!(arg, nextarg)
-        end
-    end
+# function parse_iterators(ps::ParseState, allowfilter = false)
+#     arg = parse_iterator(ps)
+#     if iscomma(ps.nt) # we've hit a comma separated list of iterators.
+#         arg = EXPR(:block, EXPR[arg])
+#         while iscomma(ps.nt)
+#             pushtotrivia!(arg, accept_comma(ps))
+#             nextarg = parse_iterator(ps)
+#             push!(arg, nextarg)
+#         end
+#     end
 
-    if allowfilter
-        arg = parse_filter(ps, arg)
+#     if allowfilter
+#         arg = parse_filter(ps, arg)
+#     end
+#     return arg
+# end
+
+function parse_iterators(ps::ParseState, iters, trivia)
+    push!(iters, parse_iterator(ps))
+    if iscomma(ps.nt)
+        push!(trivia, accept_comma(ps))
+        parse_iterators(ps, iters, trivia)
     end
-    return arg
 end
 
 """
@@ -131,7 +139,7 @@ function parse_call(ps::ParseState, ret::EXPR, ismacro = false)
         arg = @precedence ps PowerOp parse_expression(ps)
         ret = EXPR(ret, arg.args, arg.trivia)
     else
-        !ismacro && headof(ret) === :macroname && (ismacro = true)
+        !ismacro && ismacroname(ret) && (ismacro = true)
         args = ismacro ? EXPR[ret, EXPR(:NOTHING, 0, 0)] : EXPR[ret] 
         trivia = EXPR[EXPR(next(ps))]
         @closeparen ps @default ps parse_comma_sep(ps, args, trivia, !ismacro, insert_params_at = ismacro ? 3 : 2)
@@ -153,6 +161,10 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR
         end
         push!(args, a)
         if iscomma(ps.nt)
+            if istuple
+                # As soon as we hit a comma in a list we can no longer convert to a block expr
+                block = false
+            end
             accept_comma(ps, trivia)
         elseif kindof(ps.ws) == SemiColonWS
             break
@@ -166,8 +178,8 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR
         if @nocloser ps :newline @closer ps :comma @nocloser ps :semicolon closer(ps)
             if block && !(length(args) == 0 && ispunctuation(trivia[1])) && !(isunarycall(last(args)) && is_dddot(last(args).args[2]))
                 push!(args, EXPR(:block, EXPR[pop!(args)]))
-            elseif kw && kindof(ps.nt) === Tokens.RPAREN
-                push!(args, EXPR(:parameters, EXPR[], nothing, 0, 0))
+            else
+                insert!(args, insert_params_at, EXPR(:parameters, EXPR[], nothing, 0, 0))
             end
         else
             a = @nocloser ps :newline @closer ps :comma @nocloser ps :inwhere parse_expression(ps)
@@ -235,7 +247,8 @@ function parse_macrocall(ps::ParseState)
     if !isemptyws(ps.ws)
         mname = mErrorToken(ps, INSTANCE(next(ps)), UnexpectedWhiteSpace)
     else
-        mname = EXPR(:macroname, EXPR[at, EXPR(:IDENTIFIER, next(ps))], nothing)
+        next(ps)
+        mname = EXPR(:IDENTIFIER, ps.nt.startbyte - ps.t.startbyte + 1, ps.t.endbyte - ps.t.startbyte + 2, string("@", val(ps.t, ps)))
     end
 
     # Handle cases with @ at start of dotted expressions
@@ -251,6 +264,12 @@ function parse_macrocall(ps::ParseState)
         return EXPR(:macrocall, EXPR[mname, EXPR(:NOTHING, 0, 0)], nothing, mname.fullspan, mname.span)
     elseif isemptyws(ps.ws) && kindof(ps.nt) === Tokens.LPAREN
         return parse_call(ps, mname, true)
+    elseif isemptyws(ps.ws) && kindof(ps.nt) === Tokens.LBRACE
+        next(ps)
+        return EXPR(:macrocall, EXPR[mname, EXPR(:NOTHING, 0, 0), @default ps @closebrace ps parse_braces(ps)], nothing)
+    elseif isemptyws(ps.ws) && kindof(ps.nt) === Tokens.LSQUARE
+        next(ps)
+        return EXPR(:macrocall, EXPR[mname, EXPR(:NOTHING, 0, 0), @default ps parse_array(ps)], nothing)
     else
         args = EXPR[mname, EXPR(:NOTHING, 0, 0)]
         insquare = ps.closer.insquare
@@ -275,37 +294,24 @@ parse_generator(ps)
 Having hit `for` not at the beginning of an expression return a generator.
 Comprehensions are parsed as SQUAREs containing a generator.
 """
-function parse_generator(ps::ParseState, arg::EXPR)
+function parse_generator(ps::ParseState, first::EXPR)
     kw = EXPR(next(ps))
-    ranges = @closesquare ps parse_iterators(ps, true)
-    if headof(arg) === :generator && !(headof(arg.args[1]) in (:generator, :flatten))
-        arg.args[1] = setparent!(EXPR(:generator, EXPR[arg.args[1], ranges], EXPR[kw]), arg)
-        update_span!(arg)
-        ret = EXPR(:flatten, EXPR[arg], nothing)
-    elseif headof(arg) === :generator || headof(arg) === :flatten
-        arg1, arg2 = get_appropriate_child_to_expand(arg)
-        arg2.args[1] = setparent!(EXPR(:generator, EXPR[arg2.args[1], ranges], EXPR[kw]), arg2)
-        update_span!(arg2)
-        arg1.args[1] = setparent!(EXPR(:flatten, EXPR[arg2], nothing), arg1)
-        update_span!(arg1)
-        update_span!(arg)
-        ret = arg
-    else
-        ret = EXPR(:generator, EXPR[arg], EXPR[kw])
-        if headof(ranges) === :block
-            for a in ranges.args
-                push!(ret.args, setparent!(a, ret))
-            end
-            for a in ranges.trivia
-                push!(ret.trivia, setparent!(a, ret))
-            end
-            update_span!(ret)
-        else
-            push!(ret, ranges)
-        end
+    iters, trivia = EXPR[], EXPR[]
+    @closesquare ps parse_iterators(ps, iters, trivia)
+    if kindof(ps.nt) === Tokens.IF # filter
+        push!(trivia, EXPR(next(ps)))
+        cond = @closer ps :range parse_expression(ps)
+        pushfirst!(iters, cond)
+        iters = EXPR(:filter, iters, trivia)
+        trivia = EXPR[]
     end
-    return ret
+    if kindof(ps.nt) === Tokens.FOR
+        return EXPR(:flatten, EXPR[EXPR(:generator, EXPR[parse_generator(ps, first); iters], [kw; trivia])], nothing)
+    else
+        return EXPR(:generator, EXPR[first; iters], EXPR[kw; trivia])
+    end
 end
+
 
 function get_appropriate_child_to_expand(x)
     if headof(x) === :generator && !(headof(x.args[1]) in (:generator, :flatten))
@@ -320,8 +326,8 @@ end
 function parse_importexport_item(ps, is_colon = false)
     if kindof(ps.nt) === Tokens.AT_SIGN
         at = EXPR(next(ps))
-        a = INSTANCE(next(ps))
-        EXPR(:macroname, EXPR[at, a],nothing)
+        next(ps)
+        mname = EXPR(:IDENTIFIER, ps.nt.startbyte - ps.t.startbyte + 1, ps.t.endbyte - ps.t.startbyte + 2, string("@", val(ps.t, ps)))
     elseif kindof(ps.nt) === Tokens.LPAREN
         a = EXPR(:brackets, EXPR[], EXPR[EXPR(next(ps))])
         push!(a, @closeparen ps parse_expression(ps))

@@ -18,7 +18,7 @@ function closer(ps::ParseState)
         (kindof(ps.nt) === Tokens.STRING && isemptyws(ps.ws)) ||
         ((kindof(ps.nt) === Tokens.RPAREN || kindof(ps.nt) === Tokens.RSQUARE) && isidentifier(ps.nt))
     )) ||
-    (iscomma(ps.nt) && ps.closer.precedence > 0) ||
+    (iscomma(ps.nt) && ps.closer.precedence > AssignmentOp) ||
     kindof(ps.nt) === Tokens.ENDMARKER ||
     (ps.closer.comma && iscomma(ps.nt)) ||
     (ps.closer.tuple && (iscomma(ps.nt) || isassignmentop(ps.nt))) ||
@@ -218,45 +218,7 @@ function has_error(x::EXPR)
 end
 has_error(ps::ParseState) = ps.errored
 
-# When using the FancyDiagnostics package, Base.parse, is the
-# same as CSTParser.parse. Manually call the flisp parser here
-# to make sure we test what we want, even when people load the
-# FancyDiagnostics package.
-function flisp_parse(str::AbstractString, pos::Int; greedy::Bool = true, raise::Bool = true)
-    # pos is one based byte offset.
-    # returns (expr, end_pos). expr is () in case of parse error.
-    bstr = String(str)
-    ex, pos = ccall(:jl_parse_string, Any,
-                    (Ptr{UInt8}, Csize_t, Int32, Int32),
-                    bstr, sizeof(bstr), pos - 1, greedy ? 1 : 0)
-    if raise && isa(ex, Expr) && ex.head === :error
-        throw(Meta.ParseError(ex.args[1]))
-    end
-    if ex === ()
-        raise && throw(Meta.ParseError("end of input"))
-        ex = Expr(:error, "end of input")
-    end
-    return ex, pos + 1 # C is zero-based, Julia is 1-based
-end
 
-function flisp_parse(str::AbstractString; raise::Bool = true)
-    ex, pos = flisp_parse(str, 1, greedy = true, raise = raise)
-    if isa(ex, Expr) && ex.head === :error
-        return ex
-    end
-    if !(pos > ncodeunits(str))
-        raise && throw(Meta.ParseError("extra token after end of expression"))
-        return Expr(:error, "extra token after end of expression")
-    end
-    return ex
-end
-
-function flisp_parse(stream::IO; greedy::Bool = true, raise::Bool = true)
-    pos = position(stream)
-    ex, Δ = flisp_parse(read(stream, String), 1, greedy = greedy, raise = raise)
-    seek(stream, pos + Δ - 1)
-    return ex
-end
 
 using Base.Meta
 norm_ast(a::Any) = begin
@@ -300,12 +262,13 @@ norm_ast(a::Any) = begin
 end
 
 function flisp_parsefile(str, display = true)
-    io = IOBuffer(str)
+    pos = 1
     failed = false
     x1 = Expr(:file)
     try
-        while !eof(io)
-            push!(x1.args, flisp_parse(io))
+        while pos <= sizeof(str)
+            x, pos = Meta.parse(str, pos)
+            push!(x1.args, x)
         end
     catch er
         isa(er, InterruptException) && rethrow(er)
@@ -330,9 +293,9 @@ function cst_parsefile(str)
     if length(x.args) > 0 && is_nothing(x.args[1])
         popfirst!(x.args)
     end
-    if length(x.args) > 0 && is_nothing(x.args[end])
-        pop!(x.args)
-    end
+    # if length(x.args) > 0 && is_nothing(x.args[end])
+    #     pop!(x.args)
+    # end
     x0 = norm_ast(Expr(x))
     x0, has_error(ps), sp
 end
@@ -358,7 +321,7 @@ function check_file(file, ret, neq)
         printstyled(file, color = :green)
         println()
         c0, c1 = CSTParser.compare(x0, x1)
-        printstyled(string("    ", c0), bold = true, color = :ligth_red)
+        printstyled(string("    ", c0), bold = true, color = :light_red)
         println()
         printstyled(string("    ", c1), bold = true, color = :light_green)
         println()
@@ -493,7 +456,7 @@ function str_value(x)
         return valof(x)
     elseif isidentifier(x)
         valof(x.args[2])
-    elseif isoperator(x) || headof(x) === :macroname
+    elseif isoperator(x)
         return string(Expr(x))
     else
         return ""
@@ -680,5 +643,5 @@ macro cst_str(x)
 end
 
 function issuffixableliteral(ps::ParseState, x::EXPR) 
-    isidentifier(ps.nt) && isemptyws(ps.ws) && headof(x) === :macrocall && (endswith(valof(x.args[1].args[2]), "_str") || endswith(valof(x.args[1].args[2]), "_cmd"))
+    isidentifier(ps.nt) && isemptyws(ps.ws) && ismacrocall(x) && (endswith(valof(x.args[1]), "_str") || endswith(valof(x.args[1]), "_cmd"))
 end

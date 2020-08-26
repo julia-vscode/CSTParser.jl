@@ -2,7 +2,7 @@ function accept_rparen(ps)
     if kindof(ps.nt) === Tokens.RPAREN
         return EXPR(next(ps))
     else
-        return mErrorToken(ps, EXPR(:Rparen, 0, 0), UnexpectedToken)
+        return mErrorToken(ps, EXPR(:RPAREN, 0, 0), UnexpectedToken)
     end
 end
 accept_rparen(ps::ParseState, args) = push!(args, accept_rparen(ps))
@@ -38,7 +38,7 @@ function accept_comma(ps)
     if iscomma(ps.nt)
         return EXPR(next(ps))
     else
-        return EXPR(:Rparen, 0, 0)
+        return EXPR(:RPAREN, 0, 0)
     end
 end
 accept_comma(ps::ParseState, args) = push!(args, accept_comma(ps))

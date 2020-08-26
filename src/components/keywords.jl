@@ -113,7 +113,7 @@ function parse_return(ps::ParseState)
     kw = EXPR(ps)
     # Note to self: Nothing could be treated as implicit and added
     # during conversion to Expr.
-    arg = closer(ps) ? EXPR(:NOTHING, 0, 0, "") : parse_expression(ps)
+    arg = closer(ps) ? EXPR(:NOTHING, 0, 0, "") : @precedence ps AssignmentOp - 1 parse_expression(ps)
 
     return EXPR(:return, EXPR[arg], EXPR[kw])
 end
@@ -210,7 +210,13 @@ function parse_blockexpr_sig(ps::ParseState, head)
     if head === :struct || head == :mutable || head === :while
         return @closer ps :ws parse_expression(ps)
     elseif head === :for
-        return parse_iterators(ps)
+        iters, trivia = EXPR[], EXPR[]
+        parse_iterators(ps, iters, trivia)
+        if length(iters) == 1
+            return first(iters)
+        else
+            return EXPR(:block, iters, trivia)
+        end
     elseif head === :function || head === :macro
         sig = @closer ps :inwhere @closer ps :ws parse_expression(ps)
         if convertsigtotuple(sig)

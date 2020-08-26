@@ -62,7 +62,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         end
     end
 
-    # there are interpolations in the string
+    isinterpolated = false
+
     t_str = val(ps.t, ps)
     if istrip && length(t_str) == 6
         if iscmd
@@ -82,10 +83,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             _val = replace(_val, "\\\\" => "\\")
             _val = replace(_val, "\\`" => "`")
         else
-            if endswith(_val, "\\\\")
-                _val = _val[1:end - 1]
-            end
-            _val = replace(_val, "\\\"" => "\"")
+            _val = unescape_prefixed(_val)
         end
         expr = EXPR(istrip ? :TRIPLESTRING : :STRING, sfullspan, sspan, _val)
         if istrip
@@ -106,6 +104,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 write(b, c)
                 write(b, read(input, Char))
             elseif c == '$'
+                isinterpolated = true
                 lspan = position(b)
                 str = tostr(b)
                 ex = EXPR(:STRING, lspan + startbytes, lspan + startbytes, str)
@@ -184,8 +183,6 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 push!(ret, ex)
             end
         end
-        
-
     end
 
     single_string_T = (:STRING, :TRIPLESTRING, literalmap(kindof(ps.t)))
@@ -207,7 +204,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         end
     end
 
-    if (length(ret.args) == 1 && isliteral(ret.args[1]) && headof(ret.args[1]) in single_string_T)
+    if (length(ret.args) == 1 && isliteral(ret.args[1]) && headof(ret.args[1]) in single_string_T) && !isinterpolated
         ret = ret.args[1]
     end
     update_span!(ret)
@@ -235,18 +232,53 @@ function parse_prefixed_string_cmd(ps::ParseState, ret::EXPR)
     if ret.head === :IDENTIFIER && valof(ret) == "var" && isstringliteral(arg) && VERSION > v"1.3.0-"
         return EXPR(:NONSTDIDENTIFIER, EXPR[ret, arg], nothing)
     elseif headof(arg) === :macrocall && headof(arg.args[1]) === :globalrefcmd
-        mname = EXPR(:macroname, EXPR[EXPR(:ATSIGN, 0, 0), EXPR(:IDENTIFIER, 0, 0, string(valof(ret), "_cmd"))], EXPR[ret])
+        mname = EXPR(:IDENTIFIER, ret.fullspan, ret.span, string("@", valof(ret), "_cmd")) # NOTE: sizeof(valof(mname)) != mname.span
         return EXPR(:macrocall, EXPR[mname, EXPR(:NOTHING, 0, 0), arg.args[3]], nothing)
     elseif is_getfield(ret)
         if headof(ret.args[2]) === :quote || headof(ret.args[2]) === :quotenode
-            ret.args[2].args[1] = setparent!(EXPR(:macroname, EXPR[EXPR(:ATSIGN, 0, 0), EXPR(:IDENTIFIER, 0, 0, string(valof(ret.args[2].args[1]), "_str"))], EXPR[ret.args[2].args[1]]), ret.args[2])
+            ret.args[2].args[1] = setparent!(EXPR(:IDENTIFIER, ret.args[2].args[1].fullspan, ret.args[2].args[1].span, string("@", valof(ret.args[2].args[1]), "_str")), ret.args[2])
         else
-            ret.args[2] = setparent!(EXPR(:macroname, EXPR[EXPR(:ATSIGN, 0, 0), EXPR(:IDENTIFIER, 0, 0, string(valof(ret.args[2].args[1]), "_str"))], EXPR[ret.args[2]]), ret.args[2])
+            ret.args[2] = setparent!(EXPR(:IDENTIFIER, ret.args[2].args[1].fullspan, ret.args[2].args[1].span, string("@", valof(ret.args[2].args[1]), "_str")), ret.args[2])
         end
 
         return EXPR(:macrocall, EXPR[ret, EXPR(:NOTHING, 0, 0), arg], nothing)
     else
-        mname = EXPR(:macroname, EXPR[EXPR(:ATSIGN, 0, 0), EXPR(:IDENTIFIER, 0, 0, string(valof(ret), "_str"))], EXPR[ret])
-        return EXPR(:macrocall, EXPR[mname, EXPR(:NOTHING, 0, 0), arg], nothing)
+        return EXPR(:macrocall, EXPR[EXPR(:IDENTIFIER, ret.fullspan, ret.span, string("@", valof(ret), "_str")), EXPR(:NOTHING, 0, 0), arg], nothing)
     end
+end
+
+function unescape_prefixed(str)
+    edits = UnitRange{Int}[]
+    start = -1
+    for (i, c) in enumerate(str)
+        if start == -1 && c === '\\'
+            start = i
+        end
+        if start > -1
+            if c === '\\'
+            elseif c === '\"'
+                push!(edits, start:i)
+                start = -1
+            else 
+                start = -1
+            end
+        end
+    end
+    
+    if !isempty(edits) || start > -1
+        str1 = deepcopy(str)
+        if start > -1
+            # slashes preceding closing '"'
+            n = div(length(start:length(str)), 2) - 1
+            str1 = string(str1[1:prevind(str1, start)], repeat("\\", n + 1))
+        end
+
+        for e in reverse(edits)
+            n = div(length(e), 2) - 1
+            str1 = string(str1[1:prevind(str1, first(e))], string(repeat("\\", n), "\""), str1[nextind(str1, last(e)):lastindex(str1)])
+            
+        end
+        return str1
+    end
+    return str
 end

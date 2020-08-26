@@ -59,7 +59,7 @@ function parse_expression(ps::ParseState)
             end
             if is_colon(ret) && !(iscomma(ps.nt) || kindof(ps.ws) == SemiColonWS)
                 ret = parse_unary(ps, ret)
-            elseif isoperator(ret) && assign_prec(valof(ret)) && !is_approx(ret)
+            elseif isoperator(ret) && assign_prec(valof(ret)) && !isunaryop(ret)
                 ret = mErrorToken(ps, ret, UnexpectedAssignmentOp)
             end
         elseif kindof(ps.t) === Tokens.AT_SIGN
@@ -92,7 +92,7 @@ function parse_compound(ps::ParseState, ret::EXPR)
     elseif issuffixableliteral(ps, ret)
         arg = EXPR(:IDENTIFIER, next(ps))
         push!(ret, EXPR(:STRING, arg.fullspan, arg.span, val(ps.t, ps)))
-    elseif (isidentifier(ret) || is_getfield(ret)) && isprefixableliteral(ps.nt)
+    elseif (isidentifier(ret) || is_getfield(ret)) && isemptyws(ps.ws) && isprefixableliteral(ps.nt)
         ret = parse_prefixed_string_cmd(ps, ret)
     elseif kindof(ps.nt) === Tokens.LPAREN
         no_ws = !isemptyws(ps.ws)
@@ -254,9 +254,7 @@ end
 
 function _continue_doc_parse(ps::ParseState, x::EXPR)
     headof(x) === :macrocall &&
-    headof(x.args[1]) === :macroname &&
-    length(x.args[1].args) == 2 &&
-    valof(x.args[1].args[2]) == "doc" &&
+    valof(x.args[1]) == "@doc" &&
     length(x.args) < 4 &&
     ps.t.endpos[1] + 1 <= ps.nt.startpos[1]
 end

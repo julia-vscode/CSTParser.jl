@@ -28,6 +28,8 @@ function Base.getindex(x::EXPR, i)
         oddt_evena(x, i)
     elseif headof(x) === :filter
         _filter(x, i)
+    elseif headof(x) === :flatten
+        x.args[1]
     elseif headof(x) === :for
         taat(x, i)
     elseif headof(x) === :function || headof(x) === :macro
@@ -370,16 +372,25 @@ function _dot(x, i)
 end
 
 function _call(x, i)
-    if hastrivia(x)
-        _curly(x, i)
-    elseif isoperator(x.args[1])
+    if isoperator(x.args[1])
         if i == 1
             x.args[2]
         elseif i == 2
             x.args[1]
         elseif i == 3
             x.args[3]
+        elseif hastrivia(x)
+            # a + b + c + d + e
+            if iseven(i)
+                x.trivia[div(i - 2, 2)]
+            else
+                # 5->4, 7->5 9->6
+                # (i->(i-3)/2 + 3).([5,7,9])
+                x.args[div(i - 3, 2) + 3]
+            end
         end
+    elseif hastrivia(x)
+        _curly(x, i)
     end
 end
 
@@ -394,7 +405,7 @@ function _kw(x, i)
 end
 
 function _tuple(x, i)
-    hasparams = headof(x.args[1]) === :parameters
+    hasparams = x.args !== nothing && length(x.args) > 0 && headof(x.args[1]) === :parameters
     if hasparams
         if i == length(x)
             last(x.trivia)

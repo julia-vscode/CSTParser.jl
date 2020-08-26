@@ -118,7 +118,6 @@ end
 
 # Expressions
 
-# Fallback
 function Expr(x::EXPR)
     if isidentifier(x)
         if headof(x) === :NONSTDIDENTIFIER
@@ -150,18 +149,33 @@ function Expr(x::EXPR)
         Expr(Expr(x.head), Expr.(x.args)...)
     elseif x.head === :quotenode
         QuoteNode(Expr(x.args[1]))
-    elseif x.head === :macroname
-        Symbol("@", x.args[2].val)
     elseif x.head === :globalrefdoc
         GlobalRef(Core, :(var"@doc"))
     elseif x.head === :globalrefcmd
         GlobalRef(Core, :(var"@cmd"))
+    elseif x.head === :macrocall && is_getfield_w_quotenode(x.args[1]) && !ismacroname(x.args[1].args[2].args[1])
+        # Shift '@' to the right
+        new_name = Expr(:., remove_at(x.args[1].args[1]), QuoteNode(Symbol("@", valof(x.args[1].args[2].args[1]))))
+        Expr(:macrocall, new_name, Expr.(x.args[2:end])...)
+    elseif x.head === :macrocall && isidentifier(x.args[1]) && valof(x.args[1]) == "@."
+        Expr(:macrocall, :var"@__dot__", Expr.(x.args[2:end])...)
+    elseif x.head === :string && length(x.args) > 0 && (x.args[1].head === :STRING || x.args[1].head === :TRIPLESTRING) && isempty(valof(x.args[1]))
+        # Special conversion needed - the initial text section is treated as empty for the represented string following lowest-common-prefix adjustments, but exists in the source.
+        Expr(:string, Expr.(x.args[2:end])...)
     else
         Expr(Symbol(lowercase(String(x.head))), Expr.(x.args)...)
     end
 end
 
-
+function remove_at(x)
+    if isidentifier(x) && valof(x) !== nothing && first(valof(x)) == '@'
+        return Symbol(valof(x)[2:end])
+    elseif is_getfield_w_quotenode(x)
+        Expr(:., remove_at(x.args[1]), QuoteNode(remove_at(x.args[2].args[1])))
+    else
+        Expr(x)
+    end
+end
 
 # cross compatability for line number insertion in macrocalls
 if VERSION > v"1.1-"

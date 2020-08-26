@@ -26,7 +26,8 @@ isbinarysyntax(x::EXPR) =  (isoperator(x.head) && length(x.args) == 2)
 iswhere(x::EXPR) = headof(x) === :where
 istuple(x::EXPR) = headof(x) === :tuple
 ismacrocall(x::EXPR) = headof(x) === :macrocall
-ismacroname(x::EXPR) = (headof(x) === :macroname && length(x.args) == 2) || (is_getfield_w_quotenode(x) && ismacroname(x.args[2].args[1]))
+ismacroname(x::EXPR) = (isidentifier(x) && valof(x) !== nothing && !isempty(valof(x)) && first(valof(x)) == '@') || (is_getfield_w_quotenode(x) && (ismacroname(unquotenode(rhs_getfield(x))) || ismacroname(x.args[1])))
+
 iskwarg(x::EXPR) = headof(x) === :kw
 isparameters(x::EXPR) = headof(x) === :parameters
 iscurly(x::EXPR) = headof(x) === :curly
@@ -49,6 +50,8 @@ Is this an expression of the form `a.b`.
 """
 is_getfield(x::EXPR) = x.head isa EXPR && isoperator(x.head) && valof(x.head) == "." && length(x.args) == 2
 is_getfield_w_quotenode(x) = is_getfield(x) && headof(x.args[2]) === :quotenode && length(x.args[2].args) > 0
+rhs_getfield(x) = x.args[2]
+unquotenode(x) = x.args[1]
 
 function get_rhs_of_getfield(ret::EXPR)
     if headof(ret.args[2]) === :quotenode || headof(ret.args[2]) === :quote
@@ -92,7 +95,7 @@ is_approx(x::EXPR) = isoperator(x) && valof(x) == "~"
 is_exor(x) = isoperator(x) && valof(x) == "\$"
 is_decl(x) = isoperator(x) && valof(x) == "::"
 is_issubt(x) = isoperator(x) && valof(x) == "<:"
-is_issupt(x) = isoperator(x) && valof(x) == ":>"
+is_issupt(x) = isoperator(x) && valof(x) == ">:"
 is_and(x) = isoperator(x) && valof(x) == "&"
 is_not(x) = isoperator(x) && valof(x) == "!"
 is_plus(x) = isoperator(x) && valof(x) == "+"
@@ -135,6 +138,7 @@ rem_call(x::EXPR) = headof(x) === :call ? x.args[1] : x
 rem_where(x::EXPR) = iswhere(x) ? x.args[1] : x
 rem_wheres(x::EXPR) = iswhere(x) ? rem_wheres(x.args[1]) : x
 rem_where_subtype(x::EXPR) = (iswhere(x) || issubtypedecl(x)) ? x.args[1] : x
+rem_wheres_subtypes(x::EXPR) = (iswhere(x) || issubtypedecl(x)) ? rem_wheres_subtypes(x.args[1]) : x
 rem_where_decl(x::EXPR) = (iswhere(x) || isdeclaration(x)) ? x.args[1] : x
 rem_wheres_decls(x::EXPR) = (iswhere(x) || isdeclaration(x)) ? rem_wheres_decls(x.args[1]) : x
 rem_invis(x::EXPR) = isbracketed(x) ? rem_invis(x.args[1]) : x
