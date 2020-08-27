@@ -119,13 +119,11 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                 op = mOPERATOR(1, 1, Tokens.EX_OR, false)
                 if peekchar(input) == '('
                     skip(input, 1) # skip past '('
-                    lpfullspan = 1
-                    while Tokenize.Lexers.iswhitespace(peekchar(input))
-                        # skip past any trailing whitespace and add to full span of '('
-                        skip(input, 1)
-                        lpfullspan += 1
+                    lpfullspan = -position(input)
+                    if iswhitespace(peekchar(input)) || peekchar(input) === '#'
+                        read_ws_comment(input, readchar(input))
                     end
-                    lparen = mPUNCTUATION(Tokens.LPAREN, lpfullspan, 1)
+                    lparen = mPUNCTUATION(Tokens.LPAREN, lpfullspan + position(input) + 1, 1)
                     rparen = mPUNCTUATION(Tokens.RPAREN, 1, 1)
 
                     ps1 = ParseState(input)

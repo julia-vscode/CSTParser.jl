@@ -104,7 +104,7 @@ end
 Having hit an initial whitespace/comment/semicolon continues collecting similar
 `Chars` until they end. Returns a WS token with an indication of newlines/ semicolons. Indicating a semicolons takes precedence over line breaks as the former is equivalent to the former in most cases.
 """
-function lex_ws_comment(l::Lexer, c::Char)
+function read_ws_comment(l, c::Char)
     newline = c == '\n'
     semicolon = c == ';'
     if c == '#'
@@ -124,14 +124,17 @@ function lex_ws_comment(l::Lexer, c::Char)
             newline, semicolon = read_ws(l, newline, semicolon)
         end
     end
+    return newline, semicolon
+end
 
+function lex_ws_comment(l::Lexer, c::Char)
+    newline, semicolon = read_ws_comment(l, c)
     return emit(l, semicolon ? SemiColonWS :
                    newline ? NewLineWS : WS)
 end
 
 
-
-function read_ws(l::Lexer, newline, semicolon)
+function read_ws(l, newline, semicolon)
     while iswhitespace(peekchar(l))
         c = readchar(l)
         c == '\n' && (newline = true)
@@ -140,7 +143,7 @@ function read_ws(l::Lexer, newline, semicolon)
     return newline, semicolon
 end
 
-function read_comment(l::Lexer)
+function read_comment(l)
     if peekchar(l) != '='
         while true
             pc = peekchar(l)
