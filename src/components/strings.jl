@@ -118,9 +118,14 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                 startbytes = 0
                 op = EXPR(:OPERATOR, 1, 1, "\$")
                 if peekchar(input) == '('
-                    lparen = EXPR(:LPAREN, 1, 1)
+                    skip(input, 1) # skip past '('
+                    lpfullspan = -position(input)
+                    if iswhitespace(peekchar(input)) || peekchar(input) === '#'
+                        read_ws_comment(input, readchar(input))
+                    end
+                    lparen = EXPR(:LPAREN, lpfullspan + position(input) + 1, 1)
                     rparen = EXPR(:RPAREN, 1, 1)
-                    skip(input, 1)
+
                     ps1 = ParseState(input)
 
                     if kindof(ps1.nt) === Tokens.RPAREN
