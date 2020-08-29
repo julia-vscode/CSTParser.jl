@@ -847,6 +847,8 @@ end""" |> test_expr
         @test headof(x.args[3]) === :errortoken
     end
 
-
-
+    @testset "vscode issue #1632" begin
+        @test test_expr("\"\$( a)\"")
+        @test test_expr("\"\$(#=comment=# a)\"")
+    end
 end
