@@ -857,4 +857,8 @@ end""" |> test_expr
             @test test_expr(":var\"id\"")
         end
     end
+    @testset "vscode issue #1632" begin
+        @test test_expr("\"\$( a)\"")
+        @test test_expr("\"\$(#=comment=# a)\"")
+    end
 end

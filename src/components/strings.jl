@@ -118,9 +118,14 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                 startbytes = 0
                 op = mOPERATOR(1, 1, Tokens.EX_OR, false)
                 if peekchar(input) == '('
-                    lparen = mPUNCTUATION(Tokens.LPAREN, 1, 1)
+                    skip(input, 1) # skip past '('
+                    lpfullspan = -position(input)
+                    if iswhitespace(peekchar(input)) || peekchar(input) === '#'
+                        read_ws_comment(input, readchar(input))
+                    end
+                    lparen = mPUNCTUATION(Tokens.LPAREN, lpfullspan + position(input) + 1, 1)
                     rparen = mPUNCTUATION(Tokens.RPAREN, 1, 1)
-                    skip(input, 1)
+
                     ps1 = ParseState(input)
 
                     if kindof(ps1.nt) === Tokens.RPAREN
