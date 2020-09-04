@@ -42,6 +42,8 @@ function Base.getindex(x::EXPR, i)
         _if(x, i)
     elseif headof(x) === :kw
         _kw(x, i)
+    elseif headof(x) === :let
+        taat(x, i)
     elseif headof(x) === :local || headof(x) === :return
         oddt_evena(x, i)
     elseif headof(x) === :macrocall
@@ -80,6 +82,8 @@ function Base.getindex(x::EXPR, i)
         _vcat(x, i)
     elseif headof(x) === :vect
         _vect(x, i)
+    elseif headof(x) === :where
+        _where(x, i)
     elseif headof(x) === :while
         taat(x, i)
     elseif isoperator(headof(x))
@@ -229,12 +233,16 @@ end
 
 function _block(x, i)
     if hastrivia(x) # We have a begin block
-        if i == 1
-            x.trivia[1]
-        elseif 1 < i < length(x)
-            x.args[i - 1]
-        elseif i == length(x)
-            x.trivia[2]
+        if headof(x.trivia[1]) === :BEGIN
+            if i == 1
+                x.trivia[1]
+            elseif 1 < i < length(x)
+                x.args[i - 1]
+            elseif i == length(x)
+                x.trivia[2]
+            end
+        elseif headof(x.trivia[1]) === :COMMA # comma sep list as in :let block or iterators
+            odda_event(x, i)
         end
     else
         x.args[i]
@@ -373,20 +381,31 @@ end
 
 function _call(x, i)
     if isoperator(x.args[1])
-        if i == 1
-            x.args[2]
-        elseif i == 2
-            x.args[1]
-        elseif i == 3
-            x.args[3]
-        elseif hastrivia(x)
-            # a + b + c + d + e
-            if iseven(i)
-                x.trivia[div(i - 2, 2)]
-            else
-                # 5->4, 7->5 9->6
-                # (i->(i-3)/2 + 3).([5,7,9])
-                x.args[div(i - 3, 2) + 3]
+        if length(x) == 2 # unary op call
+            x.args[i]
+        elseif length(x) == 3 # binary
+            if i == 1
+                x.args[2]
+            elseif i == 2
+                x.args[1]
+            elseif i == 3
+                x.args[3]
+            end
+        elseif hastrivia(x) && headof(x.trivia[1]) === :LPAREN # op call w/ brackets
+            _curly(x, i)
+        else # chained call: a + b + c + d + ...
+            if i == 1
+                x.args[2]
+            elseif i == 2
+                x.args[1]
+            elseif i == 3
+                x.args[3]
+            elseif hastrivia(x)
+                if iseven(i)
+                    x.trivia[div(i - 2, 2)]
+                else
+                    x.args[div(i - 3, 2) + 3]
+                end
             end
         end
     elseif hastrivia(x)
@@ -659,6 +678,20 @@ function _try(x, i)
         elseif i == 8
             x.trivia[4]
         end
+    end
+end
+
+function _where(x, i)
+    if i == 1
+        x.args[1]
+    elseif i == 2
+        x.trivia[1]
+    elseif length(x) == 3
+        if i == 3
+            return x.args[2]
+        end
+    else
+        oddt_evena(x, i)
     end
 end
 
