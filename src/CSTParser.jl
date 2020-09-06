@@ -39,7 +39,9 @@ Acceptable starting tokens are:
 
 """
 function parse_expression(ps::ParseState)
-    if kindof(ps.nt) ∈ term_c && !(kindof(ps.nt) === Tokens.END && ps.closer.square)
+    if kindof(ps.nt) === Tokens.ENDMARKER
+        ret = mErrorToken(ps, UnexpectedToken)
+    elseif kindof(ps.nt) ∈ term_c && !(kindof(ps.nt) === Tokens.END && ps.closer.square)
         ret = mErrorToken(ps, EXPR(next(ps)), UnexpectedToken)
     else
         next(ps)

@@ -162,6 +162,8 @@ function Expr(x::EXPR)
     elseif x.head === :string && length(x.args) > 0 && (x.args[1].head === :STRING || x.args[1].head === :TRIPLESTRING) && isempty(valof(x.args[1]))
         # Special conversion needed - the initial text section is treated as empty for the represented string following lowest-common-prefix adjustments, but exists in the source.
         Expr(:string, Expr.(x.args[2:end])...)
+    elseif x.args == nothing
+        Expr(Symbol(lowercase(String(x.head))))
     else
         Expr(Symbol(lowercase(String(x.head))), Expr.(x.args)...)
     end

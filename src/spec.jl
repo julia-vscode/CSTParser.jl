@@ -180,6 +180,9 @@ end
 
 function EXPR(head::Union{Symbol,EXPR}, args::Vector{EXPR}, trivia::Union{Vector{EXPR},Nothing}, fullspan::Int, span::Int)
     ex = EXPR(head, args, trivia, fullspan, span, nothing, nothing, nothing)
+    if head isa EXPR
+        setparent!(head, ex)
+    end
     for c in args
         setparent!(c, ex)
     end
@@ -491,5 +494,9 @@ function tokenkindtoheadmap(k::Tokens.Kind)
         return :TRUE
     elseif k === Tokens.FALSE
         return :FALSE
+    elseif k === Tokens.ENDMARKER
+        return :errortoken
+    else
+        error("")
     end
 end

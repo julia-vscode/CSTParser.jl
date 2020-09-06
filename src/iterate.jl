@@ -24,6 +24,8 @@ function Base.getindex(x::EXPR, i)
         odda_event(x, i)
     elseif headof(x) === :elseif
         _elseif(x, i)
+    elseif headof(x) === :errortoken
+        x.args[i]
     elseif headof(x) === :export
         oddt_evena(x, i)
     elseif headof(x) === :filter
