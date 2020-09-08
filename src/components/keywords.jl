@@ -220,7 +220,7 @@ function parse_blockexpr_sig(ps::ParseState, head)
     elseif head === :function || head === :macro
         sig = @closer ps :inwhere @closer ps :ws parse_expression(ps)
         if convertsigtotuple(sig)
-            sig = EXPR(:tuple, sig.args)
+            sig = EXPR(:tuple, sig.args, sig.trivia)
         end
         while kindof(ps.nt) === Tokens.WHERE && kindof(ps.ws) != Tokens.NEWLINE_WS
             sig = @closer ps :inwhere @closer ps :ws parse_operator_where(ps, sig, INSTANCE(next(ps)), false)

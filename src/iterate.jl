@@ -70,6 +70,8 @@ function Base.getindex(x::EXPR, i)
         _string(x, i)
     elseif headof(x) === :struct
         _struct(x, i)
+    elseif headof(x) === :toplevel
+        x.args[i]
     elseif headof(x) === :try
         _try(x, i)
     elseif headof(x) === :tuple
@@ -111,6 +113,8 @@ function Base.getindex(x::EXPR, i)
                 x.args[2]
             end
         end
+    else 
+        error("Indexing $(Expr(x)) at $i")
     end
 end
 Base.iterate(x::EXPR) = length(x) == 0 ? nothing : (x[1], 1)
