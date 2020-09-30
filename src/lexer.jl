@@ -49,13 +49,10 @@ end
 
 function ParseState(str::Union{IO,String}, loc::Int)
     ps = ParseState(str)
-    prev_pos = -1  # TODO: remove
+    prevpos = position(ps)
     while ps.nt.startbyte < loc
-        if prev_pos == ps.nt.startbyte  # TODO: remove
-            throw(CSTInfiniteLoop("Inifite loop at $ps"))  # TODO: remove
-        end  # TODO: remove
-        prev_pos = ps.nt.startbyte # TODO: remove
         next(ps)
+        prevpos = loop_check(ps, prevpos)
     end
     return ps
 end
@@ -97,6 +94,7 @@ function Base.seek(ps::ParseState, offset)
     next(next(ps))
 end
 
+Base.position(ps::ParseState) = ps.nt.startbyte
 
 """
     lex_ws_comment(l::Lexer, c)

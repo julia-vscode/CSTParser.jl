@@ -215,12 +215,8 @@ function parse(ps::ParseState, cont=false)
             push!(top, mLITERAL(ps.nt.startbyte, ps.nt.startbyte, "", Tokens.NOTHING))
         end
 
-        safetytrip = 0
+        prevpos = position(ps)
         while kindof(ps.nt) !== Tokens.ENDMARKER
-            safetytrip += 1
-            if safetytrip > 10_000
-                throw(CSTInfiniteLoop("Infinite loop at $ps"))
-            end
             curr_line = ps.nt.startpos[1]
             ret = parse_doc(ps)
             if _continue_doc_parse(ps, ret)
@@ -237,6 +233,7 @@ function parse(ps::ParseState, cont=false)
                 push!(top, ret)
             end
             last_line = curr_line
+            prevpos = loop_check(ps, prevpos)
         end
     else
         if kindof(ps.nt) === Tokens.WHITESPACE || kindof(ps.nt) === Tokens.COMMENT
@@ -252,14 +249,12 @@ function parse(ps::ParseState, cont=false)
             if kindof(ps.ws) == SemiColonWS
                 top = EXPR(TopLevel, EXPR[top])
                 safetytrip = 0
+                prevpos = position(ps)
                 while kindof(ps.ws) == SemiColonWS && ps.nt.startpos[1] == last_line && kindof(ps.nt) != Tokens.ENDMARKER
-                    safetytrip += 1
-                    if safetytrip > 10_000
-                        throw(CSTInfiniteLoop("Infinite loop at $ps"))
-                    end
                     ret = parse_doc(ps)
                     push!(top, ret)
                     last_line = ps.nt.startpos[1]
+                    prevpos = loop_check(ps, prevpos)
                 end
             end
         else

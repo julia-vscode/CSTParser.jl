@@ -712,3 +712,11 @@ Is `x` a binary call for `+` or `*` that can be extended to include more
 arguments?
 """
 can_become_chain(x::EXPR, op::EXPR) = isbinarycall(x) && (is_star(op) || is_plus(op)) && kindof(op) == kindof(x.args[2]) && !x.args[2].dot && x.args[2].span > 0
+
+function loop_check(ps, prevpos)
+    if position(ps) <= prevpos
+        throw(CSTInfiniteLoop("Infinite loop at $ps"))
+    else
+        position(ps)
+    end
+end
