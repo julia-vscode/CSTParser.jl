@@ -698,10 +698,6 @@ end
 
 @testset "self test" begin
     test_iter_spans(CSTParser.parse(String(read("parser.jl")), true))
-    test_iter_spans(CSTParser.parse(String(read("../src/CSTParser.jl")), true))
-    test_iter_spans(CSTParser.parse(String(read("../src/components/internals.jl")), true))
-    test_iter_spans(CSTParser.parse(String(read("../src/components/keywords.jl")), true))
-    test_iter_spans(CSTParser.parse(String(read("../src/interface.jl")), true))
-    test_iter_spans(CSTParser.parse(String(read("../src/iterate.jl")), true))
     [(@info f test_iter_spans(CSTParser.parse(String(read(f)), true))) for f in abspath.(readdir("../src/", join = true)) if endswith(f, ".jl")]
+    [(@info f test_iter_spans(CSTParser.parse(String(read(f)), true))) for f in abspath.(readdir("../src/components", join = true)) if endswith(f, ".jl")]
 end

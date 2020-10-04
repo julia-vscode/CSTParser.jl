@@ -7,7 +7,7 @@ function Base.show(io::IO, x::EXPR, offset = 0, d = 0, er = false)
     if isidentifier(x)
         printstyled(io, " "^d, headof(x) == :NONSTDIDENTIFIER ? valof(x.args[2]) : valof(x), color = :yellow)
         x.meta !== nothing && show(io, x.meta)
-        println(io)
+        print(io)
     elseif isoperator(x)
         printstyled(io, " "^d, "OP: ", valof(x), color = c)
     elseif iskeyword(x)
@@ -23,9 +23,9 @@ function Base.show(io::IO, x::EXPR, offset = 0, d = 0, er = false)
             show(io, x.meta)
             print(io, ")")
         end
-        println(io)
         x.args === nothing && return
         for a in x.args
+            println(io)
             show(io, a, offset, d + 1, er)
             offset += a.fullspan
         end
