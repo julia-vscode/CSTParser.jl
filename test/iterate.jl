@@ -418,6 +418,14 @@ end
         @test x[3] === x.args[2]
         @test headof(x[4]) === :elseif
         @test headof(x[5]) === :END
+
+        x = cst"a ? b : c"
+        @test length(x) == 5
+        @test valof(x[1]) === "a"
+        @test CSTParser.isoperator(x[2])
+        @test valof(x[3]) === "b"
+        @test CSTParser.isoperator(x[4])
+        @test valof(x[5]) === "c"
     end
 
     @testset ":elseif" begin

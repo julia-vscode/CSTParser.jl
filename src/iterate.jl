@@ -41,7 +41,11 @@ function Base.getindex(x::EXPR, i)
     elseif headof(x) === :global
         _global(x, i)
     elseif headof(x) === :if
-        _if(x, i)
+        if isoperator(first(x.trivia)) # ternary op
+            odda_event(x, i)
+        else
+            _if(x, i)
+        end
     elseif headof(x) === :kw
         _kw(x, i)
     elseif headof(x) === :let
