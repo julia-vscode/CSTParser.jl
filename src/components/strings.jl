@@ -37,20 +37,12 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
             (isempty(str) || (lcp !== nothing && isempty(lcp))) && return
             (last && str[end] == '\n') && return (lcp = "")
             idxstart, idxend = 2, 1
-            safetytrip = 0
+            prevpos = idxend
             while nextind(str, idxend) - 1 < sizeof(str) && (lcp === nothing || !isempty(lcp))
-                safetytrip += 1
-                if safetytrip > 10_000
-                    throw(CSTInfiniteLoop("Infinite loop."))
-                end
                 idxend = skip_to_nl(str, idxend)
                 idxstart = nextind(str, idxend)
-                safetytrip1 = 0
+                prevpos1 = idxend
                 while nextind(str, idxend) - 1 < sizeof(str)
-                    safetytrip1 += 1
-                    if safetytrip1 > 10_000
-                        throw(CSTInfiniteLoop("Infinite loop."))
-                    end
                     c = str[nextind(str, idxend)]
                     if c == ' ' || c == '\t'
                         idxend += 1
@@ -63,6 +55,16 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                         lcp = lcp === nothing ? prefix : longest_common_prefix(lcp, prefix)
                         break
                     end
+                    if idxend <= prevpos1
+                        throw(CSTInfiniteLoop("Infinite loop in adjust_lcp"))
+                    else
+                        prevpos1 = idxend
+                    end
+                end
+                if idxend < prevpos
+                    throw(CSTInfiniteLoop("Infinite loop in adjust_lcp"))
+                else
+                    prevpos = idxend
                 end
             end
             if idxstart != nextind(str, idxend)
@@ -100,11 +102,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
         seek(input, startbytes)
         b = IOBuffer()
         safetytrip = 0
+        prevpos = position(input)
         while !eof(input)
-            safetytrip += 1
-            if safetytrip > length(str2) # This is iterating over characters, not parsed expressions - 10,000 was in inappropriate limit.
-                throw(CSTInfiniteLoop("Infinite loop parsing: \"$str2\""))
-            end
             c = read(input, Char)
             if c == '\\'
                 write(b, c)
@@ -160,6 +159,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
             else
                 write(b, c)
             end
+            prevpos = loop_check(input, prevpos)
         end
 
         # handle last String section

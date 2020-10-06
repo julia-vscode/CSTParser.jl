@@ -5,13 +5,8 @@ Continue parsing statements until an element of `closers` is hit (usually
 `end`). Statements are grouped in a `Block` EXPR.
 """
 function parse_block(ps::ParseState, ret::Vector{EXPR}=EXPR[], closers=(Tokens.END,), docable=false)
-    safetytrip = 0
+    prevpos = position(ps)
     while kindof(ps.nt) ∉ closers # loop until an expected closer is hit
-        safetytrip += 1
-        if safetytrip > 10_000
-            # Not needed, we take a take a token or break the loop for each branch.
-            throw(CSTInfiniteLoop("Infinite loop at $ps"))
-        end
         if kindof(ps.nt) ∈ term_c # error handling if an unexpected closer is hit
             if kindof(ps.nt) === Tokens.ENDMARKER
                 break
@@ -32,6 +27,7 @@ function parse_block(ps::ParseState, ret::Vector{EXPR}=EXPR[], closers=(Tokens.E
             end
             push!(ret, a)
         end
+        prevpos = loop_check(ps, prevpos)
     end
     return ret
 end
@@ -70,15 +66,12 @@ function parse_iterators(ps::ParseState, allowfilter=false)
     arg = parse_iterator(ps)
     if iscomma(ps.nt) # we've hit a comma separated list of iterators.
         arg = EXPR(Block, EXPR[arg])
-        safetytrip = 0
+        prevpos = position(ps)
         while iscomma(ps.nt)
-            safetytrip += 1
-            if safetytrip > 10_000
-                throw(CSTInfiniteLoop("Infinite loop at $ps"))
-            end
             accept_comma(ps, arg)
             nextarg = parse_iterator(ps)
             push!(arg, nextarg)
+            prevpos = loop_check(ps, prevpos)
         end
     end
 
@@ -147,8 +140,8 @@ Parses a comma separated list, optionally allowing for conversion of
 assignment (`=`) expressions to `Kw`.
 """
 function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw=true, block=false, istuple=false)
+    prevpos = position(ps)
     @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma while !closer(ps)
-        starting_offset = ps.t.startbyte
         a = parse_expression(ps)
         if kw && _do_kw_convert(ps, a)
             a = _kw_convert(a)
@@ -159,10 +152,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw=true, block=fals
         else# if kindof(ps.ws) == SemiColonWS
             break
         end
-        if ps.t.startbyte <= starting_offset
-            # We've not progressed over the course of a loop.
-            throw(CSTInfiniteLoop("Infinite loop at $ps"))
-        end
+        prevpos = loop_check(ps, prevpos)
     end
     if istuple && length(args) > 2
         block = false
@@ -179,14 +169,11 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw=true, block=fals
             a = @nocloser ps :newline @closer ps :comma @nocloser ps :inwhere parse_expression(ps)
             if block && !(length(args) == 1 && ispunctuation(args[1])) && !is_splat(last(args)) && !(istuple && iscomma(ps.nt))
                 args1 = EXPR[pop!(args), a]
-                safetytrip = 0
+                prevpos = position(ps)
                 @nocloser ps :newline @closer ps :comma while @nocloser ps :semicolon !closer(ps)
-                    safetytrip += 1
-                    if safetytrip > 10_000
-                        throw(CSTInfiniteLoop("Infinite loop at $ps"))
-                    end
                     a = parse_expression(ps)
                     push!(args1, a)
+                    prevpos = loop_check(ps, prevpos)
                 end
                 body = EXPR(Block, args1)
                 push!(args, body)
@@ -206,12 +193,8 @@ Parses parameter arguments for a function call (e.g. following a semicolon).
 """
 function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR}=EXPR[]; usekw=true)
     isfirst = isempty(args1)
-    safetytrip = 0
+    prevpos = position(ps)
     @nocloser ps :inwhere @nocloser ps :newline  @closer ps :comma while !isfirst || (@nocloser ps :semicolon !closer(ps))
-        safetytrip += 1
-        if safetytrip > 10_000
-            throw(CSTInfiniteLoop("Infinite loop at $ps"))
-        end
         if isfirst
             a = parse_expression(ps)
         else
@@ -231,6 +214,11 @@ function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR
         end
         if kindof(ps.ws) == SemiColonWS
             parse_parameters(ps, args1; usekw=usekw)
+        end
+        if isfirst
+            prevpos = loop_check(ps, prevpos)
+        else
+            prevpos = position(ps)
         end
         isfirst = true
     end
@@ -256,15 +244,12 @@ function parse_macrocall(ps::ParseState)
 
     # Handle cases with @ at start of dotted expressions
     if kindof(ps.nt) === Tokens.DOT && isemptyws(ps.ws)
-        safetytrip = 0
+        prevpos = position(ps)
         while kindof(ps.nt) === Tokens.DOT
-            safetytrip += 1
-            if safetytrip > 10_000
-                throw(CSTInfiniteLoop("Infinite loop at $ps"))
-            end
             op = mOPERATOR(next(ps))
             nextarg = mIDENTIFIER(next(ps))
             mname = mBinaryOpCall(mname, op, EXPR(Quotenode, EXPR[nextarg]))
+            prevpos = loop_check(ps, prevpos)
         end
     end
 
@@ -275,12 +260,8 @@ function parse_macrocall(ps::ParseState)
     else
         args = EXPR[mname]
         insquare = ps.closer.insquare
-        safetytrip = 0
+        prevpos = position(ps)
         @default ps while !closer(ps)
-            safetytrip += 1
-            if safetytrip > 10_000
-                throw(CSTInfiniteLoop("Infinite loop at $ps"))
-            end
             if insquare
                 a = @closer ps :insquare @closer ps :inmacro @closer ps :ws @closer ps :wsop parse_expression(ps)
             else
@@ -290,6 +271,7 @@ function parse_macrocall(ps::ParseState)
             if insquare && kindof(ps.nt) === Tokens.FOR
                 break
             end
+            prevpos = loop_check(ps, prevpos)
         end
         return EXPR(MacroCall, args)
     end
@@ -325,12 +307,8 @@ Helper function for parsing import/using statements.
 function parse_dot_mod(ps::ParseState, is_colon=false)
     args = EXPR[]
 
-    safetytrip = 0
+    prevpos = position(ps)
     while kindof(ps.nt) === Tokens.DOT || kindof(ps.nt) === Tokens.DDOT || kindof(ps.nt) === Tokens.DDDOT
-        safetytrip += 1
-        if safetytrip > 10_000
-            throw(CSTInfiniteLoop("Infinite loop at $ps"))
-        end
         d = mOPERATOR(next(ps))
         trailing_ws = d.fullspan - d.span
         if is_dot(d)
@@ -343,6 +321,7 @@ function parse_dot_mod(ps::ParseState, is_colon=false)
             push!(args, mOPERATOR(1, 1, Tokens.DOT, false))
             push!(args, mOPERATOR(1 + trailing_ws, 1, Tokens.DOT, false))
         end
+        prevpos = loop_check(ps, prevpos)
     end
 
     # import/export ..
@@ -353,12 +332,8 @@ function parse_dot_mod(ps::ParseState, is_colon=false)
     #     end
     # end
 
-    safetytrip = 0
+    prevpos = position(ps)
     while true
-        safetytrip += 1
-        if safetytrip > 10_000
-            throw(CSTInfiniteLoop("Infinite loop at $ps"))
-        end
         if kindof(ps.nt) === Tokens.AT_SIGN
             at = mPUNCTUATION(next(ps))
             a = INSTANCE(next(ps))
@@ -388,6 +363,7 @@ function parse_dot_mod(ps::ParseState, is_colon=false)
         else
             break
         end
+        prevpos = loop_check(ps, prevpos)
     end
     args
 end
