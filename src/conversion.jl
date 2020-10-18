@@ -150,15 +150,15 @@ function Expr(x::EXPR)
     elseif x.head === :quotenode
         QuoteNode(Expr(x.args[1]))
     elseif x.head === :globalrefdoc
-        GlobalRef(Core, :(var"@doc"))
+        GlobalRef(Core, Symbol("@doc"))
     elseif x.head === :globalrefcmd
-        GlobalRef(Core, :(var"@cmd"))
+        GlobalRef(Core, Symbol("@cmd"))
     elseif x.head === :macrocall && is_getfield_w_quotenode(x.args[1]) && !ismacroname(x.args[1].args[2].args[1])
         # Shift '@' to the right
         new_name = Expr(:., remove_at(x.args[1].args[1]), QuoteNode(Symbol("@", valof(x.args[1].args[2].args[1]))))
         Expr(:macrocall, new_name, Expr.(x.args[2:end])...)
     elseif x.head === :macrocall && isidentifier(x.args[1]) && valof(x.args[1]) == "@."
-        Expr(:macrocall, :var"@__dot__", Expr.(x.args[2:end])...)
+        Expr(:macrocall, Symbol("@__dot__"), Expr.(x.args[2:end])...)
     elseif x.head === :string && length(x.args) > 0 && (x.args[1].head === :STRING || x.args[1].head === :TRIPLESTRING) && isempty(valof(x.args[1]))
         # Special conversion needed - the initial text section is treated as empty for the represented string following lowest-common-prefix adjustments, but exists in the source.
         Expr(:string, Expr.(x.args[2:end])...)
