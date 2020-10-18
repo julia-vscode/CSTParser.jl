@@ -41,3 +41,11 @@ const punctuationprinting = Dict(:COMMA => ",",
 :RBRACE => "}",
 :ATSIGN => "@",
 :DOT => ".")
+
+struct CSTInfiniteLoop <: Exception
+    msg::AbstractString
+end
+
+function Base.showerror(io::IO, ex::CSTInfiniteLoop)
+    print(io, ex.msg)
+end

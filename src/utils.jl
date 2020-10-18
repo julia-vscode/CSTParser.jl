@@ -645,3 +645,11 @@ end
 function issuffixableliteral(ps::ParseState, x::EXPR) 
     isidentifier(ps.nt) && isemptyws(ps.ws) && ismacrocall(x) && (endswith(valof(x.args[1]), "_str") || endswith(valof(x.args[1]), "_cmd"))
 end
+
+function loop_check(ps, prevpos)
+    if position(ps) <= prevpos
+        throw(CSTInfiniteLoop("Infinite loop at $ps"))
+    else
+        position(ps)
+    end
+end

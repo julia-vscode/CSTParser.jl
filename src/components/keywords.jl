@@ -178,7 +178,7 @@ function parse_imports(ps::ParseState)
         update_span!(ret)
     else
         ret = EXPR(kwt, EXPR[arg], EXPR[kw])
-        
+        prevpos = position(ps)
         while iscomma(ps.nt)
             pushtotrivia!(ret, accept_comma(ps))
             arg = parse_dot_mod(ps)

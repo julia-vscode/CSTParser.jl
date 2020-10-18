@@ -855,7 +855,7 @@ end""" |> test_expr
             \"\"\"
             sym
         end""")
-        @test typof(x[2][1][1]) === CSTParser.GlobalRefDoc
+        @test x.args[1].args[1].args[1].head === :globalrefdoc
     end
     if VERSION > v"1.3.0-" 
         @testset "issue #198" begin
