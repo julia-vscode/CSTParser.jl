@@ -109,10 +109,12 @@ function parse_array(ps::ParseState, isref = false)
         elseif kindof(ps.ws) == WS || kindof(ps.ws) == SemiColonWS || kindof(ps.ws) == NewLineWS
             ps.closer.inref = false
             args1 = EXPR[first_arg]
-
+            prevpos = position(ps)
             while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
                 a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                 push!(args1, a)
+        
+                prevpos = loop_check(ps, prevpos)
             end
             if kindof(ps.nt) === Tokens.RSQUARE && kindof(ps.ws) != SemiColonWS
                 push!(trivia, accept_rsquare(ps))
@@ -128,13 +130,16 @@ function parse_array(ps::ParseState, isref = false)
                     first_row = EXPR(:row, args1, nothing)
                 end
                 push!(args, first_row)
+                prevpos = position(ps)
                 while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.nt) !== Tokens.ENDMARKER
                     first_arg = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                     args2 = EXPR[first_arg]
+                    prevpos1 = position(ps)
                     while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
                         a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                         
                         push!(args2, a)
+                        prevpos1 = loop_check(ps, prevpos1)
                     end
                     # if only one entry dont use :row
                     if length(args2) == 1
@@ -142,6 +147,7 @@ function parse_array(ps::ParseState, isref = false)
                     else
                         push!(args, EXPR(:row, args2, nothing))
                     end
+                    prevpos = loop_check(ps, prevpos)
                 end
                 push!(trivia, accept_rsquare(ps))
                 return EXPR(:vcat, args, trivia)
@@ -243,17 +249,21 @@ function parse_barray(ps::ParseState)
         elseif kindof(ps.ws) == NewLineWS
             ret = EXPR(:bracescat, args, trivia)
             push!(ret, first_arg)
+            prevpos = position(ps)
             while kindof(ps.nt) != Tokens.RBRACE && kindof(ps.nt) !== Tokens.ENDMARKER
                 a = @closebrace ps  parse_expression(ps)
                 push!(ret, a)
+                prevpos = loop_check(ps, prevpos)
             end
             pushtotrivia!(ret, accept_rbrace(ps))
             return ret
         elseif kindof(ps.ws) == WS || kindof(ps.ws) == SemiColonWS
             first_row = EXPR(:row, EXPR[first_arg])
+            prevpos = position(ps)
             while kindof(ps.nt) !== Tokens.RBRACE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
                 a = @closebrace ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                 push!(first_row, a)
+                prevpos = loop_check(ps, prevpos)
             end
             if kindof(ps.nt) === Tokens.RBRACE && kindof(ps.ws) != SemiColonWS
                 if length(first_row.args) == 1
@@ -269,6 +279,7 @@ function parse_barray(ps::ParseState)
                     first_row = EXPR(:row, first_row.args)
                 end
                 ret = EXPR(:bracescat, EXPR[first_row], trivia)
+                prevpos = position(ps)
                 while kindof(ps.nt) != Tokens.RBRACE
                     if kindof(ps.nt) === Tokens.ENDMARKER
                         break
@@ -278,12 +289,14 @@ function parse_barray(ps::ParseState)
                     while kindof(ps.nt) !== Tokens.RBRACE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
                         a = @closebrace ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                         push!(last(ret.args), a)
+                        prevpos = loop_check(ps, prevpos)
                     end
                     # if only one entry dont use :row
                     if length(last(ret.args).args) == 1
                         ret.args[end] = setparent!(ret.args[end].args[1], ret)
                     end
                     update_span!(ret)
+                    prevpos = loop_check(ps, prevpos)
                 end
                 pushtotrivia!(ret, accept_rbrace(ps))
                 update_span!(ret)

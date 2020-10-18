@@ -168,18 +168,22 @@ function parse_imports(ps::ParseState)
         
         arg = parse_dot_mod(ps, true)
         push!(ret.args[1], arg)
+        prevpos = position(ps)
         while iscomma(ps.nt)
             pushtotrivia!(ret.args[1], accept_comma(ps))
             arg = parse_dot_mod(ps, true)
             push!(ret.args[1], arg)
+            prevpos = loop_check(ps, prevpos)
         end
         update_span!(ret)
     else
         ret = EXPR(kwt, EXPR[arg], EXPR[kw])
+        
         while iscomma(ps.nt)
             pushtotrivia!(ret, accept_comma(ps))
             arg = parse_dot_mod(ps)
             push!(ret, arg)
+            prevpos = loop_check(ps, prevpos)
         end
     end
 
@@ -191,10 +195,12 @@ function parse_export(ps::ParseState)
     trivia = EXPR[EXPR(ps)]
     push!(args, parse_importexport_item(ps))
 
+    prevpos = position(ps)
     while iscomma(ps.nt)
         push!(trivia, EXPR(next(ps)))
         arg = parse_importexport_item(ps)
         push!(args, arg)
+        prevpos = loop_check(ps, prevpos)
     end
 
     return EXPR(:export, args, trivia)
@@ -222,8 +228,10 @@ function parse_blockexpr_sig(ps::ParseState, head)
         if convertsigtotuple(sig)
             sig = EXPR(:tuple, sig.args, sig.trivia)
         end
+        prevpos = position(ps)
         while kindof(ps.nt) === Tokens.WHERE && kindof(ps.ws) != Tokens.NEWLINE_WS
             sig = @closer ps :inwhere @closer ps :ws parse_operator_where(ps, sig, INSTANCE(next(ps)), false)
+            prevpos = loop_check(ps, prevpos)
         end
         return sig
     elseif head === :let
@@ -233,17 +241,20 @@ function parse_blockexpr_sig(ps::ParseState, head)
             arg = @closer ps :comma @closer ps :ws  parse_expression(ps)
             if iscomma(ps.nt) || !(is_wrapped_assignment(arg) || isidentifier(arg))
                 arg = EXPR(:block, EXPR[arg])
+                prevpos = position(ps)
                 while iscomma(ps.nt)
                     pushtotrivia!(arg, accept_comma(ps))
                     startbyte = ps.nt.startbyte
                     nextarg = @closer ps :comma @closer ps :ws parse_expression(ps)
                     push!(arg, nextarg)
+                    prevpos = loop_check(ps, prevpos)
                 end
             end
             return arg
         end
     elseif head === :do
         args, trivia = EXPR[], EXPR[]
+        prevpos = position(ps)
         @closer ps :comma @closer ps :block while !closer(ps)
             push!(args, @closer ps :ws a = parse_expression(ps))
             if kindof(ps.nt) === Tokens.COMMA
@@ -251,6 +262,7 @@ function parse_blockexpr_sig(ps::ParseState, head)
             elseif @closer ps :ws closer(ps)
                 break
             end
+            prevpos = loop_check(ps, prevpos)
         end
         return EXPR(:tuple, args, trivia)
     elseif head === :module || head === :baremodule

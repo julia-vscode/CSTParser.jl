@@ -1,7 +1,7 @@
 function longest_common_prefix(prefixa, prefixb)
     maxplength = min(sizeof(prefixa), sizeof(prefixb))
     maxplength == 0 && return ""
-    idx = findfirst(i->(prefixa[i] != prefixb[i]), 1:maxplength)
+    idx = findfirst(i -> (prefixa[i] != prefixb[i]), 1:maxplength)
     idx = idx === nothing ? maxplength : idx - 1
     prefixa[1:idx]
 end
@@ -21,7 +21,7 @@ parse_string_or_cmd(ps)
 When trying to make an `INSTANCE` from a string token we must check for
 interpolating opoerators.
 """
-function parse_string_or_cmd(ps::ParseState, prefixed = false)
+function parse_string_or_cmd(ps::ParseState, prefixed=false)
     sfullspan = ps.nt.startbyte - ps.t.startbyte
     sspan = 1 + ps.t.endbyte - ps.t.startbyte
 
@@ -30,16 +30,18 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
 
     lcp = nothing
     exprs_to_adjust = []
-    function adjust_lcp(expr::EXPR, last = false)
+    function adjust_lcp(expr::EXPR, last=false)
         if isliteral(expr)
             push!(exprs_to_adjust, expr)
             str = valof(expr)
             (isempty(str) || (lcp !== nothing && isempty(lcp))) && return
             (last && str[end] == '\n') && return (lcp = "")
             idxstart, idxend = 2, 1
+            prevpos = idxend
             while nextind(str, idxend) - 1 < sizeof(str) && (lcp === nothing || !isempty(lcp))
                 idxend = skip_to_nl(str, idxend)
                 idxstart = nextind(str, idxend)
+                prevpos1 = idxend
                 while nextind(str, idxend) - 1 < sizeof(str)
                     c = str[nextind(str, idxend)]
                     if c == ' ' || c == '\t'
@@ -53,6 +55,16 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
                         lcp = lcp === nothing ? prefix : longest_common_prefix(lcp, prefix)
                         break
                     end
+                    if idxend <= prevpos1
+                        throw(CSTInfiniteLoop("Infinite loop in adjust_lcp"))
+                    else
+                        prevpos1 = idxend
+                    end
+                end
+                if idxend < prevpos
+                    throw(CSTInfiniteLoop("Infinite loop in adjust_lcp"))
+                else
+                    prevpos = idxend
                 end
             end
             if idxstart != nextind(str, idxend)
@@ -98,6 +110,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
         startbytes = istrip ? 3 : 1
         seek(input, startbytes)
         b = IOBuffer()
+        safetytrip = 0
+        prevpos = position(input)
         while !eof(input)
             c = read(input, Char)
             if c == '\\'
@@ -164,6 +178,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed = false)
             else
                 write(b, c)
             end
+            prevpos = loop_check(input, prevpos)
         end
 
         # handle last String section

@@ -17,7 +17,7 @@ function Base.show(io::IO, x::EXPR, offset = 0, d = 0, er = false)
     elseif isliteral(x)
         printstyled(io, " "^d, "$(headof(x)): ", valof(x), color = c)
     else
-        printstyled(io, " "^d, T, color = c)
+        printstyled(io, " "^d, T, color=c)
         if x.meta !== nothing
             print(io, "( ")
             show(io, x.meta)

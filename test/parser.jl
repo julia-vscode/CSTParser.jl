@@ -16,7 +16,7 @@ randop() = rand(["-->", "→",
 
 test_expr_broken(str) = test_expr(str, false)
 
-function test_expr(str, show_data = true)
+function test_expr(str, show_data=true)
     x, ps = CSTParser.parse(ParseState(str))
 
     x0 = Expr(x)
@@ -847,6 +847,21 @@ end""" |> test_expr
         @test headof(x.args[3]) === :errortoken
     end
 
+    @testset "issue #182" begin
+        x = CSTParser.parse("""
+        quote 
+            \"\"\"
+            txt
+            \"\"\"
+            sym
+        end""")
+        @test typof(x[2][1][1]) === CSTParser.GlobalRefDoc
+    end
+    if VERSION > v"1.3.0-" 
+        @testset "issue #198" begin
+            @test test_expr(":var\"id\"")
+        end
+    end
     @testset "vscode issue #1632" begin
         @test test_expr("\"\$( a)\"")
         @test test_expr("\"\$(#=comment=# a)\"")

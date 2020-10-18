@@ -51,7 +51,7 @@ function sized_uint_oct_literal(s::AbstractString)
     # (len < 45 || (len == 45 && s <= "0o3777777777777777777777777777777777777777777")) && return Base.parse(UInt128, s)
     # return Base.parse(BigInt, s)
     (len < 45 || (len == 45 && s <= "0o3777777777777777777777777777777777777777777")) && return Expr(:macrocall, GlobalRef(Core, Symbol("@uint128_str")), nothing, s)
-    return Meta.parse(s)
+    return flisp_parse(s)
 end
 
 function _literal_expr(x)
@@ -93,7 +93,7 @@ function Expr_int(x)
     is_oct && return sized_uint_oct_literal(val)
     is_bin && return sized_uint_literal(val, 1)
     # sizeof(val) <= sizeof(TYPEMAX_INT64_STR) && return Base.parse(Int64, val)
-    return Meta.parse(val)
+    return flisp_parse(val)
     # # val < TYPEMAX_INT64_STR && return Base.parse(Int64, val)
     # sizeof(val) <= sizeof(TYPEMAX_INTval < TYPEMAX_INT128_STR128_STR) && return Base.parse(Int128, val)
     # # val < TYPEMAX_INT128_STR && return Base.parse(Int128, val)
@@ -210,14 +210,14 @@ Removes line info expressions. (i.e. Expr(:line, 1))
 function remlineinfo!(x)
     if isa(x, Expr)
         if x.head == :macrocall && x.args[2] !== nothing
-            id = findall(map(x->(isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
+            id = findall(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
             deleteat!(x.args, id)
             for j in x.args
                 remlineinfo!(j)
             end
             insert!(x.args, 2, nothing)
         else
-            id = findall(map(x->(isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
+            id = findall(map(x -> (isa(x, Expr) && x.head == :line) || (@isdefined(LineNumberNode) && x isa LineNumberNode), x.args))
             deleteat!(x.args, id)
             for j in x.args
                 remlineinfo!(j)
@@ -229,6 +229,5 @@ function remlineinfo!(x)
     end
     x
 end
-
 
 

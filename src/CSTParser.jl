@@ -69,12 +69,12 @@ function parse_expression(ps::ParseState)
         else
             ret = mErrorToken(ps, INSTANCE(ps), UnexpectedToken)
         end
-        while !closer(ps)
-            ret = parse_compound(ps, ret)
-        end
+        ret = parse_compound_recur(ps, ret)
     end
     return ret
 end
+
+parse_compound_recur(ps, ret) = !closer(ps) ? parse_compound_recur(ps, parse_compound(ps, ret)) : ret
 
 """
     parse_compound(ps::ParseState, ret::EXPR)
@@ -160,7 +160,7 @@ end
 
 Parses the passed string. If `cont` is true then will continue parsing until the end of the string returning the resulting expressions in a TOPLEVEL block.
 """
-function parse(str::String, cont = false)
+function parse(str::String, cont=false)
     ps = ParseState(str)
     x, ps = parse(ps, cont)
     return x
@@ -195,7 +195,7 @@ function parse_doc(ps::ParseState)
     return ret
 end
 
-function parse(ps::ParseState, cont = false)
+function parse(ps::ParseState, cont=false)
     if ps.l.io.size == 0
         return (cont ? EXPR(:file, EXPR[]) : nothing), ps
     end
@@ -209,7 +209,8 @@ function parse(ps::ParseState, cont = false)
             push!(top, EXPR(:NOTHING, ps.nt.startbyte, ps.nt.startbyte, ""))
         end
 
-        while !ps.done
+        prevpos = position(ps)
+        while kindof(ps.nt) !== Tokens.ENDMARKER
             curr_line = ps.nt.startpos[1]
             ret = parse_doc(ps)
             if _continue_doc_parse(ps, ret)
@@ -226,6 +227,7 @@ function parse(ps::ParseState, cont = false)
                 push!(top, ret)
             end
             last_line = curr_line
+            prevpos = loop_check(ps, prevpos)
         end
     else
         if kindof(ps.nt) === Tokens.WHITESPACE || kindof(ps.nt) === Tokens.COMMENT
@@ -240,10 +242,12 @@ function parse(ps::ParseState, cont = false)
             last_line = ps.nt.startpos[1]
             if kindof(ps.ws) == SemiColonWS
                 top = EXPR(:toplevel, EXPR[top], nothing)
+                prevpos = position(ps)
                 while kindof(ps.ws) == SemiColonWS && ps.nt.startpos[1] == last_line && kindof(ps.nt) != Tokens.ENDMARKER
                     ret = parse_doc(ps)
                     push!(top, ret)
                     last_line = ps.nt.startpos[1]
+                    prevpos = loop_check(ps, prevpos)
                 end
             end
         else

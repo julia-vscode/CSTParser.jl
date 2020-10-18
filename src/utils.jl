@@ -5,6 +5,7 @@ A magical function determining whether the parsing of an expression should conti
 stop.
 """
 function closer(ps::ParseState)
+    kindof(ps.nt) === Tokens.ENDMARKER ||
     (ps.closer.newline && kindof(ps.ws) == NewLineWS && !iscomma(ps.t)) ||
     (ps.closer.semicolon && kindof(ps.ws) == SemiColonWS) ||
     (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence) ||
@@ -218,10 +219,9 @@ function has_error(x::EXPR)
 end
 has_error(ps::ParseState) = ps.errored
 
-
-
 using Base.Meta
-norm_ast(a::Any) = begin
+
+function norm_ast(a::Any)
     if isa(a, Expr)
         for (i, arg) in enumerate(a.args)
             a.args[i] = norm_ast(arg)
@@ -307,29 +307,29 @@ function check_file(file, ret, neq)
 
     print("\r                             ")
     if !isempty(sp)
-        printstyled(file, color = :blue)
+        printstyled(file, color=:blue)
         @show sp
         println()
         push!(ret, (file, :span))
     end
     if cstfailed
-        printstyled(file, color = :yellow)
+        printstyled(file, color=:yellow)
         println()
         push!(ret, (file, :errored))
     elseif !(x0 == x1)
         cumfail = 0
-        printstyled(file, color = :green)
+        printstyled(file, color=:green)
         println()
         c0, c1 = CSTParser.compare(x0, x1)
         printstyled(string("    ", c0), bold = true, color = :light_red)
         println()
-        printstyled(string("    ", c1), bold = true, color = :light_green)
+        printstyled(string("    ", c1), bold=true, color=:light_green)
         println()
         push!(ret, (file, :noteq))
     end
 end
 
-function check_base(dir = dirname(Base.find_source_file("essentials.jl")), display = false)
+function check_base(dir=dirname(Base.find_source_file("essentials.jl")), display=false)
     N = 0
     neq = 0
     err = 0
@@ -345,7 +345,7 @@ function check_base(dir = dirname(Base.find_source_file("essentials.jl")), displ
             if endswith(file, ".jl")
                 N += 1
                 try
-                    print("\r", rpad(string(N), 5), rpad(string(round(fail / N * 100, sigdigits = 3)), 8), rpad(string(round(err / N * 100, sigdigits = 3)), 8), rpad(string(round(neq / N * 100, sigdigits = 3)), 8))
+                    print("\r", rpad(string(N), 5), rpad(string(round(fail / N * 100, sigdigits=3)), 8), rpad(string(round(err / N * 100, sigdigits=3)), 8), rpad(string(round(neq / N * 100, sigdigits=3)), 8))
 
                     check_file(file, ret, neq)
                 catch er
@@ -355,7 +355,7 @@ function check_base(dir = dirname(Base.find_source_file("essentials.jl")), displ
                         println()
                     end
                     fail += 1
-                    printstyled(file, color = :red)
+                    printstyled(file, color=:red)
                     println()
                     push!(ret, (file, :failed))
                 end
@@ -365,13 +365,13 @@ function check_base(dir = dirname(Base.find_source_file("essentials.jl")), displ
     redirect_stderr(oldstderr)
     if bfail + fail + err + neq > 0
         println("\r$N files")
-        printstyled("failed", color = :red)
+        printstyled("failed", color=:red)
         println(" : $fail    $(100 * fail / N)%")
-        printstyled("errored", color = :yellow)
+        printstyled("errored", color=:yellow)
         println(" : $err     $(100 * err / N)%")
-        printstyled("not eq.", color = :green)
+        printstyled("not eq.", color=:green)
         println(" : $neq    $(100 * neq / N)%", "  -  $aerr     $(100 * aerr / N)%")
-        printstyled("base failed", color = :magenta)
+        printstyled("base failed", color=:magenta)
         println(" : $bfail    $(100 * bfail / N)%")
         println()
     else
@@ -463,7 +463,7 @@ function str_value(x)
     end
 end
 
-_unescape_string(s::AbstractString) = sprint(_unescape_string, s, sizehint = lastindex(s))
+_unescape_string(s::AbstractString) = sprint(_unescape_string, s, sizehint=lastindex(s))
 function _unescape_string(io, s::AbstractString)
     a = Iterators.Stateful(s)
     for c in a

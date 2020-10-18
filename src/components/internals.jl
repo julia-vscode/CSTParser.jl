@@ -4,7 +4,8 @@ const term_c = (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE, Tokens.END, Tokens
 Continue parsing statements until an element of `closers` is hit (usually
 `end`). Statements are grouped in a `Block` EXPR.
 """
-function parse_block(ps::ParseState, ret::Vector{EXPR} = EXPR[], closers = (Tokens.END,), docable = false)
+function parse_block(ps::ParseState, ret::Vector{EXPR}=EXPR[], closers=(Tokens.END,), docable=false)
+    prevpos = position(ps)
     while kindof(ps.nt) ∉ closers # loop until an expected closer is hit
         if kindof(ps.nt) ∈ term_c # error handling if an unexpected closer is hit
             if kindof(ps.nt) === Tokens.ENDMARKER
@@ -20,6 +21,7 @@ function parse_block(ps::ParseState, ret::Vector{EXPR} = EXPR[], closers = (Toke
             end
             push!(ret, a)
         end
+        prevpos = loop_check(ps, prevpos)
     end
     return ret
 end
@@ -72,23 +74,6 @@ end
 Parses a group of iterators e.g. used in a `for` loop or generator. Can allow
 for a succeeding `Filter` expression.
 """
-# function parse_iterators(ps::ParseState, allowfilter = false)
-#     arg = parse_iterator(ps)
-#     if iscomma(ps.nt) # we've hit a comma separated list of iterators.
-#         arg = EXPR(:block, EXPR[arg])
-#         while iscomma(ps.nt)
-#             pushtotrivia!(arg, accept_comma(ps))
-#             nextarg = parse_iterator(ps)
-#             push!(arg, nextarg)
-#         end
-#     end
-
-#     if allowfilter
-#         arg = parse_filter(ps, arg)
-#     end
-#     return arg
-# end
-
 function parse_iterators(ps::ParseState, iters, trivia)
     push!(iters, parse_iterator(ps))
     if iscomma(ps.nt)
@@ -120,7 +105,7 @@ end
 
 Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
 """
-function parse_call(ps::ParseState, ret::EXPR, ismacro = false)
+function parse_call(ps::ParseState, ret::EXPR, ismacro=false)
     if is_minus(ret) || is_not(ret)
         arg = @closer ps :unary @closer ps :inwhere @precedence ps PowerOp parse_expression(ps)
         if istuple(arg)
@@ -154,6 +139,7 @@ Parses a comma separated list, optionally allowing for conversion of
 assignment (`=`) expressions to `Kw`.
 """
 function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR}, kw = true, block = false, istuple = false; insert_params_at = 2)
+    prevpos = position(ps)
     @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma while !closer(ps)
         a = parse_expression(ps)
         if kw && _do_kw_convert(ps, a)
@@ -169,6 +155,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR
         elseif kindof(ps.ws) == SemiColonWS
             break
         end
+        prevpos = loop_check(ps, prevpos)
     end
     if istuple && length(args) > 1
         block = false
@@ -185,9 +172,11 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR
             a = @nocloser ps :newline @closer ps :comma @nocloser ps :inwhere parse_expression(ps)
             if block && !(length(args) == 0 && ispunctuation(trivia[1])) && !issplat(last(args)) && !(istuple && iscomma(ps.nt))
                 args1 = EXPR[pop!(args), a]
+                prevpos = position(ps)
                 @nocloser ps :newline @closer ps :comma while @nocloser ps :semicolon !closer(ps)
                     a = parse_expression(ps)
                     push!(args1, a)
+                    prevpos = loop_check(ps, prevpos)
                 end
                 body = EXPR(:block, args1)
                 push!(args, body)
@@ -208,6 +197,7 @@ Parses parameter arguments for a function call (e.g. following a semicolon).
 function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR} = EXPR[], insert_params_at = 2; usekw = true)
     trivia = EXPR[]
     isfirst = isempty(args1)
+    prevpos = position(ps)
     @nocloser ps :inwhere @nocloser ps :newline  @closer ps :comma while !isfirst || (@nocloser ps :semicolon !closer(ps))
         if isfirst
             a = parse_expression(ps)
@@ -227,7 +217,12 @@ function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR
             accept_comma(ps, trivia)
         end
         if kindof(ps.ws) == SemiColonWS
-            parse_parameters(ps, args1; usekw = usekw)
+            parse_parameters(ps, args1; usekw=usekw)
+        end
+        if isfirst
+            prevpos = loop_check(ps, prevpos)
+        else
+            prevpos = position(ps)
         end
         isfirst = true
     end
@@ -253,10 +248,12 @@ function parse_macrocall(ps::ParseState)
 
     # Handle cases with @ at start of dotted expressions
     if kindof(ps.nt) === Tokens.DOT && isemptyws(ps.ws)
+        prevpos = position(ps)
         while kindof(ps.nt) === Tokens.DOT
             op = EXPR(:OPERATOR, next(ps))
             nextarg = EXPR(:IDENTIFIER, next(ps))
             mname = EXPR(op, EXPR[mname, EXPR(:quotenode, EXPR[nextarg], nothing)], nothing)
+            prevpos = loop_check(ps, prevpos)
         end
     end
 
@@ -273,6 +270,7 @@ function parse_macrocall(ps::ParseState)
     else
         args = EXPR[mname, EXPR(:NOTHING, 0, 0)]
         insquare = ps.closer.insquare
+        prevpos = position(ps)
         @default ps while !closer(ps)
             if insquare
                 a = @closer ps :insquare @closer ps :inmacro @closer ps :ws @closer ps :wsop parse_expression(ps)
@@ -283,6 +281,7 @@ function parse_macrocall(ps::ParseState)
             if insquare && kindof(ps.nt) === Tokens.FOR
                 break
             end
+            prevpos = loop_check(ps, prevpos)
         end
         return EXPR(:macrocall, args, nothing)
     end
@@ -352,6 +351,7 @@ Helper function for parsing import/using statements.
 function parse_dot_mod(ps::ParseState, is_colon = false)
     ret = EXPR(EXPR(:OPERATOR, 0, 0, "."), EXPR[], EXPR[])
 
+    prevpos = position(ps)
     while kindof(ps.nt) === Tokens.DOT || kindof(ps.nt) === Tokens.DDOT || kindof(ps.nt) === Tokens.DDDOT
         d = EXPR(:OPERATOR, next(ps))
         trailing_ws = d.fullspan - d.span
@@ -365,8 +365,10 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
             push!(ret, EXPR(:OPERATOR, 1, 1, "."))
             push!(ret, EXPR(:OPERATOR, 1 + trailing_ws, 1, "."))
         end
+        prevpos = loop_check(ps, prevpos)
     end
 
+    prevpos = position(ps)
     while true
         push!(ret, parse_importexport_item(ps, is_colon))
 
@@ -378,6 +380,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
         else
             break
         end
+        prevpos = loop_check(ps, prevpos)
     end
     ret
 end
