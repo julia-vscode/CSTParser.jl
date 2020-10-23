@@ -15,7 +15,7 @@ function Base.show(io::IO, x::EXPR, offset = 0, d = 0, er = false)
     elseif ispunctuation(x)
         printstyled(io, " "^d, punctuationprinting[headof(x)], color = c)
     elseif isliteral(x)
-        printstyled(io, " "^d, "$(headof(x)): ", valof(x), color = c)
+        printstyled(io, " "^d, "$(headof(x)): ", valof(x) === nothing ? "nothing" : valof(x), color = c)
     else
         printstyled(io, " "^d, T, color=c)
         if x.meta !== nothing

@@ -7,13 +7,12 @@ const LazyAndOp     = 5
 const ComparisonOp  = 6
 const PipeOp        = 7
 const ColonOp       = 8
+const PlusOp        = 9
 @static if Base.operator_precedence(:<<) == 12
-    const PlusOp        = 9
     const BitShiftOp    = 10
     const TimesOp       = 11
     const RationalOp    = 12
 else
-    const PlusOp        = 9
     const TimesOp       = 10
     const RationalOp    = 11
     const BitShiftOp    = 12
