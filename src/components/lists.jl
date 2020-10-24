@@ -6,61 +6,41 @@ tuple.
 """
 function parse_tuple end
 
-@static if VERSION > v"1.1-"
-    function parse_tuple(ps::ParseState, ret::EXPR)
-        op = EXPR(next(ps))
-        if istuple(ret)
-            if (isassignmentop(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
-                pushtotrivia!(ret, op)
-            elseif closer(ps)
+function parse_tuple(ps::ParseState, ret::EXPR)
+    op = EXPR(next(ps))
+    if istuple(ret)
+        if (isassignmentop(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
+            pushtotrivia!(ret, op)
+        elseif closer(ps)
+            @static if VERSION > v"1.1-"
                 pushtotrivia!(ret, mErrorToken(ps, op, Unknown))
             else
-                nextarg = @closer ps :tuple parse_expression(ps)
-                if !(is_lparen(first(ret.trivia)))
-                    pushtotrivia!(ret, op)
-                    push!(ret, nextarg)
-                else
-                    ret = EXPR(:tuple, EXPR[ret, nextarg], EXPR[op])
-                end
+                pushtotrivia!(ret, op)
             end
         else
-            if (isassignmentop(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
-                ret = EXPR(:tuple, EXPR[ret], EXPR[op])
-            elseif closer(ps)
-                ret = mErrorToken(ps, EXPR(:tuple, EXPR[ret], EXPR[op]), Unknown)
+            nextarg = @closer ps :tuple parse_expression(ps)
+            if !(is_lparen(first(ret.trivia)))
+                pushtotrivia!(ret, op)
+                push!(ret, nextarg)
             else
-                nextarg = @closer ps :tuple parse_expression(ps)
                 ret = EXPR(:tuple, EXPR[ret, nextarg], EXPR[op])
             end
         end
-        return ret
-    end
-else
-    function parse_tuple(ps::ParseState, ret::EXPR)
-        op = EXPR(next(ps))
-        if istuple(ret)
-            if closer(ps) || (isassignmentop(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
-                push!(ret, op)
+    else
+        if (isassignmentop(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
+            ret = EXPR(:tuple, EXPR[ret], EXPR[op])
+        elseif closer(ps)
+            @static if VERSION > v"1.1-"
+                ret = mErrorToken(ps, EXPR(:tuple, EXPR[ret], EXPR[op]), Unknown)
             else
-                nextarg = @closer ps :tuple parse_expression(ps)
-                if !(is_lparen(first(ret.args)))
-                    push!(ret, op)
-                    push!(ret, nextarg)
-                else
-                    ret = EXPR(:tuple, EXPR[ret, op, nextarg])
-                end
+                ret = EXPR(:tuple, EXPR[ret], EXPR[op])
             end
         else
-            if closer(ps) || (isassignmentop(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
-                ret = EXPR(:tuple, EXPR[ret, op])
-            else
-                nextarg = @closer ps :tuple parse_expression(ps)
-                ret = EXPR(:tuple, EXPR[ret, op, nextarg])
-            end
+            nextarg = @closer ps :tuple parse_expression(ps)
+            ret = EXPR(:tuple, EXPR[ret, nextarg], EXPR[op])
         end
-        return ret
     end
-
+    return ret
 end
 
 """

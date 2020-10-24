@@ -152,7 +152,11 @@ function Expr(x::EXPR)
     elseif x.head === :globalrefdoc
         GlobalRef(Core, Symbol("@doc"))
     elseif x.head === :globalrefcmd
-        GlobalRef(Core, Symbol("@cmd"))
+        if VERSION > v"1.1"
+            GlobalRef(Core, Symbol("@cmd"))
+        else
+            Symbol("@cmd")
+        end
     elseif x.head === :macrocall && is_getfield_w_quotenode(x.args[1]) && !ismacroname(x.args[1].args[2].args[1])
         # Shift '@' to the right
         new_name = Expr(:., remove_at(x.args[1].args[1]), QuoteNode(Symbol("@", valof(x.args[1].args[2].args[1]))))

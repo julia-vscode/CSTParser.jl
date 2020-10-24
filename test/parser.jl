@@ -714,7 +714,9 @@ end""" |> test_expr
         @test "(1:\n2)" |> test_expr
         @test "a[: ]" |> test_expr
         @test ".~b" |> test_expr
-        @test "a .~ b" |> test_expr
+        if VERSION > v"1.1-"
+            @test "a .~ b" |> test_expr
+        end
         @test "1 .< 2 .< 3" |> test_expr
         @test "(;)" |> test_expr
         if VERSION > v"1.5"
