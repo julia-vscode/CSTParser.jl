@@ -18,36 +18,83 @@ using CSTParser
 ```
 **Documentation**: [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://www.julia-vscode.org/CSTParser.jl/dev)
 
-### Additional Output
-- `EXPR`'s are iterable producing children in the order that they appear in the source code, including punctuation. 
-
-    Example: 
-  ```
-  f(x) = x*2 becomes [f(x), =, x*2]
-  f(x) becomes [f, (, x, )]
-  ```
-- The byte span of each `EXPR` is stored allowing a mapping between byte position in the source code and the releveant parsed expression. The span of a single token includes any trailing whitespace, newlines or comments. This also allows for fast partial parsing of modified source code.
-- Formatting hints are generated as the source code is parsed (e.g. mismatched indents for blocks, missing white space around operators). 
-- The declaration of modules, functions, datatypes and variables are tracked and stored in the relevant hierarchical scopes attatched to the expressions that declare the scope. This allows for a mapping between any identifying symbol and the relevant code that it refers to.
 
 ### Structure
+`CSTParser.EXPR` are broadly equivalent to `Base.Expr` in structure. The key differences are additional fields to store, for each expression:
+* trivia tokens such as punctuation or keywords that are not stored as part of the AST but are needed for the CST representation;
+* the span measurements for an expression;
+* the textual representation of the token (only needed for certain tokens including identifiers (symbols), operators and literals);
+* the parent expression, if present; and
+* any other meta information (this field is untyped and is used within CSTParser to hold errors).
 
-Expressions are represented solely by the following types:
+All `.head` values used in `Expr` are used in `EXPR`. Unlike in AST, tokens (terminal expressions with no child expressions) are stored as `EXPR` and additional head types are used to distinguish between different types of token. These possible head values include:
+
 ```
-Parser.SyntaxNode
-  Parser.EXPR
-  Parser.INSTANCE
-    Parser.HEAD{K}
-    Parser.IDENTIFIER
-    Parser.KEYWORD{K}
-    Parser.LITERAL{K}
-    Parser.OPERATOR{P,K,dot}
-    Parser.PUNCTUATION
-  Parser.QUOTENODE
+:IDENTIFIER
+:NONSTDIDENTIFIER (e.g. var"id")
+:OPERATOR
+
+# Punctuation
+:COMMA
+:LPAREN
+:RPAREN
+:LSQUARE
+:RSQUARE
+:LBRACE
+:RBRACE
+:ATSIGN
+:DOT
+
+# Keywords
+:ABSTRACT
+:BAREMODULE
+:BEGIN
+:BREAK
+:CATCH
+:CONST
+:CONTINUE
+:DO
+:ELSE
+:ELSEIF
+:END
+:EXPORT
+:FINALLY
+:FOR
+:FUNCTION
+:GLOBAL
+:IF
+:IMPORT
+:LET
+:LOCAL
+:MACRO
+:MODULE
+:MUTABLE
+:NEW
+:OUTER
+:PRIMITIVE
+:QUOTE
+:RETURN
+:STRUCT
+:TRY
+:TYPE
+:USING
+:WHILE
+
+# Literals
+:INTEGER
+:BININT (0b0)
+:HEXINT (0x0)
+:OCTINT (0o0)
+:FLOAT
+:STRING
+:TRIPLESTRING
+:CHAR
+:CMD
+:TRIPLECMD
+:NOTHING 
+:TRUE
+:FALSE
 ```
 
-The `K` parameterisation refers to the `kind` of the associated token as specified by `Tokenize.Tokens.Kind`. The `P` and `dot` parameters for operators refers to the precedence of the operator and whether it is dotted (e.g. `.+`).
+The ordering of `.args` members matches that in `Base.Expr` and members of `.trivia` are stored in the order in which they appear in text. 
 
-`INSTANCE`s represent singular objects that may have a concrete or implicit relation to a portion of the source text. In the the former case they have a `span` storing the width in bytes that they occupy in the source text, in the latter case their span is 0. Additionally, `IDENTIFIER`s store their value as a `Symbol` and `LITERAL`s as a `String`.
-
-`EXPR` are equivalent to `Base.Expr` but have extra fields to store their span and any punctuation tokens.
