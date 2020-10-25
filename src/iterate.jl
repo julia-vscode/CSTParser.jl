@@ -266,8 +266,12 @@ function _quote(x, i)
         elseif i == 2
             x.args[1]
         end
-    else length(x.trivia) == 2
+    elseif length(x.trivia) == 2
         tat(x, i)
+    elseif x.trivia === nothing
+        x.args[i]
+    else
+        error()
     end
 end
 
