@@ -23,6 +23,7 @@ isunarysyntax(x::EXPR) =  (isoperator(x.head) && length(x.args) == 1)
 isbinarycall(x::EXPR) = headof(x) === :call && length(x) == 3 && isoperator(x.args[1])
 isbinarycall(x::EXPR, op) = headof(x) === :call && length(x) == 3 && isoperator(x.args[1]) && valof(x.args[1]) == op
 isbinarysyntax(x::EXPR) =  (isoperator(x.head) && length(x.args) == 2)
+ischainedcall(x::EXPR) = headof(x) === :call && isoperator(x.args[1]) && (valof(x.args[1]) == "+" || valof(x.args[1]) == "*") && hastrivia(x) && isoperator(first(x.trivia))
 iswhere(x::EXPR) = headof(x) === :where
 istuple(x::EXPR) = headof(x) === :tuple
 ismacrocall(x::EXPR) = headof(x) === :macrocall

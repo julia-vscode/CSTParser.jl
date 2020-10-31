@@ -260,13 +260,13 @@ function _block(x, i)
 end
 
 function _quote(x, i)
-    if length(x.trivia) == 1
+    if x.trivia !== nothing && length(x.trivia) == 1
         if i == 1
             x.trivia[1]
         elseif i == 2
             x.args[1]
         end
-    elseif length(x.trivia) == 2
+    elseif x.trivia !== nothing && length(x.trivia) == 2
         tat(x, i)
     elseif x.trivia === nothing
         x.args[i]
@@ -440,11 +440,16 @@ end
 function _tuple(x, i)
     hasparams = x.args !== nothing && length(x.args) > 0 && headof(x.args[1]) === :parameters
     if hasparams
-        if i == length(x)
+        if i == 1
+            first(x.trivia)
+        elseif i == length(x)
             last(x.trivia)
-        elseif i == last(x) - 1
+        elseif i == length(x) - 1
             first(x.args)
-
+        elseif isodd(i)
+            x.trivia[div(i + 1, 2)]
+        else
+            x.args[div(i, 2) + 1]
         end
     else
         if length(x.trivia) == length(x.args) - 1  # No brackets, no trailing comma
