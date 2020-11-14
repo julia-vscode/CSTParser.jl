@@ -162,7 +162,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR
     end
 
     if kindof(ps.ws) == SemiColonWS
-        if @nocloser ps :newline @closer ps :comma @nocloser ps :semicolon closer(ps)
+        if @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma @nocloser ps :semicolon closer(ps)
             if block && !(length(args) == 0 && ispunctuation(trivia[1])) && !(isunarycall(last(args)) && is_dddot(last(args).args[2]))
                 push!(args, EXPR(:block, EXPR[pop!(args)]))
             else
@@ -173,7 +173,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR
             if block && !(length(args) == 0 && ispunctuation(trivia[1])) && !issplat(last(args)) && !(istuple && iscomma(ps.nt))
                 args1 = EXPR[pop!(args), a]
                 prevpos = position(ps)
-                @nocloser ps :newline @closer ps :comma while @nocloser ps :semicolon !closer(ps)
+                @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma while @nocloser ps :semicolon !closer(ps)
                     a = parse_expression(ps)
                     push!(args1, a)
                     prevpos = loop_check(ps, prevpos)
