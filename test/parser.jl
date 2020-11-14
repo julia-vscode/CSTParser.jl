@@ -861,4 +861,7 @@ end""" |> test_expr
         @test test_expr("\"\$( a)\"")
         @test test_expr("\"\$(#=comment=# a)\"")
     end
+    @testset "issue #210" begin
+        @test test_expr("function f(a; where = false) end")
+    end
 end
