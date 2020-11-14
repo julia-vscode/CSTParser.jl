@@ -159,7 +159,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw=true, block=fals
     end
 
     if kindof(ps.ws) == SemiColonWS
-        if @nocloser ps :newline @closer ps :comma @nocloser ps :semicolon closer(ps)
+        if @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma @nocloser ps :semicolon closer(ps)
             if block && !(length(args) == 1 && ispunctuation(args[1])) && !(typof(last(args)) === UnaryOpCall && is_dddot(last(args).args[2]))
                 push!(args, EXPR(Block, EXPR[pop!(args)]))
             elseif kw && kindof(ps.nt) === Tokens.RPAREN
@@ -170,7 +170,7 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw=true, block=fals
             if block && !(length(args) == 1 && ispunctuation(args[1])) && !is_splat(last(args)) && !(istuple && iscomma(ps.nt))
                 args1 = EXPR[pop!(args), a]
                 prevpos = position(ps)
-                @nocloser ps :newline @closer ps :comma while @nocloser ps :semicolon !closer(ps)
+                @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma while @nocloser ps :semicolon !closer(ps)
                     a = parse_expression(ps)
                     push!(args1, a)
                     prevpos = loop_check(ps, prevpos)
