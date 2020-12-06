@@ -2,6 +2,14 @@ module Iterating
 using ..CSTParser: EXPR, headof, hastrivia, isoperator, valof, isstringliteral, is_exor, is_lparen, is_rparen
 
 function Base.getindex(x::EXPR, i)
+    a = _getindex(x, i)
+    if a === nothing
+        error("indexing error for $(x.head) expression at $i")
+    end
+    a
+end
+
+function _getindex(x::EXPR, i)
     if headof(x) === :abstract
         _abstract(x, i)
     elseif headof(x) === :block
