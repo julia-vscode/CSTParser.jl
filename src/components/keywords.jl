@@ -380,6 +380,7 @@ function parse_try(ps::ParseState)
             catchblock = EXPR(:block, catchblockargs, nothing)
         end
     else
+        push!(trivia, EXPR(:CATCH, 0, 0))
         caught = EXPR(:FALSE, 0, 0, "")
         catchblock = EXPR(:block, EXPR[], nothing)
     end

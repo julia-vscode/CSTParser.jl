@@ -154,6 +154,9 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR
             accept_comma(ps, trivia)
         elseif kindof(ps.ws) == SemiColonWS
             break
+        elseif !closer(ps)
+            # We've not hit a closing token, nor separating punctuation so let's insert an error-wrapped comma
+            push!(trivia, EXPR(:errortoken, EXPR[EXPR(:COMMA, 0, 0)], nothing))
         end
         prevpos = loop_check(ps, prevpos)
     end

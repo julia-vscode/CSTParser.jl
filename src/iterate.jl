@@ -2,8 +2,14 @@ module Iterating
 using ..CSTParser: EXPR, headof, hastrivia, isoperator, valof, isstringliteral, is_exor, is_lparen, is_rparen
 
 function Base.getindex(x::EXPR, i)
-    a = _getindex(x, i)
-    if a === nothing
+    try
+        a = _getindex(x, i)
+        if a === nothing
+            error("indexing error for $(x.head) expression at $i")
+        end
+        return a
+    catch err
+        @info x
         error("indexing error for $(x.head) expression at $i")
     end
     a
@@ -67,7 +73,24 @@ function _getindex(x::EXPR, i)
     elseif headof(x) === :outer
         ta(x, i)
     elseif headof(x) === :parameters
-        odda_event(x, i)
+        if length(x.args) > 1 && headof(x.args[2]) === :parameters
+            if i == length(x)
+                x.args[2]
+            elseif i == 1
+                x.args[1]
+            elseif isodd(i)
+                x.args[div(i + 1, 2) + 1]
+            else
+                x.trivia[div(i, 2)]
+            end
+        else
+            odda_event(x, i)
+        end
+        # if hastrivia(x)
+        #     odda_event(x, i)
+        # else
+        #     x.args[i]
+        # end
     elseif headof(x) === :primitive
         _primitive(x, i)
     elseif headof(x) === :quote
@@ -94,7 +117,7 @@ function _getindex(x::EXPR, i)
         _typed_vcat(x, i)
     elseif headof(x) === :using || headof(x) === :import
         _using(x, i)
-    elseif headof(x) === :vcat || headof(x) === :hcat
+    elseif headof(x) === :vcat || headof(x) === :hcat || headof(x) === :bracescat
         _vcat(x, i)
     elseif headof(x) === :vect
         _vect(x, i)
@@ -405,7 +428,7 @@ function _call(x, i)
     if isoperator(x.args[1])
         if length(x) == 2 # unary op call
             x.args[i]
-        elseif length(x) == 3 # binary
+        elseif length(x) == 3 && !hastrivia(x)# binary
             if i == 1
                 x.args[2]
             elseif i == 2
@@ -432,6 +455,8 @@ function _call(x, i)
         end
     elseif hastrivia(x)
         _curly(x, i)
+    else
+        x.args[i]
     end
 end
 
@@ -460,7 +485,9 @@ function _tuple(x, i)
             x.args[div(i, 2) + 1]
         end
     else
-        if length(x.trivia) == length(x.args) - 1  # No brackets, no trailing comma
+        if isempty(x.args)
+            x.trivia[i]
+        elseif length(x.trivia) == length(x.args) - 1  # No brackets, no trailing comma
             odda_event(x, i)
         elseif length(x.trivia) - 1 == length(x.args) # Brackets, no trailing comma
             oddt_evena(x, i)
@@ -472,7 +499,8 @@ function _tuple(x, i)
             else
                 oddt_evena(x, i)
             end
-
+        else
+            odda_event(x, i)
         end
     end
 end

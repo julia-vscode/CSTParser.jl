@@ -627,7 +627,7 @@ should_negate_number_literal(ps::ParseState, op::EXPR) = (is_plus(op) || is_minu
 Is `x` a binary comparison call (e.g. `a < b`) that can be extended to include more
 arguments?
 """
-can_become_comparison(x::EXPR) = (isoperator(x.head) && comp_prec(valof(x.head))) || (x.head === :call && isoperator(x.args[1]) && comp_prec(valof(x.args[1])))
+can_become_comparison(x::EXPR) = (isoperator(x.head) && comp_prec(valof(x.head)) && length(x.args) > 1) || (x.head === :call && isoperator(x.args[1]) && comp_prec(valof(x.args[1])) && length(x.args) > 2)
 
 """
     can_become_chain(x::EXPR, op::EXPR)
@@ -643,11 +643,11 @@ macro cst_str(x)
 end
 
 function issuffixableliteral(ps::ParseState, x::EXPR) 
-    isidentifier(ps.nt) && isemptyws(ps.ws) && ismacrocall(x) && (endswith(valof(x.args[1]), "_str") || endswith(valof(x.args[1]), "_cmd"))
+    isidentifier(ps.nt) && isemptyws(ps.ws) && ismacrocall(x) && (valof(x.args[1]) isa String && (endswith(valof(x.args[1]), "_str") || endswith(valof(x.args[1]), "_cmd")))
 end
 
 function loop_check(ps, prevpos)
-    if position(ps) <= prevpos
+    if position(ps) <= prevpos && ps.nt.kind !== Tokens.ENDMARKER
         throw(CSTInfiniteLoop("Infinite loop at $ps"))
     else
         position(ps)

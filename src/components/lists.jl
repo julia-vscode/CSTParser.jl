@@ -8,7 +8,7 @@ function parse_tuple end
 
 function parse_tuple(ps::ParseState, ret::EXPR)
     op = EXPR(next(ps))
-    if istuple(ret)
+    if istuple(ret) && !(length(ret.trivia) > 1 && last(ret.trivia).head === :RPAREN)
         if (isassignmentop(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
             pushtotrivia!(ret, op)
         elseif closer(ps)
@@ -266,10 +266,11 @@ function parse_barray(ps::ParseState)
                     end
                     first_arg = @closebrace ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                     push!(ret, EXPR(:row, EXPR[first_arg]))
+                    prevpos1 = position(ps)
                     while kindof(ps.nt) !== Tokens.RBRACE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
                         a = @closebrace ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                         push!(last(ret.args), a)
-                        prevpos = loop_check(ps, prevpos)
+                        prevpos1 = loop_check(ps, prevpos1)
                     end
                     # if only one entry dont use :row
                     if length(last(ret.args).args) == 1
