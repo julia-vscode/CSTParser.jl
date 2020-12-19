@@ -202,11 +202,7 @@ function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR
     isfirst = isempty(args1)
     prevpos = position(ps)
     @nocloser ps :inwhere @nocloser ps :newline  @closer ps :comma while !isfirst || (@nocloser ps :semicolon !closer(ps))
-        if isfirst
-            a = parse_expression(ps)
-        else
-            a = first(args1)
-        end
+        a = isfirst ? parse_expression(ps) : first(args1)
         if usekw && _do_kw_convert(ps, a)
             a = _kw_convert(a)
         end
@@ -218,15 +214,13 @@ function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR
         end
         if iscomma(ps.nt)
             accept_comma(ps, trivia)
+        elseif kindof(ps.ws) !== SemiColonWS && closer(ps)
+            push!(trivia, EXPR(:errortoken, EXPR[EXPR(:COMMA, 0, 0)], nothing))
         end
         if kindof(ps.ws) == SemiColonWS
             parse_parameters(ps, args1; usekw=usekw)
         end
-        if isfirst
-            prevpos = loop_check(ps, prevpos)
-        else
-            prevpos = position(ps)
-        end
+        prevpos = isfirst ? loop_check(ps, prevpos) : position(ps)
         isfirst = true
     end
     if !isempty(args1)

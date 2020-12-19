@@ -147,6 +147,18 @@ function _getindex(x::EXPR, i)
             elseif i == 3
                 x.args[2]
             end
+        else
+            if i == 1
+                x.head
+            elseif i == 2
+                x.trivia[1]
+            elseif i == length(x)
+                last(x.trivia)
+            elseif isodd(i)
+                x.args[div(i+1, 2) - 1]
+            else
+                x.trivia[div(i, 2)]
+            end
         end
     else 
         error("Indexing $(Expr(x)) at $i")
@@ -487,21 +499,36 @@ function _tuple(x, i)
     else
         if isempty(x.args)
             x.trivia[i]
-        elseif length(x.trivia) == length(x.args) - 1  # No brackets, no trailing comma
-            odda_event(x, i)
-        elseif length(x.trivia) - 1 == length(x.args) # Brackets, no trailing comma
-            oddt_evena(x, i)
-        elseif length(x.trivia) - 2 == length(x.args) # Brackets, trailing comma
-            if i == length(x)
-                last(x.trivia)
-            elseif i == length(x) - 1
-                x.trivia[end-1]
+        elseif hastrivia(x)
+            if first(x.trivia).head === :LPAREN
+                if i == length(x)
+                    last(x.trivia)
+                else
+                    oddt_evena(x, i)
+                end
             else
-                oddt_evena(x, i)
+                odda_event(x, i)    
             end
         else
-            odda_event(x, i)
+            x.args[i]
         end
+        # if isempty(x.args)
+        #     x.trivia[i]
+        # elseif length(x.trivia) == length(x.args) - 1  # No brackets, no trailing comma
+        #     odda_event(x, i)
+        # elseif length(x.trivia) - 1 == length(x.args) # Brackets, no trailing comma
+        #     oddt_evena(x, i)
+        # elseif length(x.trivia) - 2 == length(x.args) # Brackets, trailing comma
+        #     if i == length(x)
+        #         last(x.trivia)
+        #     elseif i == length(x) - 1
+        #         x.trivia[end-1]
+        #     else
+        #         oddt_evena(x, i)
+        #     end
+        # else
+        #     odda_event(x, i)
+        # end
     end
 end
 
@@ -586,7 +613,7 @@ function _string(x, i)
                 arg = false
             end
         else
-            if is_exor(x.trivia[ti])
+            if is_exor(x.trivia[ti]) || (x.trivia[ti].head === :errortoken && x.trivia[ti].args[1].head === :OPERATOR && valof(x.trivia[ti].args[1]) == "\$")
                 if ti < length(x.trivia) && is_lparen(x.trivia[ti + 1])
                     # 
                 else
@@ -741,10 +768,10 @@ function _where(x, i)
         x.args[1]
     elseif i == 2
         x.trivia[1]
-    elseif length(x) == 3
-        if i == 3
-            return x.args[2]
-        end
+    elseif i == 3 && length(x) == 3 && length(x.trivia) == 1
+        return x.args[2]
+    elseif i == length(x)
+        last(x.trivia)
     else
         oddt_evena(x, i)
     end

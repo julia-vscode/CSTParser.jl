@@ -6,9 +6,11 @@ tuple.
 """
 function parse_tuple end
 
+iserrorwrapped(x, head) = x.head === head || (x.head === :errortoken && length(x.args) > 0 && iserrorwrapped(x.args[1], head))
+
 function parse_tuple(ps::ParseState, ret::EXPR)
     op = EXPR(next(ps))
-    if istuple(ret) && !(length(ret.trivia) > 1 && last(ret.trivia).head === :RPAREN)
+    if istuple(ret) && !(length(ret.trivia) > 1 && iserrorwrapped(last(ret.trivia), :RPAREN))
         if (isassignmentop(ps.nt) && kindof(ps.nt) != Tokens.APPROX)
             pushtotrivia!(ret, op)
         elseif closer(ps)

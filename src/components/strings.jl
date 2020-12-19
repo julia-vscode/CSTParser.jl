@@ -159,7 +159,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                     # Compared to flisp/JuliaParser, we have an extra lookahead token,
                     # so we need to back up one here
                 elseif Tokenize.Lexers.iswhitespace(peekchar(input)) || peekchar(input) === '#'
-                    push!(ret, mErrorToken(ps, op, StringInterpolationWithTrailingWhitespace))
+                    pushtotrivia!(ret, mErrorToken(ps, op, StringInterpolationWithTrailingWhitespace))
                 else
                     pos = position(input)
                     ps1 = ParseState(input)
@@ -258,7 +258,7 @@ function parse_prefixed_string_cmd(ps::ParseState, ret::EXPR)
         if headof(ret.args[2]) === :quote || headof(ret.args[2]) === :quotenode
             ret.args[2].args[1] = setparent!(EXPR(:IDENTIFIER, ret.args[2].args[1].fullspan, ret.args[2].args[1].span, string("@", valof(ret.args[2].args[1]), "_str")), ret.args[2])
         else
-            ret.args[2] = setparent!(EXPR(:IDENTIFIER, ret.args[2].args[1].fullspan, ret.args[2].args[1].span, string("@", valof(ret.args[2].args[1]), "_str")), ret.args[2])
+            ret.args[2] = EXPR(:IDENTIFIER, ret.args[2].fullspan, ret.args[2].span, string("@", valof(ret.args[2]), "_str"))
         end
 
         return EXPR(:macrocall, EXPR[ret, EXPR(:NOTHING, 0, 0), arg], nothing)
