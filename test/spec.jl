@@ -184,8 +184,8 @@ end
     test_expr("try a catch e end", :try, 6, true)
     test_expr("try a catch e b end", :try, 6, true)
     test_expr("try a catch e b end", :try, 6, true)
-    test_expr("try finally end", :try, 7, true)
-    test_expr("try finally a end", :try, 7, true)
+    test_expr("try finally end", :try, 8, true)
+    test_expr("try finally a end", :try, 8, true)
     test_expr("try a catch e b finally c end", :try, 8, true)
 end
 

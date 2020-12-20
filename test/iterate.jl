@@ -656,14 +656,16 @@ end
         @test headof(x[6]) === :END
 
         x = cst"try expr finally expr2 end"
-        @test length(x) == 7
+        @test length(x) == 8
         @test headof(x[1]) === :TRY
         @test headof(x[2]) === :block
-        @test headof(x[3]) === :FALSE
+        @test headof(x[3]) === :CATCH
+        @test x[3].fullspan == 0
         @test headof(x[4]) === :FALSE
-        @test headof(x[5]) === :FINALLY
-        @test headof(x[6]) === :block
-        @test headof(x[7]) === :END
+        @test headof(x[5]) === :FALSE
+        @test headof(x[6]) === :FINALLY
+        @test headof(x[7]) === :block
+        @test headof(x[8]) === :END
 
         x = cst"try expr catch err expr2 finally expr3 end"
         @test length(x) == 8

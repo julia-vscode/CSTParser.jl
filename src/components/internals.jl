@@ -214,7 +214,7 @@ function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR
         end
         if iscomma(ps.nt)
             accept_comma(ps, trivia)
-        elseif kindof(ps.ws) !== SemiColonWS && closer(ps)
+        elseif kindof(ps.ws) !== SemiColonWS && !closer(ps)
             push!(trivia, EXPR(:errortoken, EXPR[EXPR(:COMMA, 0, 0)], nothing))
         end
         if kindof(ps.ws) == SemiColonWS

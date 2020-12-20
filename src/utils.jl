@@ -215,7 +215,7 @@ Determine whether a parsing error occured while processing text with the given
 `ParseState`, or exists as a (sub) expression of `x`.
 """
 function has_error(x::EXPR)
-    return headof(x) == :errortoken || (x.args !== nothing && any(has_error, x.args))
+    return headof(x) == :errortoken || (x.args !== nothing && any(has_error, x.args)) || (x.trivia !== nothing && any(has_error, x.trivia))
 end
 has_error(ps::ParseState) = ps.errored
 
