@@ -232,6 +232,7 @@ function parse(ps::ParseState, cont=false)
                 push!(top, ret)
             end
             last_line = curr_line
+            kindof(ps.nt) === Tokens.ENDMARKER && break # don't do loop check if eof
             prevpos = loop_check(ps, prevpos)
         end
     else
