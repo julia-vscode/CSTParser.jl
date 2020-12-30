@@ -258,7 +258,8 @@ function parse_prefixed_string_cmd(ps::ParseState, ret::EXPR)
         if headof(ret.args[2]) === :quote || headof(ret.args[2]) === :quotenode
             ret.args[2].args[1] = setparent!(EXPR(:IDENTIFIER, ret.args[2].args[1].fullspan, ret.args[2].args[1].span, string("@", valof(ret.args[2].args[1]), "_str")), ret.args[2])
         else
-            ret.args[2] = EXPR(:IDENTIFIER, ret.args[2].fullspan, ret.args[2].span, string("@", valof(ret.args[2]), "_str"))
+            str_type = valof(ret.args[2]) isa String ? valof(ret.args[2]) : "" # to handle some malformed case
+            ret.args[2] = EXPR(:IDENTIFIER, ret.args[2].fullspan, ret.args[2].span, string("@", str_type, "_str"))
         end
 
         return EXPR(:macrocall, EXPR[ret, EXPR(:NOTHING, 0, 0), arg], nothing)

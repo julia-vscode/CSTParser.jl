@@ -17,12 +17,14 @@
     end
     
     function check_str(s)
-        try
-            x = CSTParser.parse(s, true)
-            trav(x)
-        catch err
-            throw(err)
+        x = try
+            CSTParser.parse(s, true)
+        catch e
+            @info "Couldn't parse:"
+            @info s
+            rethrow(e)
         end
+        trav(x)
     end
     
     function check_dir(dir)
@@ -37,6 +39,7 @@
                 end
             end
         end
+        true
     end
     
     function get_segs(x) 
@@ -67,5 +70,5 @@
         end
     end
 
-    check_dir("..")
+    @test check_dir("..")
 end

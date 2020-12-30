@@ -68,7 +68,7 @@ end
     
 Is `x` an assignment expression, ignoring any surrounding parentheses.
 """
-is_wrapped_assignment(x::EXPR) = isassignment(x) || (isbracketed(x) && is_wrapped_assignment(x.args[2]))
+is_wrapped_assignment(x::EXPR) = isassignment(x) || (isbracketed(x) && is_wrapped_assignment(x.args[1]))
 
 
 function is_func_call(x::EXPR)
