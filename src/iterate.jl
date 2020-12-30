@@ -9,10 +9,8 @@ function Base.getindex(x::EXPR, i)
         end
         return a
     catch err
-        @info x
         error("indexing error for $(x.head) expression at $i")
     end
-    a
 end
 
 function _getindex(x::EXPR, i)

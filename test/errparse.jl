@@ -63,8 +63,6 @@
                 end
             end
         else
-            @info s
-            @info s0
             error()
         end
     end
