@@ -212,6 +212,9 @@ function parse(ps::ParseState, cont=false)
         if kindof(ps.nt) === Tokens.WHITESPACE || kindof(ps.nt) === Tokens.COMMENT
             next(ps)
             push!(top, EXPR(:NOTHING, ps.nt.startbyte, ps.nt.startbyte, ""))
+        elseif kindof(ps.nt) === Tokens.SEMICOLON
+            next(ps)
+            push!(top, EXPR(:toplevel, EXPR[EXPR(:NOTHING, ps.nt.startbyte, ps.nt.startbyte, "")]))
         end
 
         prevpos = position(ps)
@@ -240,19 +243,23 @@ function parse(ps::ParseState, cont=false)
             next(ps)
             top = EXPR(:NOTHING, ps.nt.startbyte, ps.nt.startbyte, "")
         elseif !(ps.done || kindof(ps.nt) === Tokens.ENDMARKER)
-            curr_line = ps.nt.startpos[1]
-            top = parse_doc(ps)
-            if _continue_doc_parse(ps, top)
-                push!(top, parse_expression(ps))
+            last_line = current_line(ps)
+            if ps.nt.kind === Tokens.SEMICOLON
+                next(ps)
+                top = EXPR(:toplevel, EXPR[EXPR(:NOTHING, ps.nt.startbyte, ps.nt.startbyte, "")])
+            else
+                top = parse_doc(ps)
+                if _continue_doc_parse(ps, top)
+                    push!(top, parse_expression(ps))
+                end
             end
-            last_line = ps.nt.startpos[1]
-            if kindof(ps.ws) == SemiColonWS
+            if kindof(ps.ws) == SemiColonWS# && curr_line == last_line
                 top = EXPR(:toplevel, EXPR[top], nothing)
                 prevpos = position(ps)
-                while kindof(ps.ws) == SemiColonWS && ps.nt.startpos[1] == last_line && kindof(ps.nt) != Tokens.ENDMARKER
+                while kindof(ps.ws) == SemiColonWS && current_line(ps) == last_line && kindof(ps.nt) != Tokens.ENDMARKER
+                    last_line = current_line(ps)
                     ret = parse_doc(ps)
                     push!(top, ret)
-                    last_line = ps.nt.startpos[1]
                     prevpos = loop_check(ps, prevpos)
                 end
             end

@@ -25,7 +25,13 @@
             @info s
             rethrow(e)
         end
-        trav(x)
+        try
+            trav(x)
+        catch e
+            @info "Couldn't traverse:"
+            @info s
+            rethrow(e)
+        end
     end
     
     function get_segs(x) 

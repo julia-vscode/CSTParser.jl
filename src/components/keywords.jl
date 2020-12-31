@@ -37,6 +37,9 @@ function parse_kw(ps::ParseState)
         return EXPR(ps)
     elseif k === Tokens.IMPORT
         return parse_imports(ps)
+    elseif k === Tokens.IMPORTALL
+        # Old keyword..
+        return EXPR(:IDENTIFIER, ps)
     elseif k === Tokens.USING
         return parse_imports(ps)
     elseif k === Tokens.EXPORT

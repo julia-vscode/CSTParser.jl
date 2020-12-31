@@ -96,6 +96,7 @@ end
 
 Base.position(ps::ParseState) = ps.nt.startbyte
 
+current_line(ps::ParseState) = ps.nt.startpos[1]
 """
     lex_ws_comment(l::Lexer, c)
 
