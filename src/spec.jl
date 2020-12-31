@@ -38,7 +38,8 @@ const AnonFuncOp    = 14
     InvalidIterator,
     StringInterpolationWithTrailingWhitespace,
     TooLongChar,
-    Unknown)
+    Unknown,
+    SignatureOfFunctionDefIsNotACall)
 
 mutable struct EXPR
     head::Union{Symbol,EXPR}

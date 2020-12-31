@@ -4,7 +4,8 @@
 @testset "invalid jl file parsing" begin
     trav(x, f = x->nothing) = (f(x);for a in x trav(a, f) end)
     trav1(x, f = x->nothing) = (f(x);if x.args !== nothing;for a in x.args trav1(a, f) end;end)
-    function check_err_parse(s, n = div(sizeof(s), 10))
+
+    function check_err_parse(s, n = 1000)
         check_str(s) # parsing works?
         check_itr_order(s) # iteration produces same text?
     
@@ -25,21 +26,6 @@
             rethrow(e)
         end
         trav(x)
-    end
-    
-    function check_dir(dir)
-        for (root, dirs, files) in walkdir(dir)
-            for f in files
-                f = joinpath(root, f)
-                (!isfile(f) || !endswith(f, ".jl")) && continue
-                @info "checking edits to $f"
-                s = String(read(f))
-                if isvalid(s) && length(s) >0
-                    check_err_parse(s, 1000)
-                end
-            end
-        end
-        true
     end
     
     function get_segs(x) 
@@ -70,5 +56,48 @@
         end
     end
 
-    @test check_dir("..")
+    comp(x, y) = x == y
+    function comp(x::CSTParser.EXPR, y::CSTParser.EXPR)
+        comp(x.head, y.head) && 
+        x.span == y.span && 
+        x.fullspan == y.fullspan && 
+        x.val == y.val && 
+        length(x) == length(y) && 
+        all(comp(x[i], y[i]) for i = 1:length(x))
+    end
+
+    function check_reparse(s0, n = 1000)
+        for i in 1:n
+            x0 = CSTParser.parse(s0, true)
+            ts = collect(tokenize(s0))[1:end-1]
+            length(ts) == 1 && return
+            deleteat!(ts, rand(1:length(ts)))
+            s1 = untokenize(ts)
+            x1 = CSTParser.parse(s1, true)
+            x2 = CSTParser.minimal_reparse(s0, s1, x0, x1)
+            @test comp(x1, x2)
+            @test join(String(codeunits(s0)[seg]) for seg in get_segs(x0)) == s0
+            @test join(String(codeunits(s1)[seg]) for seg in get_segs(x1)) == s1
+            @test join(String(codeunits(s1)[seg]) for seg in get_segs(x2)) == s1
+            s0 = s1
+        end
+    end
+
+    function check_dir(dir, check)
+        for (root, dirs, files) in walkdir(dir)
+            for f in files
+                f = joinpath(root, f)
+                (!isfile(f) || !endswith(f, ".jl")) && continue
+                @info "checking $(nameof(check)) against $f"
+                s = String(read(f))
+                if isvalid(s) && length(s) >0
+                    check(s)
+                end
+            end
+        end
+        true
+    end
+
+    @test check_dir("..", check_err_parse)
+    @test check_dir("..", check_reparse)
 end

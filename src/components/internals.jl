@@ -237,7 +237,12 @@ Parses a macro call. Expects to start on the `@`.
 function parse_macrocall(ps::ParseState)
     at = EXPR(ps)
     if !isemptyws(ps.ws)
-        mname = mErrorToken(ps, INSTANCE(next(ps)), UnexpectedWhiteSpace)
+        ws = ps.ws.endbyte - ps.ws.startbyte + 1
+        mname = INSTANCE(next(ps))
+        mname.val = valof(mname) isa String ? string("@", " "^ws, valof(mname)) : string("@", " "^ws)
+        mname.span += ws
+        mname.fullspan += ws
+        mname = mErrorToken(ps, mname, UnexpectedWhiteSpace)
     else
         next(ps)
         mname = EXPR(:IDENTIFIER, ps.nt.startbyte - ps.t.startbyte + 1, ps.t.endbyte - ps.t.startbyte + 2, string("@", val(ps.t, ps)))

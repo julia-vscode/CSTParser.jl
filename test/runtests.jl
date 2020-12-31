@@ -1,8 +1,5 @@
-using CSTParser
-using Test
-
-import CSTParser: parse, remlineinfo!, span, flisp_parse, headof, kindof, valof
-using CSTParser.Tokenize
+using CSTParser, Test, CSTParser.Tokenize
+using CSTParser: parse, remlineinfo!, span, headof, kindof, valof
 
 @testset "CSTParser" begin
     include("spec.jl")

@@ -304,7 +304,12 @@ function parse_blockexpr(ps::ParseState, head)
     elseif sig === nothing
         EXPR(head, EXPR[EXPR(:block, blockargs, nothing)], EXPR[kw, accept_end(ps)])
     elseif (head === :function || head === :macro) && is_either_id_op_interp(sig)
-        EXPR(head, EXPR[sig], EXPR[kw, accept_end(ps)])
+        if isempty(blockargs)
+            EXPR(head, EXPR[sig], EXPR[kw, accept_end(ps)])
+        else
+            sig = mErrorToken(ps, sig, SignatureOfFunctionDefIsNotACall)
+            EXPR(head, EXPR[sig, EXPR(:block, blockargs, nothing)], EXPR[kw, accept_end(ps)])
+        end
     elseif head === :mutable
         EXPR(:struct, EXPR[EXPR(:TRUE, 0, 0), sig, EXPR(:block, blockargs, nothing)], EXPR[kw, accept_end(ps)])
     elseif head === :module

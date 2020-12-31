@@ -320,7 +320,7 @@ function check_file(file, ret, neq)
         cumfail = 0
         printstyled(file, color=:green)
         println()
-        c0, c1 = CSTParser.compare(x0, x1)
+        c0, c1 = compare(x0, x1)
         printstyled(string("    ", c0), bold = true, color = :light_red)
         println()
         printstyled(string("    ", c1), bold=true, color=:light_green)
@@ -405,6 +405,78 @@ function compare(x::Expr, y::Expr)
             end
         end
     end
+end
+
+# code for updating CST
+"""
+    firstdiff(s0::AbstractString, s1::AbstractString)
+
+Returns the last byte index, i, for which s0 and s1 are the same such that:
+    `s0[1:i] == s1[1:i]`
+"""
+function firstdiff(s0::AbstractString, s1::AbstractString)
+    minlength = min(sizeof(s0), sizeof(s1))
+    @inbounds for i in 1:minlength
+        if codeunits(s0)[i] !== codeunits(s1)[i]
+            return i - 1 # This could return a non-commencing byte of a multi-byte unicode sequence.
+        end
+    end
+    return minlength
+end
+
+"""
+    find_arg_at(x, i)
+
+Returns the index of the node of `x` within which the byte offset `i` falls.
+"""
+function find_arg_at(x::CSTParser.EXPR, i)
+    @assert i <= x.fullspan
+    offset = 0
+    for (cnt, a) in enumerate(x.args)
+        if i <= offset + a.fullspan
+            return cnt
+        end
+        offset += a.fullspan
+    end
+end
+
+function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.parse(s1, true))
+    i0 = firstdiff(s0, s1)
+
+    # Find unaffected expressions at start
+
+    # CST should be unaffected (and able to be copied across) up to this point, 
+    # but we need to check.
+    r1 = 1:min(find_arg_at(x0, i0) - 1, length(x0.args))
+    for i = 1:min(find_arg_at(x0, i0) - 1, find_arg_at(x1, i0) - 1)
+        if x0.args[i].fullspan !== x1.args[i].fullspan
+            r1 = 1:(i-1)
+            break
+        end
+        r1 = 1:i
+    end
+    # we can re-use x0.args[r1]
+    
+    # assume we'll just use x1.args from here on
+    r2 = (last(r1) + 1):length(x1.args) 
+    r3 = 0:-1
+
+    # though we now check whether there is a sequence at the end of x0.args and 
+    # x1.args that match
+    for i = 0:min(length(x0.args), length(x1.args)) - 1
+        if x0.args[end - i].fullspan !== x1.args[end - i].fullspan
+            r2 = first(r2):(length(x1.args) - i)
+            r3 = length(x0.args) .+ ((-i + 1):0)
+            break
+        end
+    end
+    
+    x2 = CSTParser.EXPR(x0.head, CSTParser.EXPR[
+        x0.args[r1]
+        x1.args[r2]
+        x0.args[r3]
+    ], nothing)
+    return x2
 end
 
 """
