@@ -58,6 +58,8 @@
                 end
             end
         else
+            @info "check_itr_order failed: "
+            @info s
             error()
         end
     end
@@ -81,7 +83,7 @@
             s1 = untokenize(ts)
             x1 = CSTParser.parse(s1, true)
             x2 = CSTParser.minimal_reparse(s0, s1, x0, x1)
-            @test comp(x1, x2)
+            @test comp(x1, x2) ? true : (@info(string("comp failed: \n", s0)); false)
             @test join(String(codeunits(s0)[seg]) for seg in get_segs(x0)) == s0
             @test join(String(codeunits(s1)[seg]) for seg in get_segs(x1)) == s1
             @test join(String(codeunits(s1)[seg]) for seg in get_segs(x2)) == s1

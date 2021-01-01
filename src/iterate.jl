@@ -710,12 +710,12 @@ function _module(x, i)
 end
 
 function _filter(x, i)
-    if i == 1
-        x.args[2]
-    elseif i == 2
-        x.trivia[1]
-    elseif i == 3
+    if i == length(x)
         x.args[1]
+    elseif iseven(i)
+        x.trivia[div(i, 2)]
+    else
+        x.args[div(i + 1, 2) + 1]
     end
 end
 
