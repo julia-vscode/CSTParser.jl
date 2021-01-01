@@ -188,12 +188,6 @@ function parse_doc(ps::ParseState)
 
         ret = parse_expression(ps)
         ret = EXPR(:macrocall, EXPR[EXPR(:globalrefdoc, 0, 0), EXPR(:NOTHING, 0, 0), doc, ret], nothing)
-    elseif nexttokenstartsdocstring(ps)
-        doc = EXPR(:IDENTIFIER, next(ps))
-        arg = parse_string_or_cmd(next(ps), doc)
-        doc = EXPR(:x_Str, EXPR[doc, arg], nothing)
-        ret = parse_expression(ps)
-        ret = EXPR(:macrocall, EXPR[EXPR(:globalrefdoc, 0, 0), EXPR(:NOTHING, 0, 0), doc, ret], nothing)
     else
         ret = parse_expression(ps)
     end

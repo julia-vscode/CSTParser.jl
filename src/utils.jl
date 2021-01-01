@@ -444,10 +444,23 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
     i0 = firstdiff(s0, s1)
 
     # Find unaffected expressions at start
-
+    try 
+        find_arg_at(x0, i0)
+    catch e
+        @info "find_arg_at failed for x0 i0: "
+        @info s0
+        @info s1
+    end
+    try 
+        find_arg_at(x1, i0)
+    catch e
+        @info "find_arg_at failed for x1 i0: "
+        @info s0
+        @info s1
+    end
     # CST should be unaffected (and able to be copied across) up to this point, 
     # but we need to check.
-    r1 = 1:min(find_arg_at(x0, i0) - 1, length(x0.args))
+    r1 = 1:min(find_arg_at(x0, i0) - 1, length(x0.args), find_arg_at(x1, i0) - 1)
     for i = 1:min(find_arg_at(x0, i0) - 1, find_arg_at(x1, i0) - 1)
         if x0.args[i].fullspan !== x1.args[i].fullspan
             r1 = 1:(i-1)

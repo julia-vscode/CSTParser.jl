@@ -270,6 +270,7 @@ function parse_macrocall(ps::ParseState)
         next(ps)
         return EXPR(:macrocall, EXPR[mname, EXPR(:NOTHING, 0, 0), @default ps parse_array(ps)], nothing)
     else
+        #TODO add special hndling for @doc
         args = EXPR[mname, EXPR(:NOTHING, 0, 0)]
         insquare = ps.closer.insquare
         prevpos = position(ps)

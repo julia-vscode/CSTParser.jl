@@ -139,6 +139,13 @@ function _getindex(x::EXPR, i)
             elseif i == 3
                 x.args[2]
             end
+        elseif valof(headof(x)) == "->" && headof(x).fullspan == 0
+            # anon function as used in a 'do' block
+            if i == 1
+                x.args[1]
+            else 
+                x.args[2]
+            end
         elseif !hastrivia(x)
             if i == 1
                 x.args[1]

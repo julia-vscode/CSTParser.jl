@@ -96,7 +96,7 @@ function parse_local_global(ps::ParseState, islocal = true)
     kw = EXPR(ps)
     if ps.nt.kind === Tokens.CONST
         arg1 = parse_const(next(ps))
-        EXPR(:const, EXPR[EXPR(:global, EXPR[arg1.args[1]], nothing)], EXPR[kw, arg1.trivia[1]])
+        EXPR(:const, EXPR[EXPR(islocal ? :local : :global, EXPR[arg1.args[1]], nothing)], EXPR[kw, arg1.trivia[1]])
     else
         args, trivia = EXPR[], EXPR[kw]
         @closer ps :comma while !closer(ps)
