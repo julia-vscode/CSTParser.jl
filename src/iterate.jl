@@ -52,7 +52,7 @@ function _getindex(x::EXPR, i)
         _function(x, i)
     elseif headof(x) === :generator
         odda_event(x, i)
-    elseif headof(x) === :global
+    elseif headof(x) === :global || headof(x) === :local
         _global(x, i)
     elseif headof(x) === :if
         if isoperator(first(x.trivia)) # ternary op
@@ -64,7 +64,7 @@ function _getindex(x::EXPR, i)
         _kw(x, i)
     elseif headof(x) === :let
         taat(x, i)
-    elseif headof(x) === :local || headof(x) === :return
+    elseif headof(x) === :return
         oddt_evena(x, i)
     elseif headof(x) === :macrocall
         _macrocall(x, i)
@@ -242,7 +242,7 @@ function _const(x, i)
 end
 
 function _global(x, i) 
-    if hastrivia(x) && headof(first(x.trivia)) === :GLOBAL
+    if hastrivia(x) && (headof(first(x.trivia)) === :GLOBAL || headof(first(x.trivia)) === :LOCAL)
         oddt_evena(x, i)
     else
         odda_event(x, i)

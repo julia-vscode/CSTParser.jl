@@ -229,12 +229,7 @@ function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR
     return
 end
 
-"""
-    parse_macrocall(ps)
-
-Parses a macro call. Expects to start on the `@`.
-"""
-function parse_macrocall(ps::ParseState)
+function parse_macroname(ps)
     at = EXPR(ps)
     if !isemptyws(ps.ws)
         ws = ps.ws.endbyte - ps.ws.startbyte + 1
@@ -247,7 +242,15 @@ function parse_macrocall(ps::ParseState)
         next(ps)
         mname = EXPR(:IDENTIFIER, ps.nt.startbyte - ps.t.startbyte + 1, ps.t.endbyte - ps.t.startbyte + 2, string("@", val(ps.t, ps)))
     end
+end
 
+"""
+    parse_macrocall(ps)
+
+Parses a macro call. Expects to start on the `@`.
+"""
+function parse_macrocall(ps::ParseState)
+    mname = parse_macroname(ps)
     # Handle cases with @ at start of dotted expressions
     if kindof(ps.nt) === Tokens.DOT && isemptyws(ps.ws)
         prevpos = position(ps)
@@ -327,17 +330,14 @@ end
 
 function parse_importexport_item(ps, is_colon = false)
     if kindof(ps.nt) === Tokens.AT_SIGN
-        at = EXPR(next(ps))
-        next(ps)
-        mname = EXPR(:IDENTIFIER, ps.nt.startbyte - ps.t.startbyte + 1, ps.t.endbyte - ps.t.startbyte + 2, string("@", val(ps.t, ps)))
+        mname = parse_macroname(next(ps))
     elseif kindof(ps.nt) === Tokens.LPAREN
         a = EXPR(:brackets, EXPR[], EXPR[EXPR(next(ps))])
         push!(a, @closeparen ps parse_expression(ps))
         pushtotrivia!(a, accept_rparen(ps))
         a
     elseif kindof(ps.nt) === Tokens.EX_OR
-        a = @closer ps :comma parse_expression(ps)
-        a
+        @closer ps :comma parse_expression(ps)
     elseif !is_colon && isoperator(ps.nt)
         next(ps)
         EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, val(ps.t, ps))
