@@ -103,7 +103,7 @@ function parse_local_global(ps::ParseState, islocal = true)
             push!(args, parse_expression(ps))
             if iscomma(ps.nt)
                 accept_comma(ps, trivia)
-            elseif kindof(ps.ws) == SemiColonWS
+            else
                 break
             end
         end
