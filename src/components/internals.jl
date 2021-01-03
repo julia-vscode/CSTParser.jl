@@ -120,16 +120,21 @@ function parse_call(ps::ParseState, ret::EXPR, ismacro=false)
             arg = EXPR(:brackets, arg.args)
         end
         ret = EXPR(ret, EXPR[arg], nothing)
-    elseif is_issubt(ret) || is_issupt(ret)
-        arg = @precedence ps PowerOp parse_expression(ps)
-        ret = EXPR(ret, arg.args, arg.trivia)
     else
         !ismacro && ismacroname(ret) && (ismacro = true)
-        args = ismacro ? EXPR[ret, EXPR(:NOTHING, 0, 0)] : EXPR[ret] 
+        syntaxcall = is_issubt(ret) || is_issupt(ret)
+        args = if syntaxcall
+            EXPR[]
+        elseif ismacro
+            EXPR[ret, EXPR(:NOTHING, 0, 0)]
+        else
+            EXPR[ret]
+        end
+        # args = ismacro ? EXPR[ret, EXPR(:NOTHING, 0, 0)] : EXPR[ret] 
         trivia = EXPR[EXPR(next(ps))]
         @closeparen ps @default ps parse_comma_sep(ps, args, trivia, !ismacro, insert_params_at = ismacro ? 3 : 2)
         accept_rparen(ps, trivia)
-        ret = EXPR(ismacro ? :macrocall : :call, args, trivia)
+        ret = EXPR(ismacro ? :macrocall : syntaxcall ? ret : :call, args, trivia)
     end
     return ret
 end
@@ -240,7 +245,8 @@ function parse_macroname(ps)
         mname = mErrorToken(ps, mname, UnexpectedWhiteSpace)
     else
         next(ps)
-        mname = EXPR(:IDENTIFIER, ps.nt.startbyte - ps.t.startbyte + 1, ps.t.endbyte - ps.t.startbyte + 2, string("@", val(ps.t, ps)))
+        # set span/fullspan min length at 1 to account for the case of a lonely '@'
+        mname = EXPR(:IDENTIFIER, max(1, ps.nt.startbyte - ps.t.startbyte + 1), max(1, ps.t.endbyte - ps.t.startbyte + 2), string("@", val(ps.t, ps)))
     end
 end
 

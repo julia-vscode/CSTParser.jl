@@ -425,6 +425,21 @@ function firstdiff(s0::AbstractString, s1::AbstractString)
 end
 
 """
+    revfirstdiff(s0::AbstractString, s1::AbstractString)
+
+Reversed version of firstdiff but returns two indices, one for each string.
+"""
+function revfirstdiff(s0::AbstractString, s1::AbstractString)
+    minlength = min(sizeof(s0), sizeof(s1))
+    @inbounds for i in 0:minlength - 1
+        if codeunits(s0)[end - i] !== codeunits(s1)[end - i]
+            return sizeof(s0) - i, sizeof(s1) - i# This could return a non-commencing byte of a multi-byte unicode sequence.
+        end
+    end
+    return 1, 1
+end
+
+"""
     find_arg_at(x, i)
 
 Returns the index of the node of `x` within which the byte offset `i` falls.
@@ -438,26 +453,23 @@ function find_arg_at(x::CSTParser.EXPR, i)
         end
         offset += a.fullspan
     end
+    error()
+end
+
+comp(x, y) = x == y
+function comp(x::CSTParser.EXPR, y::CSTParser.EXPR)
+    comp(x.head, y.head) && 
+    x.span == y.span && 
+    x.fullspan == y.fullspan && 
+    x.val == y.val && 
+    length(x) == length(y) && 
+    all(comp(x[i], y[i]) for i = 1:length(x))
 end
 
 function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.parse(s1, true))
     i0 = firstdiff(s0, s1)
-
+    i1, i2 = revfirstdiff(s0, s1)
     # Find unaffected expressions at start
-    try 
-        find_arg_at(x0, i0)
-    catch e
-        @info "find_arg_at failed for x0 i0: "
-        @info s0
-        @info s1
-    end
-    try 
-        find_arg_at(x1, i0)
-    catch e
-        @info "find_arg_at failed for x1 i0: "
-        @info s0
-        @info s1
-    end
     # CST should be unaffected (and able to be copied across) up to this point, 
     # but we need to check.
     r1 = 1:min(find_arg_at(x0, i0) - 1, length(x0.args), find_arg_at(x1, i0) - 1)
@@ -471,14 +483,15 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
     # we can re-use x0.args[r1]
     
     # assume we'll just use x1.args from here on
-    r2 = (last(r1) + 1):length(x1.args) 
+    r2 = (last(r1) + 1):length(x1.args)
     r3 = 0:-1
 
     # though we now check whether there is a sequence at the end of x0.args and 
     # x1.args that match
-    for i = 0:min(length(x0.args), length(x1.args)) - 1
-        if x0.args[end - i].fullspan !== x1.args[end - i].fullspan
-            r2 = first(r2):(length(x1.args) - i)
+    for i = 0:min(last(r1), length(x0.args), length(x1.args)) - 1
+        if x0.args[end - i].fullspan !== x1.args[end - i].fullspan || 
+            !comp(x0.args[end - i].head, x1.args[end - i].head)
+            r2 = first(r2):length(x1.args) - i
             r3 = length(x0.args) .+ ((-i + 1):0)
             break
         end
@@ -712,7 +725,7 @@ should_negate_number_literal(ps::ParseState, op::EXPR) = (is_plus(op) || is_minu
 Is `x` a binary comparison call (e.g. `a < b`) that can be extended to include more
 arguments?
 """
-can_become_comparison(x::EXPR) = (isoperator(x.head) && comp_prec(valof(x.head)) && length(x.args) > 1) || (x.head === :call && isoperator(x.args[1]) && comp_prec(valof(x.args[1])) && length(x.args) > 2)
+can_become_comparison(x::EXPR) = (isoperator(x.head) && comp_prec(valof(x.head)) && length(x.args) > 1) || (x.head === :call && isoperator(x.args[1]) && comp_prec(valof(x.args[1])) && length(x.args) > 2 && !hastrivia(x))
 
 """
     can_become_chain(x::EXPR, op::EXPR)

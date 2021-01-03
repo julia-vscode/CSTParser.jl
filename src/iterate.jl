@@ -613,6 +613,10 @@ function _string(x, i)
             ai += 1
             if isinterpolant
                 arg = !bracket
+                if ai <= length(x.args) && !isstringliteral(x.args[ai])
+                    # interpolated value immediately followed by xor
+                    arg = false
+                end
                 bracket = false
                 isinterpolant = false
 

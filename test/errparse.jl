@@ -78,12 +78,22 @@
         for i in 1:n
             x0 = CSTParser.parse(s0, true)
             ts = collect(tokenize(s0))[1:end-1]
-            length(ts) == 1 && return
+            length(ts) < 2 && return
             deleteat!(ts, rand(1:length(ts)))
             s1 = untokenize(ts)
+            length(ts) < 3 || isempty(s1) && return
             x1 = CSTParser.parse(s1, true)
-            x2 = CSTParser.minimal_reparse(s0, s1, x0, x1)
-            @test comp(x1, x2) ? true : (@info(string("comp failed: \n", s0)); false)
+            x2 = try
+                CSTParser.minimal_reparse(s0, s1, x0, x1)
+            catch err
+                @info "minimal reparse failed with"
+                @info "s0:"
+                @info codeunits(s0)
+                @info "s1:"
+                @info codeunits(s1)
+                rethrow(err)
+            end
+            @test comp(x1, x2) ? true : (@info(string("Comparison failed between s0:\n", s0, "\n\n and s1: \n", s1)); false)
             @test join(String(codeunits(s0)[seg]) for seg in get_segs(x0)) == s0
             @test join(String(codeunits(s1)[seg]) for seg in get_segs(x1)) == s1
             @test join(String(codeunits(s1)[seg]) for seg in get_segs(x2)) == s1

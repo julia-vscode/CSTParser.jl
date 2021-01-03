@@ -484,6 +484,14 @@ end
         @test x[4] === x.args[1]
         @test x[5] === x.trivia[4]
         @test x[6] === x.trivia[5]
+
+        x = cst"\"a$b$c \""
+        @test length(x) == 6
+        @test x[1] === x.args[1]
+        @test x[2] === x.trivia[1]
+        @test x[3] === x.args[2]
+        @test x[4] === x.trivia[2]
+        @test x[5] === x.args[3]
     end
 
     @testset ":macrocall" begin
