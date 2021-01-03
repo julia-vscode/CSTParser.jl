@@ -489,8 +489,9 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
     # though we now check whether there is a sequence at the end of x0.args and 
     # x1.args that match
     for i = 0:min(last(r1), length(x0.args), length(x1.args)) - 1
-        if x0.args[end - i].fullspan !== x1.args[end - i].fullspan || 
-            !comp(x0.args[end - i].head, x1.args[end - i].head)
+        # if x0.args[end - i].fullspan !== x1.args[end - i].fullspan || 
+        #     headof(x0.args[end-i]) == :errortoken ? a : !comp(x0.args[end - i].head, x1.args[end - i].head) 
+        if !comp(x0.args[end - i], x1.args[ end - i])
             r2 = first(r2):length(x1.args) - i
             r3 = length(x0.args) .+ ((-i + 1):0)
             break
@@ -503,6 +504,13 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
         x0.args[r3]
     ], nothing)
     return x2
+end
+
+# Quick and very dirty comparison of two EXPR, makes extra effort for :errortokens
+function quick_comp(a::EXPR, b::EXPR)
+    a.fullspan == b.fullspan && 
+    headof(a) === :errortoken ? headof(b) === :errortoken && length(a.args) > 0 && length(a.args) == length(b.args) && quick_comp(first(a.args), first(b.args)) : 
+        comp(headof(a), headof(b))
 end
 
 """
