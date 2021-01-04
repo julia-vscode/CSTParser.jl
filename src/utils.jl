@@ -261,125 +261,6 @@ function norm_ast(a::Any)
     return a
 end
 
-function flisp_parsefile(str, display = true)
-    pos = 1
-    failed = false
-    x1 = Expr(:file)
-    try
-        while pos <= sizeof(str)
-            x, pos = Meta.parse(str, pos)
-            push!(x1.args, x)
-        end
-    catch er
-        isa(er, InterruptException) && rethrow(er)
-        if display
-            Base.showerror(stdout, er, catch_backtrace())
-            println()
-        end
-        return x1, true
-    end
-    if length(x1.args) > 0  && x1.args[end] === nothing
-        pop!(x1.args)
-    end
-    x1 = norm_ast(x1)
-    remlineinfo!(x1)
-    return x1, false
-end
-
-function cst_parsefile(str)
-    x, ps = CSTParser.parse(ParseState(str), true)
-    sp = check_span(x)
-    # remove leading/trailing nothings
-    if length(x.args) > 0 && is_nothing(x.args[1])
-        popfirst!(x.args)
-    end
-    # if length(x.args) > 0 && is_nothing(x.args[end])
-    #     pop!(x.args)
-    # end
-    x0 = norm_ast(Expr(x))
-    x0, has_error(ps), sp
-end
-
-function check_file(file, ret, neq)
-    str = read(file, String)
-    x0, cstfailed, sp = cst_parsefile(str)
-    x1, flispfailed = flisp_parsefile(str)
-
-    print("\r                             ")
-    if !isempty(sp)
-        printstyled(file, color=:blue)
-        @show sp
-        println()
-        push!(ret, (file, :span))
-    end
-    if cstfailed
-        printstyled(file, color=:yellow)
-        println()
-        push!(ret, (file, :errored))
-    elseif !(x0 == x1)
-        cumfail = 0
-        printstyled(file, color=:green)
-        println()
-        c0, c1 = compare(x0, x1)
-        printstyled(string("    ", c0), bold = true, color = :light_red)
-        println()
-        printstyled(string("    ", c1), bold=true, color=:light_green)
-        println()
-        push!(ret, (file, :noteq))
-    end
-end
-
-function check_base(dir=dirname(Base.find_source_file("essentials.jl")), display=false)
-    N = 0
-    neq = 0
-    err = 0
-    aerr = 0
-    fail = 0
-    bfail = 0
-    ret = []
-    oldstderr = stderr
-    redirect_stderr()
-    for (rp, d, files) in walkdir(dir)
-        for f in files
-            file = joinpath(rp, f)
-            if endswith(file, ".jl")
-                N += 1
-                try
-                    print("\r", rpad(string(N), 5), rpad(string(round(fail / N * 100, sigdigits=3)), 8), rpad(string(round(err / N * 100, sigdigits=3)), 8), rpad(string(round(neq / N * 100, sigdigits=3)), 8))
-
-                    check_file(file, ret, neq)
-                catch er
-                    isa(er, InterruptException) && rethrow(er)
-                    if display
-                        Base.showerror(stdout, er, catch_backtrace())
-                        println()
-                    end
-                    fail += 1
-                    printstyled(file, color=:red)
-                    println()
-                    push!(ret, (file, :failed))
-                end
-            end
-        end
-    end
-    redirect_stderr(oldstderr)
-    if bfail + fail + err + neq > 0
-        println("\r$N files")
-        printstyled("failed", color=:red)
-        println(" : $fail    $(100 * fail / N)%")
-        printstyled("errored", color=:yellow)
-        println(" : $err     $(100 * err / N)%")
-        printstyled("not eq.", color=:green)
-        println(" : $neq    $(100 * neq / N)%", "  -  $aerr     $(100 * aerr / N)%")
-        printstyled("base failed", color=:magenta)
-        println(" : $bfail    $(100 * bfail / N)%")
-        println()
-    else
-        println("\r")
-    end
-    ret
-end
-
 """
     compare(x,y)
 
@@ -458,11 +339,11 @@ end
 
 comp(x, y) = x == y
 function comp(x::CSTParser.EXPR, y::CSTParser.EXPR)
-    comp(x.head, y.head) && 
-    x.span == y.span && 
-    x.fullspan == y.fullspan && 
-    x.val == y.val && 
-    length(x) == length(y) && 
+    comp(x.head, y.head) &&
+    x.span == y.span &&
+    x.fullspan == y.fullspan &&
+    x.val == y.val &&
+    length(x) == length(y) &&
     all(comp(x[i], y[i]) for i = 1:length(x))
 end
 
@@ -470,7 +351,7 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
     i0 = firstdiff(s0, s1)
     i1, i2 = revfirstdiff(s0, s1)
     # Find unaffected expressions at start
-    # CST should be unaffected (and able to be copied across) up to this point, 
+    # CST should be unaffected (and able to be copied across) up to this point,
     # but we need to check.
     r1 = 1:min(find_arg_at(x0, i0) - 1, length(x0.args), find_arg_at(x1, i0) - 1)
     for i = 1:min(find_arg_at(x0, i0) - 1, find_arg_at(x1, i0) - 1)
@@ -481,23 +362,23 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
         r1 = 1:i
     end
     # we can re-use x0.args[r1]
-    
+
     # assume we'll just use x1.args from here on
     r2 = (last(r1) + 1):length(x1.args)
     r3 = 0:-1
 
-    # though we now check whether there is a sequence at the end of x0.args and 
+    # though we now check whether there is a sequence at the end of x0.args and
     # x1.args that match
     for i = 0:min(last(r1), length(x0.args), length(x1.args)) - 1
-        # if x0.args[end - i].fullspan !== x1.args[end - i].fullspan || 
-        #     headof(x0.args[end-i]) == :errortoken ? a : !comp(x0.args[end - i].head, x1.args[end - i].head) 
+        # if x0.args[end - i].fullspan !== x1.args[end - i].fullspan ||
+        #     headof(x0.args[end-i]) == :errortoken ? a : !comp(x0.args[end - i].head, x1.args[end - i].head)
         if !comp(x0.args[end - i], x1.args[ end - i])
             r2 = first(r2):length(x1.args) - i
             r3 = length(x0.args) .+ ((-i + 1):0)
             break
         end
     end
-    
+
     x2 = CSTParser.EXPR(x0.head, CSTParser.EXPR[
         x0.args[r1]
         x1.args[r2]
@@ -508,8 +389,8 @@ end
 
 # Quick and very dirty comparison of two EXPR, makes extra effort for :errortokens
 function quick_comp(a::EXPR, b::EXPR)
-    a.fullspan == b.fullspan && 
-    headof(a) === :errortoken ? headof(b) === :errortoken && length(a.args) > 0 && length(a.args) == length(b.args) && quick_comp(first(a.args), first(b.args)) : 
+    a.fullspan == b.fullspan &&
+    headof(a) === :errortoken ? headof(b) === :errortoken && length(a.args) > 0 && length(a.args) == length(b.args) && quick_comp(first(a.args), first(b.args)) :
         comp(headof(a), headof(b))
 end
 
@@ -748,7 +629,7 @@ macro cst_str(x)
     CSTParser.parse(x)
 end
 
-function issuffixableliteral(ps::ParseState, x::EXPR) 
+function issuffixableliteral(ps::ParseState, x::EXPR)
     isidentifier(ps.nt) && isemptyws(ps.ws) && ismacrocall(x) && (valof(x.args[1]) isa String && (endswith(valof(x.args[1]), "_str") || endswith(valof(x.args[1]), "_cmd")))
 end
 

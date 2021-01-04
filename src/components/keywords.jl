@@ -99,14 +99,14 @@ function parse_local_global(ps::ParseState, islocal = true)
         EXPR(:const, EXPR[EXPR(islocal ? :local : :global, EXPR[arg1.args[1]], nothing)], EXPR[kw, arg1.trivia[1]])
     else
         args, trivia = EXPR[], EXPR[kw]
-        @closer ps :comma while !closer(ps)
+        @closer(ps, :comma, while !closer(ps)
             push!(args, parse_expression(ps))
             if iscomma(ps.nt)
                 accept_comma(ps, trivia)
             else
                 break
             end
-        end
+        end)
         EXPR(islocal ? :local : :global, args, trivia)
     end
 end
@@ -168,7 +168,7 @@ function parse_imports(ps::ParseState)
         ret = EXPR(kwt, EXPR[arg], EXPR[kw])
     elseif iscolon(ps.nt)
         ret = EXPR(kwt, EXPR[EXPR(EXPR(:OPERATOR, next(ps)), EXPR[arg])], EXPR[kw])
-        
+
         arg = parse_dot_mod(ps, true)
         push!(ret.args[1], arg)
         prevpos = position(ps)
@@ -295,7 +295,7 @@ end
 """
     parse_blockexpr(ps::ParseState, head)
 
-General function for parsing block expressions comprised of a series of statements 
+General function for parsing block expressions comprised of a series of statements
 terminated by an `end`.
 """
 function parse_blockexpr(ps::ParseState, head)

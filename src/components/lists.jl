@@ -1,8 +1,7 @@
 """
-parse_tuple(ps, ret)
+    parse_tuple(ps, ret)
 
-`ret` is followed by a comma so tries to parse the rest of the
-tuple.
+`ret` is followed by a comma so tries to parse the rest of the tuple.
 """
 function parse_tuple end
 
@@ -47,6 +46,7 @@ end
 
 """
     parse_array(ps)
+
 Having hit '[' return either:
 + A vect
 + A vcat
@@ -95,7 +95,7 @@ function parse_array(ps::ParseState, isref = false)
             while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
                 a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                 push!(args1, a)
-        
+
                 prevpos = loop_check(ps, prevpos)
             end
             if kindof(ps.nt) === Tokens.RSQUARE && kindof(ps.ws) != SemiColonWS
@@ -119,7 +119,7 @@ function parse_array(ps::ParseState, isref = false)
                     prevpos1 = position(ps)
                     while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
                         a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
-                        
+
                         push!(args2, a)
                         prevpos1 = loop_check(ps, prevpos1)
                     end
@@ -144,7 +144,7 @@ function parse_array(ps::ParseState, isref = false)
 end
 
 function parse_array_row()
-    
+
 end
 
 """

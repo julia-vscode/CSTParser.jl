@@ -219,8 +219,8 @@ function lastchildistrivia(x::EXPR)
     return hastrivia(x) && (last(x.trivia).head in (:END, :RPAREN, :RSQUARE, :RBRACE) || (x.head in (:parameters, :tuple) && length(x.args) <= length(x.trivia)))
 end
 
-function Base.length(x::EXPR) 
-    headof(x) === :NONSTDIDENTIFIER && return 0 
+function Base.length(x::EXPR)
+    headof(x) === :NONSTDIDENTIFIER && return 0
     n = x.args isa Nothing ? 0 : length(x.args)
     n += hastrivia(x) ? length(x.trivia) : 0
     x.head isa EXPR && !(x.head.span === 0) && (n += 1)
@@ -255,27 +255,25 @@ function literalmap(k::Tokens.Kind)
     end
 end
 
-
-
 function tokenkindtoheadmap(k::Tokens.Kind)
-    if k == Tokens.COMMA
-        :COMMA
-    elseif k == Tokens.LPAREN
-        :LPAREN
-    elseif k == Tokens.RPAREN
-        :RPAREN
-    elseif k == Tokens.LSQUARE
-        :LSQUARE
-    elseif k == Tokens.RSQUARE
-        :RSQUARE
-    elseif k == Tokens.LBRACE
-        :LBRACE
-    elseif k == Tokens.RBRACE
-        :RBRACE
-    elseif k == Tokens.AT_SIGN
-        :ATSIGN
-    elseif k == Tokens.DOT
-        :DOT
+    if k === Tokens.COMMA
+        return :COMMA
+    elseif k === Tokens.LPAREN
+        return :LPAREN
+    elseif k === Tokens.RPAREN
+        return :RPAREN
+    elseif k === Tokens.LSQUARE
+        return :LSQUARE
+    elseif k === Tokens.RSQUARE
+        return :RSQUARE
+    elseif k === Tokens.LBRACE
+        return :LBRACE
+    elseif k === Tokens.RBRACE
+        return :RBRACE
+    elseif k === Tokens.AT_SIGN
+        return :ATSIGN
+    elseif k === Tokens.DOT
+        return :DOT
     elseif k === Tokens.ABSTRACT
         return :ABSTRACT
     elseif k === Tokens.BAREMODULE
@@ -371,6 +369,6 @@ function tokenkindtoheadmap(k::Tokens.Kind)
     elseif k === Tokens.ENDMARKER
         return :errortoken
     else
-        error("")
+        error("Could not determine HEAD for token $k.")
     end
 end

@@ -845,7 +845,7 @@ end""" |> test_expr
 
     @testset "issue #165" begin
         x = CSTParser.parse("""
-    a ? b 
+    a ? b
     function f end""")
         @test length(x) == 5 # make sure we always give out an EXPR of the right length
         @test headof(x.args[3]) === :errortoken
@@ -853,7 +853,7 @@ end""" |> test_expr
 
     @testset "issue #182" begin
         x = CSTParser.parse("""
-        quote 
+        quote
             \"\"\"
             txt
             \"\"\"
@@ -861,7 +861,7 @@ end""" |> test_expr
         end""")
         @test x.args[1].args[1].args[1].head === :globalrefdoc
     end
-    if VERSION > v"1.3.0-" 
+    if VERSION > v"1.3.0-"
         @testset "issue #198" begin
             @test test_expr(":var\"id\"")
         end
@@ -872,5 +872,9 @@ end""" |> test_expr
     end
     @testset "issue #210" begin
         @test test_expr("function f(a; where = false) end")
+    end
+    @testset "suffix operators" begin
+        @test test_expr("2*ₛ3")
+        @test test_expr("2+ₛ3")
     end
 end

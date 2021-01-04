@@ -138,8 +138,8 @@ function Expr(x::EXPR)
     elseif ispunctuation(x)
         if headof(x) === :DOT
             return :(.)
-        else 
-            error()
+        else
+            error("Unexpected punctuation `", valof(x), "`")
         end
     elseif isliteral(x)
         return _literal_expr(x)
