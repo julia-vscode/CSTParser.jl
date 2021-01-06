@@ -466,7 +466,7 @@ function comp(x::CSTParser.EXPR, y::CSTParser.EXPR)
     all(comp(x[i], y[i]) for i = 1:length(x))
 end
 
-function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.parse(s1, true))
+function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.parse(s1, true); inds = false)
     i0 = firstdiff(s0, s1)
     i1, i2 = revfirstdiff(s0, s1)
     # Find unaffected expressions at start
@@ -497,7 +497,7 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
             break
         end
     end
-    
+    inds && return r1, r2, r3
     x2 = CSTParser.EXPR(x0.head, CSTParser.EXPR[
         x0.args[r1]
         x1.args[r2]
