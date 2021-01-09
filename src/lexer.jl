@@ -96,6 +96,7 @@ end
 
 Base.position(ps::ParseState) = ps.nt.startbyte
 
+current_line(ps::ParseState) = ps.nt.startpos[1]
 """
     lex_ws_comment(l::Lexer, c)
 
@@ -178,14 +179,14 @@ isendoflinews(t::AbstractToken) = kindof(t) == SemiColonWS || kindof(t) == NewLi
 @inline val(token::AbstractToken, ps::ParseState) = String(ps.l.io.data[token.startbyte + 1:token.endbyte + 1])
 both_symbol_and_op(t::AbstractToken) = kindof(t) === Tokens.WHERE || kindof(t) === Tokens.IN || kindof(t) === Tokens.ISA
 isprefixableliteral(t::AbstractToken) = (kindof(t) === Tokens.STRING || kindof(t) === Tokens.TRIPLE_STRING || kindof(t) === Tokens.CMD || kindof(t) === Tokens.TRIPLE_CMD)
-isassignment(t::AbstractToken) = Tokens.begin_assignments < kindof(t) < Tokens.end_assignments
+isassignmentop(t::AbstractToken) = Tokens.begin_assignments < kindof(t) < Tokens.end_assignments
 
 isidentifier(t::AbstractToken) = kindof(t) === Tokens.IDENTIFIER
 isliteral(t::AbstractToken) = Tokens.begin_literal < kindof(t) < Tokens.end_literal
 isbool(t::AbstractToken) =  Tokens.TRUE ≤ kindof(t) ≤ Tokens.FALSE
 iscomma(t::AbstractToken) =  kindof(t) === Tokens.COMMA
 iscolon(t::AbstractToken) =  kindof(t) === Tokens.COLON
-iskw(t::AbstractToken) = Tokens.iskeyword(kindof(t))
-isinstance(t::AbstractToken) = isidentifier(t) || isliteral(t) || isbool(t) || iskw(t)
+iskeyword(t::AbstractToken) = Tokens.iskeyword(kindof(t))
+isinstance(t::AbstractToken) = isidentifier(t) || isliteral(t) || isbool(t) || iskeyword(t)
 ispunctuation(t::AbstractToken) = iscomma(t) || kindof(t) === Tokens.END || Tokens.LSQUARE ≤ kindof(t) ≤ Tokens.RPAREN || kindof(t) === Tokens.AT_SIGN
 

@@ -10,14 +10,8 @@ function parse_block(ps::ParseState, ret::Vector{EXPR}=EXPR[], closers=(Tokens.E
         if kindof(ps.nt) ∈ term_c # error handling if an unexpected closer is hit
             if kindof(ps.nt) === Tokens.ENDMARKER
                 break
-            elseif kindof(ps.nt) === Tokens.RPAREN
-                push!(ret, mErrorToken(ps, INSTANCE(next(ps)), UnexpectedToken))
-            elseif kindof(ps.nt) === Tokens.RBRACE
-                push!(ret, mErrorToken(ps, INSTANCE(next(ps)), UnexpectedToken))
-            elseif kindof(ps.nt) === Tokens.RSQUARE
-                push!(ret, mErrorToken(ps, INSTANCE(next(ps)), UnexpectedToken))
             else
-                push!(ret, mErrorToken(ps, INSTANCE(next(ps)), UnexpectedToken))
+                push!(ret, mErrorToken(ps, EXPR(next(ps)), UnexpectedToken))
             end
         else
             if docable
@@ -37,22 +31,40 @@ Parses an iterator, allowing for the preceding keyword `outer`. Returns an
 error expression if an invalid expression is parsed (anything other than
 `=`, `in`, `∈`).
 """
-function parse_iterator(ps::ParseState, outer=parse_outer(ps))
-    arg = @closer ps :range @closer ps :ws parse_expression(ps)
+function parse_iterator(ps::ParseState, outer = parse_outer(ps))
+    arg = @closer ps :range @closer ps :ws @nocloser ps :wsop parse_expression(ps)
     if !is_range(arg)
         arg = mErrorToken(ps, arg, InvalidIterator)
+    else 
+        arg = adjust_iter(arg)
     end
     if outer !== nothing
-        arg.args[1] = setparent!(EXPR(Outer, EXPR[outer, arg.args[1]]), arg)
+        arg.args[1] = setparent!(EXPR(:outer, EXPR[arg.args[1]], EXPR[outer]), arg)
         arg.fullspan += outer.fullspan
         arg.span = outer.fullspan + arg.span
     end
     return arg
 end
 
+function adjust_iter(x::EXPR)
+    # Assumes x is a valid iterator
+    if x.head === :call # isoperator(x.args[1]) && x.args[1].val in ("in", "∈")
+        EXPR(EXPR(:OPERATOR, 0, 0, "="), EXPR[x.args[2], x.args[3]], EXPR[x.args[1]])
+    else 
+        x
+    end
+end
+
+"""
+    is_range(x::EXPR)
+
+Is `x` a valid iterator for use in `for` loops or generators?
+"""
+is_range(x::EXPR) = isassignment(x) || (x.head === :call && (is_in(x.args[1]) || is_elof(x.args[1])))
+
 function parse_outer(ps)
     if kindof(ps.nt) === Tokens.OUTER && kindof(ps.nws) !== EmptyWS && !Tokens.isoperator(kindof(ps.nnt))
-        outer = INSTANCE(next(ps))
+        outer = EXPR(next(ps))
     end
 end
 
@@ -62,23 +74,12 @@ end
 Parses a group of iterators e.g. used in a `for` loop or generator. Can allow
 for a succeeding `Filter` expression.
 """
-function parse_iterators(ps::ParseState, allowfilter=false)
-    arg = parse_iterator(ps)
-    if iscomma(ps.nt) # we've hit a comma separated list of iterators.
-        arg = EXPR(Block, EXPR[arg])
-        prevpos = position(ps)
-        while iscomma(ps.nt)
-            accept_comma(ps, arg)
-            nextarg = parse_iterator(ps)
-            push!(arg, nextarg)
-            prevpos = loop_check(ps, prevpos)
-        end
+function parse_iterators(ps::ParseState, iters, trivia)
+    push!(iters, parse_iterator(ps))
+    if iscomma(ps.nt)
+        push!(trivia, accept_comma(ps))
+        parse_iterators(ps, iters, trivia)
     end
-
-    if allowfilter
-        arg = parse_filter(ps, arg)
-    end
-    return arg
 end
 
 """
@@ -88,14 +89,13 @@ Parse a conditional filter following a generator.
 """
 function parse_filter(ps::ParseState, arg)
     if kindof(ps.nt) === Tokens.IF # assumes we're inside a generator
-        if typof(arg) === Block
-            arg = EXPR(Filter, arg.args)
-        else
-            arg = EXPR(Filter, EXPR[arg])
-        end
-        push!(arg, mKEYWORD(next(ps)))
+        trivia = EXPR[EXPR(next(ps))]
         cond = @closer ps :range parse_expression(ps)
-        push!(arg, cond)
+        if headof(arg) === :block
+            arg = EXPR(:filter, EXPR[cond; arg.args], trivia)
+        else
+            arg = EXPR(:filter, EXPR[cond, arg], trivia)
+        end
     end
     return arg
 end
@@ -110,27 +110,31 @@ function parse_call(ps::ParseState, ret::EXPR, ismacro=false)
         arg = @closer ps :unary @closer ps :inwhere @precedence ps PowerOp parse_expression(ps)
         if istuple(arg)
             pushfirst!(arg.args, ret)
-            ret = EXPR(Call, arg.args)
-        elseif iswherecall(arg) && istuple(arg.args[1])
-            ret = mWhereOpCall(EXPR(Call, EXPR[ret; arg.args[1].args]), arg.args[2], arg.args[3:end])
+            ret = EXPR(:call, arg.args, arg.trivia)
         else
-            ret = mUnaryOpCall(ret, arg)
+            ret = EXPR(:call, EXPR[ret, arg], nothing)
         end
     elseif is_and(ret) || is_decl(ret) || is_exor(ret)
         arg = @precedence ps 20 parse_expression(ps)
-        if is_exor(ret) && istuple(arg) && length(arg) == 3 && is_splat(arg.args[2])
-            arg = EXPR(InvisBrackets, arg.args)
+        if is_exor(ret) && istuple(arg) && length(arg) == 3 && issplat(arg.args[2])
+            arg = EXPR(:brackets, arg.args)
         end
-        ret = mUnaryOpCall(ret, arg)
-    elseif is_issubt(ret) || is_issupt(ret)
-        arg = @precedence ps PowerOp parse_expression(ps)
-        ret = EXPR(Call, EXPR[ret; arg.args])
+        ret = EXPR(ret, EXPR[arg], nothing)
     else
-        !ismacro && typof(ret) === MacroName && (ismacro = true)
-        args = EXPR[ret, mPUNCTUATION(next(ps))]
-        @closeparen ps @default ps parse_comma_sep(ps, args, !ismacro)
-        accept_rparen(ps, args)
-        ret = EXPR(ismacro ? MacroCall : Call, args)
+        !ismacro && ismacroname(ret) && (ismacro = true)
+        syntaxcall = is_issubt(ret) || is_issupt(ret)
+        args = if syntaxcall
+            EXPR[]
+        elseif ismacro
+            EXPR[ret, EXPR(:NOTHING, 0, 0)]
+        else
+            EXPR[ret]
+        end
+        # args = ismacro ? EXPR[ret, EXPR(:NOTHING, 0, 0)] : EXPR[ret] 
+        trivia = EXPR[EXPR(next(ps))]
+        @closeparen ps @default ps parse_comma_sep(ps, args, trivia, !ismacro, insert_params_at = ismacro ? 3 : 2)
+        accept_rparen(ps, trivia)
+        ret = EXPR(ismacro ? :macrocall : syntaxcall ? ret : :call, args, trivia)
     end
     return ret
 end
@@ -139,7 +143,7 @@ end
 Parses a comma separated list, optionally allowing for conversion of 
 assignment (`=`) expressions to `Kw`.
 """
-function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw=true, block=false, istuple=false)
+function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR}, kw = true, block = false, istuple = false; insert_params_at = 2)
     prevpos = position(ps)
     @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma while !closer(ps)
         a = parse_expression(ps)
@@ -148,26 +152,33 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw=true, block=fals
         end
         push!(args, a)
         if iscomma(ps.nt)
-            accept_comma(ps, args)
-        else# if kindof(ps.ws) == SemiColonWS
+            if istuple
+                # As soon as we hit a comma in a list we can no longer convert to a block expr
+                block = false
+            end
+            accept_comma(ps, trivia)
+        elseif kindof(ps.ws) == SemiColonWS
             break
+        elseif !closer(ps)
+            # We've not hit a closing token, nor separating punctuation so let's insert an error-wrapped comma
+            push!(trivia, EXPR(:errortoken, EXPR[EXPR(:COMMA, 0, 0)], nothing))
         end
         prevpos = loop_check(ps, prevpos)
     end
-    if istuple && length(args) > 2
+    if istuple && length(args) > 1
         block = false
     end
 
     if kindof(ps.ws) == SemiColonWS
         if @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma @nocloser ps :semicolon closer(ps)
-            if block && !(length(args) == 1 && ispunctuation(args[1])) && !(typof(last(args)) === UnaryOpCall && is_dddot(last(args).args[2]))
-                push!(args, EXPR(Block, EXPR[pop!(args)]))
-            elseif kw && kindof(ps.nt) === Tokens.RPAREN
-                push!(args, EXPR(Parameters, EXPR[], 0, 0))
+            if block && !(length(args) == 0 && ispunctuation(trivia[1])) && !(isunarycall(last(args)) && is_dddot(last(args).args[2]))
+                push!(args, EXPR(:block, EXPR[pop!(args)]))
+            else
+                insert!(args, insert_params_at, EXPR(:parameters, EXPR[], nothing, 0, 0))
             end
         else
             a = @nocloser ps :newline @closer ps :comma @nocloser ps :inwhere parse_expression(ps)
-            if block && !(length(args) == 1 && ispunctuation(args[1])) && !is_splat(last(args)) && !(istuple && iscomma(ps.nt))
+            if block && !(length(args) == 0 && ispunctuation(trivia[1])) && !issplat(last(args)) && !(istuple && iscomma(ps.nt))
                 args1 = EXPR[pop!(args), a]
                 prevpos = position(ps)
                 @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma while @nocloser ps :semicolon !closer(ps)
@@ -175,11 +186,11 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, kw=true, block=fals
                     push!(args1, a)
                     prevpos = loop_check(ps, prevpos)
                 end
-                body = EXPR(Block, args1)
+                body = EXPR(:block, args1)
                 push!(args, body)
                 args = body
             else
-                parse_parameters(ps, args, EXPR[a])
+                parse_parameters(ps, args, EXPR[a], insert_params_at)
             end
         end
     end
@@ -191,15 +202,12 @@ end
 
 Parses parameter arguments for a function call (e.g. following a semicolon).
 """
-function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR}=EXPR[]; usekw=true)
+function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR} = EXPR[], insert_params_at = 2; usekw = true)
+    trivia = EXPR[]
     isfirst = isempty(args1)
     prevpos = position(ps)
     @nocloser ps :inwhere @nocloser ps :newline  @closer ps :comma while !isfirst || (@nocloser ps :semicolon !closer(ps))
-        if isfirst
-            a = parse_expression(ps)
-        else
-            a = first(args1)
-        end
+        a = isfirst ? parse_expression(ps) : first(args1)
         if usekw && _do_kw_convert(ps, a)
             a = _kw_convert(a)
         end
@@ -210,23 +218,36 @@ function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR
             push!(args1, a)
         end
         if iscomma(ps.nt)
-            accept_comma(ps, args1)
+            accept_comma(ps, trivia)
+        elseif kindof(ps.ws) !== SemiColonWS && !closer(ps)
+            push!(trivia, EXPR(:errortoken, EXPR[EXPR(:COMMA, 0, 0)], nothing))
         end
         if kindof(ps.ws) == SemiColonWS
             parse_parameters(ps, args1; usekw=usekw)
         end
-        if isfirst
-            prevpos = loop_check(ps, prevpos)
-        else
-            prevpos = position(ps)
-        end
+        prevpos = isfirst ? loop_check(ps, prevpos) : position(ps)
         isfirst = true
     end
     if !isempty(args1)
-        paras = EXPR(Parameters, args1)
-        push!(args, paras)
+        insert!(args, insert_params_at, EXPR(:parameters, args1, trivia))
     end
     return
+end
+
+function parse_macroname(ps)
+    at = EXPR(ps)
+    if !isemptyws(ps.ws)
+        ws = ps.ws.endbyte - ps.ws.startbyte + 1
+        mname = INSTANCE(next(ps))
+        mname.val = valof(mname) isa String ? string("@", " "^ws, valof(mname)) : string("@", " "^ws)
+        mname.span += ws
+        mname.fullspan += ws
+        mname = mErrorToken(ps, mname, UnexpectedWhiteSpace)
+    else
+        next(ps)
+        # set span/fullspan min length at 1 to account for the case of a lonely '@'
+        mname = EXPR(:IDENTIFIER, max(1, ps.nt.startbyte - ps.t.startbyte + 1), max(1, ps.t.endbyte - ps.t.startbyte + 2), string("@", val(ps.t, ps)))
+    end
 end
 
 """
@@ -235,30 +256,31 @@ end
 Parses a macro call. Expects to start on the `@`.
 """
 function parse_macrocall(ps::ParseState)
-    at = mPUNCTUATION(ps)
-    if !isemptyws(ps.ws)
-        mname = mErrorToken(ps, INSTANCE(next(ps)), UnexpectedWhiteSpace)
-    else
-        mname = EXPR(MacroName, EXPR[at, mIDENTIFIER(next(ps))])
-    end
-
+    mname = parse_macroname(ps)
     # Handle cases with @ at start of dotted expressions
     if kindof(ps.nt) === Tokens.DOT && isemptyws(ps.ws)
         prevpos = position(ps)
         while kindof(ps.nt) === Tokens.DOT
-            op = mOPERATOR(next(ps))
-            nextarg = mIDENTIFIER(next(ps))
-            mname = mBinaryOpCall(mname, op, EXPR(Quotenode, EXPR[nextarg]))
+            op = EXPR(:OPERATOR, next(ps))
+            nextarg = EXPR(:IDENTIFIER, next(ps))
+            mname = EXPR(op, EXPR[mname, EXPR(:quotenode, EXPR[nextarg], nothing)], nothing)
             prevpos = loop_check(ps, prevpos)
         end
     end
 
     if iscomma(ps.nt)
-        return EXPR(MacroCall, EXPR[mname], mname.fullspan, mname.span)
+        return EXPR(:macrocall, EXPR[mname, EXPR(:NOTHING, 0, 0)], nothing, mname.fullspan, mname.span)
     elseif isemptyws(ps.ws) && kindof(ps.nt) === Tokens.LPAREN
         return parse_call(ps, mname, true)
+    elseif isemptyws(ps.ws) && kindof(ps.nt) === Tokens.LBRACE
+        next(ps)
+        return EXPR(:macrocall, EXPR[mname, EXPR(:NOTHING, 0, 0), @default ps @closebrace ps parse_braces(ps)], nothing)
+    elseif isemptyws(ps.ws) && kindof(ps.nt) === Tokens.LSQUARE
+        next(ps)
+        return EXPR(:macrocall, EXPR[mname, EXPR(:NOTHING, 0, 0), @default ps parse_array(ps)], nothing)
     else
-        args = EXPR[mname]
+        #TODO add special hndling for @doc
+        args = EXPR[mname, EXPR(:NOTHING, 0, 0)]
         insquare = ps.closer.insquare
         prevpos = position(ps)
         @default ps while !closer(ps)
@@ -273,7 +295,7 @@ function parse_macrocall(ps::ParseState)
             end
             prevpos = loop_check(ps, prevpos)
         end
-        return EXPR(MacroCall, args)
+        return EXPR(:macrocall, args, nothing)
     end
 end
 
@@ -283,87 +305,91 @@ parse_generator(ps)
 Having hit `for` not at the beginning of an expression return a generator.
 Comprehensions are parsed as SQUAREs containing a generator.
 """
-function parse_generator(ps::ParseState, ret::EXPR)
-    kw = mKEYWORD(next(ps))
-    ret = EXPR(Generator, EXPR[ret, kw])
-    ranges = @closesquare ps parse_iterators(ps, true)
-
-    if typof(ranges) === Block
-        append!(ret, ranges)
+function parse_generator(ps::ParseState, first::EXPR)
+    kw = EXPR(next(ps))
+    iters, trivia = EXPR[], EXPR[]
+    @closesquare ps parse_iterators(ps, iters, trivia)
+    if kindof(ps.nt) === Tokens.IF # filter
+        push!(trivia, EXPR(next(ps)))
+        cond = @closer ps :range parse_expression(ps)
+        pushfirst!(iters, cond)
+        iters = EXPR(:filter, iters, trivia)
+        trivia = EXPR[]
+    end
+    if kindof(ps.nt) === Tokens.FOR
+        return EXPR(:flatten, EXPR[EXPR(:generator, EXPR[parse_generator(ps, first); iters], [kw; trivia])], nothing)
     else
-        push!(ret, ranges)
+        return EXPR(:generator, EXPR[first; iters], EXPR[kw; trivia])
     end
-
-    if typof(ret.args[1]) === Generator || typof(ret.args[1]) === Flatten
-        ret = EXPR(Flatten, EXPR[ret])
-    end
-
-    return ret
 end
 
+
+function get_appropriate_child_to_expand(x)
+    if headof(x) === :generator && !(headof(x.args[1]) in (:generator, :flatten))
+        return x, x.args[1]
+    elseif headof(x) === :flatten &&  headof(x.args[1]) === :generator && headof(x.args[1].args[1]) === :generator
+        x.args[1], x.args[1].args[1]
+    else
+        get_appropriate_child_to_expand(x.args[1])
+    end
+end
+
+function parse_importexport_item(ps, is_colon = false)
+    if kindof(ps.nt) === Tokens.AT_SIGN
+        mname = parse_macroname(next(ps))
+    elseif kindof(ps.nt) === Tokens.LPAREN
+        a = EXPR(:brackets, EXPR[], EXPR[EXPR(next(ps))])
+        push!(a, @closeparen ps parse_expression(ps))
+        pushtotrivia!(a, accept_rparen(ps))
+        a
+    elseif kindof(ps.nt) === Tokens.EX_OR
+        @closer ps :comma parse_expression(ps)
+    elseif !is_colon && isoperator(ps.nt)
+        next(ps)
+        EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, val(ps.t, ps))
+    elseif VERSION > v"1.3.0-" && isidentifier(ps.nt) && isemptyws(ps.nws) && (kindof(ps.nnt) === Tokens.STRING || kindof(ps.nnt) === Tokens.TRIPLE_STRING)
+        EXPR(:NONSTDIDENTIFIER, EXPR[INSTANCE(next(ps)), INSTANCE(next(ps))])
+        #TODO fix nonstdid handling
+    else
+        INSTANCE(next(ps))
+    end
+end
 """
 Helper function for parsing import/using statements.
 """
-function parse_dot_mod(ps::ParseState, is_colon=false)
-    args = EXPR[]
+function parse_dot_mod(ps::ParseState, is_colon = false)
+    ret = EXPR(EXPR(:OPERATOR, 0, 0, "."), EXPR[], EXPR[])
 
     prevpos = position(ps)
     while kindof(ps.nt) === Tokens.DOT || kindof(ps.nt) === Tokens.DDOT || kindof(ps.nt) === Tokens.DDDOT
-        d = mOPERATOR(next(ps))
+        d = EXPR(:OPERATOR, next(ps))
         trailing_ws = d.fullspan - d.span
         if is_dot(d)
-            push!(args, mOPERATOR(1 + trailing_ws, 1, Tokens.DOT, false))
+            push!(ret, EXPR(:OPERATOR, 1 + trailing_ws, 1, "."))
         elseif is_ddot(d)
-            push!(args, mOPERATOR(1, 1, Tokens.DOT, false))
-            push!(args, mOPERATOR(1 + trailing_ws, 1, Tokens.DOT, false))
+            push!(ret, EXPR(:OPERATOR, 1, 1, "."))
+            push!(ret, EXPR(:OPERATOR, 1 + trailing_ws, 1, "."))
         elseif is_dddot(d)
-            push!(args, mOPERATOR(1, 1, Tokens.DOT, false))
-            push!(args, mOPERATOR(1, 1, Tokens.DOT, false))
-            push!(args, mOPERATOR(1 + trailing_ws, 1, Tokens.DOT, false))
+            push!(ret, EXPR(:OPERATOR, 1, 1, "."))
+            push!(ret, EXPR(:OPERATOR, 1, 1, "."))
+            push!(ret, EXPR(:OPERATOR, 1 + trailing_ws, 1, "."))
         end
         prevpos = loop_check(ps, prevpos)
     end
 
-    # import/export ..
-    # TODO: Not clear what this is for?
-    # if iscomma(ps.nt) || kindof(ps.ws) == NewLineWS || kindof(ps.nt) === Tokens.ENDMARKER
-    #     if length(args) == 2
-    #         return EXPR[INSTANCE(ps)]
-    #     end
-    # end
-
     prevpos = position(ps)
     while true
-        if kindof(ps.nt) === Tokens.AT_SIGN
-            at = mPUNCTUATION(next(ps))
-            a = INSTANCE(next(ps))
-            push!(args, EXPR(MacroName, EXPR[at, a]))
-        elseif kindof(ps.nt) === Tokens.LPAREN
-            a = EXPR(InvisBrackets, EXPR[mPUNCTUATION(next(ps))])
-            push!(a, @closeparen ps parse_expression(ps))
-            accept_rparen(ps, a)
-            push!(args, a)
-        elseif kindof(ps.nt) === Tokens.EX_OR
-            a = @closer ps :comma parse_expression(ps)
-            push!(args, a)
-        elseif !is_colon && isoperator(ps.nt)
-            next(ps)
-            push!(args, mOPERATOR(ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, kindof(ps.t), false))
-        elseif VERSION > v"1.3.0-" && isidentifier(ps.nt) && isemptyws(ps.nws) && (kindof(ps.nnt) === Tokens.STRING || kindof(ps.nnt) === Tokens.TRIPLE_STRING)
-            push!(args, EXPR(NONSTDIDENTIFIER, EXPR[INSTANCE(next(ps)), INSTANCE(next(ps))]))
-        else
-            push!(args, INSTANCE(next(ps)))
-        end
+        push!(ret, parse_importexport_item(ps, is_colon))
 
         if kindof(ps.nt) === Tokens.DOT
-            push!(args, mPUNCTUATION(next(ps)))
+            pushtotrivia!(ret, EXPR(next(ps)))
         elseif isoperator(ps.nt) && (ps.nt.dotop || kindof(ps.nt) === Tokens.DOT)
-            push!(args, mPUNCTUATION(Tokens.DOT, 1, 1))
+            pushtotrivia!(ret, EXPR(:DOT, 1, 1))
             ps.nt = RawToken(kindof(ps.nt), ps.nt.startpos, ps.nt.endpos, ps.nt.startbyte + 1, ps.nt.endbyte, ps.nt.token_error, false, ps.nt.suffix)
         else
             break
         end
         prevpos = loop_check(ps, prevpos)
     end
-    args
+    ret
 end
