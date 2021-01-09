@@ -873,4 +873,9 @@ end""" |> test_expr
     @testset "issue #210" begin
         @test test_expr("function f(a; where = false) end")
     end
+
+    @testset "suffixed ops" begin
+        @test test_expr("a +₊ b *₊ c")
+        @test test_expr("a *₊ b +₊ c")
+    end
 end
