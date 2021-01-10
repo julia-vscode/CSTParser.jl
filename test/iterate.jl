@@ -492,6 +492,23 @@ end
         @test x[3] === x.args[2]
         @test x[4] === x.trivia[2]
         @test x[5] === x.args[3]
+        
+        x = cst"\"$(a)$(b)$(c)d\""
+        @test length(x) == 14
+        @test x[1] === x.trivia[1]
+        @test x[2] === x.trivia[2]
+        @test x[3] === x.trivia[3]
+        @test x[4] === x.args[1]
+        @test x[5] === x.trivia[4]
+        @test x[6] === x.trivia[5]
+        @test x[7] === x.trivia[6]
+        @test x[8] === x.args[2]
+        @test x[9] === x.trivia[7]
+        @test x[10] === x.trivia[8]
+        @test x[11] === x.trivia[9]
+        @test x[12] === x.args[3]
+        @test x[13] === x.trivia[10]
+        @test x[14] === x.args[4]
     end
 
     @testset ":macrocall" begin

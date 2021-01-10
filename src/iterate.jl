@@ -637,7 +637,7 @@ function _string(x, i)
                 bracket = true
             elseif is_rparen(x.trivia[ti])
                 isinterpolant = false
-                arg = true
+                arg = !(ai <= length(x.args) && !isstringliteral(x.args[ai]))
                 bracket = false
             end
             ti += 1
