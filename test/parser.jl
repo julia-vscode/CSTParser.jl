@@ -879,7 +879,7 @@ end""" |> test_expr
         @test test_expr("a *₊ b +₊ c")
     end
     @static if VERSION > v"1.6-"
-        @testset "import .. a .. syntax" begin
+        @testset "import .. as .. syntax" begin
             @test test_expr("import a as b")
             @test test_expr("import a as b, c")
             @test CSTParser.parse("using a as b")[2].head === :errortoken
