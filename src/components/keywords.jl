@@ -161,20 +161,21 @@ end
 
 function parse_imports(ps::ParseState)
     kw = EXPR(ps)
-    kwt = is_import(kw) ? :import : :using
+    allow_as = is_import(kw)
+    kwt = allow_as ? :import : :using
 
-    arg = parse_dot_mod(ps)
+    arg = parse_dot_mod(ps, false, allow_as)
     if !iscomma(ps.nt) && !iscolon(ps.nt)
         ret = EXPR(kwt, EXPR[arg], EXPR[kw])
     elseif iscolon(ps.nt)
         ret = EXPR(kwt, EXPR[EXPR(EXPR(:OPERATOR, next(ps)), EXPR[arg])], EXPR[kw])
         
-        arg = parse_dot_mod(ps, true)
+        arg = parse_dot_mod(ps, true, allow_as)
         push!(ret.args[1], arg)
         prevpos = position(ps)
         while iscomma(ps.nt)
             pushtotrivia!(ret.args[1], accept_comma(ps))
-            arg = parse_dot_mod(ps, true)
+            arg = parse_dot_mod(ps, true, allow_as)
             push!(ret.args[1], arg)
             prevpos = loop_check(ps, prevpos)
         end
@@ -184,7 +185,7 @@ function parse_imports(ps::ParseState)
         prevpos = position(ps)
         while iscomma(ps.nt)
             pushtotrivia!(ret, accept_comma(ps))
-            arg = parse_dot_mod(ps)
+            arg = parse_dot_mod(ps, false, allow_as)
             push!(ret, arg)
             prevpos = loop_check(ps, prevpos)
         end

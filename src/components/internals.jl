@@ -357,7 +357,7 @@ end
 """
 Helper function for parsing import/using statements.
 """
-function parse_dot_mod(ps::ParseState, is_colon = false)
+function parse_dot_mod(ps::ParseState, is_colon = false, allow_as = false)
     ret = EXPR(EXPR(:OPERATOR, 0, 0, "."), EXPR[], EXPR[])
 
     prevpos = position(ps)
@@ -387,6 +387,13 @@ function parse_dot_mod(ps::ParseState, is_colon = false)
             pushtotrivia!(ret, EXPR(:DOT, 1, 1))
             ps.nt = RawToken(kindof(ps.nt), ps.nt.startpos, ps.nt.endpos, ps.nt.startbyte + 1, ps.nt.endbyte, ps.nt.token_error, false, ps.nt.suffix)
         else
+            @static if VERSION > v"1.6-"
+                if allow_as && !isnewlinews(ps.ws) && isidentifier(ps.nt) && val(ps.nt, ps) == "as"
+                    as = EXPR(:AS, next(ps))
+                    as_val = parse_importexport_item(ps, is_colon)
+                    ret = EXPR(:as, EXPR[ret, as_val], EXPR[as])
+                end
+            end
             break
         end
         prevpos = loop_check(ps, prevpos)

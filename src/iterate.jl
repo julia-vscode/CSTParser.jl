@@ -18,6 +18,8 @@ end
 function _getindex(x::EXPR, i)
     if headof(x) === :abstract
         _abstract(x, i)
+    elseif headof(x) === :as
+        odda_event(x, i)
     elseif headof(x) === :block
         _block(x, i)
     elseif headof(x) === :braces
