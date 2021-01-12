@@ -885,4 +885,7 @@ end""" |> test_expr
             @test CSTParser.parse("using a as b")[2].head === :errortoken
         end
     end
+    @testset "exor #201" begin
+        @test test_expr(raw"$return(x)")
+    end
 end
