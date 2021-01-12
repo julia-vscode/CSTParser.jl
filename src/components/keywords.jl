@@ -92,7 +92,7 @@ function parse_const(ps::ParseState)
     return ret
 end
 
-function parse_local_global(ps::ParseState, islocal = true)
+function parse_local_global(ps::ParseState, islocal=true)
     kw = EXPR(ps)
     if ps.nt.kind === Tokens.CONST
         arg1 = parse_const(next(ps))
@@ -333,7 +333,7 @@ end
 
 Parse an `if` block.
 """
-function parse_if(ps::ParseState, nested = false)
+function parse_if(ps::ParseState, nested=false)
     args = EXPR[]
     trivia = EXPR[EXPR(ps)]
 

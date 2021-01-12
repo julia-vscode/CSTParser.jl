@@ -144,7 +144,7 @@ Parses an expression starting with a `(`.
 function parse_paren(ps::ParseState)
     args = EXPR[]
     trivia = EXPR[EXPR(ps)]
-    @closeparen ps @default ps @nocloser ps :inwhere parse_comma_sep(ps, args, trivia, false, true, true, insert_params_at = 1)
+    @closeparen ps @default ps @nocloser ps :inwhere parse_comma_sep(ps, args, trivia, false, true, true, insert_params_at=1)
     if length(args) == 1 && length(trivia) == 1 && ((kindof(ps.ws) !== SemiColonWS || headof(args[1]) === :block) && headof(args[1]) !== :parameters)
         accept_rparen(ps, trivia)
         ret = EXPR(:brackets, args, trivia)

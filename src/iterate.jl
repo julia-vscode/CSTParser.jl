@@ -164,7 +164,7 @@ function _getindex(x::EXPR, i)
             elseif i == length(x)
                 last(x.trivia)
             elseif isodd(i)
-                x.args[div(i+1, 2) - 1]
+                x.args[div(i + 1, 2) - 1]
             else
                 x.trivia[div(i, 2)]
             end
@@ -234,7 +234,7 @@ function _const(x, i)
     if length(x.trivia) === 1
         ta(x, i)
     elseif length(x.trivia) === 2
-        #global const
+        # global const
         if i < 3
             x.trivia[i]
         elseif i == 3
@@ -545,17 +545,17 @@ function _if(x, i)
     if length(x) == 4 # if c expr end
         taat(x, i)
     elseif length(x) == 5 # if c expr elseif... end
-    if i == 1
-        x.trivia[1]
-    elseif i == 2
-        x.args[1]
-    elseif i == 3
-        x.args[2]
-    elseif i == 4
-        x.args[3]
-    elseif i == 5
-        x.trivia[2]
-    end
+        if i == 1
+            x.trivia[1]
+        elseif i == 2
+            x.args[1]
+        elseif i == 3
+            x.args[2]
+        elseif i == 4
+            x.args[3]
+        elseif i == 5
+            x.trivia[2]
+        end
     elseif length(x) == 6 # if c expr else expr end
         if i == 1
             x.trivia[1]
@@ -597,7 +597,7 @@ end
 
 function _string(x, i)
     # TODO: this is mega slow
-    ai, ti = 1,1
+    ai, ti = 1, 1
     arg = isstringliteral(x.args[1])
     isinterpolant = !arg
     bracket = false

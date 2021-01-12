@@ -261,7 +261,7 @@ function norm_ast(a::Any)
     return a
 end
 
-function flisp_parsefile(str, display = true)
+function flisp_parsefile(str, display=true)
     pos = 1
     failed = false
     x1 = Expr(:file)
@@ -321,7 +321,7 @@ function check_file(file, ret, neq)
         printstyled(file, color=:green)
         println()
         c0, c1 = compare(x0, x1)
-        printstyled(string("    ", c0), bold = true, color = :light_red)
+        printstyled(string("    ", c0), bold=true, color=:light_red)
         println()
         printstyled(string("    ", c1), bold=true, color=:light_green)
         println()
@@ -466,7 +466,7 @@ function comp(x::CSTParser.EXPR, y::CSTParser.EXPR)
     all(comp(x[i], y[i]) for i = 1:length(x))
 end
 
-function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.parse(s1, true); inds = false)
+function minimal_reparse(s0, s1, x0=CSTParser.parse(s0, true), x1=CSTParser.parse(s1, true); inds=false)
     i0 = firstdiff(s0, s1)
     i1, i2 = revfirstdiff(s0, s1)
     # Find unaffected expressions at start
@@ -475,7 +475,7 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
     r1 = 1:min(find_arg_at(x0, i0) - 1, length(x0.args), find_arg_at(x1, i0) - 1)
     for i = 1:min(find_arg_at(x0, i0) - 1, find_arg_at(x1, i0) - 1)
         if x0.args[i].fullspan !== x1.args[i].fullspan
-            r1 = 1:(i-1)
+            r1 = 1:(i - 1)
             break
         end
         r1 = 1:i
@@ -519,7 +519,7 @@ check_span(x, neq = [])
 Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
-function check_span(x::EXPR, neq = [])
+function check_span(x::EXPR, neq=[])
     (ispunctuation(x) || isidentifier(x) || iskeyword(x) || isoperator(x) || isliteral(x) || headof(x) == :string) && return neq
 
     s = 0
