@@ -13,15 +13,16 @@ function closer(ps::ParseState)
     (ps.closer.inwhere && kindof(ps.nt) === Tokens.WHERE) ||
     (ps.closer.inwhere && ps.closer.ws && kindof(ps.t) === Tokens.RPAREN && isoperator(ps.nt) && precedence(ps.nt) < DeclarationOp) ||
     (ps.closer.precedence > WhereOp && (
-        (kindof(ps.nt) === Tokens.LPAREN && !(ps.t.kind === Tokens.EX_OR)) ||
+        (kindof(ps.nt) === Tokens.LPAREN && !(kindof(ps.t) === Tokens.EX_OR)) ||
         kindof(ps.nt) === Tokens.LBRACE ||
         kindof(ps.nt) === Tokens.LSQUARE ||
         (kindof(ps.nt) === Tokens.STRING && isemptyws(ps.ws)) ||
         ((kindof(ps.nt) === Tokens.RPAREN || kindof(ps.nt) === Tokens.RSQUARE) && isidentifier(ps.nt))
     )) ||
-    (iscomma(ps.nt) && ps.closer.precedence > 0) ||
+    (iscomma(ps.nt) && ps.closer.precedence > AssignmentOp) ||
+    kindof(ps.nt) === Tokens.ENDMARKER ||
     (ps.closer.comma && iscomma(ps.nt)) ||
-    (ps.closer.tuple && (iscomma(ps.nt) || isassignment(ps.nt))) ||
+    (ps.closer.tuple && (iscomma(ps.nt) || isassignmentop(ps.nt))) ||
     (kindof(ps.nt) === Tokens.FOR && ps.closer.precedence > -1) ||
     (ps.closer.block && kindof(ps.nt) === Tokens.END) ||
     (ps.closer.paren && kindof(ps.nt) === Tokens.RPAREN) ||
@@ -41,7 +42,7 @@ function closer(ps::ParseState)
         !(kindof(ps.nt) === Tokens.DO) &&
         !(
             (isbinaryop(ps.nt) && !(ps.closer.wsop && isemptyws(ps.nws) && isunaryop(ps.nt) && precedence(ps.nt) > 7)) ||
-            (isunaryop(ps.t) && kindof(ps.ws) == WS && ps.lt.kind !== CSTParser.Tokens.COLON)
+            (isunaryop(ps.t) && kindof(ps.ws) == WS && kindof(ps.lt) !== CSTParser.Tokens.COLON)
         )) ||
     (ps.closer.unary && (kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE) && isidentifier(ps.nt)))
 end
@@ -201,31 +202,8 @@ macro default(ps, body)
 end
 
 
-
-isidentifier(x::EXPR) = typof(x) === IDENTIFIER || typof(x) === NONSTDIDENTIFIER
-
-isunarycall(x::EXPR) = typof(x) === UnaryOpCall
-isbinarycall(x::EXPR) = typof(x) === BinaryOpCall
-iswherecall(x::EXPR) = typof(x) === WhereOpCall
-isdeclaration(x::EXPR) = isbinarycall(x) && is_decl(x[2])
-isinterpolant(x::EXPR) = isunarycall(x) && is_exor(x[1])
-istuple(x::EXPR) = typof(x) === TupleH
-is_either_id_op_interp(x::EXPR) = isidentifier(x) || isoperator(x) || isinterpolant(x)
-is_splat(x::EXPR) = isunarycall(x) && is_dddot(x[2])
-
-
-isliteral(x::EXPR) = typof(x) === LITERAL
-iskw(x::EXPR) = typof(x) === KEYWORD # TODO: should change to `iskeyword`
-ispunctuation(x::EXPR) = typof(x) === PUNCTUATION
-
-isstring(x) = typof(x) === StringH || (isliteral(x) && (kindof(x) === Tokens.STRING || kindof(x) === Tokens.TRIPLE_STRING))
-is_integer(x) = isliteral(x) && kindof(x) === Tokens.INTEGER
-is_float(x) = isliteral(x) && kindof(x) === Tokens.FLOAT
-is_number(x) = isliteral(x) && (kindof(x) === Tokens.INTEGER || kindof(x) === Tokens.FLOAT)
-is_nothing(x) = isliteral(x) && kindof(x) === Tokens.NOTHING
-
-isajuxtaposition(ps::ParseState, ret::EXPR) = ((is_number(ret) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.LPAREN || kindof(ps.nt) === Tokens.CMD || kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)) ||
-        ((typof(ret) === UnaryOpCall && is_prime(ret.args[2]) && isidentifier(ps.nt)) ||
+isajuxtaposition(ps::ParseState, ret::EXPR) = ((isnumber(ret) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.LPAREN || kindof(ps.nt) === Tokens.CMD || kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)) ||
+        ((is_prime(ret.head) && isidentifier(ps.nt)) ||
         ((kindof(ps.t) === Tokens.RPAREN || kindof(ps.t) === Tokens.RSQUARE) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.CMD)) ||
         ((kindof(ps.t) === Tokens.STRING || kindof(ps.t) === Tokens.TRIPLE_STRING) && (kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)))) || ((kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT) || kindof(ps.t) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && isidentifier(ps.nt))
 
@@ -237,54 +215,9 @@ Determine whether a parsing error occured while processing text with the given
 `ParseState`, or exists as a (sub) expression of `x`.
 """
 function has_error(x::EXPR)
-    return typof(x) == ErrorToken || (x.args !== nothing && any(has_error, x.args))
+    return headof(x) == :errortoken || (x.args !== nothing && any(has_error, x.args)) || (x.trivia !== nothing && any(has_error, x.trivia))
 end
 has_error(ps::ParseState) = ps.errored
-
-# When using the FancyDiagnostics package, Meta.parse is the
-# same as CSTParser.parse. Manually call the flisp parser here
-# to make sure we test what we want, even when people load the
-# FancyDiagnostics package.
-function flisp_parse(str::AbstractString, pos::Int; greedy::Bool=true, raise::Bool=true)
-    if VERSION < v"1.6-DEV"
-        bstr = String(str)
-        ex, pos = ccall(:jl_parse_string, Any,
-                        (Ptr{UInt8}, Csize_t, Int32, Int32),
-                        bstr, sizeof(bstr), pos - 1, greedy ? 1 : 0)
-    else
-        filename = "none"
-        rule = greedy ? :statement : :atom
-        ex, pos = Core.Compiler.fl_parse(str, filename, pos - 1, rule)
-    end
-    if raise && isa(ex, Expr) && ex.head === :error
-        throw(Meta.ParseError(ex.args[1]))
-    end
-    if ex === ()
-        raise && throw(Meta.ParseError("end of input"))
-        ex = Expr(:error, "end of input")
-    end
-    # pos is zero-based byte offset
-    return ex, pos + 1
-end
-
-function flisp_parse(str::AbstractString; raise::Bool=true)
-    ex, pos = flisp_parse(str, 1, greedy=true, raise=raise)
-    if isa(ex, Expr) && ex.head === :error
-        return ex
-    end
-    if !(pos > ncodeunits(str))
-        raise && throw(Meta.ParseError("extra token after end of expression"))
-        return Expr(:error, "extra token after end of expression")
-    end
-    return ex
-end
-
-function flisp_parse(stream::IO; greedy::Bool=true, raise::Bool=true)
-    pos = position(stream)
-    ex, Δ = flisp_parse(read(stream, String), 1, greedy=greedy, raise=raise)
-    seek(stream, pos + Δ - 1)
-    return ex
-end
 
 using Base.Meta
 
@@ -328,13 +261,14 @@ function norm_ast(a::Any)
     return a
 end
 
-function flisp_parsefile(str, display=true)
-    io = IOBuffer(str)
+function flisp_parsefile(str, display = true)
+    pos = 1
     failed = false
     x1 = Expr(:file)
     try
-        while !eof(io)
-            push!(x1.args, flisp_parse(io))
+        while pos <= sizeof(str)
+            x, pos = Meta.parse(str, pos)
+            push!(x1.args, x)
         end
     catch er
         isa(er, InterruptException) && rethrow(er)
@@ -359,9 +293,9 @@ function cst_parsefile(str)
     if length(x.args) > 0 && is_nothing(x.args[1])
         popfirst!(x.args)
     end
-    if length(x.args) > 0 && is_nothing(x.args[end])
-        pop!(x.args)
-    end
+    # if length(x.args) > 0 && is_nothing(x.args[end])
+    #     pop!(x.args)
+    # end
     x0 = norm_ast(Expr(x))
     x0, has_error(ps), sp
 end
@@ -386,8 +320,8 @@ function check_file(file, ret, neq)
         cumfail = 0
         printstyled(file, color=:green)
         println()
-        c0, c1 = CSTParser.compare(x0, x1)
-        printstyled(string("    ", c0), bold=true, color=:ligth_red)
+        c0, c1 = compare(x0, x1)
+        printstyled(string("    ", c0), bold = true, color = :light_red)
         println()
         printstyled(string("    ", c1), bold=true, color=:light_green)
         println()
@@ -473,21 +407,138 @@ function compare(x::Expr, y::Expr)
     end
 end
 
+# code for updating CST
+"""
+    firstdiff(s0::AbstractString, s1::AbstractString)
+
+Returns the last byte index, i, for which s0 and s1 are the same such that:
+    `s0[1:i] == s1[1:i]`
+"""
+function firstdiff(s0::AbstractString, s1::AbstractString)
+    minlength = min(sizeof(s0), sizeof(s1))
+    @inbounds for i in 1:minlength
+        if codeunits(s0)[i] !== codeunits(s1)[i]
+            return i - 1 # This could return a non-commencing byte of a multi-byte unicode sequence.
+        end
+    end
+    return minlength
+end
+
+"""
+    revfirstdiff(s0::AbstractString, s1::AbstractString)
+
+Reversed version of firstdiff but returns two indices, one for each string.
+"""
+function revfirstdiff(s0::AbstractString, s1::AbstractString)
+    minlength = min(sizeof(s0), sizeof(s1))
+    @inbounds for i in 0:minlength - 1
+        if codeunits(s0)[end - i] !== codeunits(s1)[end - i]
+            return sizeof(s0) - i, sizeof(s1) - i# This could return a non-commencing byte of a multi-byte unicode sequence.
+        end
+    end
+    return 1, 1
+end
+
+"""
+    find_arg_at(x, i)
+
+Returns the index of the node of `x` within which the byte offset `i` falls.
+"""
+function find_arg_at(x::CSTParser.EXPR, i)
+    @assert i <= x.fullspan
+    offset = 0
+    for (cnt, a) in enumerate(x.args)
+        if i <= offset + a.fullspan
+            return cnt
+        end
+        offset += a.fullspan
+    end
+    error()
+end
+
+comp(x, y) = x == y
+function comp(x::CSTParser.EXPR, y::CSTParser.EXPR)
+    comp(x.head, y.head) && 
+    x.span == y.span && 
+    x.fullspan == y.fullspan && 
+    x.val == y.val && 
+    length(x) == length(y) && 
+    all(comp(x[i], y[i]) for i = 1:length(x))
+end
+
+function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.parse(s1, true); inds = false)
+    i0 = firstdiff(s0, s1)
+    i1, i2 = revfirstdiff(s0, s1)
+    # Find unaffected expressions at start
+    # CST should be unaffected (and able to be copied across) up to this point, 
+    # but we need to check.
+    r1 = 1:min(find_arg_at(x0, i0) - 1, length(x0.args), find_arg_at(x1, i0) - 1)
+    for i = 1:min(find_arg_at(x0, i0) - 1, find_arg_at(x1, i0) - 1)
+        if x0.args[i].fullspan !== x1.args[i].fullspan
+            r1 = 1:(i-1)
+            break
+        end
+        r1 = 1:i
+    end
+    # we can re-use x0.args[r1]
+    
+    # assume we'll just use x1.args from here on
+    r2 = (last(r1) + 1):length(x1.args)
+    r3 = 0:-1
+
+    # though we now check whether there is a sequence at the end of x0.args and 
+    # x1.args that match
+    for i = 0:min(last(r1), length(x0.args), length(x1.args)) - 1
+        # if x0.args[end - i].fullspan !== x1.args[end - i].fullspan || 
+        #     headof(x0.args[end-i]) == :errortoken ? a : !comp(x0.args[end - i].head, x1.args[end - i].head) 
+        if !comp(x0.args[end - i], x1.args[ end - i])
+            r2 = first(r2):length(x1.args) - i
+            r3 = length(x0.args) .+ ((-i + 1):0)
+            break
+        end
+    end
+    inds && return r1, r2, r3
+    x2 = CSTParser.EXPR(x0.head, CSTParser.EXPR[
+        x0.args[r1]
+        x1.args[r2]
+        x0.args[r3]
+    ], nothing)
+    return x2
+end
+
+# Quick and very dirty comparison of two EXPR, makes extra effort for :errortokens
+function quick_comp(a::EXPR, b::EXPR)
+    a.fullspan == b.fullspan && 
+    headof(a) === :errortoken ? headof(b) === :errortoken && length(a.args) > 0 && length(a.args) == length(b.args) && quick_comp(first(a.args), first(b.args)) : 
+        comp(headof(a), headof(b))
+end
+
 """
 check_span(x, neq = [])
 
 Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
-function check_span(x::EXPR, neq=[])
-    (ispunctuation(x) || isidentifier(x) || iskw(x) || isoperator(x) || isliteral(x) || typof(x) == StringH) && return neq
+function check_span(x::EXPR, neq = [])
+    (ispunctuation(x) || isidentifier(x) || iskeyword(x) || isoperator(x) || isliteral(x) || headof(x) == :string) && return neq
 
     s = 0
-    for a in x.args
-        check_span(a, neq)
-        s += a.fullspan
+    if x.args !== nothing
+        for a in x.args
+            check_span(a, neq)
+            s += a.fullspan
+        end
     end
-    if length(x.args) > 0 && s != x.fullspan
+    if hastrivia(x)
+        for a in x.trivia
+            check_span(a, neq)
+            s += a.fullspan
+        end
+    end
+    if x.head isa EXPR
+        s += x.head.fullspan
+    end
+    if length(x) > 0 && s != x.fullspan
         push!(neq, x)
     end
     neq
@@ -507,11 +558,11 @@ end
 Attempt to get a string representation of a nodeless expression.
 """
 function str_value(x)
-    if typof(x) === IDENTIFIER || typof(x) === LITERAL
+    if headof(x) === :IDENTIFIER || isliteral(x)
         return valof(x)
     elseif isidentifier(x)
         valof(x.args[2])
-    elseif typof(x) === OPERATOR || typof(x) === MacroName
+    elseif isoperator(x)
         return string(Expr(x))
     else
         return ""
@@ -627,12 +678,8 @@ function valid_escaped_seq(s::AbstractString)
     return true
 end
 
-"""
-    is_getfield(x::EXPR)
 
-Is this an expression of the form `a.b`.
-"""
-is_getfield(x::EXPR) = isbinarycall(x) && length(x) == 3 && kindof(x[2]) === Tokens.DOT
+
 
 """
     disallowednumberjuxt(ret::EXPR)
@@ -640,45 +687,33 @@ is_getfield(x::EXPR) = isbinarycall(x) && length(x) == 3 && kindof(x[2]) === Tok
 Does this number literal end in a decimal and so cannot precede a paren for
 implicit multiplication?
 """
-disallowednumberjuxt(ret::EXPR) = is_number(ret) && last(valof(ret)) == '.'
+disallowednumberjuxt(ret::EXPR) = isnumber(ret) && last(valof(ret)) == '.'
 
 
 nexttokenstartsdocstring(ps::ParseState) = isidentifier(ps.nt) && val(ps.nt, ps) == "doc" && (kindof(ps.nnt) === Tokens.STRING || kindof(ps.nnt) === Tokens.TRIPLE_STRING)
 
-"""
-    is_wrapped_assignment(x::EXPR)
-    
-Is `x` an assignment expression, ignoring any surrounding parentheses.
-"""
-is_wrapped_assignment(x::EXPR) = is_assignment(x) || (isbracketed(x) && is_wrapped_assignment(x.args[2]))
 
-"""
-    is_range(x::EXPR)
-
-Is `x` a valid iterator for use in `for` loops or generators?
-"""
-is_range(x::EXPR) = isbinarycall(x) && (is_eq(x.args[2]) || is_in(x.args[2]) || is_elof(x.args[2]))
 
 """
     _do_kw_convert(ps::ParseState, a::EXPR)
 
 Should `a` be converted to a keyword-argument expression?
 """
-_do_kw_convert(ps::ParseState, a::EXPR) = !ps.closer.brace && is_assignment(a)
+_do_kw_convert(ps::ParseState, a::EXPR) = !ps.closer.brace && isassignment(a)
 
 """
     _kw_convert(ps::ParseState, a::EXPR)
 
 Converted an assignment expression to a keyword-argument expression.
 """
-_kw_convert(a::EXPR) = EXPR(Kw, EXPR[a.args[1], a.args[2], a.args[3]], a.fullspan, a.span)
+_kw_convert(x::EXPR) = EXPR(:kw, EXPR[x.args[1], x.args[2]], EXPR[x.head], x.fullspan, x.span)
 
 """
     convertsigtotuple(sig::EXPR)
 
 When parsing a function or macro signature, should it be converted to a tuple?
 """
-convertsigtotuple(sig::EXPR) = isbracketed(sig) && !(istuple(sig.args[2]) || (typof(sig.args[2]) === Block) || is_splat(sig.args[2]))
+convertsigtotuple(sig::EXPR) = isbracketed(sig) && !(istuple(sig.args[1]) || (headof(sig.args[1]) === :block) || issplat(sig.args[1]))
 
 """
     docable(head)
@@ -686,16 +721,11 @@ convertsigtotuple(sig::EXPR) = isbracketed(sig) && !(istuple(sig.args[2]) || (ty
 When parsing a block of expressions, can documentation be attached? Prefixed docs at the
 top-level are handled within `parse(ps::ParseState, cont = false)`.
 """
-docable(head) = head === Begin || head === ModuleH || head === BareModule || head === Quote
+docable(head) = head === :begin || head === :module || head === :baremodule || head === :quote
 
 
 should_negate_number_literal(ps::ParseState, op::EXPR) = (is_plus(op) || is_minus(op)) && (kindof(ps.nt) === Tokens.INTEGER || kindof(ps.nt) === Tokens.FLOAT) && isemptyws(ps.ws) && kindof(ps.nnt) != Tokens.CIRCUMFLEX_ACCENT
 
-isbracketed(x::EXPR) = typof(x) === InvisBrackets # Assumption that x has 3 args, doesn't need checking?
-
-unwrapbracket(x::EXPR) = isbracketed(x) ? unwrapbracket(x[2]) : x
-
-isbeginorblock(x::EXPR) = typof(x) === Begin || typof(unwrapbracket(x)) == Block
 
 """
     can_become_comparison(x::EXPR)
@@ -703,7 +733,7 @@ isbeginorblock(x::EXPR) = typof(x) === Begin || typof(unwrapbracket(x)) == Block
 Is `x` a binary comparison call (e.g. `a < b`) that can be extended to include more
 arguments?
 """
-can_become_comparison(x::EXPR) = isbinarycall(x) && (precedence(x.args[2]) == ComparisonOp || is_issubt(x.args[2]) || is_issupt(x.args[2]))
+can_become_comparison(x::EXPR) = (isoperator(x.head) && comp_prec(valof(x.head)) && length(x.args) > 1) || (x.head === :call && isoperator(x.args[1]) && comp_prec(valof(x.args[1])) && length(x.args) > 2 && !hastrivia(x))
 
 """
     can_become_chain(x::EXPR, op::EXPR)
@@ -711,10 +741,19 @@ can_become_comparison(x::EXPR) = isbinarycall(x) && (precedence(x.args[2]) == Co
 Is `x` a binary call for `+` or `*` that can be extended to include more
 arguments?
 """
-can_become_chain(x::EXPR, op::EXPR) = isbinarycall(x) && (is_star(op) || is_plus(op)) && kindof(op) == kindof(x.args[2]) && !x.args[2].dot && x.args[2].span > 0
+can_become_chain(x::EXPR, op::EXPR) = isbinarycall(x) && (is_star(op) || is_plus(op)) && valof(op) == valof(x.args[2]) && !isdotted(x.args[2]) && x.args[2].span > 0
+
+
+macro cst_str(x)
+    CSTParser.parse(x)
+end
+
+function issuffixableliteral(ps::ParseState, x::EXPR) 
+    isidentifier(ps.nt) && isemptyws(ps.ws) && ismacrocall(x) && (valof(x.args[1]) isa String && (endswith(valof(x.args[1]), "_str") || endswith(valof(x.args[1]), "_cmd")))
+end
 
 function loop_check(ps, prevpos)
-    if position(ps) <= prevpos
+    if position(ps) <= prevpos && ps.nt.kind !== Tokens.ENDMARKER
         throw(CSTInfiniteLoop("Infinite loop at $ps"))
     else
         position(ps)

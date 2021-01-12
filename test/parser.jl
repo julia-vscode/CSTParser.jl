@@ -191,7 +191,7 @@ end
 
     @testset "Tuples" begin
         @static if VERSION > v"1.1-"
-            @test typof(CSTParser.parse("1,")) === CSTParser.ErrorToken
+            @test headof(CSTParser.parse("1,")) === :errortoken
         else
             @test "1," |> test_expr
         end
@@ -358,7 +358,7 @@ end
         @test "@mac f(5)" |> test_expr
         @test "(@mac x)" |> test_expr
         @test "Mod.@mac a b c" |> test_expr
-    # @test "[@mac a b]" |> test_expr
+        @test "[@mac a b]" |> test_expr
         @test "@inline get_chunks_id(i::Integer) = _div64(Int(i)-1)+1, _mod64(Int(i) -1)" |> test_expr
         @test "@inline f() = (), ()" |> test_expr
         @test "@sprintf(\"%08d\", id)" |> test_expr
@@ -389,6 +389,7 @@ end
             @test """[x;y
                   z]""" |> test_expr
             @test "[x,y;z]" |> test_expr
+            @test "[1,2;]" |> test_expr
         end
 
         @testset "typed_vcat" begin
@@ -549,8 +550,9 @@ end
         "\"\"\"\n$(ws1)a\n\n$(ws1)b\n\n$(ws2)c\n\n$(ws2)d\n\n$(ws2)\"\"\"" |> test_expr
         @test "\"\"\"\n$(ws1)α\n$(ws1)β\n$(ws2)γ\n$(ws2)δ\n$(ws2)\"\"\"" |> test_expr
         @test "\"\"\"Float\$(bit)\"\"\"" |> test_expr
-        @test kindof(CSTParser.parse("\"\"\"abc\$(de)fg\"\"\"")[3]) == CSTParser.Tokens.STRING
-        @test kindof(CSTParser.parse("\"\"\"abc(de)fg\"\"\"")) == CSTParser.Tokens.TRIPLE_STRING
+        @test headof(CSTParser.parse("\"\"\"abc\$(de)fg\"\"\"").args[3]) == :STRING
+        @test headof(CSTParser.parse("\"\"\"abc(de)fg\"\"\"")) == :TRIPLESTRING
+        @test "\"\"\"\n\t\"\"\"" |> test_expr # Change of behaviour from v1.5 -> v1.6
     end
 
     @testset "No longer broken things" begin
@@ -564,7 +566,7 @@ end
         @test "isa(a,a) != isa(a,a)" |> test_expr
         @test "@mac return x" |> test_expr
         @static if VERSION > v"1.1-"
-            @test typof(CSTParser.parse("a,b,").args[4]) === CSTParser.ErrorToken
+            @test headof(CSTParser.parse("a,b,").trivia[2]) === :errortoken
         else
             @test "a,b," |> test_expr
         end
@@ -707,19 +709,30 @@ end""" |> test_expr
         @test "@~" |> test_expr
         @test "\$\$(x)" |> test_expr
         @test "\$\$(x)" |> test_expr
-        @test CSTParser.typof(CSTParser.parse("=")) === CSTParser.ErrorToken
-        @test CSTParser.typof(CSTParser.parse("~")) === CSTParser.OPERATOR
+        @test CSTParser.headof(CSTParser.parse("=")) === :errortoken
+        @test CSTParser.headof(CSTParser.parse("~")) === :OPERATOR
         @test "(1:\n2)" |> test_expr
         @test "a[: ]" |> test_expr
+        @test ".~b" |> test_expr
+        if VERSION > v"1.1-"
+            @test "a .~ b" |> test_expr
+        end
+        @test "1 .< 2 .< 3" |> test_expr
+        @test "(;)" |> test_expr
+        if VERSION > v"1.5"
+        @test "@M{a}-b" |> test_expr
+        @test "@M{a,b}-b" |> test_expr
+        end
+        @test "@M[a]-b" |> test_expr
     end
 
     @testset "interpolation error catching" begin
         x = CSTParser.parse("\"a \$ b\"")
         @test x.fullspan == 7
-        @test CSTParser.typof(x[2]) === CSTParser.ErrorToken
+        @test CSTParser.headof(x[2]) === :errortoken
         x = CSTParser.parse("\"a \$# b\"")
         @test x.fullspan == 8
-        @test CSTParser.typof(x[2]) === CSTParser.ErrorToken
+        @test CSTParser.headof(x[2]) === :errortoken
     end
 
     @testset "Broken things" begin
@@ -772,18 +785,15 @@ end""" |> test_expr
     end
 
     @testset "errors" begin
-        @test typof(CSTParser.parse("1? b : c ")[1]) === CSTParser.ErrorToken
-        @test typof(CSTParser.parse("1 ?b : c ")[2]) === CSTParser.ErrorToken
-        @test typof(CSTParser.parse("1 ? b :c ")[4]) === CSTParser.ErrorToken
-        @test typof(CSTParser.parse("1:\n2")[2]) === CSTParser.ErrorToken
-        @test typof(CSTParser.parse("1.a")[1]) === CSTParser.ErrorToken
-        @test typof(CSTParser.parse("f ()")) === CSTParser.ErrorToken
-        @test typof(CSTParser.parse("f{t} ()")) === CSTParser.ErrorToken
-        @test typof(CSTParser.parse(": a")[1]) === CSTParser.ErrorToken
-        @test typof(CSTParser.parse("const a")[2]) === CSTParser.ErrorToken
-        @test typof(CSTParser.parse("const a = 1")[2]) === CSTParser.BinaryOpCall
-        @test typof(CSTParser.parse("const global a")[2]) === CSTParser.ErrorToken
-        @test typof(CSTParser.parse("const global a = 1")[2]) === CSTParser.Global
+        @test headof(CSTParser.parse("1? b : c ").args[1]) === :errortoken
+        @test headof(CSTParser.parse("1 ?b : c ").trivia[1]) === :errortoken
+        @test headof(CSTParser.parse("1 ? b :c ").trivia[2]) === :errortoken
+        @test headof(CSTParser.parse("1:\n2").args[1]) === :errortoken
+        @test headof(CSTParser.parse("1.a").args[2]) === :errortoken
+        @test headof(CSTParser.parse("f ()")) === :errortoken
+        @test headof(CSTParser.parse("f{t} ()")) === :errortoken
+        @test headof(CSTParser.parse(": a").trivia[1]) === :errortoken
+        @test headof(CSTParser.parse("const a").args[1]) === :errortoken
     end
 
     @testset "tuple params" begin
@@ -816,9 +826,9 @@ end""" |> test_expr
     end
 
     @testset "import preceding dot whitespace" begin
-        @test CSTParser.parse("using . M")[2].fullspan == 2
-        @test CSTParser.parse("using .. M")[3].fullspan == 2
-        @test CSTParser.parse("using ... M")[4].fullspan == 2
+        @test "using . M" |> test_expr
+        @test "using .. M" |> test_expr
+        @test "using ... M" |> test_expr
     end
 
     @testset "issue #116" begin
@@ -838,8 +848,7 @@ end""" |> test_expr
     a ? b 
     function f end""")
         @test length(x) == 5 # make sure we always give out an EXPR of the right length
-        @test typof(x[4]) === CSTParser.ErrorToken
-        @test typof(x[4][1]) === CSTParser.OPERATOR
+        @test headof(x.args[3]) === :errortoken
     end
 
     @testset "issue #182" begin
@@ -850,7 +859,7 @@ end""" |> test_expr
             \"\"\"
             sym
         end""")
-        @test typof(x[2][1][1]) === CSTParser.GlobalRefDoc
+        @test x.args[1].args[1].args[1].head === :globalrefdoc
     end
     if VERSION > v"1.3.0-" 
         @testset "issue #198" begin
@@ -860,5 +869,20 @@ end""" |> test_expr
     @testset "vscode issue #1632" begin
         @test test_expr("\"\$( a)\"")
         @test test_expr("\"\$(#=comment=# a)\"")
+    end
+    @testset "issue #210" begin
+        @test test_expr("function f(a; where = false) end")
+    end
+
+    @testset "suffixed ops" begin
+        @test test_expr("a +₊ b *₊ c")
+        @test test_expr("a *₊ b +₊ c")
+    end
+    @static if VERSION > v"1.6-"
+        @testset "import .. as .. syntax" begin
+            @test test_expr("import a as b")
+            @test test_expr("import a as b, c")
+            @test CSTParser.parse("using a as b")[2].head === :errortoken
+        end
     end
 end
