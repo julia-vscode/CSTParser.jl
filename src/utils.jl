@@ -488,14 +488,16 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
 
     # though we now check whether there is a sequence at the end of x0.args and 
     # x1.args that match
+    offset = sizeof(s1)
     for i = 0:min(last(r1), length(x0.args), length(x1.args)) - 1
         # if x0.args[end - i].fullspan !== x1.args[end - i].fullspan || 
         #     headof(x0.args[end-i]) == :errortoken ? a : !comp(x0.args[end - i].head, x1.args[end - i].head) 
-        if !comp(x0.args[end - i], x1.args[ end - i])
+        if !comp(x0.args[end - i], x1.args[ end - i]) || offset <= i1
             r2 = first(r2):length(x1.args) - i
             r3 = length(x0.args) .+ ((-i + 1):0)
             break
         end
+        offset -= x1.args[end - i].fullspan
     end
     inds && return r1, r2, r3
     x2 = CSTParser.EXPR(x0.head, CSTParser.EXPR[
