@@ -5,6 +5,9 @@ Dispatch function for when the parser has reached a keyword.
 """
 function parse_kw(ps::ParseState)
     k = kindof(ps.t)
+    if ps.closer.precedence == 20 && ps.lt.kind === Tokens.EX_OR && k !== Tokens.END
+        return EXPR(:IDENTIFIER, ps)
+    end
     if k === Tokens.IF
         return @default ps @closer ps :block parse_if(ps)
     elseif k === Tokens.LET
