@@ -75,6 +75,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
     end
 
     isinterpolated = false
+    erroredonlast = false
 
     t_str = val(ps.t, ps)
     if istrip && length(t_str) == 6
@@ -141,6 +142,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                     rparen = EXPR(:RPAREN, 1, 1)
 
                     ps1 = ParseState(input)
+                    ps1.lastbyte = ps.t.endbyte
+                    # We're reusing a portion of the string from `ps` so we need to make sure `ps1` knows where the end of the string is.
 
                     if kindof(ps1.nt) === Tokens.RPAREN
                         push!(ret, EXPR(:ERRORTOKEN, EXPR[], nothing))
@@ -153,7 +156,18 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                         push!(ret, interp_val)
                         pushtotrivia!(ret, op)
                         pushtotrivia!(ret, lparen)
-                        pushtotrivia!(ret, rparen)
+                        if kindof(ps1.nt) === Tokens.RPAREN
+                            # Need to check the parenthese were actually closed.
+                            pushtotrivia!(ret, rparen)
+                        else
+                            pushtotrivia!(ret, EXPR(:RPAREN, 0, 0))
+                            if eof(input)
+                                # Some errored interpolation, we're now at the end of the string but lets make sure we have the closing "
+                                # write(b, '"')
+                                erroredonlast = true
+                               break
+                            end
+                        end
                         seek(input, ps1.nt.startbyte + 1)
                     end
                     # Compared to flisp/JuliaParser, we have an extra lookahead token,
@@ -165,7 +179,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                     ps1 = ParseState(input)
                     next(ps1)
                     if kindof(ps1.t) === Tokens.WHITESPACE
-                        error("Unexpecte whitespace after \$ in String")
+                        error("Unexpected whitespace after \$ in String")
                     else
                         t = INSTANCE(ps1)
                     end
@@ -183,7 +197,10 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
 
         # handle last String section
         lspan = position(b)
-        if b.size == 0
+        if erroredonlast
+            ex = EXPR(istrip ? :TRIPLESTRING : :STRING, (istrip ? 3 : 1) + (ps.nt.startbyte - ps.t.endbyte - 1), istrip ? 3 : 1, "")
+            pushtotrivia!(ret, ex)
+        elseif b.size == 0
             ex = mErrorToken(ps, Unknown)
             push!(ret, ex)
         else

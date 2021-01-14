@@ -6,6 +6,7 @@ stop.
 """
 function closer(ps::ParseState)
     kindof(ps.nt) === Tokens.ENDMARKER ||
+    ps.nt.startbyte >= ps.lastbyte ||
     (ps.closer.newline && kindof(ps.ws) == NewLineWS && !iscomma(ps.t)) ||
     (ps.closer.semicolon && kindof(ps.ws) == SemiColonWS) ||
     (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence) ||
