@@ -43,19 +43,17 @@ mutable struct ParseState
     lastbyte::Int
     errored::Bool
 end
-function ParseState(str::Union{IO,String})
+function ParseState(str::Union{IOBuffer,String})
     lastbyte = if str isa String
         sizeof(str)
     elseif str isa IOBuffer
         str.size
-    else
-        Inf
     end
     ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), Closer(), lastbyte, false)
     return next(next(ps))
 end
 
-function ParseState(str::Union{IO,String}, loc::Int)
+function ParseState(str::Union{IOBuffer,String}, loc::Int)
     ps = ParseState(str)
     prevpos = position(ps)
     while ps.nt.startbyte < loc
