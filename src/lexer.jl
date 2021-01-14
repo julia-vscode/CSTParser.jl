@@ -51,7 +51,7 @@ function ParseState(str::Union{IO,String})
     else
         Inf
     end
-    ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), Closer(), str isa String ? sizeof(str) : lastbyte, false)
+    ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), Closer(), lastbyte, false)
     return next(next(ps))
 end
 
@@ -197,4 +197,3 @@ iscolon(t::AbstractToken) =  kindof(t) === Tokens.COLON
 iskeyword(t::AbstractToken) = Tokens.iskeyword(kindof(t))
 isinstance(t::AbstractToken) = isidentifier(t) || isliteral(t) || isbool(t) || iskeyword(t)
 ispunctuation(t::AbstractToken) = iscomma(t) || kindof(t) === Tokens.END || Tokens.LSQUARE ≤ kindof(t) ≤ Tokens.RPAREN || kindof(t) === Tokens.AT_SIGN
-
