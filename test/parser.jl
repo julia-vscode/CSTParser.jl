@@ -729,10 +729,10 @@ end""" |> test_expr
     @testset "interpolation error catching" begin
         x = CSTParser.parse("\"a \$ b\"")
         @test x.fullspan == 7
-        @test CSTParser.headof(x[2]) === :errortoken
+        @test CSTParser.headof(x[3]) === :errortoken
         x = CSTParser.parse("\"a \$# b\"")
         @test x.fullspan == 8
-        @test CSTParser.headof(x[2]) === :errortoken
+        @test CSTParser.headof(x[3]) === :errortoken
     end
 
     @testset "Broken things" begin

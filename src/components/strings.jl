@@ -173,7 +173,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                     # Compared to flisp/JuliaParser, we have an extra lookahead token,
                     # so we need to back up one here
                 elseif Tokenize.Lexers.iswhitespace(peekchar(input)) || peekchar(input) === '#'
-                    pushtotrivia!(ret, mErrorToken(ps, op, StringInterpolationWithTrailingWhitespace))
+                    pushtotrivia!(ret, op)
+                    push!(ret, mErrorToken(ps, StringInterpolationWithTrailingWhitespace))
                 else
                     pos = position(input)
                     ps1 = ParseState(input)
