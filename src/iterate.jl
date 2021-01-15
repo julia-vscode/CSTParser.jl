@@ -603,7 +603,7 @@ function _string(x, i)
     bracket = false
     if i == 1 && hastrivia(x) && (x.trivia[1].head === :STRING || x.trivia[1].head === :TRIPLESTRING) && isempty(x.trivia[1].val)
         return x.trivia[1]
-    elseif i == length(x) && hastrivia(x) && last(x.trivia).head === :STRING || last(x.trivia).head === :TRIPLESTRING && isempty(last(x.trivia).val)
+    elseif i == length(x) && hastrivia(x) && (last(x.trivia).head === :STRING || last(x.trivia).head === :TRIPLESTRING) && isempty(last(x.trivia).val)
         return last(x.trivia)
     end
     for j = 1:i

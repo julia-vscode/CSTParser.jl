@@ -176,6 +176,10 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                 elseif Tokenize.Lexers.iswhitespace(peekchar(input)) || peekchar(input) === '#'
                     pushtotrivia!(ret, op)
                     push!(ret, mErrorToken(ps, StringInterpolationWithTrailingWhitespace))
+                elseif sspan == position(input) + (istrip ? 3 : 1)
+                    # Error. We've hit the end of the string
+                    pushtotrivia!(ret, op)
+                    push!(ret, mErrorToken(ps, StringInterpolationWithTrailingWhitespace))
                 else
                     pos = position(input)
                     ps1 = ParseState(input)
