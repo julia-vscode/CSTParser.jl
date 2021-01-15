@@ -159,6 +159,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                         if kindof(ps1.nt) === Tokens.RPAREN
                             # Need to check the parenthese were actually closed.
                             pushtotrivia!(ret, rparen)
+                            seek(input, ps1.nt.startbyte + 1)
                         else
                             pushtotrivia!(ret, EXPR(:RPAREN, 0, 0))
                             if eof(input)
@@ -167,8 +168,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                                 erroredonlast = true
                                break
                             end
+                            seek(input, ps1.nt.startbyte) # We don't skip ahead one as there wasn't a closing paren
                         end
-                        seek(input, ps1.nt.startbyte + 1)
                     end
                     # Compared to flisp/JuliaParser, we have an extra lookahead token,
                     # so we need to back up one here
