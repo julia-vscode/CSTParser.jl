@@ -141,6 +141,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                     lparen = EXPR(:LPAREN, lpfullspan + position(input) + 1, 1)
                     rparen = EXPR(:RPAREN, 1, 1)
 
+                    prev_input_size = input.size
+                    input.size = input.size - (istrip ? 3 : 1)
                     ps1 = ParseState(input)
                     ps1.lastbyte = ps.t.endbyte - (istrip ? 3 : 1)
                     # We're reusing a portion of the string from `ps` so we need to make sure `ps1` knows where the end of the string is.
@@ -152,7 +154,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                         pushtotrivia!(ret, rparen)
                         skip(input, 1)
                     else
-                        interp_val = @closer ps1 :paren parse_expression(ps1)
+                        interp_val = @closer ps1 :paren parse_expression(ps1, true)
                         push!(ret, interp_val)
                         pushtotrivia!(ret, op)
                         pushtotrivia!(ret, lparen)
@@ -165,14 +167,17 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                             if eof(input)
                                 # Some errored interpolation, we're now at the end of the string but lets make sure we have the closing "
                                 # write(b, '"')
-                                erroredonlast = true
-                               break
+                                # erroredonlast = true
+                                # @info "break"
+                            #    break
                             end
+
                             seek(input, ps1.nt.startbyte) # We don't skip ahead one as there wasn't a closing paren
                         end
                     end
                     # Compared to flisp/JuliaParser, we have an extra lookahead token,
                     # so we need to back up one here
+                    input.size = prev_input_size
                 elseif Tokenize.Lexers.iswhitespace(peekchar(input)) || peekchar(input) === '#'
                     pushtotrivia!(ret, op)
                     push!(ret, mErrorToken(ps, StringInterpolationWithTrailingWhitespace))
