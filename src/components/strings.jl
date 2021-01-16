@@ -143,9 +143,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
 
                     prev_input_size = input.size
                     input.size = input.size - (istrip ? 3 : 1)
-                    ps1 = ParseState(input)
-                    ps1.lastbyte = ps.t.endbyte - (istrip ? 3 : 1)
                     # We're reusing a portion of the string from `ps` so we need to make sure `ps1` knows where the end of the string is.
+                    ps1 = ParseState(input)
 
                     if kindof(ps1.nt) === Tokens.RPAREN
                         push!(ret, EXPR(:ERRORTOKEN, EXPR[], nothing))

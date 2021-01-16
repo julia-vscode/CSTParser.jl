@@ -40,16 +40,10 @@ mutable struct ParseState
     nws::RawToken
     nnws::RawToken
     closer::Closer
-    lastbyte::Int
     errored::Bool
 end
 function ParseState(str::Union{IOBuffer,String})
-    lastbyte = if str isa String
-        sizeof(str)
-    elseif str isa IOBuffer
-        str.size
-    end
-    ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), Closer(), lastbyte, false)
+    ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), Closer(), false)
     return next(next(ps))
 end
 
