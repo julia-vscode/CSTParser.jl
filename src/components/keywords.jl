@@ -88,7 +88,7 @@ end
 function parse_const(ps::ParseState)
     kw = EXPR(ps)
     arg = parse_expression(ps)
-    if !(isassignment(unwrapbracket(arg)) || (headof(arg) === :global && isassignment(unwrapbracket(arg.args[1]))))
+    if !(isassignment(unwrapbracket(arg)) || (headof(arg) === :global && length(arg.args) > 0 && isassignment(unwrapbracket(arg.args[1]))))
         arg = mErrorToken(ps, arg, ExpectedAssignment)
     end
     ret = EXPR(:const, EXPR[arg], EXPR[kw])
@@ -288,6 +288,9 @@ function parse_do(ps::ParseState, pre::EXPR)
             push!(trivia1, accept_comma(ps))
         elseif @closer ps :ws closer(ps)
             break
+        else
+            # we've errored, let's add a dummy comma
+            push!(trivia1, EXPR(:COMMA, 0, 0))
         end
     end
     blockargs = parse_block(ps, EXPR[], (Tokens.END,))

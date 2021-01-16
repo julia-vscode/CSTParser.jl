@@ -42,12 +42,12 @@ mutable struct ParseState
     closer::Closer
     errored::Bool
 end
-function ParseState(str::Union{IO,String})
+function ParseState(str::Union{IOBuffer,String})
     ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), Closer(), false)
     return next(next(ps))
 end
 
-function ParseState(str::Union{IO,String}, loc::Int)
+function ParseState(str::Union{IOBuffer,String}, loc::Int)
     ps = ParseState(str)
     prevpos = position(ps)
     while ps.nt.startbyte < loc
@@ -189,4 +189,3 @@ iscolon(t::AbstractToken) =  kindof(t) === Tokens.COLON
 iskeyword(t::AbstractToken) = Tokens.iskeyword(kindof(t))
 isinstance(t::AbstractToken) = isidentifier(t) || isliteral(t) || isbool(t) || iskeyword(t)
 ispunctuation(t::AbstractToken) = iscomma(t) || kindof(t) === Tokens.END || Tokens.LSQUARE ≤ kindof(t) ≤ Tokens.RPAREN || kindof(t) === Tokens.AT_SIGN
-

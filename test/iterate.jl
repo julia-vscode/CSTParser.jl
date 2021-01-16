@@ -509,6 +509,11 @@ end
         @test x[12] === x.args[3]
         @test x[13] === x.trivia[10]
         @test x[14] === x.args[4]
+
+        x = cst"""
+        "$(()$)"
+        """
+        @test x[6] === x.trivia[5]
     end
 
     @testset ":macrocall" begin

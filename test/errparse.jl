@@ -94,8 +94,20 @@
                 rethrow(err)
             end
             @test comp(x1, x2) ? true : (@info(string("Comparison failed between s0:\n", s0, "\n\n and s1: \n", s1)); false)
-            @test join(String(codeunits(s0)[seg]) for seg in get_segs(x0)) == s0
-            @test join(String(codeunits(s1)[seg]) for seg in get_segs(x1)) == s1
+            @test try
+                join(String(codeunits(s0)[seg]) for seg in get_segs(x0)) == s0
+            catch e
+                @info "Couldn't reconstruct original text from EXPR segments for:"
+                @info s0
+                rethrow(e)
+            end
+            @test try
+                join(String(codeunits(s1)[seg]) for seg in get_segs(x1)) == s1
+            catch e
+                @info "Couldn't reconstruct original text from EXPR segments for:"
+                @info s1
+                rethrow(e)
+            end
             @test join(String(codeunits(s1)[seg]) for seg in get_segs(x2)) == s1
             s0 = s1
         end

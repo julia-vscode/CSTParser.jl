@@ -168,6 +168,8 @@ function Expr(x::EXPR)
         Expr(:string, Expr.(x.args[2:end])...)
     elseif x.args === nothing
         Expr(Symbol(lowercase(String(x.head))))
+    elseif x.head === :errortoken
+        Expr(:error)
     else
         Expr(Symbol(lowercase(String(x.head))), Expr.(x.args)...)
     end

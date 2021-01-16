@@ -38,9 +38,11 @@ Acceptable starting tokens are:
 + An `@`.
 
 """
-function parse_expression(ps::ParseState)
+function parse_expression(ps::ParseState, esc_on_error = false)
     if kindof(ps.nt) === Tokens.ENDMARKER
         ret = mErrorToken(ps, UnexpectedToken)
+    elseif (esc_on_error && ps.nt.kind == Tokens.ERROR)
+        ret = EXPR(:errortoken, 0, 0)
     elseif kindof(ps.nt) ∈ term_c && !(kindof(ps.nt) === Tokens.END && ps.closer.square)
         ret = mErrorToken(ps, EXPR(next(ps)), UnexpectedToken)
     else

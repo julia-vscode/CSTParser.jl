@@ -75,6 +75,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
     end
 
     isinterpolated = false
+    erroredonlast = false
 
     t_str = val(ps.t, ps)
     if istrip && length(t_str) == 6
@@ -140,6 +141,9 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                     lparen = EXPR(:LPAREN, lpfullspan + position(input) + 1, 1)
                     rparen = EXPR(:RPAREN, 1, 1)
 
+                    prev_input_size = input.size
+                    input.size = input.size - (istrip ? 3 : 1)
+                    # We're reusing a portion of the string from `ps` so we need to make sure `ps1` knows where the end of the string is.
                     ps1 = ParseState(input)
 
                     if kindof(ps1.nt) === Tokens.RPAREN
@@ -149,23 +153,35 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                         pushtotrivia!(ret, rparen)
                         skip(input, 1)
                     else
-                        interp_val = @closer ps1 :paren parse_expression(ps1)
+                        interp_val = @closer ps1 :paren parse_expression(ps1, true)
                         push!(ret, interp_val)
                         pushtotrivia!(ret, op)
                         pushtotrivia!(ret, lparen)
-                        pushtotrivia!(ret, rparen)
-                        seek(input, ps1.nt.startbyte + 1)
+                        if kindof(ps1.nt) === Tokens.RPAREN
+                            # Need to check the parenthese were actually closed.
+                            pushtotrivia!(ret, rparen)
+                            seek(input, ps1.nt.startbyte + 1)
+                        else
+                            pushtotrivia!(ret, EXPR(:RPAREN, 0, 0))
+                            seek(input, ps1.nt.startbyte) # We don't skip ahead one as there wasn't a closing paren
+                        end
                     end
                     # Compared to flisp/JuliaParser, we have an extra lookahead token,
                     # so we need to back up one here
+                    input.size = prev_input_size
                 elseif Tokenize.Lexers.iswhitespace(peekchar(input)) || peekchar(input) === '#'
-                    pushtotrivia!(ret, mErrorToken(ps, op, StringInterpolationWithTrailingWhitespace))
+                    pushtotrivia!(ret, op)
+                    push!(ret, mErrorToken(ps, StringInterpolationWithTrailingWhitespace))
+                elseif sspan == position(input) + (istrip ? 3 : 1)
+                    # Error. We've hit the end of the string
+                    pushtotrivia!(ret, op)
+                    push!(ret, mErrorToken(ps, StringInterpolationWithTrailingWhitespace))
                 else
                     pos = position(input)
                     ps1 = ParseState(input)
                     next(ps1)
                     if kindof(ps1.t) === Tokens.WHITESPACE
-                        error("Unexpecte whitespace after \$ in String")
+                        error("Unexpected whitespace after \$ in String")
                     else
                         t = INSTANCE(ps1)
                     end
@@ -183,7 +199,10 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
 
         # handle last String section
         lspan = position(b)
-        if b.size == 0
+        if erroredonlast
+            ex = EXPR(istrip ? :TRIPLESTRING : :STRING, (istrip ? 3 : 1) + (ps.nt.startbyte - ps.t.endbyte - 1), istrip ? 3 : 1, "")
+            pushtotrivia!(ret, ex)
+        elseif b.size == 0
             ex = mErrorToken(ps, Unknown)
             push!(ret, ex)
         else
