@@ -163,14 +163,6 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                             seek(input, ps1.nt.startbyte + 1)
                         else
                             pushtotrivia!(ret, EXPR(:RPAREN, 0, 0))
-                            if eof(input)
-                                # Some errored interpolation, we're now at the end of the string but lets make sure we have the closing "
-                                # write(b, '"')
-                                # erroredonlast = true
-                                # @info "break"
-                            #    break
-                            end
-
                             seek(input, ps1.nt.startbyte) # We don't skip ahead one as there wasn't a closing paren
                         end
                     end
