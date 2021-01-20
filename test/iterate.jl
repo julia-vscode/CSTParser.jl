@@ -726,6 +726,32 @@ end
         @test headof(x[4]) === :RSQUARE
     end
 
+    @testset "unary syntax" begin
+        x = cst"<:a"
+        @test length(x) == 2
+        @test headof(x[1]) === :OPERATOR
+        @test headof(x[2]) === :IDENTIFIER
+
+        x = cst">:a"
+        @test length(x) == 2
+        @test headof(x[1]) === :OPERATOR
+        @test headof(x[2]) === :IDENTIFIER
+
+        x = cst"::a"
+        @test length(x) == 2
+        @test headof(x[1]) === :OPERATOR
+        @test headof(x[2]) === :IDENTIFIER
+
+        x = cst"&a"
+        @test length(x) == 2
+        @test headof(x[1]) === :OPERATOR
+        @test headof(x[2]) === :IDENTIFIER
+
+        x = cst"a..."
+        @test length(x) == 2
+        @test headof(x[1]) === :IDENTIFIER
+        @test headof(x[2]) === :OPERATOR
+    end
 end
 
 @testset "self test" begin
