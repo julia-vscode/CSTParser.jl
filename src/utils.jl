@@ -453,7 +453,7 @@ function find_arg_at(x::CSTParser.EXPR, i)
         end
         offset += a.fullspan
     end
-    error()
+    error("$(x.head) with fullspan: $(x.fullspan) at $i")
 end
 
 comp(x, y) = x == y
@@ -467,6 +467,7 @@ function comp(x::CSTParser.EXPR, y::CSTParser.EXPR)
 end
 
 function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.parse(s1, true); inds = false)
+    isempty(x0.args) && return inds ? (1:0, 1:length(x1.args), 1:0) : x1
     i0 = firstdiff(s0, s1)
     i1, i2 = revfirstdiff(s0, s1)
     # Find unaffected expressions at start
@@ -489,10 +490,8 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
     # though we now check whether there is a sequence at the end of x0.args and 
     # x1.args that match
     offset = sizeof(s1)
-    for i = 0:min(last(r1), length(x0.args), length(x1.args)) - 1
-        # if x0.args[end - i].fullspan !== x1.args[end - i].fullspan || 
-        #     headof(x0.args[end-i]) == :errortoken ? a : !comp(x0.args[end - i].head, x1.args[end - i].head) 
-        if !comp(x0.args[end - i], x1.args[ end - i]) || offset <= i1
+    for i = 0:min(length(x0.args) - last(r1), length(x0.args), length(x1.args)) - 1
+        if !quick_comp(x0.args[end - i], x1.args[end - i]) || offset <= i1 || length(x0.args) - i == last(r1) + 1
             r2 = first(r2):length(x1.args) - i
             r3 = length(x0.args) .+ ((-i + 1):0)
             break
@@ -511,8 +510,8 @@ end
 # Quick and very dirty comparison of two EXPR, makes extra effort for :errortokens
 function quick_comp(a::EXPR, b::EXPR)
     a.fullspan == b.fullspan && 
-    headof(a) === :errortoken ? headof(b) === :errortoken && length(a.args) > 0 && length(a.args) == length(b.args) && quick_comp(first(a.args), first(b.args)) : 
-        comp(headof(a), headof(b))
+    (headof(a) === :errortoken ? headof(b) === :errortoken && length(a.args) > 0 && length(a.args) == length(b.args) && quick_comp(first(a.args), first(b.args)) : 
+        comp(headof(a), headof(b)))
 end
 
 """
