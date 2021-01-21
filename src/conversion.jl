@@ -139,7 +139,8 @@ function Expr(x::EXPR)
         if headof(x) === :DOT
             return :(.)
         else 
-            error()
+            # We only reach this if we have a malformed expression.
+            Expr(:error)
         end
     elseif isliteral(x)
         return _literal_expr(x)
