@@ -222,7 +222,7 @@ end
 function Base.length(x::EXPR) 
     headof(x) === :NONSTDIDENTIFIER && return 0 
     n = x.args isa Nothing ? 0 : length(x.args)
-    n += hastrivia(x) ? length(x.trivia) : 0
+    n += x.trivia !== nothing ? length(x.trivia) : 0
     x.head isa EXPR && !(x.head.span === 0) && (n += 1)
     return n
 end
