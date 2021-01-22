@@ -139,7 +139,8 @@ function Expr(x::EXPR)
         if headof(x) === :DOT
             return :(.)
         else 
-            error()
+            # We only reach this if we have a malformed expression.
+            Expr(:error)
         end
     elseif isliteral(x)
         return _literal_expr(x)
@@ -159,7 +160,9 @@ function Expr(x::EXPR)
         end
     elseif x.head === :macrocall && is_getfield_w_quotenode(x.args[1]) && !ismacroname(x.args[1].args[2].args[1])
         # Shift '@' to the right
-        new_name = Expr(:., remove_at(x.args[1].args[1]), QuoteNode(Symbol("@", valof(x.args[1].args[2].args[1]))))
+        valofrhs = valof(x.args[1].args[2].args[1])
+        valofrhs = valofrhs === nothing ? "" : valofrhs
+        new_name = Expr(:., remove_at(x.args[1].args[1]), QuoteNode(Symbol("@", valofrhs)))
         Expr(:macrocall, new_name, Expr.(x.args[2:end])...)
     elseif x.head === :macrocall && isidentifier(x.args[1]) && valof(x.args[1]) == "@."
         Expr(:macrocall, Symbol("@__dot__"), Expr.(x.args[2:end])...)
