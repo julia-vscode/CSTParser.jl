@@ -38,6 +38,7 @@ const AnonFuncOp    = 14
     InvalidIterator,
     StringInterpolationWithTrailingWhitespace,
     TooLongChar,
+    EmptyChar,
     Unknown,
     SignatureOfFunctionDefIsNotACall)
 
@@ -87,6 +88,8 @@ end
         v = val(ps.t, ps)
         if kindof(ps.t) === Tokens.CHAR && length(v) > 3 && !(v[2] == '\\' && valid_escaped_seq(v[2:prevind(v, length(v))]))
             return mErrorToken(ps, EXPR(:CHAR, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, string(v[1:2], '\'')), TooLongChar)
+        elseif kindof(ps.t) === Tokens.CHAR && length(v) == 2
+            return mErrorToken(ps, EXPR(:CHAR, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, string(v[1:2], '\'')), EmptyChar)
         end
         return EXPR(literalmap(kindof(ps.t)), ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, v)
     end
