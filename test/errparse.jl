@@ -32,6 +32,13 @@
             @info s
             rethrow(e)
         end
+        try
+            Expr(x)
+        catch e
+            @info "Couldn't convert:"
+            @info s
+            rethrow(e)
+        end
     end
     
     function get_segs(x) 
