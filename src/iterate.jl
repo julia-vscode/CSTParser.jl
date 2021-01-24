@@ -148,7 +148,7 @@ function _getindex(x::EXPR, i)
             else 
                 x.args[2]
             end
-        elseif length(x) == 2 && (valof(headof(x)) == "<:" || valof(headof(x)) == ">:"  || valof(headof(x)) == "&"  || valof(headof(x)) == "::" )
+        elseif length(x) == 2 && (valof(headof(x)) == "\$" || valof(headof(x)) == "::" || valof(headof(x)) == "<:" || valof(headof(x)) == ">:"  || valof(headof(x)) == "&")
             if i == 1
                 x.head
             else
