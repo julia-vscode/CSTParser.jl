@@ -751,6 +751,11 @@ end
         @test length(x) == 2
         @test headof(x[1]) === :IDENTIFIER
         @test headof(x[2]) === :OPERATOR
+
+        x = cst"$a"
+        @test length(x) == 2
+        @test headof(x[1]) === :OPERATOR
+        @test headof(x[2]) === :IDENTIFIER
     end
 end
 
