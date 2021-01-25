@@ -22,7 +22,7 @@ end
             @test x[1] === x.trivia[1]
             @test x[2] === x.args[1]
         end
-        
+
         @testset "global" begin
             x = cst"global a = 1"
             @test length(x) == 2
@@ -94,9 +94,9 @@ end
 
     @testset ":quote" begin
         @testset "block" begin
-            x = cst"""quote 
+            x = cst"""quote
                             ex1
-                            ex2 
+                            ex2
                         end"""
             @test length(x) == 3
             @test x[1] === x.trivia[1]
@@ -110,10 +110,10 @@ end
             @test x[2] === x.args[1]
         end
     end
-    
+
     @testset ":block" begin
         @testset "begin" begin
-            x = cst"""begin 
+            x = cst"""begin
                             ex1
                             ex2
                         end"""
@@ -125,7 +125,7 @@ end
         end
     end
     @testset ":for" begin
-        x = cst"""for itr in itr 
+        x = cst"""for itr in itr
                         ex1
                         ex2
                     end"""
@@ -137,7 +137,7 @@ end
     end
 
     @testset ":outer" begin
-        x = cst"""for outer itr in itr 
+        x = cst"""for outer itr in itr
                         ex1
                         ex2
                     end""".args[1].args[1]
@@ -387,7 +387,7 @@ end
         x = cst"a.b".args[2]
         @test length(x) == 1
         @test x[1] === x.args[1]
-        
+
         x = cst"a.:b".args[2]
         @test length(x) == 2
         @test x[1] === x.trivia[1]
@@ -492,7 +492,7 @@ end
         @test x[3] === x.args[2]
         @test x[4] === x.trivia[2]
         @test x[5] === x.args[3]
-        
+
         x = cst"\"$(a)$(b)$(c)d\""
         @test length(x) == 14
         @test x[1] === x.trivia[1]
@@ -540,15 +540,26 @@ end
         @test x[5] === x.trivia[2]
         @test x[6] === x.args[4]
         @test x[7] === x.trivia[3]
-        
+
         x = cst"@mac(a; b = 1)"
         @test length(x) == 6
         @test x[1] === x.args[1]
         @test x[2] === x.args[2]
         @test x[3] === x.trivia[1]
-        @test x[4] === x.args[3]
+        @test x[4] === x.args[4]
         @test x[5] === x.args[3]
         @test x[6] === x.trivia[2]
+
+        x = cst"@mac(a, b; x)"
+        @test length(x) == 8
+        @test x[1] === x.args[1]
+        @test x[2] === x.args[2]
+        @test x[3] === x.trivia[1]
+        @test x[4] === x.args[4]
+        @test x[5] === x.trivia[2]
+        @test x[6] === x.args[5]
+        @test x[7] === x.args[3]
+        @test x[8] === x.trivia[3]
     end
 
     @testset ":brackets" begin
@@ -600,7 +611,7 @@ end
         x = cst"[a b; c d ]".args[1]
         @test length(x) == 2
         @test x[1] === x.args[1]
-        @test x[2] === x.args[2] 
+        @test x[2] === x.args[2]
     end
 
     @testset ":module" begin
@@ -612,7 +623,7 @@ end
         @test x[4] === x.args[3]
         @test x[5] === x.trivia[2]
     end
-    
+
     @testset ":export" begin
         x = cst"export a, b, c"
         @test length(x) == 6
