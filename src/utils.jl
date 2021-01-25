@@ -511,7 +511,7 @@ end
 # Quick and very dirty comparison of two EXPR, makes extra effort for :errortokens
 function quick_comp(a::EXPR, b::EXPR)
     a.fullspan == b.fullspan && 
-    (headof(a) === :errortoken ? headof(b) === :errortoken && length(a.args) > 0 && length(a.args) == length(b.args) && quick_comp(first(a.args), first(b.args)) : 
+    (headof(a) === :errortoken ? headof(b) === :errortoken && length(a.args) > 0 && length(b.args) > 0 && length(a.args) == length(b.args) && quick_comp(first(a.args), first(b.args)) : 
         comp(headof(a), headof(b)))
 end
 
