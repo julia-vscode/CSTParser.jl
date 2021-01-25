@@ -132,7 +132,7 @@ function _getindex(x::EXPR, i)
             _colon_in_using(x, i)
         elseif valof(headof(x)) == "."
             _dot(x, i)
-        elseif valof(headof(x)) == "=" && hastrivia(x) 
+        elseif valof(headof(x)) == "=" && hastrivia(x)
             # a loop that has been lowered from in/∈ to = at parse time
             if i == 1
                 x.args[1]
@@ -145,7 +145,7 @@ function _getindex(x::EXPR, i)
             # anon function as used in a 'do' block
             if i == 1
                 x.args[1]
-            else 
+            else
                 x.args[2]
             end
         elseif length(x) == 2 && (valof(headof(x)) == "\$" || valof(headof(x)) == "::" || valof(headof(x)) == "<:" || valof(headof(x)) == ">:"  || valof(headof(x)) == "&")
@@ -175,7 +175,7 @@ function _getindex(x::EXPR, i)
                 x.trivia[div(i, 2)]
             end
         end
-    else 
+    else
         error("Indexing $(Expr(x)) at $i")
     end
 end
@@ -236,7 +236,7 @@ function odda_event(x, i)
 end
 
 
-function _const(x, i) 
+function _const(x, i)
     if length(x.trivia) === 1
         ta(x, i)
     elseif length(x.trivia) === 2
@@ -249,7 +249,7 @@ function _const(x, i)
     end
 end
 
-function _global(x, i) 
+function _global(x, i)
     if hastrivia(x) && (headof(first(x.trivia)) === :GLOBAL || headof(first(x.trivia)) === :LOCAL)
         oddt_evena(x, i)
     else
@@ -355,7 +355,7 @@ end
 
 function _braces(x, i)
     if length(x.args) > 0 && headof(x.args[1]) === :parameters
-        if i == 1 
+        if i == 1
             x.trivia[1]
         elseif i == length(x)
             last(x.trivia)
@@ -522,7 +522,7 @@ function _tuple(x, i)
                     oddt_evena(x, i)
                 end
             else
-                odda_event(x, i)    
+                odda_event(x, i)
             end
         else
             x.args[i]
@@ -634,7 +634,7 @@ function _string(x, i)
         else
             if is_exor(x.trivia[ti]) || (x.trivia[ti].head === :errortoken && x.trivia[ti].args[1].head === :OPERATOR && valof(x.trivia[ti].args[1]) == "\$")
                 if ti < length(x.trivia) && is_lparen(x.trivia[ti + 1])
-                    # 
+                    #
                 else
                     isinterpolant = true
                     arg = true
@@ -664,12 +664,12 @@ function _macrocall(x, i)
         elseif length(x.args) > 2 && headof(x.args[3]) === :parameters
             if i == length(x) - 1
                 x.args[3]
-            elseif i == length(x) 
+            elseif i == length(x)
                 last(x.trivia)
             elseif isodd(i)
                 x.trivia[div(i, 2)]
             else
-                x.args[div(i + 1, 2) + 1]
+                x.args[div(i + 1, 2) + 2]
             end
         else
             if isodd(i)
