@@ -470,7 +470,9 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
     isempty(x0.args) && return inds ? (1:0, 1:length(x1.args), 1:0) : x1
     x1.fullspan == 0 && return inds ? (1:0, 1:0, 1:0) : x1
     i0 = firstdiff(s0, s1)
+    i0 > x0.fullspan && return inds ? (1:0, 1:length(x1.args), 1:0) : x1
     i1, i2 = revfirstdiff(s0, s1)
+    (i0 > x1.fullspan || i1 > x1.fullspan || i2 > x1.fullspan) && return inds ? (1:0, 1:length(x1.args), 1:0) : x1
     # Find unaffected expressions at start
     # CST should be unaffected (and able to be copied across) up to this point, 
     # but we need to check.
