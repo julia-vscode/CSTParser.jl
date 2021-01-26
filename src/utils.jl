@@ -467,12 +467,21 @@ function comp(x::CSTParser.EXPR, y::CSTParser.EXPR)
 end
 
 function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.parse(s1, true); inds = false)
-    isempty(x0.args) && return inds ? (1:0, 1:length(x1.args), 1:0) : x1
-    x1.fullspan == 0 && return inds ? (1:0, 1:0, 1:0) : x1
+    if sizeof(s0) !== x0.fullspan
+       error("minimal reparse - input text length doesn't match the full span of the provided CST.")
+        # return inds ? (1:0, 1:length(x1.args), 1:0) : x1
+    end
+    if sizeof(s1) !== x1.fullspan
+        error("minimal reparse - input text length doesn't match the full span of the provided CST.")
+         # return inds ? (1:0, 1:length(x1.args), 1:0) : x1
+    end
+    isempty(x0.args) && return inds ? (1:0, 1:length(x1.args), 1:0) : x1 # Original CST was empty
+    x1.fullspan == 0 && return inds ? (1:0, 1:0, 1:0) : x1 # New CST is empty
+
     i0 = firstdiff(s0, s1)
-    i0 > x0.fullspan && return inds ? (1:0, 1:length(x1.args), 1:0) : x1
+    i0 > x0.fullspan && return inds ? (1:0, 1:length(x1.args), 1:0) : x1 # Should error?
     i1, i2 = revfirstdiff(s0, s1)
-    (i0 > x1.fullspan || i1 > x1.fullspan || i2 > x1.fullspan) && return inds ? (1:0, 1:length(x1.args), 1:0) : x1
+    (i0 > x1.fullspan || i1 > x1.fullspan || i2 > x1.fullspan) && return inds ? (1:0, 1:length(x1.args), 1:0) : x1 # Should error?
     # Find unaffected expressions at start
     # CST should be unaffected (and able to be copied across) up to this point, 
     # but we need to check.
