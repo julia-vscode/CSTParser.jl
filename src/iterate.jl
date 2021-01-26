@@ -9,9 +9,7 @@ function Base.getindex(x::EXPR, i)
         end
         return a
     catch err
-        @info typeof(x)
-        @info x
-        error("indexing error for $(x.head) expression at $i")
+        error("indexing error for $(x.head) expression at $i. args: $(x.args !== nothing ? headof.(x.args) : []) trivia: $(x.trivia !== nothing ? headof.(x.trivia) : [])")
     end
 end
 
