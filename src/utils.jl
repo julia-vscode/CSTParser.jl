@@ -529,7 +529,7 @@ function quick_comp(a::EXPR, b::EXPR)
             return length(a.args) == length(b.args) && (length(a.args) == 0 || quick_comp(first(a.args), first(b.args)))
         end
     end
-    return true
+    return comp(headof(a), headof(b))
 end
 
 """

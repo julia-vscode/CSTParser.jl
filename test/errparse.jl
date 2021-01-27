@@ -39,6 +39,11 @@
             @info s
             rethrow(e)
         end
+        if sizeof(s) != x.fullspan
+            @info "sizeof(s) != x.fullspan for :"
+            @info s
+        end
+        check_itr_order(s, x)
     end
     
     function get_segs(x) 
