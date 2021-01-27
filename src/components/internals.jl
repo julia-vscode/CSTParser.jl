@@ -236,17 +236,21 @@ end
 
 function parse_macroname(ps)
     at = EXPR(ps)
-    if !isemptyws(ps.ws)
-        ws = ps.ws.endbyte - ps.ws.startbyte + 1
-        mname = INSTANCE(next(ps))
-        mname.val = valof(mname) isa String ? string("@", " "^ws, valof(mname)) : string("@", " "^ws)
-        mname.span += ws
-        mname.fullspan += ws
-        mname = mErrorToken(ps, mname, UnexpectedWhiteSpace)
+    if isidentifier(ps.nt)
+        if !isemptyws(ps.ws)
+            ws = ps.ws.endbyte - ps.ws.startbyte + 1
+            mname = INSTANCE(next(ps))
+            mname.val = valof(mname) isa String ? string("@", " "^ws, valof(mname)) : string("@", " "^ws)
+            mname.span += ws
+            mname.fullspan += ws
+            mname = mErrorToken(ps, mname, UnexpectedWhiteSpace)
+        else
+            next(ps)
+            # set span/fullspan min length at 1 to account for the case of a lonely '@'
+            mname = EXPR(:IDENTIFIER, max(1, ps.nt.startbyte - ps.t.startbyte + 1), max(1, ps.t.endbyte - ps.t.startbyte + 2), string("@", val(ps.t, ps)))
+        end
     else
-        next(ps)
-        # set span/fullspan min length at 1 to account for the case of a lonely '@'
-        mname = EXPR(:IDENTIFIER, max(1, ps.nt.startbyte - ps.t.startbyte + 1), max(1, ps.t.endbyte - ps.t.startbyte + 2), string("@", val(ps.t, ps)))
+        mErrorToken(ps, at, MalformedMacroName)
     end
 end
 

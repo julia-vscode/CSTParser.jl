@@ -40,7 +40,8 @@ const AnonFuncOp    = 14
     TooLongChar,
     EmptyChar,
     Unknown,
-    SignatureOfFunctionDefIsNotACall)
+    SignatureOfFunctionDefIsNotACall,
+    MalformedMacroName)
 
 mutable struct EXPR
     head::Union{Symbol,EXPR}
