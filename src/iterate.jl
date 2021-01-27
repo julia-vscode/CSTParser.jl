@@ -680,13 +680,7 @@ function _macrocall(x, i)
 end
 
 function _vect(x, i)
-    if i == 1
-        x.trivia[1]
-    elseif i == length(x)
-        last(x.trivia)
-    else
-        oddt_evena(x, i)
-    end
+    _braces(x, i)
 end
 
 function _vcat(x, i)
