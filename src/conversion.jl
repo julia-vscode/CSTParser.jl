@@ -121,7 +121,11 @@ end
 function Expr(x::EXPR)
     if isidentifier(x)
         if headof(x) === :NONSTDIDENTIFIER
-            Symbol(normalize_julia_identifier(valof(x.args[2])))
+            if startswith(valof(x.args[1]), "@")
+                Symbol("@", normalize_julia_identifier(valof(x.args[2])))
+            else
+                Symbol(normalize_julia_identifier(valof(x.args[2])))
+            end
         else
             return Symbol(normalize_julia_identifier(valof(x)))
         end

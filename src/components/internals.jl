@@ -246,8 +246,16 @@ function parse_macroname(ps)
             mname = mErrorToken(ps, mname, UnexpectedWhiteSpace)
         else
             next(ps)
-            # set span/fullspan min length at 1 to account for the case of a lonely '@'
-            mname = EXPR(:IDENTIFIER, max(1, ps.nt.startbyte - ps.t.startbyte + 1), max(1, ps.t.endbyte - ps.t.startbyte + 2), string("@", val(ps.t, ps)))
+            if VERSION > v"1.3.0-" && val(ps.t, ps) == "var" && kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING
+                mname = EXPR(:IDENTIFIER, max(1, ps.nt.startbyte - ps.t.startbyte + 1), max(1, ps.t.endbyte - ps.t.startbyte + 2), string("@", val(ps.t, ps)))
+                arg = parse_string_or_cmd(next(ps), mname)
+
+                EXPR(:NONSTDIDENTIFIER, EXPR[mname, arg], nothing)
+                  
+            else
+                # set span/fullspan min length at 1 to account for the case of a lonely '@'
+                mname = EXPR(:IDENTIFIER, max(1, ps.nt.startbyte - ps.t.startbyte + 1), max(1, ps.t.endbyte - ps.t.startbyte + 2), string("@", val(ps.t, ps)))
+            end
         end
     else
         mErrorToken(ps, at, MalformedMacroName)
