@@ -888,4 +888,11 @@ end""" |> test_expr
     @testset "exor #201" begin
         @test test_expr(raw"$return(x)")
     end
+    if VERSION > v"1.3.0-" 
+        @testset "@var #236" begin
+            s = raw"""@var" " a"""
+            @test test_expr(s)
+            @test CSTParser.ismacroname(CSTParser.parse(s).args[1])
+        end
+    end
 end

@@ -27,7 +27,7 @@ ischainedcall(x::EXPR) = headof(x) === :call && isoperator(x.args[1]) && (valof(
 iswhere(x::EXPR) = headof(x) === :where
 istuple(x::EXPR) = headof(x) === :tuple
 ismacrocall(x::EXPR) = headof(x) === :macrocall
-ismacroname(x::EXPR) = (isidentifier(x) && valof(x) !== nothing && !isempty(valof(x)) && first(valof(x)) == '@') || (is_getfield_w_quotenode(x) && (ismacroname(unquotenode(rhs_getfield(x))) || ismacroname(x.args[1])))
+ismacroname(x::EXPR) = (headof(x) === :NONSTDIDENTIFIER && startswith(valof(first(x.args)), "@") || (isidentifier(x) && valof(x) !== nothing && !isempty(valof(x)) && first(valof(x)) == '@')) || (is_getfield_w_quotenode(x) && (ismacroname(unquotenode(rhs_getfield(x))) || ismacroname(x.args[1])))
 
 iskwarg(x::EXPR) = headof(x) === :kw
 isparameters(x::EXPR) = headof(x) === :parameters
