@@ -236,7 +236,7 @@ end
 
 function parse_macroname(ps)
     at = EXPR(ps)
-    if isidentifier(ps.nt) || isoperator(ps.nt)
+    if isidentifier(ps.nt) || isoperator(ps.nt) || iskeyword(ps.nt)
         if !isemptyws(ps.ws)
             ws = ps.ws.endbyte - ps.ws.startbyte + 1
             mname = INSTANCE(next(ps))
