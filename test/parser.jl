@@ -895,4 +895,7 @@ end""" |> test_expr
             @test CSTParser.ismacroname(CSTParser.parse(s).args[1])
         end
     end
+    @testset "bad uint" begin
+            @test Expr(CSTParser.parse("0x.")) == Expr(:error)
+        end
 end
