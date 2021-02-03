@@ -602,12 +602,16 @@ end
 function _string(x, i)
     # TODO: this is mega slow
     ai, ti = 1,1
-    arg = isstringliteral(x.args[1])
+    arg = isstringliteral(x.args[1])# && sizeof(valof(x.args[1])) !== x.args[1].fullspan
     isinterpolant = !arg
     bracket = false
-    if i == 1 && hastrivia(x) && (x.trivia[1].head === :STRING || x.trivia[1].head === :TRIPLESTRING) && isempty(x.trivia[1].val)
-        return x.trivia[1]
-    elseif i == length(x) && hastrivia(x) && (last(x.trivia).head === :STRING || last(x.trivia).head === :TRIPLESTRING) && isempty(last(x.trivia).val)
+    if hastrivia(x) && (x.trivia[1].head === :STRING || x.trivia[1].head === :TRIPLESTRING) && isempty(x.trivia[1].val)
+        if i == 1
+            return x.trivia[1]
+        end
+        arg = false
+    end
+    if i == length(x) && hastrivia(x) && (last(x.trivia).head === :STRING || last(x.trivia).head === :TRIPLESTRING) && isempty(last(x.trivia).val)
         return last(x.trivia)
     end
     for j = 1:i
