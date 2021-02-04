@@ -220,7 +220,7 @@ end
 hastrivia(x::EXPR) = x.trivia !== nothing && length(x.trivia) > 0
 
 function lastchildistrivia(x::EXPR)
-    return hastrivia(x) && (last(x.trivia).head in (:END, :RPAREN, :RSQUARE, :RBRACE) || (x.head in (:parameters, :tuple) && length(x.args) <= length(x.trivia)))
+    return hastrivia(x) && ((last(x.trivia).head in (:END, :RPAREN, :RSQUARE, :RBRACE) || (x.head in (:parameters, :tuple) && length(x.args) <= length(x.trivia))) || last(x) == last(x.trivia))
 end
 
 function Base.length(x::EXPR) 

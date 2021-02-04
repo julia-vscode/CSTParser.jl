@@ -896,6 +896,11 @@ end""" |> test_expr
         end
     end
     @testset "bad uint" begin
-            @test Expr(CSTParser.parse("0x.")) == Expr(:error)
-        end
+        @test Expr(CSTParser.parse("0x.")) == Expr(:error)
+    end
+
+    @testset "endswithtrivia" begin
+        x = CSTParser.parse(raw""""some long title $label1 $label2"  a""")
+        @test CSTParser.lastchildistrivia(x[3])
+    end
 end
