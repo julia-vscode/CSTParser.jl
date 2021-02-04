@@ -901,6 +901,7 @@ end""" |> test_expr
 
     @testset "endswithtrivia" begin
         x = CSTParser.parse(raw""""some long title $label1 $label2"  a""")
+        @test x[3].span < x[3].fullspan
         @test CSTParser.lastchildistrivia(x[3])
     end
 end
