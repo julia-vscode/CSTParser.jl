@@ -205,7 +205,6 @@ LtoR(prec::Int) = AssignmentOp ≤ prec ≤ LazyAndOp || prec == PowerOp
 Having hit a unary operator at the start of an expression return a call.
 """
 function parse_unary(ps::ParseState, op::EXPR)
-    dot = isdotted(op)
     if is_colon(op)
         ret = parse_unary_colon(ps, op)
     elseif should_negate_number_literal(ps, op)
@@ -416,7 +415,6 @@ function parse_operator_anon_func(ps::ParseState, ret::EXPR, op::EXPR)
 end
 
 function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
-    dot = isdotted(op)
     P = isdotted(op) ? get_prec(valof(op)[2:end]) : get_prec(valof(op))
     if op.val == "*" && op.fullspan == 0 # implicit multiplication has a very high precedence
         P = WhereOp

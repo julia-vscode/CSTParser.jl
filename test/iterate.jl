@@ -1,4 +1,4 @@
-using CSTParser: @cst_str, headof, EXPR, valof
+using CSTParser: @cst_str, headof, valof
 
 function test_iter_spans(x)
     n = 0

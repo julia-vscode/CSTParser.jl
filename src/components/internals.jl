@@ -64,7 +64,7 @@ is_range(x::EXPR) = isassignment(x) || (x.head === :call && (is_in(x.args[1]) ||
 
 function parse_outer(ps)
     if kindof(ps.nt) === Tokens.OUTER && kindof(ps.nws) !== EmptyWS && !Tokens.isoperator(kindof(ps.nnt))
-        outer = EXPR(next(ps))
+        EXPR(next(ps))
     end
 end
 
@@ -254,7 +254,7 @@ function parse_macroname(ps)
                   
             else
                 # set span/fullspan min length at 1 to account for the case of a lonely '@'
-                mname = EXPR(:IDENTIFIER, max(1, ps.nt.startbyte - ps.t.startbyte + 1), max(1, ps.t.endbyte - ps.t.startbyte + 2), string("@", val(ps.t, ps)))
+                EXPR(:IDENTIFIER, max(1, ps.nt.startbyte - ps.t.startbyte + 1), max(1, ps.t.endbyte - ps.t.startbyte + 2), string("@", val(ps.t, ps)))
             end
         end
     else
@@ -348,7 +348,7 @@ end
 
 function parse_importexport_item(ps, is_colon = false)
     if kindof(ps.nt) === Tokens.AT_SIGN
-        mname = parse_macroname(next(ps))
+        parse_macroname(next(ps))
     elseif kindof(ps.nt) === Tokens.LPAREN
         a = EXPR(:brackets, EXPR[], EXPR[EXPR(next(ps))])
         push!(a, @closeparen ps parse_expression(ps))

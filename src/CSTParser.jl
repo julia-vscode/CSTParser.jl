@@ -169,7 +169,7 @@ Parses the passed string. If `cont` is true then will continue parsing until the
 """
 function parse(str::String, cont=false)
     ps = ParseState(str)
-    x, ps = parse(ps, cont)
+    x, _ = parse(ps, cont)
     return x
 end
 
