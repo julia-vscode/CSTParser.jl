@@ -896,6 +896,12 @@ end""" |> test_expr
         end
     end
     @testset "bad uint" begin
-            @test Expr(CSTParser.parse("0x.")) == Expr(:error)
-        end
+        @test Expr(CSTParser.parse("0x.")) == Expr(:error)
+    end
+    @testset "bad interp with following newline" begin
+        s = "\"\"\"\$()\n\"\"\""
+        x = CSTParser.parse(s)
+        @test sizeof(s) == x.fullspan
+    end
+    
 end
