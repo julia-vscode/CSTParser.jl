@@ -904,4 +904,11 @@ end""" |> test_expr
         @test x[3].span < x[3].fullspan
         @test CSTParser.lastchildistrivia(x[3])
     end
+
+    @testset "bad interp with following newline" begin
+        s = "\"\"\"\$()\n\"\"\""
+        x = CSTParser.parse(s)
+        @test sizeof(s) == x.fullspan
+    end
+    
 end
