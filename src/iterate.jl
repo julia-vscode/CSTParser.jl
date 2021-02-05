@@ -787,6 +787,14 @@ function _where(x, i)
         return x.args[2]
     elseif i == length(x)
         last(x.trivia)
+    elseif length(x.args) > 1 && headof(x.args[2]) === :parameters
+        if i == length(x) - 1
+            x.args[2]
+        elseif isodd(i)
+            x.trivia[div(i + 1, 2)]
+        else
+            x.args[div(i, 2) + 1]
+        end
     else
         oddt_evena(x, i)
     end
