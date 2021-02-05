@@ -898,6 +898,13 @@ end""" |> test_expr
     @testset "bad uint" begin
         @test Expr(CSTParser.parse("0x.")) == Expr(:error)
     end
+
+    @testset "endswithtrivia" begin
+        x = CSTParser.parse(raw""""some long title $label1 $label2"  a""")
+        @test x[3].span < x[3].fullspan
+        @test CSTParser.lastchildistrivia(x[3])
+    end
+
     @testset "bad interp with following newline" begin
         s = "\"\"\"\$()\n\"\"\""
         x = CSTParser.parse(s)
