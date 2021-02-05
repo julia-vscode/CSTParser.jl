@@ -383,6 +383,19 @@ end
         @test x[8] === x.trivia[4]
     end
 
+    @testset ":where" begin
+        x = cst"a where {b,c;d}"
+        @test length(x) == 8
+        @test x[1] === x.args[1]
+        @test x[2] === x.trivia[1]
+        @test x[3] === x.trivia[2]
+        @test x[4] === x.args[3]
+        @test x[5] === x.trivia[3]
+        @test x[6] === x.args[4]
+        @test x[7] === x.args[2]
+        @test x[8] === x.trivia[4]
+    end
+
     @testset ":quotenode" begin
         x = cst"a.b".args[2]
         @test length(x) == 1
