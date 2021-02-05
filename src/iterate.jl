@@ -9,9 +9,6 @@ function Base.getindex(x::EXPR, i)
         end
         return a
     catch err
-        @info x
-        @info Expr(x)
-        @info x.fullspan
         error("indexing error for $(x.head) expression at $i. args: $(x.args !== nothing ? headof.(x.args) : []) trivia: $(x.trivia !== nothing ? headof.(x.trivia) : [])")
     end
 end
