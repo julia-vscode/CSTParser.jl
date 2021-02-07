@@ -503,7 +503,11 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
     # x1.args that match
     offset = sizeof(s1)
     for i = 0:min(length(x0.args) - last(r1), length(x0.args), length(x1.args)) - 1
-        if !quick_comp(x0.args[end - i], x1.args[end - i]) || offset <= i1 || length(x0.args) - i == last(r1) + 1
+        if !quick_comp(x0.args[end - i], x1.args[end - i]) || 
+            offset <= i1 || 
+            length(x0.args) - i == last(r1) + 1 ||
+            offset - x1.args[end-i].fullspan <= i2 <= offset
+
             r2 = first(r2):length(x1.args) - i
             r3 = length(x0.args) .+ ((-i + 1):0)
             break
