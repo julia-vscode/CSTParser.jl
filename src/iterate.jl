@@ -611,7 +611,7 @@ function _string(x, i)
         end
         arg = false
     end
-    if i == length(x) && hastrivia(x) && (last(x.trivia).head === :STRING || last(x.trivia).head === :TRIPLESTRING) && isempty(last(x.trivia).val)
+    if i == length(x) && hastrivia(x) && (last(x.trivia).head === :STRING || last(x.trivia).head === :TRIPLESTRING || last(x.trivia).head === :errortoken) && isempty(last(x.trivia).val)
         return last(x.trivia)
     end
     for j = 1:i
@@ -623,7 +623,7 @@ function _string(x, i)
             ai += 1
             if isinterpolant
                 arg = !bracket
-                if ai <= length(x.args) && !isstringliteral(x.args[ai])
+                if ai <= length(x.args) && !(isstringliteral(x.args[ai]) || x.args[ai].head === :errortoken)
                     # interpolated value immediately followed by xor
                     arg = false
                 end
@@ -647,7 +647,7 @@ function _string(x, i)
                 bracket = true
             elseif is_rparen(x.trivia[ti])
                 isinterpolant = false
-                arg = !(ai <= length(x.args) && !isstringliteral(x.args[ai]))
+                arg = !(ai <= length(x.args) && !(isstringliteral(x.args[ai])) || x.args[ai].head == :errortoken)
                 bracket = false
             end
             ti += 1

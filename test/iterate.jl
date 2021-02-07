@@ -536,6 +536,9 @@ end
         @test x[4] === x.args[1]
         @test x[5] === x.trivia[4]
         @test x[6] === x.trivia[5]
+
+        x = EXPR(:string, EXPR[cst"\" \"", EXPR(:errortoken, 0, 0), EXPR(:errortoken, 0, 0)], EXPR[cst"$"])
+        @test x[4] == x.args[3]
     end
 
     @testset ":macrocall" begin

@@ -910,5 +910,20 @@ end""" |> test_expr
         x = CSTParser.parse(s)
         @test sizeof(s) == x.fullspan
     end
+
+    @testset "minimal_reparse" begin
+        s0 = """
+        testsettravx=nothing; 
+            ) fx;ifxend) 
+                # parsing works?"""
+        s1 = """
+        testsettravx=nothing; 
+            ) ;ifxend) 
+                # parsing works?"""
+        x0 = CSTParser.parse(s0, true)
+        x1 = CSTParser.parse(s1, true)
+        x2 = CSTParser.minimal_reparse(s0, s1, x0, x1)
+        @test CSTParser.comp(x1, x2)
+    end
     
 end
