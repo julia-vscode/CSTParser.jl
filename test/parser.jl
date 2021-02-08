@@ -925,5 +925,15 @@ end""" |> test_expr
         x2 = CSTParser.minimal_reparse(s0, s1, x0, x1)
         @test CSTParser.comp(x1, x2)
     end
+
+    @testset "primes" begin
+        @test test_expr("""
+        f() do x
+            end'
+        """)
+        @test CSTParser.has_error(cst"begin end'")
+        @test !CSTParser.has_error(cst"[]'")
+        @test !CSTParser.has_error(cst"'a''")
+    end
     
 end
