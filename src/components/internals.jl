@@ -302,7 +302,7 @@ function parse_macrocall(ps::ParseState)
                 a = @closer ps :inmacro @closer ps :ws @closer ps :wsop parse_expression(ps)
             end
             push!(args, a)
-            if insquare && kindof(ps.nt) === Tokens.FOR
+            if (insquare || ps.closer.paren || ps.closer.square) && kindof(ps.nt) === Tokens.FOR 
                 break
             end
             prevpos = loop_check(ps, prevpos)
