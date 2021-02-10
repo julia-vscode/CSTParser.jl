@@ -23,7 +23,7 @@ function parse_kw(ps::ParseState)
             return @default ps @closer ps :block parse_blockexpr(ps, :begin)
         else
             if ps.closer.inref
-                ret = EXPR(:IDENTIFIER, ps)
+                ret = EXPR(ps)
             else
                 return @default ps @closer ps :block parse_blockexpr(ps, :begin)
             end
@@ -61,7 +61,7 @@ function parse_kw(ps::ParseState)
         return @default ps parse_return(ps)
     elseif k === Tokens.END
         if ps.closer.square
-            ret = EXPR(:IDENTIFIER, ps)
+            ret = EXPR(ps)
         else
             ret = mErrorToken(ps, EXPR(:IDENTIFIER, ps), UnexpectedToken)
         end
