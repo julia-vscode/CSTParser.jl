@@ -936,4 +936,10 @@ end""" |> test_expr
         @test !CSTParser.has_error(cst"'a''")
     end
     
+    @testset "end as id juxt" begin
+        @test test_expr("a[1end]")
+        if VERSION >= v"1.4"
+            @test test_expr("a[2begin:1end]")
+        end
+    end
 end
