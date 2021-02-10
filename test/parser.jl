@@ -927,6 +927,6 @@ end""" |> test_expr
     end
 
     @testset "end as id juxt" begin
-        @test test_expr("a[1end]")
+        @test test_expr("a[2begin:1end]")
     end
 end
