@@ -925,5 +925,11 @@ end""" |> test_expr
         x2 = CSTParser.minimal_reparse(s0, s1, x0, x1)
         @test CSTParser.comp(x1, x2)
     end
-    
+
+    @testset "end as id juxt" begin
+        @test test_expr("a[1end]")
+        if VERSION >= v"1.4"
+            @test test_expr("a[2begin:1end]")
+        end
+    end
 end
