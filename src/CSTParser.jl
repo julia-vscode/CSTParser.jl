@@ -131,7 +131,13 @@ function parse_compound(ps::ParseState, ret::EXPR)
         if kindof(ps.nt) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)
             nextarg = mErrorToken(ps, EXPR(next(ps)), Unknown)
         else
-            nextarg = parse_expression(ps)
+            nextarg = try
+                parse_expression(ps)
+            catch err
+                if err isa StackOverflowError
+                    throw(error(string(ps, "\nsize: ", ps.l.io.size)))
+                end
+            end
         end
         ret = EXPR(:errortoken, EXPR[ret, nextarg], nothing)
     end
