@@ -76,7 +76,9 @@ function parse_expression(ps::ParseState, esc_on_error = false)
     return ret
 end
 
-parse_compound_recur(ps, ret) = !closer(ps) ? parse_compound_recur(ps, parse_compound(ps, ret)) : ret
+function parse_compound_recur(ps, ret)
+    !closer(ps) ? parse_compound_recur(ps, parse_compound(ps, ret)) : ret
+end
 
 """
     parse_compound(ps::ParseState, ret::EXPR)
