@@ -927,6 +927,9 @@ end""" |> test_expr
     end
 
     @testset "end as id juxt" begin
-        @test test_expr("a[2begin:1end]")
+        @test test_expr("a[1end]")
+        if VERSION >= v"1.4"
+            @test test_expr("a[2begin:1end]")
+        end
     end
 end
