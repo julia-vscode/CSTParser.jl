@@ -102,7 +102,7 @@ end
 
 function Expr_float(x)
     if !startswith(valof(x), "0x") && 'f' in valof(x)
-        return Base.parse(Float32, replace(valof(x), 'f' => 'e'))
+        return Base.parse(Float32, replace(replace(valof(x), 'f' => 'e'), '_' => ""))
     end
     Base.parse(Float64, replace(valof(x), "_" => ""))
 end
