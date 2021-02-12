@@ -225,7 +225,8 @@ function lastchildistrivia(x::EXPR)
 end
 
 function Base.length(x::EXPR) 
-    headof(x) === :NONSTDIDENTIFIER && return 0 
+    headof(x) === :NONSTDIDENTIFIER && return 0
+    headof(x) === :flatten && return length(Iterating._flatten_lhs(x))
     n = x.args isa Nothing ? 0 : length(x.args)
     n += x.trivia !== nothing ? length(x.trivia) : 0
     x.head isa EXPR && !(x.head.span === 0) && (n += 1)

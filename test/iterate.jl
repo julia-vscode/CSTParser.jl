@@ -703,6 +703,26 @@ end
         @test x[5] === x.args[3]
     end
 
+    @testset ":flatten" begin 
+        function flatten(x)
+            if length(x) == 0
+                [x]
+            else
+                vcat([flatten(a) for a in x]...)
+            end
+        end
+        function testflattenorder(s)
+            x = CSTParser.parse(s)[2]
+            issorted([Base.parse(Int, a.val) for a in flatten(x) if a.head === :INTEGER])
+        end
+
+        @test testflattenorder("(1 for 2 in 3)")
+        @test testflattenorder("(1 for 2 in 3 for 4 in 5)")
+        @test testflattenorder("(1 for 2 in 3, 4 in 5 for 6 in 7)")
+        @test testflattenorder("(1 for 2 in 3 for 4 in 5, 6 in 7)")
+        @test testflattenorder("(1 for 2 in 3 for 4 in 5, 6 in 7 if 8)")
+    end
+    
     @testset ":filter" begin
         x = cst"(a for a in A if a)".args[1].args[2]
         @test length(x) == 3
