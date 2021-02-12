@@ -934,6 +934,7 @@ end""" |> test_expr
         @test CSTParser.has_error(cst"begin end'")
         @test !CSTParser.has_error(cst"[]'")
         @test !CSTParser.has_error(cst"'a''")
+        @test test_expr("(a)'")
     end
     
     @testset "end as id juxt" begin
