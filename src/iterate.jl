@@ -45,7 +45,7 @@ function _getindex(x::EXPR, i)
     elseif headof(x) === :filter
         _filter(x, i)
     elseif headof(x) === :flatten
-        x.args[1]
+        _flatten(x, i)
     elseif headof(x) === :for
         taat(x, i)
     elseif headof(x) === :function || headof(x) === :macro
@@ -797,6 +797,28 @@ function _where(x, i)
         end
     else
         oddt_evena(x, i)
+    end
+end
+
+
+function _flatten(x, i)
+    lhs = _flatten_lhs(x)
+    lhs[i]
+end
+
+function _flatten_lhs(x, ret = [])
+    if x.args[1].head === :generator || x.args[1].head === :flatten
+        if headof(x) !== :flatten
+            for i = 2:length(x)
+                push!(ret, x[i])
+            end
+        end
+        _flatten_lhs(x.args[1], ret)
+    else
+        for i = 2:length(x)
+            push!(ret, x[i])
+        end
+        pushfirst!(ret, x.args[1])
     end
 end
 
