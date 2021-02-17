@@ -187,7 +187,7 @@ end
 Used for top-level parsing - attaches documentation (such as this) to expressions.
 """
 function parse_doc(ps::ParseState)
-    if (kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING) && !isemptyws(ps.nws)
+    if (kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING) && isnewlinews(ps.nws)
         doc = mLITERAL(next(ps))
         if kindof(ps.nt) === Tokens.ENDMARKER || kindof(ps.nt) === Tokens.END || ps.t.endpos[1] + 1 < ps.nt.startpos[1]
             return doc
