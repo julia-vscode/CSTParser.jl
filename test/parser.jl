@@ -948,4 +948,8 @@ end""" |> test_expr
     @testset "last child is trivia for :string" begin
         @test !CSTParser.lastchildistrivia(cst"""("a $(A) a"  )"""[2])
     end
+
+    @testset "toplevel strings" begin
+        @test test_expr(""""a" in b && c""")
+    end
 end
