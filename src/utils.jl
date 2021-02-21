@@ -205,7 +205,8 @@ end
 isajuxtaposition(ps::ParseState, ret::EXPR) = ((isnumber(ret) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.LPAREN || kindof(ps.nt) === Tokens.CMD || kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)) ||
         ((is_prime(ret.head) && isidentifier(ps.nt)) ||
         ((kindof(ps.t) === Tokens.RPAREN || kindof(ps.t) === Tokens.RSQUARE) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.CMD)) ||
-        ((kindof(ps.t) === Tokens.STRING || kindof(ps.t) === Tokens.TRIPLE_STRING) && (kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)))) || ((kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT) || kindof(ps.t) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && isidentifier(ps.nt))
+        ((kindof(ps.t) === Tokens.STRING || kindof(ps.t) === Tokens.TRIPLE_STRING) && (kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)))) || ((kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT) || kindof(ps.t) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && isidentifier(ps.nt)) ||
+        (isnumber(ret) && ps.closer.inref && (ps.nt.kind === Tokens.END || ps.nt.kind === Tokens.BEGIN))
 
 """
     has_error(ps::ParseState)
@@ -501,7 +502,11 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
     # x1.args that match
     offset = sizeof(s1)
     for i = 0:min(length(x0.args) - last(r1), length(x0.args), length(x1.args)) - 1
-        if !quick_comp(x0.args[end - i], x1.args[end - i]) || offset <= i1 || length(x0.args) - i == last(r1) + 1
+        if !quick_comp(x0.args[end - i], x1.args[end - i]) || 
+            offset <= i1 || 
+            length(x0.args) - i == last(r1) + 1 ||
+            offset - x1.args[end-i].fullspan <= i2 <= offset
+
             r2 = first(r2):length(x1.args) - i
             r3 = length(x0.args) .+ ((-i + 1):0)
             break

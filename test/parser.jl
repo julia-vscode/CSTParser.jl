@@ -896,6 +896,56 @@ end""" |> test_expr
         end
     end
     @testset "bad uint" begin
-            @test Expr(CSTParser.parse("0x.")) == Expr(:error)
+        @test Expr(CSTParser.parse("0x.")) == Expr(:error)
+    end
+
+    @testset "endswithtrivia" begin
+        x = CSTParser.parse(raw""""some long title $label1 $label2"  a""")
+        @test x[3].span < x[3].fullspan
+        @test CSTParser.lastchildistrivia(x[3])
+    end
+
+    @testset "bad interp with following newline" begin
+        s = "\"\"\"\$()\n\"\"\""
+        x = CSTParser.parse(s)
+        @test sizeof(s) == x.fullspan
+    end
+
+    @testset "minimal_reparse" begin
+        s0 = """
+        testsettravx=nothing; 
+            ) fx;ifxend) 
+                # parsing works?"""
+        s1 = """
+        testsettravx=nothing; 
+            ) ;ifxend) 
+                # parsing works?"""
+        x0 = CSTParser.parse(s0, true)
+        x1 = CSTParser.parse(s1, true)
+        x2 = CSTParser.minimal_reparse(s0, s1, x0, x1)
+        @test CSTParser.comp(x1, x2)
+    end
+
+    @testset "primes" begin
+        @test test_expr("""
+        f() do x
+            end'
+        """)
+        @test CSTParser.has_error(cst"begin end'")
+        @test !CSTParser.has_error(cst"[]'")
+        @test !CSTParser.has_error(cst"'a''")
+        @test test_expr("(a)'")
+        @test test_expr("a.a'")
+    end
+    
+    @testset "end as id juxt" begin
+        @test test_expr("a[1end]")
+        if VERSION >= v"1.4"
+            @test test_expr("a[2begin:1end]")
         end
+    end
+
+    @testset "last child is trivia for :string" begin
+        @test !CSTParser.lastchildistrivia(cst"""("a $(A) a"  )"""[2])
+    end
 end

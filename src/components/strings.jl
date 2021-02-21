@@ -150,7 +150,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                         pushtotrivia!(ret, op)
                         pushtotrivia!(ret, lparen)
                         pushtotrivia!(ret, rparen)
-                        skip(input, 1)
+                        seek(input, ps1.nt.startbyte + 1)
                     else
                         interp_val = @closer ps1 :paren parse_expression(ps1, true)
                         push!(ret, interp_val)

@@ -220,11 +220,18 @@ end
 hastrivia(x::EXPR) = x.trivia !== nothing && length(x.trivia) > 0
 
 function lastchildistrivia(x::EXPR)
-    return hastrivia(x) && (last(x.trivia).head in (:END, :RPAREN, :RSQUARE, :RBRACE) || (x.head in (:parameters, :tuple) && length(x.args) <= length(x.trivia)))
+
+    if headof(x) === :string
+        isstringliteral(last(x.trivia)) && sizeof(valof(last(x.trivia))) < last(x.trivia).span
+        # This section checks whether last trivia stringliteral has a span that accounts for closing quotation mark(s)
+    else
+        hastrivia(x) && (last(x.trivia).head in (:END, :RPAREN, :RSQUARE, :RBRACE) || (x.head in (:parameters, :tuple) && length(x.args) <= length(x.trivia)))
+    end
 end
 
 function Base.length(x::EXPR) 
-    headof(x) === :NONSTDIDENTIFIER && return 0 
+    headof(x) === :NONSTDIDENTIFIER && return 0
+    headof(x) === :flatten && return length(Iterating._flatten_lhs(x))
     n = x.args isa Nothing ? 0 : length(x.args)
     n += x.trivia !== nothing ? length(x.trivia) : 0
     x.head isa EXPR && !(x.head.span === 0) && (n += 1)

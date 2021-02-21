@@ -116,7 +116,7 @@ function parse_call(ps::ParseState, ret::EXPR, ismacro=false)
         end
     elseif is_and(ret) || is_decl(ret) || is_exor(ret)
         arg = @precedence ps 20 parse_expression(ps)
-        if is_exor(ret) && istuple(arg) && length(arg) == 3 && issplat(arg.args[2])
+        if is_exor(ret) && istuple(arg) && length(arg) == 3 && issplat(arg.args[1])
             arg = EXPR(:brackets, arg.args)
         end
         ret = EXPR(ret, EXPR[arg], nothing)
@@ -302,7 +302,7 @@ function parse_macrocall(ps::ParseState)
                 a = @closer ps :inmacro @closer ps :ws @closer ps :wsop parse_expression(ps)
             end
             push!(args, a)
-            if insquare && kindof(ps.nt) === Tokens.FOR
+            if (insquare || ps.closer.paren || ps.closer.square) && kindof(ps.nt) === Tokens.FOR 
                 break
             end
             prevpos = loop_check(ps, prevpos)

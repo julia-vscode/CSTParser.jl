@@ -438,8 +438,18 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
         ret = parse_operator_anon_func(ps, ret, op)
     elseif is_dot(op)
         ret = parse_operator_dot(ps, ret, op)
-    elseif is_dddot(op) || is_prime(op)
+    elseif is_dddot(op)
         ret = EXPR(op, EXPR[ret], nothing)
+    elseif is_prime(op)
+        if isidentifier(ret) || isliteral(ret) ||
+            headof(ret) in (:call, :tuple, :brackets, :ref, :vect, :vcat, :hcat, :typed_vcat, :typed_hcat, :comprehension, :typed_comprehension, :curly, :braces, :braces_cat) ||
+            headof(ret) === :do ||
+            is_dot(headof(ret))
+            ret = EXPR(op, EXPR[ret], nothing)
+        else
+            ret = EXPR(:errortoken, EXPR[ret, op])
+            ret.meta = UnexpectedToken
+        end
     elseif P == ComparisonOp
         ret = parse_comp_operator(ps, ret, op)
     elseif P == PowerOp

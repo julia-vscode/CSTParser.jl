@@ -383,6 +383,19 @@ end
         @test x[8] === x.trivia[4]
     end
 
+    @testset ":where" begin
+        x = cst"a where {b,c;d}"
+        @test length(x) == 8
+        @test x[1] === x.args[1]
+        @test x[2] === x.trivia[1]
+        @test x[3] === x.trivia[2]
+        @test x[4] === x.args[3]
+        @test x[5] === x.trivia[3]
+        @test x[6] === x.args[4]
+        @test x[7] === x.args[2]
+        @test x[8] === x.trivia[4]
+    end
+
     @testset ":quotenode" begin
         x = cst"a.b".args[2]
         @test length(x) == 1
@@ -523,6 +536,9 @@ end
         @test x[4] === x.args[1]
         @test x[5] === x.trivia[4]
         @test x[6] === x.trivia[5]
+
+        x = EXPR(:string, EXPR[cst"\" \"", EXPR(:errortoken, 0, 0), EXPR(:errortoken, 0, 0)], EXPR[cst"$"])
+        @test x[4] == x.args[3]
     end
 
     @testset ":macrocall" begin
@@ -687,6 +703,26 @@ end
         @test x[5] === x.args[3]
     end
 
+    @testset ":flatten" begin 
+        function flatten(x)
+            if length(x) == 0
+                [x]
+            else
+                vcat([flatten(a) for a in x]...)
+            end
+        end
+        function testflattenorder(s)
+            x = CSTParser.parse(s)[2]
+            issorted([Base.parse(Int, a.val) for a in flatten(x) if a.head === :INTEGER])
+        end
+
+        @test testflattenorder("(1 for 2 in 3)")
+        @test testflattenorder("(1 for 2 in 3 for 4 in 5)")
+        @test testflattenorder("(1 for 2 in 3, 4 in 5 for 6 in 7)")
+        @test testflattenorder("(1 for 2 in 3 for 4 in 5, 6 in 7)")
+        @test testflattenorder("(1 for 2 in 3 for 4 in 5, 6 in 7 if 8)")
+    end
+    
     @testset ":filter" begin
         x = cst"(a for a in A if a)".args[1].args[2]
         @test length(x) == 3

@@ -45,7 +45,7 @@ function _getindex(x::EXPR, i)
     elseif headof(x) === :filter
         _filter(x, i)
     elseif headof(x) === :flatten
-        x.args[1]
+        _flatten(x, i)
     elseif headof(x) === :for
         taat(x, i)
     elseif headof(x) === :function || headof(x) === :macro
@@ -611,7 +611,7 @@ function _string(x, i)
         end
         arg = false
     end
-    if i == length(x) && hastrivia(x) && (last(x.trivia).head === :STRING || last(x.trivia).head === :TRIPLESTRING) && isempty(last(x.trivia).val)
+    if i == length(x) && hastrivia(x) && (last(x.trivia).head === :STRING || last(x.trivia).head === :TRIPLESTRING || last(x.trivia).head === :errortoken) && isempty(last(x.trivia).val)
         return last(x.trivia)
     end
     for j = 1:i
@@ -623,7 +623,7 @@ function _string(x, i)
             ai += 1
             if isinterpolant
                 arg = !bracket
-                if ai <= length(x.args) && !isstringliteral(x.args[ai])
+                if ai <= length(x.args) && !(isstringliteral(x.args[ai]) || x.args[ai].head === :errortoken)
                     # interpolated value immediately followed by xor
                     arg = false
                 end
@@ -647,7 +647,7 @@ function _string(x, i)
                 bracket = true
             elseif is_rparen(x.trivia[ti])
                 isinterpolant = false
-                arg = !(ai <= length(x.args) && !isstringliteral(x.args[ai]))
+                arg = !(ai <= length(x.args) && !(isstringliteral(x.args[ai])) || x.args[ai].head == :errortoken)
                 bracket = false
             end
             ti += 1
@@ -787,8 +787,38 @@ function _where(x, i)
         return x.args[2]
     elseif i == length(x)
         last(x.trivia)
+    elseif length(x.args) > 1 && headof(x.args[2]) === :parameters
+        if i == length(x) - 1
+            x.args[2]
+        elseif isodd(i)
+            x.trivia[div(i + 1, 2)]
+        else
+            x.args[div(i, 2) + 1]
+        end
     else
         oddt_evena(x, i)
+    end
+end
+
+
+function _flatten(x, i)
+    lhs = _flatten_lhs(x)
+    lhs[i]
+end
+
+function _flatten_lhs(x, ret = [])
+    if x.args[1].head === :generator || x.args[1].head === :flatten
+        if headof(x) !== :flatten
+            for i = 2:length(x)
+                push!(ret, x[i])
+            end
+        end
+        _flatten_lhs(x.args[1], ret)
+    else
+        for i = 2:length(x)
+            push!(ret, x[i])
+        end
+        pushfirst!(ret, x.args[1])
     end
 end
 
