@@ -192,7 +192,7 @@ function parse_doc(ps::ParseState)
         if kindof(ps.nt) === Tokens.ENDMARKER || kindof(ps.nt) === Tokens.END || ps.t.endpos[1] + 1 < ps.nt.startpos[1]
             return doc
         elseif isbinaryop(ps.nt) && !closer(ps)
-            ret = parse_compound(ps, doc)
+            ret = parse_compound_recur(ps, doc)
             return ret
         end
 
