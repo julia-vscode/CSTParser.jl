@@ -900,7 +900,7 @@ end""" |> test_expr
     end
 
     @testset "endswithtrivia" begin
-        x = CSTParser.parse(raw""""some long title $label1 $label2"  a""")
+        x = CSTParser.parse("\"some long title \$label1 \$label2\" \na")
         @test x[3].span < x[3].fullspan
         @test CSTParser.lastchildistrivia(x[3])
     end
@@ -947,5 +947,9 @@ end""" |> test_expr
 
     @testset "last child is trivia for :string" begin
         @test !CSTParser.lastchildistrivia(cst"""("a $(A) a"  )"""[2])
+    end
+
+    @testset "toplevel strings" begin
+        @test test_expr(""""a" in b && c""")
     end
 end
