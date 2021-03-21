@@ -111,7 +111,6 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
         startbytes = istrip ? 3 : 1
         seek(input, startbytes)
         b = IOBuffer()
-        safetytrip = 0
         prevpos = position(input)
         while !eof(input)
             c = read(input, Char)

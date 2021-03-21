@@ -251,7 +251,6 @@ function parse_blockexpr_sig(ps::ParseState, head)
                 prevpos = position(ps)
                 while iscomma(ps.nt)
                     pushtotrivia!(arg, accept_comma(ps))
-                    startbyte = ps.nt.startbyte
                     nextarg = @closer ps :comma @closer ps :ws parse_expression(ps)
                     push!(arg, nextarg)
                     prevpos = loop_check(ps, prevpos)

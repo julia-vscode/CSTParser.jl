@@ -264,7 +264,6 @@ end
 
 function flisp_parsefile(str, display = true)
     pos = 1
-    failed = false
     x1 = Expr(:file)
     try
         while pos <= sizeof(str)
@@ -304,7 +303,7 @@ end
 function check_file(file, ret, neq)
     str = read(file, String)
     x0, cstfailed, sp = cst_parsefile(str)
-    x1, flispfailed = flisp_parsefile(str)
+    x1, _ = flisp_parsefile(str)
 
     print("\r                             ")
     if !isempty(sp)
@@ -318,7 +317,6 @@ function check_file(file, ret, neq)
         println()
         push!(ret, (file, :errored))
     elseif !(x0 == x1)
-        cumfail = 0
         printstyled(file, color=:green)
         println()
         c0, c1 = compare(x0, x1)
@@ -340,7 +338,7 @@ function check_base(dir=dirname(Base.find_source_file("essentials.jl")), display
     ret = []
     oldstderr = stderr
     redirect_stderr()
-    for (rp, d, files) in walkdir(dir)
+    for (rp, _, files) in walkdir(dir)
         for f in files
             file = joinpath(rp, f)
             if endswith(file, ".jl")
@@ -669,7 +667,6 @@ function valid_escaped_seq(s::AbstractString)
                     popfirst!(a)
                 end
                 if k == 1 || n > 0x10ffff
-                    u = m == 4 ? 'u' : 'U'
                     return false
                 end
             elseif '0' <= c <= '7'

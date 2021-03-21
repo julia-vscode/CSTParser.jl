@@ -10,7 +10,7 @@
         check_itr_order(s) # iteration produces same text?
     
         ts = collect(tokenize(s))[1:end-1]
-        for i in 1:n
+        for _ in 1:n
             length(ts) == 1 && return
             deleteat!(ts, rand(1:length(ts)))
             check_str(untokenize(ts))
@@ -87,7 +87,7 @@
     end
 
     function check_reparse(s0, n = 1000)
-        for i in 1:n
+        for _ in 1:n
             x0 = CSTParser.parse(s0, true)
             ts = collect(tokenize(s0))[1:end-1]
             length(ts) < 2 && return
@@ -126,7 +126,7 @@
     end
 
     function check_dir(dir, check)
-        for (root, dirs, files) in walkdir(dir)
+        for (root, _, files) in walkdir(dir)
             for f in files
                 f = joinpath(root, f)
                 (!isfile(f) || !endswith(f, ".jl")) && continue
