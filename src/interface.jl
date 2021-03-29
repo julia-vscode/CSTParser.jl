@@ -226,7 +226,7 @@ function get_name(x::EXPR)
         sig = rem_decl(sig)
         sig = rem_call(sig)
         sig = rem_curly(sig)
-        sig = rem_invis(sig)
+        rem_invis(sig)
     end
 end
 
@@ -237,5 +237,5 @@ function get_arg_name(arg::EXPR)
     arg = rem_decl(arg)
     arg = rem_subtype(arg)
     arg = rem_curly(arg)
-    arg = rem_invis(arg)
+    rem_invis(arg)
 end
