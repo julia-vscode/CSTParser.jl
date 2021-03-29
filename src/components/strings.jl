@@ -90,7 +90,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
         else
             return EXPR(:STRING, sfullspan, sspan, "")
         end
-    elseif prefixed != false || iscmd
+    elseif prefixed != false
         _val = istrip ? t_str[4:prevind(t_str, sizeof(t_str), 3)] : t_str[2:prevind(t_str, sizeof(t_str))]
         if iscmd
             _val = replace(_val, "\\\\" => "\\")

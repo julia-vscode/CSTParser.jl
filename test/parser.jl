@@ -735,6 +735,17 @@ end""" |> test_expr
         @test CSTParser.headof(x[3]) === :errortoken
     end
 
+    @testset "cmd interpolation" begin
+        @test test_expr("`a \$b c`")
+        @test test_expr("`a b c`")
+        x = CSTParser.parse("`a \$b c`")
+        @test x.args[1].head == :globalrefcmd
+        @test x.args[3].head == :string
+        @test valof(x.args[3].args[1]) == "a "
+        @test valof(x.args[3].args[2]) == "b"
+        @test valof(x.args[3].args[3]) == " c"
+    end
+
     @testset "Broken things" begin
         @test_broken "\$(a) * -\$(b)" |> test_expr_broken
     end
