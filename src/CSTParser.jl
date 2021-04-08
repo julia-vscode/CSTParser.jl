@@ -190,16 +190,18 @@ function parse_doc(ps::ParseState)
     if (kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING) && !isemptyws(ps.nws)
         doc = mLITERAL(next(ps))
         if kindof(ps.nt) === Tokens.ENDMARKER || kindof(ps.nt) === Tokens.END || ps.t.endpos[1] + 1 < ps.nt.startpos[1]
-            return doc
+            ret = doc
         elseif isbinaryop(ps.nt) && !closer(ps)
             ret = parse_compound_recur(ps, doc)
-            return ret
+        else
+            ret = parse_expression(ps)
+            ret = EXPR(:macrocall, EXPR[EXPR(:globalrefdoc, 0, 0), EXPR(:NOTHING, 0, 0), doc, ret], nothing)
         end
-
-        ret = parse_expression(ps)
-        ret = EXPR(:macrocall, EXPR[EXPR(:globalrefdoc, 0, 0), EXPR(:NOTHING, 0, 0), doc, ret], nothing)
     else
         ret = parse_expression(ps)
+    end
+    if _continue_doc_parse(ps, ret)
+        push!(ret, parse_expression(ps))
     end
     return ret
 end
@@ -225,9 +227,6 @@ function parse(ps::ParseState, cont=false)
         while kindof(ps.nt) !== Tokens.ENDMARKER
             curr_line = ps.nt.startpos[1]
             ret = parse_doc(ps)
-            if _continue_doc_parse(ps, ret)
-                push!(ret, parse_expression(ps))
-            end
             # join semicolon sep items
             if curr_line == last_line && headof(last(top.args)) === :toplevel
                 push!(last(top.args), ret)
@@ -253,9 +252,6 @@ function parse(ps::ParseState, cont=false)
                 top = EXPR(:toplevel, EXPR[EXPR(:NOTHING, ps.nt.startbyte, ps.nt.startbyte, "")])
             else
                 top = parse_doc(ps)
-                if _continue_doc_parse(ps, top)
-                    push!(top, parse_expression(ps))
-                end
             end
             if kindof(ps.ws) == SemiColonWS# && curr_line == last_line
                 top = EXPR(:toplevel, EXPR[top], nothing)
@@ -279,7 +275,7 @@ function _continue_doc_parse(ps::ParseState, x::EXPR)
     headof(x) === :macrocall &&
     valof(x.args[1]) == "@doc" &&
     length(x.args) < 4 &&
-    ps.t.endpos[1] + 1 <= ps.nt.startpos[1]
+    ps.t.endpos[1] + 1 == ps.nt.startpos[1]
 end
 
 include("precompile.jl")
