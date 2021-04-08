@@ -807,6 +807,12 @@ end""" |> test_expr
         @test headof(CSTParser.parse("const a").args[1]) === :errortoken
     end
 
+    @testset "colons" begin
+        @test test_expr("(if true I elseif false J else : end for i in 1:5)")
+        @test test_expr("if true; : end")
+        @test test_expr("a + :")
+    end
+
     @testset "tuple params" begin
         @test "1,2,3" |> test_expr
         @test "1;2,3" |> test_expr
@@ -856,7 +862,7 @@ end""" |> test_expr
 
     @testset "issue #165" begin
         x = CSTParser.parse("""
-    a ? b 
+    a ? b
     function f end""")
         @test length(x) == 5 # make sure we always give out an EXPR of the right length
         @test headof(x.args[3]) === :errortoken
@@ -864,7 +870,7 @@ end""" |> test_expr
 
     @testset "issue #182" begin
         x = CSTParser.parse("""
-        quote 
+        quote
             \"\"\"
             txt
             \"\"\"
@@ -872,7 +878,7 @@ end""" |> test_expr
         end""")
         @test x.args[1].args[1].args[1].head === :globalrefdoc
     end
-    if VERSION > v"1.3.0-" 
+    if VERSION > v"1.3.0-"
         @testset "issue #198" begin
             @test test_expr(":var\"id\"")
         end
@@ -899,7 +905,7 @@ end""" |> test_expr
     @testset "exor #201" begin
         @test test_expr(raw"$return(x)")
     end
-    if VERSION > v"1.3.0-" 
+    if VERSION > v"1.3.0-"
         @testset "@var #236" begin
             s = raw"""@var" " a"""
             @test test_expr(s)
@@ -924,12 +930,12 @@ end""" |> test_expr
 
     @testset "minimal_reparse" begin
         s0 = """
-        testsettravx=nothing; 
-            ) fx;ifxend) 
+        testsettravx=nothing;
+            ) fx;ifxend)
                 # parsing works?"""
         s1 = """
-        testsettravx=nothing; 
-            ) ;ifxend) 
+        testsettravx=nothing;
+            ) ;ifxend)
                 # parsing works?"""
         x0 = CSTParser.parse(s0, true)
         x1 = CSTParser.parse(s1, true)
@@ -948,7 +954,7 @@ end""" |> test_expr
         @test test_expr("(a)'")
         @test test_expr("a.a'")
     end
-    
+
     @testset "end as id juxt" begin
         @test test_expr("a[1end]")
         if VERSION >= v"1.4"

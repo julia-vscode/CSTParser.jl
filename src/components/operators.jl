@@ -226,7 +226,7 @@ end
 
 function parse_unary_colon(ps::ParseState, op::EXPR)
     op = requires_no_ws(op, ps)
-    if Tokens.iskeyword(kindof(ps.nt))
+    if Tokens.iskeyword(kindof(ps.nt)) && op.span == op.fullspan
         ret = EXPR(:quotenode, EXPR[EXPR(:IDENTIFIER, next(ps))], EXPR[op])
     elseif isidentifier(ps.nt)
         id = INSTANCE(next(ps))
