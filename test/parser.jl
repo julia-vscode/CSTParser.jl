@@ -969,4 +969,8 @@ end""" |> test_expr
     @testset "toplevel strings" begin
         @test test_expr(""""a" in b && c""")
     end
+   
+    @testset "@doc cont" begin
+        @test test_expr("module a\n@doc doc\"\"\"doc\"\"\"\nx\nend")
+    end
 end
