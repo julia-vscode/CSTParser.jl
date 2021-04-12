@@ -899,7 +899,11 @@ end""" |> test_expr
         @testset "import .. as .. syntax" begin
             @test test_expr("import a as b")
             @test test_expr("import a as b, c")
+            @test test_expr("import M: a as b")
+            @test test_expr("import M: a as b, c")
             @test CSTParser.parse("using a as b")[2].head === :errortoken
+            @test test_expr("using M: a as b")
+            @test test_expr("using M: a as b, c")
         end
     end
     @testset "exor #201" begin
