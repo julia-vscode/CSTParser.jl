@@ -363,6 +363,7 @@ end
         @test "@inline f() = (), ()" |> test_expr
         @test "@sprintf(\"%08d\", id)" |> test_expr
         @test "[@m @n a for a in A]" |> test_expr # ensure closer.insquare propogates
+        @test CSTParser.parse("@__DIR__\n\nx", all)[1].span == 8
     end
 
     @testset "Square " begin
