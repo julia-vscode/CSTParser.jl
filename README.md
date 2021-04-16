@@ -15,6 +15,7 @@ Pkg.add("CSTParser")
 ```
 ```julia
 using CSTParser
+CSTParser.parse("x = y + 123")
 ```
 **Documentation**: [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://www.julia-vscode.org/CSTParser.jl/dev)
 
