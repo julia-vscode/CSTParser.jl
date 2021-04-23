@@ -35,7 +35,7 @@ function parse_iterator(ps::ParseState, outer = parse_outer(ps))
     arg = @closer ps :range @closer ps :ws @nocloser ps :wsop parse_expression(ps)
     if !is_range(arg)
         arg = mErrorToken(ps, arg, InvalidIterator)
-    else 
+    else
         arg = adjust_iter(arg)
     end
     if outer !== nothing
@@ -50,7 +50,7 @@ function adjust_iter(x::EXPR)
     # Assumes x is a valid iterator
     if x.head === :call # isoperator(x.args[1]) && x.args[1].val in ("in", "∈")
         EXPR(EXPR(:OPERATOR, 0, 0, "="), EXPR[x.args[2], x.args[3]], EXPR[x.args[1]])
-    else 
+    else
         x
     end
 end
@@ -130,7 +130,7 @@ function parse_call(ps::ParseState, ret::EXPR, ismacro=false)
         else
             EXPR[ret]
         end
-        # args = ismacro ? EXPR[ret, EXPR(:NOTHING, 0, 0)] : EXPR[ret] 
+        # args = ismacro ? EXPR[ret, EXPR(:NOTHING, 0, 0)] : EXPR[ret]
         trivia = EXPR[EXPR(next(ps))]
         @closeparen ps @default ps parse_comma_sep(ps, args, trivia, !ismacro, insert_params_at = ismacro ? 3 : 2)
         accept_rparen(ps, trivia)
@@ -140,7 +140,7 @@ function parse_call(ps::ParseState, ret::EXPR, ismacro=false)
 end
 
 """
-Parses a comma separated list, optionally allowing for conversion of 
+Parses a comma separated list, optionally allowing for conversion of
 assignment (`=`) expressions to `Kw`.
 """
 function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR}, kw = true, block = false, istuple = false; insert_params_at = 2)
@@ -251,7 +251,7 @@ function parse_macroname(ps)
                 arg = parse_string_or_cmd(next(ps), mname)
 
                 EXPR(:NONSTDIDENTIFIER, EXPR[mname, arg], nothing)
-                  
+
             else
                 # set span/fullspan min length at 1 to account for the case of a lonely '@'
                 EXPR(:IDENTIFIER, max(1, ps.nt.startbyte - ps.t.startbyte + 1), max(1, ps.t.endbyte - ps.t.startbyte + 2), string("@", val(ps.t, ps)))
@@ -280,7 +280,7 @@ function parse_macrocall(ps::ParseState)
         end
     end
 
-    if iscomma(ps.nt)
+    if iscomma(ps.nt) || isnewlinews(ps.ws)
         return EXPR(:macrocall, EXPR[mname, EXPR(:NOTHING, 0, 0)], nothing, mname.fullspan, mname.span)
     elseif isemptyws(ps.ws) && kindof(ps.nt) === Tokens.LPAREN
         return parse_call(ps, mname, true)
@@ -302,7 +302,7 @@ function parse_macrocall(ps::ParseState)
                 a = @closer ps :inmacro @closer ps :ws @closer ps :wsop parse_expression(ps)
             end
             push!(args, a)
-            if (insquare || ps.closer.paren || ps.closer.square) && kindof(ps.nt) === Tokens.FOR 
+            if (insquare || ps.closer.paren || ps.closer.square) && kindof(ps.nt) === Tokens.FOR
                 break
             end
             prevpos = loop_check(ps, prevpos)
