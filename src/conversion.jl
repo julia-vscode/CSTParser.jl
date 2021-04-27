@@ -8,8 +8,8 @@ function julia_normalization_map(c::Int32, x::Ptr{Nothing})::Int32
 end
 
 # Note: This code should be in julia base
-function utf8proc_map_custom(str::String, options, func)
-    norm_func = @cfunction $func Int32 (Int32, Ptr{Nothing})
+function utf8proc_map_custom(str::String, options)
+    norm_func = @cfunction julia_normalization_map Int32 (Int32, Ptr{Nothing})
     nwords = ccall(:utf8proc_decompose_custom, Int, (Ptr{UInt8}, Int, Ptr{UInt8}, Int, Cint, Ptr{Nothing}, Ptr{Nothing}),
                    str, sizeof(str), C_NULL, 0, options, norm_func, C_NULL)
     nwords < 0 && Base.Unicode.utf8proc_error(nwords)
@@ -24,7 +24,7 @@ end
 
 function normalize_julia_identifier(str::AbstractString)
     options = Base.Unicode.UTF8PROC_STABLE | Base.Unicode.UTF8PROC_COMPOSE
-    utf8proc_map_custom(String(str), options, julia_normalization_map)
+    utf8proc_map_custom(String(str), options)
 end
 
 
@@ -142,7 +142,7 @@ function Expr(x::EXPR)
     elseif ispunctuation(x)
         if headof(x) === :DOT
             return :(.)
-        else 
+        else
             # We only reach this if we have a malformed expression.
             Expr(:error)
         end
@@ -244,5 +244,3 @@ function remlineinfo!(x)
     end
     x
 end
-
-
