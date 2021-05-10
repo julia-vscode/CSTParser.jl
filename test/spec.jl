@@ -30,7 +30,7 @@ end
 
 
 @testset ":local" begin
-    test_expr("local a", :local, 2) 
+    test_expr("local a", :local, 2)
 end
 
 @testset ":global" begin
@@ -138,6 +138,7 @@ end
     # https://github.com/julia-vscode/CSTParser.jl/issues/278
     test_expr("*(a)*b*c", :call, 5, false)
     test_expr("+(a)+b+c", :call, 5, false)
+    test_expr("(\na +\nb +\nc +\n d\n)", :brackets, 3, true)
 end
 
 @testset ":parameters" begin
@@ -156,8 +157,8 @@ end
         test_expr("[a\nb]", :vcat, 4, true)
         test_expr("[a;b]", :vcat, 4, true)
         test_expr("[a b\nc d]", :vcat, 4, true)
-        test_expr("[a\nc d]", :vcat, 4, true) 
-        test_expr("[a;c d]", :vcat, 4, true) 
+        test_expr("[a\nc d]", :vcat, 4, true)
+        test_expr("[a;c d]", :vcat, 4, true)
     end
 
     @testset ":hcat" begin
@@ -244,7 +245,7 @@ end
     test_expr("(arg for x in X, y in Y if x)", :brackets, 3, true)
     test_expr("(arg for x in X for  y in Y)", :brackets, 3, true)
     test_expr("(arg for x in X for  y in Y if x)", :brackets, 3, true)
-    test_expr("(arg for x in X for y in Y for z in Z)", :brackets, 3, true) 
+    test_expr("(arg for x in X for y in Y for z in Z)", :brackets, 3, true)
 end
 
 @testset ":cmd" begin

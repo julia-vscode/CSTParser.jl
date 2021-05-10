@@ -47,21 +47,21 @@ isoperator(t::AbstractToken) = isoperator(kindof(t))
 
 
 isunaryop(op) = false
-isunaryop(op::EXPR) = isoperator(op) && ((valof(op) == "<:" || 
-                                          valof(op) == ">:" || 
-                                          valof(op) == "+" || 
-                                          valof(op) == "-" || 
-                                          valof(op) == "!" || 
-                                          valof(op) == "~" || 
-                                          valof(op) == "¬" || 
-                                          valof(op) == "&" || 
-                                          valof(op) == "√" || 
-                                          valof(op) == "∛"  || 
-                                          valof(op) == "∜"  || 
-                                          valof(op) == "::" || 
-                                          valof(op) == "\$" || 
-                                          valof(op) == ":" || 
-                                          valof(op) == "⋆") || 
+isunaryop(op::EXPR) = isoperator(op) && ((valof(op) == "<:" ||
+                                          valof(op) == ">:" ||
+                                          valof(op) == "+" ||
+                                          valof(op) == "-" ||
+                                          valof(op) == "!" ||
+                                          valof(op) == "~" ||
+                                          valof(op) == "¬" ||
+                                          valof(op) == "&" ||
+                                          valof(op) == "√" ||
+                                          valof(op) == "∛"  ||
+                                          valof(op) == "∜"  ||
+                                          valof(op) == "::" ||
+                                          valof(op) == "\$" ||
+                                          valof(op) == ":" ||
+                                          valof(op) == "⋆") ||
                         (length(valof(op)) == 2 && valof(op)[1] == '.' && (valof(op)[2] == '+' ||
                                                                            valof(op)[2] == '-' ||
                                                                            valof(op)[2] == '!' ||
@@ -419,7 +419,9 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
     if op.val == "*" && op.fullspan == 0 # implicit multiplication has a very high precedence
         P = WhereOp
     end
-    if headof(ret) === :call && (is_plus(ret.args[1]) || is_star(ret.args[1])) && valof(ret.args[1]) == valof(op) && ret.args[1].span > 0 && (ret.trivia === nothing || isempty(ret.trivia))
+    if headof(ret) === :call && (is_plus(ret.args[1]) || is_star(ret.args[1])) &&
+          valof(ret.args[1]) == valof(op) && ret.args[1].span > 0 &&
+          !(hastrivia(ret) && headof(ret[end]) === :RPAREN)
         # a + b -> a + b + c
         nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
         !hastrivia(ret) && (ret.trivia = EXPR[])
