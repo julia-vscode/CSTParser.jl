@@ -134,6 +134,10 @@ end
     test_expr("a...", nothing, 2, false)
     @test let x = cst"a... "; x.fullspan - x.span == 1 end
     test_expr("a <: b", nothing, 3, false)
+
+    # https://github.com/julia-vscode/CSTParser.jl/issues/278
+    test_expr("*(a)*b*c", :call, 5, false)
+    test_expr("+(a)+b+c", :call, 5, false)
 end
 
 @testset ":parameters" begin
