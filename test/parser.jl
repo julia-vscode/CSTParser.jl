@@ -974,8 +974,34 @@ end""" |> test_expr
     @testset "toplevel strings" begin
         @test test_expr(""""a" in b && c""")
     end
-   
+
     @testset "@doc cont" begin
         @test test_expr("module a\n@doc doc\"\"\"doc\"\"\"\nx\nend")
+    end
+
+    @testset "char escape" begin
+        @test test_expr(raw"'\$'")
+        @test test_expr(raw"'\a'")
+        @test test_expr(raw"'\3'")
+        @test test_expr(raw"'\u222'")
+        @test test_expr(raw"'\ufff'")
+        @test test_expr(raw"'\x2'")
+        @test test_expr(raw"'\x22'")
+        @test test_expr(raw"'\u22'")
+        @test test_expr(raw"'\u2222'")
+        @test test_expr(raw"'\U2222'")
+        @test test_expr(raw"'\U22222'")
+        @test CSTParser.parse(raw"'\x222'").head == :errortoken
+        @test CSTParser.parse(raw"'\u22222'").head == :errortoken
+        @test CSTParser.parse(raw"'\U222222'").head == :errortoken
+        @test CSTParser.parse(raw"'\asdd'").head == :errortoken
+        @test CSTParser.parse(raw"'\α'").head == :errortoken
+        @test CSTParser.parse(raw"'\αsdd'").head == :errortoken
+        @test CSTParser.parse(raw"'\u222ää'").head == :errortoken
+        @test CSTParser.parse(raw"'\x222ää'").head == :errortoken
+        @test CSTParser.parse(raw"'\U222ää'").head == :errortoken
+        for c in rand(Char, 1000)
+            @test test_expr(string("'", c, "'"))
+        end
     end
 end

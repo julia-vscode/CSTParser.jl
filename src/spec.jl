@@ -37,7 +37,7 @@ const AnonFuncOp    = 14
     MissingColon, # We didn't get a colon (`:`) when we expected to while parsing a `?` expression.
     InvalidIterator,
     StringInterpolationWithTrailingWhitespace,
-    TooLongChar,
+    InvalidChar,
     EmptyChar,
     Unknown,
     SignatureOfFunctionDefIsNotACall,
@@ -87,8 +87,8 @@ end
         return parse_string_or_cmd(ps)
     else
         v = val(ps.t, ps)
-        if kindof(ps.t) === Tokens.CHAR && length(v) > 3 && !(v[2] == '\\' && valid_escaped_seq(v[2:prevind(v, length(v))]))
-            return mErrorToken(ps, EXPR(:CHAR, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, string(v[1:2], '\'')), TooLongChar)
+        if kindof(ps.t) === Tokens.CHAR && length(v) > 3 && !(v[2] == '\\' && valid_escaped_seq(v[2:prevind(v, end)]))
+            return mErrorToken(ps, EXPR(:CHAR, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, string(v[1:2], '\'')), InvalidChar)
         elseif kindof(ps.t) === Tokens.CHAR && length(v) == 2
             return mErrorToken(ps, EXPR(:CHAR, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, string(v[1:2], '\'')), EmptyChar)
         end
@@ -229,7 +229,7 @@ function lastchildistrivia(x::EXPR)
     end
 end
 
-function Base.length(x::EXPR) 
+function Base.length(x::EXPR)
     headof(x) === :NONSTDIDENTIFIER && return 0
     headof(x) === :flatten && return length(Iterating._flatten_lhs(x))
     n = x.args isa Nothing ? 0 : length(x.args)
