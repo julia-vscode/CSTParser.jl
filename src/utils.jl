@@ -668,6 +668,9 @@ function valid_escaped_seq(s::AbstractString)
             end
             return n <= 0x10ffff
         else
+            @static if VERSION < v"1.1.0"
+                c = string(c)
+            end
             return ncodeunits(c) == 1 && isempty(a)
         end
     end
