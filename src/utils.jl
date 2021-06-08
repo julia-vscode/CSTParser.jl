@@ -667,6 +667,14 @@ function valid_escaped_seq(s::AbstractString)
                     'A' <= nc <= 'F' ? n << 4 + (nc - 'A' + 10) : return false
             end
             return n <= 0x10ffff
+        elseif '0' <= c <= '7'
+            length(a) <= 3 || return false
+            n = c - '0'
+            while !isempty(a)
+                nc = popfirst!(a)
+                n = ('0' <= c <= '7') ? n << 3 + nc - '0' : return false
+            end
+            return n < 128
         else
             @static if VERSION < v"1.1.0"
                 c = string(c)

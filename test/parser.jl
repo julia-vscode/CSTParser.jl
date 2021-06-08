@@ -983,6 +983,9 @@ end""" |> test_expr
         @test test_expr(raw"'\$'")
         @test test_expr(raw"'\a'")
         @test test_expr(raw"'\3'")
+        @test test_expr(raw"'\000'")
+        @test test_expr(raw"'\033'")
+        @test test_expr(raw"'\177'")
         @test test_expr(raw"'\u222'")
         @test test_expr(raw"'\ufff'")
         @test test_expr(raw"'\x2'")
@@ -991,6 +994,12 @@ end""" |> test_expr
         @test test_expr(raw"'\u2222'")
         @test test_expr(raw"'\U2222'")
         @test test_expr(raw"'\U22222'")
+
+        @test CSTParser.parse(raw"'\200'").head == :errortoken
+        @test CSTParser.parse(raw"'\300'").head == :errortoken
+        @test CSTParser.parse(raw"'\377'").head == :errortoken
+        @test CSTParser.parse(raw"'\600'").head == :errortoken
+        @test CSTParser.parse(raw"'\777'").head == :errortoken
         @test CSTParser.parse(raw"'\x222'").head == :errortoken
         @test CSTParser.parse(raw"'\u22222'").head == :errortoken
         @test CSTParser.parse(raw"'\U222222'").head == :errortoken
