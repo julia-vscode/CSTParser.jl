@@ -139,7 +139,7 @@ function parse_compound(ps::ParseState, ret::EXPR)
                 if err isa StackOverflowError
                     throw(error(string(ps, "\nsize: ", ps.l.io.size)))
                 end
-                EXPR(:errortoken, EXPR[], nothing)
+                mErrorToken(ps, ret, Unknown)
             end
         end
         ret = EXPR(:errortoken, EXPR[ret, nextarg], nothing)

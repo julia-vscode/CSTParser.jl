@@ -39,6 +39,7 @@ const AnonFuncOp    = 14
     StringInterpolationWithTrailingWhitespace,
     InvalidChar,
     EmptyChar,
+    InvalidString,
     Unknown,
     SignatureOfFunctionDefIsNotACall,
     MalformedMacroName)
