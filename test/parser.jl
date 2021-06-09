@@ -1013,4 +1013,9 @@ end""" |> test_expr
             @test test_expr(string("'", c, "'"))
         end
     end
+
+    @testset "invalid char in string" begin
+        @test CSTParser.parse(raw"\"\U222222222\"").head == :errortoken
+        @test CSTParser.parse(raw"\"\U222ää\"").head == :errortoken
+    end
 end
