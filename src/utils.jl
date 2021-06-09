@@ -457,11 +457,11 @@ end
 
 comp(x, y) = x == y
 function comp(x::CSTParser.EXPR, y::CSTParser.EXPR)
-    comp(x.head, y.head) && 
-    x.span == y.span && 
-    x.fullspan == y.fullspan && 
-    x.val == y.val && 
-    length(x) == length(y) && 
+    comp(x.head, y.head) &&
+    x.span == y.span &&
+    x.fullspan == y.fullspan &&
+    x.val == y.val &&
+    length(x) == length(y) &&
     all(comp(x[i], y[i]) for i = 1:length(x))
 end
 
@@ -482,7 +482,7 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
     i1, i2 = revfirstdiff(s0, s1)
     (i0 > x1.fullspan || i1 > x1.fullspan || i2 > x1.fullspan) && return inds ? (1:0, 1:length(x1.args), 1:0) : x1 # Should error?
     # Find unaffected expressions at start
-    # CST should be unaffected (and able to be copied across) up to this point, 
+    # CST should be unaffected (and able to be copied across) up to this point,
     # but we need to check.
     r1 = 1:min(find_arg_at(x0, i0) - 1, length(x0.args), find_arg_at(x1, i0) - 1)
     for i = 1:min(find_arg_at(x0, i0) - 1, find_arg_at(x1, i0) - 1)
@@ -493,17 +493,17 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
         r1 = 1:i
     end
     # we can re-use x0.args[r1]
-    
+
     # assume we'll just use x1.args from here on
     r2 = (last(r1) + 1):length(x1.args)
     r3 = 0:-1
 
-    # though we now check whether there is a sequence at the end of x0.args and 
+    # though we now check whether there is a sequence at the end of x0.args and
     # x1.args that match
     offset = sizeof(s1)
     for i = 0:min(length(x0.args) - last(r1), length(x0.args), length(x1.args)) - 1
-        if !quick_comp(x0.args[end - i], x1.args[end - i]) || 
-            offset <= i1 || 
+        if !quick_comp(x0.args[end - i], x1.args[end - i]) ||
+            offset <= i1 ||
             length(x0.args) - i == last(r1) + 1 ||
             offset - x1.args[end-i].fullspan <= i2 <= offset
 
@@ -525,9 +525,9 @@ end
 # Quick and very dirty comparison of two EXPR, makes extra effort for :errortokens
 function quick_comp(a::EXPR, b::EXPR)
     a.fullspan != b.fullspan && return false
-    if headof(a) === :errortoken 
+    if headof(a) === :errortoken
         headof(b) !== :errortoken && return false
-        if a.args !== nothing 
+        if a.args !== nothing
             b.args === nothing && return false
             return length(a.args) == length(b.args) && (length(a.args) == 0 || quick_comp(first(a.args), first(b.args)))
         end
@@ -649,58 +649,41 @@ function _unescape_string(io, s::AbstractString)
     end
 end
 
-
 function valid_escaped_seq(s::AbstractString)
+    l = length(s)
+    l == 0 && return false # zero length chars are always invalid
+    l == 1 && return true # length-one chars are always valid to Julia's parser
     a = Iterators.Stateful(s)
-    for c in a
-        if !isempty(a) && c == '\\'
-            c = popfirst!(a)
-            if c == 'x' || c == 'u' || c == 'U'
-                n = k = 0
-                m = c == 'x' ? 2 :
-                    c == 'u' ? 4 : 8
-                while (k += 1) <= m && !isempty(a)
-                    nc = Base.peek(a)
-                    n = '0' <= nc <= '9' ? n << 4 + (nc - '0') :
-                        'a' <= nc <= 'f' ? n << 4 + (nc - 'a' + 10) :
-                        'A' <= nc <= 'F' ? n << 4 + (nc - 'A' + 10) : break
-                    popfirst!(a)
-                end
-                if k == 1 || n > 0x10ffff
-                    return false
-                end
-            elseif '0' <= c <= '7'
-                k = 1
-                n = c - '0'
-                while (k += 1) <= 3 && !isempty(a)
-                    c = Base.peek(a)
-                    n = ('0' <= c <= '7') ? n << 3 + c - '0' : break
-                    popfirst!(a)
-                end
-                if n > 255
-                    return false
-                end
-            else
-                c == 'a' ||
-                c == 'b' ||
-                c == 't' ||
-                c == 'n' ||
-                c == 'v' ||
-                c == 'f' ||
-                c == 'r' ||
-                c == 'e' ||
-                c == '\\' ||
-                c == '"' ||
-                c == '\'' ||
-                return false
+    if popfirst!(a) == '\\'
+        c = popfirst!(a)
+        if c === 'x' || c === 'u' || c === 'U'
+            maxiter = c === 'x' ? 2 : c === 'u' ? 4 : 5
+            0 < length(a) <= maxiter || return false
+            n = 0
+            while !isempty(a)
+                nc = popfirst!(a)
+                n = '0' <= nc <= '9' ? n << 4 + (nc - '0') :
+                    'a' <= nc <= 'f' ? n << 4 + (nc - 'a' + 10) :
+                    'A' <= nc <= 'F' ? n << 4 + (nc - 'A' + 10) : return false
             end
+            return n <= 0x10ffff
+        elseif '0' <= c <= '7'
+            length(a) <= 3 || return false
+            n = c - '0'
+            while !isempty(a)
+                nc = popfirst!(a)
+                n = ('0' <= c <= '7') ? n << 3 + nc - '0' : return false
+            end
+            return n < 128
+        else
+            @static if VERSION < v"1.1.0"
+                c = string(c)
+            end
+            return ncodeunits(c) == 1 && isempty(a)
         end
     end
-    return true
+    return false
 end
-
-
-
 
 """
     disallowednumberjuxt(ret::EXPR)
@@ -769,7 +752,7 @@ macro cst_str(x)
     CSTParser.parse(x)
 end
 
-function issuffixableliteral(ps::ParseState, x::EXPR) 
+function issuffixableliteral(ps::ParseState, x::EXPR)
     isidentifier(ps.nt) && isemptyws(ps.ws) && ismacrocall(x) && (valof(x.args[1]) isa String && (endswith(valof(x.args[1]), "_str") || endswith(valof(x.args[1]), "_cmd")))
 end
 

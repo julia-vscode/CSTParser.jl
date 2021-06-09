@@ -205,7 +205,11 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
             ex = mErrorToken(ps, Unknown)
             push!(ret, ex)
         else
-            str = tostr(b)
+            str = try
+                tostr(b)
+            catch err
+                return mErrorToken(ps, ret, InvalidString)
+            end
             if istrip
                 str = str[1:prevind(str, lastindex(str), 3)]
                 # only mark non-interpolated triple strings
@@ -299,12 +303,12 @@ function unescape_prefixed(str)
             elseif c === '\"'
                 push!(edits, start:i)
                 start = -1
-            else 
+            else
                 start = -1
             end
         end
     end
-    
+
     if !isempty(edits) || start > -1
         str1 = deepcopy(str)
         if start > -1
@@ -316,7 +320,7 @@ function unescape_prefixed(str)
         for e in reverse(edits)
             n = div(length(e), 2) - 1
             str1 = string(str1[1:prevind(str1, first(e))], string(repeat("\\", n), "\""), str1[nextind(str1, last(e)):lastindex(str1)])
-            
+
         end
         return str1
     end
