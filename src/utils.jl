@@ -657,7 +657,7 @@ function valid_escaped_seq(s::AbstractString)
     if popfirst!(a) == '\\'
         c = popfirst!(a)
         if c === 'x' || c === 'u' || c === 'U'
-            maxiter = c === 'x' ? 2 : c === 'u' ? 4 : 5
+            maxiter = c === 'x' ? 2 : c === 'u' ? 4 : 8
             0 < length(a) <= maxiter || return false
             n = 0
             while !isempty(a)
