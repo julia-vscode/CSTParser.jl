@@ -994,6 +994,7 @@ end""" |> test_expr
         @test test_expr(raw"'\u2222'")
         @test test_expr(raw"'\U2222'")
         @test test_expr(raw"'\U22222'")
+        @test test_expr(raw"'\U00000001'")
 
         @test CSTParser.parse(raw"'\200'").head == :errortoken
         @test CSTParser.parse(raw"'\300'").head == :errortoken
@@ -1009,6 +1010,7 @@ end""" |> test_expr
         @test CSTParser.parse(raw"'\u222ää'").head == :errortoken
         @test CSTParser.parse(raw"'\x222ää'").head == :errortoken
         @test CSTParser.parse(raw"'\U222ää'").head == :errortoken
+        @test CSTParser.parse(raw"'\U10000001'").head == :errortoken
         for c in rand(Char, 1000)
             @test test_expr(string("'", c, "'"))
         end
