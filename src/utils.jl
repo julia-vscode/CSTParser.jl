@@ -28,7 +28,6 @@ function closer(ps::ParseState)
     (ps.closer.paren && kindof(ps.nt) === Tokens.RPAREN) ||
     (ps.closer.brace && kindof(ps.nt) === Tokens.RBRACE) ||
     (ps.closer.square && kindof(ps.nt) === Tokens.RSQUARE) ||
-    (@static VERSION < v"1.4" ? false : ((ps.closer.insquare || ps.closer.inmacro) && kindof(ps.nt) === Tokens.APPROX && kindof(ps.nws) == EmptyWS)) ||
     kindof(ps.nt) === Tokens.ELSEIF ||
     kindof(ps.nt) === Tokens.ELSE ||
     kindof(ps.nt) === Tokens.CATCH ||

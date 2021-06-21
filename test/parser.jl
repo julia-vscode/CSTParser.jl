@@ -718,6 +718,7 @@ end""" |> test_expr
         if VERSION > v"1.1-"
             @test "a .~ b" |> test_expr
         end
+        @test "A[a~b]" |> test_expr
         @test "1 .< 2 .< 3" |> test_expr
         @test "(;)" |> test_expr
         if VERSION > v"1.5"
