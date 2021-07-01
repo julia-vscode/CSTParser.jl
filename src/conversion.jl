@@ -171,7 +171,7 @@ function Expr(x::EXPR)
     elseif x.head === :macrocall && isidentifier(x.args[1]) && valof(x.args[1]) == "@."
         Expr(:macrocall, Symbol("@__dot__"), Expr.(x.args[2:end])...)
     elseif x.head === :macrocall && length(x.args) == 3 && x.args[1].head === :globalrefcmd && x.args[3].head == :string
-        Expr(:macrocall, Expr(x.args[1]), Expr(x.args[2]), join(valof.(x.args[3])))
+        Expr(:macrocall, Expr(x.args[1]), Expr(x.args[2]), x.args[3].meta)
     elseif x.head === :string && length(x.args) > 0 && (x.args[1].head === :STRING || x.args[1].head === :TRIPLESTRING) && isempty(valof(x.args[1]))
         # Special conversion needed - the initial text section is treated as empty for the represented string following lowest-common-prefix adjustments, but exists in the source.
         Expr(:string, Expr.(x.args[2:end])...)

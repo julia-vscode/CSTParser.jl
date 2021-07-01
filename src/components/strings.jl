@@ -19,7 +19,7 @@ tostr(buf::IOBuffer) = _unescape_string(String(take!(buf)))
 parse_string_or_cmd(ps)
 
 When trying to make an `INSTANCE` from a string token we must check for
-interpolating opoerators.
+interpolating operators.
 """
 function parse_string_or_cmd(ps::ParseState, prefixed=false)
     sfullspan = ps.nt.startbyte - ps.t.startbyte
@@ -100,7 +100,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
         end
         expr = EXPR(istrip ? :TRIPLESTRING : :STRING, sfullspan, sspan, _val)
         if istrip
-            adjust_lcp(expr)
+            adjust_lcp(expr, true)
             ret = EXPR(:string, EXPR[expr], nothing, sfullspan, sspan)
         else
             return iscmd ? wrapwithcmdmacro(expr) : expr
@@ -225,6 +225,14 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                 push!(ret, ex)
             end
         end
+        if iscmd
+            str = istrip ? t_str[4:prevind(t_str, sizeof(t_str), 3)] : t_str[2:prevind(t_str, sizeof(t_str))]
+            str = replace(str, "\n$lcp" => "\n")
+            if startswith(str, "\n")
+                str = str[2:end]
+            end
+            ret.meta = str
+        end
     end
 
     single_string_T = (:STRING, :TRIPLESTRING, literalmap(kindof(ps.t)))
@@ -242,7 +250,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
         # Drop leading newline
         if !isempty(ret.args) && isliteral(ret.args[1]) && headof(ret.args[1]) in single_string_T &&
                 !isempty(valof(ret.args[1])) && valof(ret.args[1])[1] == '\n'
-            ret.args[1] = dropleadlingnewline(ret.args[1])
+            ret.args[1] = dropleadingnewline(ret.args[1])
         end
     end
 
@@ -259,7 +267,7 @@ function adjustspan(x::EXPR)
     return x
 end
 
-dropleadlingnewline(x::EXPR) = EXPR(headof(x), x.fullspan, x.span, valof(x)[2:end])
+dropleadingnewline(x::EXPR) = EXPR(headof(x), x.fullspan, x.span, valof(x)[2:end])
 
 wrapwithcmdmacro(x) =EXPR(:macrocall, EXPR[EXPR(:globalrefcmd, 0, 0), EXPR(:NOTHING, 0, 0), x])
 
