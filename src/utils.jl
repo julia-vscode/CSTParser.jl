@@ -28,6 +28,11 @@ function closer(ps::ParseState)
     (ps.closer.paren && kindof(ps.nt) === Tokens.RPAREN) ||
     (ps.closer.brace && kindof(ps.nt) === Tokens.RBRACE) ||
     (ps.closer.square && kindof(ps.nt) === Tokens.RSQUARE) ||
+    # tilde parsing in vect exprs needs to be special cased because `~` has assignment precedence
+    (@static VERSION < v"1.4" ?
+        false :
+        ((ps.closer.insquare || ps.closer.inmacro) && kindof(ps.nt) === Tokens.APPROX && !isemptyws(ps.ws) && isemptyws(ps.nws))
+    ) ||
     kindof(ps.nt) === Tokens.ELSEIF ||
     kindof(ps.nt) === Tokens.ELSE ||
     kindof(ps.nt) === Tokens.CATCH ||
