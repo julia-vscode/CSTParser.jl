@@ -89,6 +89,10 @@ end
             @test "a*b..." |> test_expr
             @test "a//b..." |> test_expr
             @test "a^b..." |> test_expr
+            @test "3a^b" |> test_expr
+            @test "3//a^b" |> test_expr
+            @test "3^b//a^b" |> test_expr
+            @test "3^b//a" |> test_expr
             @test "a::b..." |> test_expr
             @test "a where b..." |> test_expr
             @test "a.b..." |> test_expr
