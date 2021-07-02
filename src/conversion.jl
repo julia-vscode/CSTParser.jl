@@ -141,7 +141,13 @@ function Expr(x::EXPR)
         return Symbol(valof(x))
     elseif ispunctuation(x)
         if headof(x) === :DOT
-            return :(.)
+            if x.args === nothing
+                return :(.)
+            elseif length(x.args) == 1 && isoperator(x.args[1])
+                return Expr(:(.), Expr(x.args[1]))
+            else
+                Expr(:error)
+            end
         else
             # We only reach this if we have a malformed expression.
             Expr(:error)

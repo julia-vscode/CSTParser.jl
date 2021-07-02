@@ -114,6 +114,18 @@ end
             @test "::(a,b)" |> test_expr
         end
 
+        @testset "dotted non-calls" begin
+            @test "f(.+)" |> test_expr
+            @test "f(.-)" |> test_expr
+            @test "f(.!)" |> test_expr
+            @test "f(.¬)" |> test_expr
+            @test_broken "f(.~)" |> test_expr
+            @test "f(.√)" |> test_expr
+            @test "f(:(.=))" |> test_expr
+            @test "f(:(.+))" |> test_expr
+            @test "f(:(.*))" |> test_expr
+        end
+
         @testset "where precedence" begin
             @test "a = b where c = d" |> test_expr
             @test "a = b where c" |> test_expr

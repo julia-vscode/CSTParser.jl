@@ -59,7 +59,12 @@ function parse_expression(ps::ParseState, esc_on_error = false)
             if both_symbol_and_op(ps.t)
                 ret = EXPR(:IDENTIFIER, ps)
             else
-                ret = INSTANCE(ps)
+                if ps.t.dotop && closer(ps) && !isassignmentop(ps.t)
+                    v = val(ps.t, ps)[2:end]
+                    ret = EXPR(:DOT, EXPR[EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte - 1, ps.t.endbyte - ps.t.startbyte - 1, v)], nothing, 1, ps.t.endbyte - ps.t.startbyte)
+                else
+                    ret = INSTANCE(ps)
+                end
             end
             if is_colon(ret) && !(iscomma(ps.nt) || kindof(ps.ws) == SemiColonWS)
                 ret = parse_unary(ps, ret)
