@@ -165,7 +165,7 @@ function read_comment(l)
                 n_end += 1
             end
             if n_start == n_end
-                return true
+                return false
             end
             c = nc
         end
