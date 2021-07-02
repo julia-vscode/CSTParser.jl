@@ -136,6 +136,13 @@ end
             @test ":(;;)" |> test_expr
         end
 
+        @testset "for outer parsing" begin
+            @test "for outer i in 1:3 end" |> test_expr
+            @test "for outer i = 1:3 end" |> test_expr
+            @test "for outer \$i = 1:3 end" |> test_expr
+            @test "for outer \$ i = 1:3 end" |> test_expr
+        end
+
         @testset "where precedence" begin
             @test "a = b where c = d" |> test_expr
             @test "a = b where c" |> test_expr
