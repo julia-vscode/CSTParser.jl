@@ -1028,4 +1028,14 @@ end""" |> test_expr
     @testset "invalid char in string" begin
         @test CSTParser.parse(raw"\"\U222222222\"").head == :errortoken
     end
+
+    @testset "string macros" begin
+        @test test_expr(raw"""test"asd"asd""")
+        @test test_expr(raw"""test"asd"0x0""")
+        @test test_expr(raw"""test"asd"0o0""")
+        @test test_expr(raw"""test"asd"0""")
+        @test test_expr(raw"""test"asd"0.0""")
+        @test test_expr(raw"""test"asd"true""")
+        @test test_expr(raw"""test""true""")
+    end
 end
