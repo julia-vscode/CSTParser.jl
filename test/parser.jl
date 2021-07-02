@@ -774,6 +774,7 @@ end""" |> test_expr
 
     @testset "cmd interpolation" begin
         @test test_expr("`a \$b c`")
+        @test test_expr(raw"`a \"\$b $b\" c`")
         @test test_expr("`a b c`")
         x = CSTParser.parse("`a \$b c`")
         @test x.args[1].head == :globalrefcmd

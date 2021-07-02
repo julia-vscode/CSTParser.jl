@@ -268,7 +268,11 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
     end
 
     if (length(ret.args) == 1 && isliteral(ret.args[1]) && headof(ret.args[1]) in single_string_T) && !isinterpolated
-        ret = ret.args[1]
+        unwrapped = ret.args[1]
+        if iscmd && ret.meta !== nothing
+            unwrapped.val = ret.meta
+        end
+        ret = unwrapped
     end
     update_span!(ret)
 
@@ -282,7 +286,7 @@ end
 
 dropleadingnewline(x::EXPR) = EXPR(headof(x), x.fullspan, x.span, valof(x)[2:end])
 
-wrapwithcmdmacro(x) =EXPR(:macrocall, EXPR[EXPR(:globalrefcmd, 0, 0), EXPR(:NOTHING, 0, 0), x])
+wrapwithcmdmacro(x) = EXPR(:macrocall, EXPR[EXPR(:globalrefcmd, 0, 0), EXPR(:NOTHING, 0, 0), x])
 
 """
     parse_prefixed_string_cmd(ps::ParseState, ret::EXPR)
