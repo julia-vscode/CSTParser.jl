@@ -601,7 +601,7 @@ end
 
 function issuffixableliteral(ps::ParseState, x::EXPR)
     # prefixed string/cmd macros can be suffixed by identifiers or numeric literals
-    (isidentifier(ps.nt) || isnumberliteral(ps.nt)) && isemptyws(ps.ws) && ismacrocall(x) && (valof(x.args[1]) isa String && (endswith(valof(x.args[1]), "_str") || endswith(valof(x.args[1]), "_cmd")))
+    (isidentifier(ps.nt) || isnumberliteral(ps.nt) || isbool(ps.nt)) && isemptyws(ps.ws) && ismacrocall(x) && (valof(x.args[1]) isa String && (endswith(valof(x.args[1]), "_str") || endswith(valof(x.args[1]), "_cmd")))
 end
 
 function loop_check(ps, prevpos)

@@ -101,8 +101,13 @@ function parse_compound(ps::ParseState, ret::EXPR)
         end
         ret = parse_operator(ps, ret, EXPR(:OPERATOR, 0, 0, "*"))
     elseif issuffixableliteral(ps, ret)
-        arg = EXPR(:IDENTIFIER, next(ps))
-        push!(ret, EXPR(:STRING, arg.fullspan, arg.span, val(ps.t, ps)))
+        if isnumberliteral(ps.nt)
+            arg = mLITERAL(next(ps))
+            push!(ret, arg)
+        else
+            arg = EXPR(:IDENTIFIER, next(ps))
+            push!(ret, EXPR(:STRING, arg.fullspan, arg.span, val(ps.t, ps)))
+        end
     elseif (isidentifier(ret) || is_getfield(ret)) && isemptyws(ps.ws) && isprefixableliteral(ps.nt)
         ret = parse_prefixed_string_cmd(ps, ret)
     elseif kindof(ps.nt) === Tokens.LPAREN
