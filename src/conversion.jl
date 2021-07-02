@@ -38,7 +38,7 @@ function sized_uint_literal(s::AbstractString, b::Integer)
     l <= 64  && return Base.parse(UInt64,  s)
     # l <= 128 && return Base.parse(UInt128, s)
     l <= 128 && return Expr(:macrocall, GlobalRef(Core, Symbol("@uint128_str")), nothing, s)
-    return Base.parse(BigInt, s)
+    return Expr(:macrocall, GlobalRef(Core, Symbol("@big_str")), nothing, s)
 end
 
 function sized_uint_oct_literal(s::AbstractString)

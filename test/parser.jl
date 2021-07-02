@@ -136,13 +136,6 @@ end
             @test ":(;;)" |> test_expr
         end
 
-        @testset "for outer parsing" begin
-            @test "for outer i in 1:3 end" |> test_expr
-            @test "for outer i = 1:3 end" |> test_expr
-            @test "for outer \$i = 1:3 end" |> test_expr
-            @test "for outer \$ i = 1:3 end" |> test_expr
-        end
-
         @testset "where precedence" begin
             @test "a = b where c = d" |> test_expr
             @test "a = b where c" |> test_expr
@@ -544,6 +537,13 @@ end
             @test """for i = 1:10, j = 1:20
             f(i)
         end""" |> test_expr
+
+            @testset "for outer parsing" begin
+                @test "for outer i in 1:3 end" |> test_expr
+                @test "for outer i = 1:3 end" |> test_expr
+                @test "for outer \$i = 1:3 end" |> test_expr
+                @test "for outer \$ i = 1:3 end" |> test_expr
+            end
         end
 
         @testset "Let" begin
@@ -1099,5 +1099,88 @@ end""" |> test_expr
         @test test_expr(raw"""test"asd"0.0""")
         @test test_expr(raw"""test"asd"true""")
         @test test_expr(raw"""test""true""")
+    end
+
+    @testset "number parsing" begin
+        @test test_expr("0b00000000")
+        @test test_expr("0b000000000")
+        @test test_expr("0b0000000000000000")
+        @test test_expr("0b00000000000000000")
+        @test test_expr("0b00000000000000000000000000000000")
+        @test test_expr("0b000000000000000000000000000000000")
+        @test test_expr("0b0000000000000000000000000000000000000000000000000000000000000000")
+        @test test_expr("0b00000000000000000000000000000000000000000000000000000000000000000")
+        @test test_expr("0b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
+        @test test_expr("0b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
+        @test test_expr("0b11111111")
+        @test test_expr("0b111111111")
+        @test test_expr("0b1111111111111111")
+        @test test_expr("0b11111111111111111")
+        @test test_expr("0b11111111111111111111111111111111")
+        @test test_expr("0b111111111111111111111111111111111")
+        @test test_expr("0b1111111111111111111111111111111111111111111111111111111111111111")
+        @test test_expr("0b11111111111111111111111111111111111111111111111111111111111111111")
+        @test test_expr("0b11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+        @test test_expr("0b111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+
+        @test test_expr("0o0")
+        @test test_expr("0o00")
+        @test test_expr("0o0000")
+        @test test_expr("0o00000")
+        @test test_expr("0o000000000")
+        @test test_expr("0o0000000000")
+        @test test_expr("0o00000000000000000000")
+        @test test_expr("0o000000000000000000000")
+        @test test_expr("0o00000000000000000000000000000000000000000")
+        @test test_expr("0o0000000000000000000000000000000000000000000")
+        @test test_expr("0o1")
+        @test test_expr("0o11")
+        @test test_expr("0o1111")
+        @test test_expr("0o11111")
+        @test test_expr("0o111111111")
+        @test test_expr("0o1111111111")
+        @test test_expr("0o11111111111111111111")
+        @test test_expr("0o111111111111111111111")
+        @test test_expr("0o11111111111111111111111111111111111111111")
+        @test test_expr("0o111111111111111111111111111111111111111111")
+        @test test_expr("0o377777777777777777777777777777777777777777")
+        @test test_expr("0o1111111111111111111111111111111111111111111")
+        @test test_expr("0o077")
+        @test test_expr("0o377")
+        @test test_expr("0o400")
+        @test test_expr("0o077777")
+        @test test_expr("0o177777")
+        @test test_expr("0o200000")
+        @test test_expr("0o00000000000")
+        @test test_expr("0o17777777777")
+        @test test_expr("0o40000000000")
+        @test test_expr("0o0000000000000000000000")
+        @test test_expr("0o1000000000000000000000")
+        @test test_expr("0o2000000000000000000000")
+        @test test_expr("0o0000000000000000000000000000000000000000000")
+        @test test_expr("0o1000000000000000000000000000000000000000000")
+        @test test_expr("0o2000000000000000000000000000000000000000000")
+
+        @test test_expr("0x00")
+        @test test_expr("0x000")
+        @test test_expr("0x0000")
+        @test test_expr("0x00000")
+        @test test_expr("0x00000000")
+        @test test_expr("0x000000000")
+        @test test_expr("0x0000000000000000")
+        @test test_expr("0x00000000000000000")
+        @test test_expr("0x00000000000000000000000000000000")
+        @test test_expr("0x000000000000000000000000000000000")
+
+        @test test_expr("0x11")
+        @test test_expr("0x111")
+        @test test_expr("0x1111")
+        @test test_expr("0x11111")
+        @test test_expr("0x11111111")
+        @test test_expr("0x111111111")
+        @test test_expr("0x1111111111111111")
+        @test test_expr("0x11111111111111111")
+        @test test_expr("0x11111111111111111111111111111111")
+        @test test_expr("0x111111111111111111111111111111111")
     end
 end
