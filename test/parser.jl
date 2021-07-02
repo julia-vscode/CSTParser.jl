@@ -772,6 +772,15 @@ end""" |> test_expr
         @test test_expr(raw"""`a$("asd")a` """)
     end
 
+    @testset "string whitespace handling" begin
+        @test test_expr("""\"\"\"\n\\t\"\"\" """)
+        @test test_expr("""\"\"\"\n\\t\n\"\"\" """)
+        @test test_expr("""\"\"\"\n\\t\\n\"\"\" """)
+        @test test_expr(raw"""\"\"\"\n\\t\"\"\" """)
+        @test test_expr(raw"""\"\"\"\n\\t\n\"\"\" """)
+        @test test_expr(raw"""\"\"\"\n\\t\\n\"\"\" """)
+    end
+
     @testset "cmd interpolation" begin
         @test test_expr("`a \$b c`")
         @test test_expr(raw"`a \"\$b $b\" c`")

@@ -75,6 +75,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
     end
 
     isinterpolated = false
+    shoulddropleadingnewline = true
     erroredonlast = false
 
     t_str = val(ps.t, ps)
@@ -211,18 +212,29 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
             ex = mErrorToken(ps, Unknown)
             push!(ret, ex)
         else
-            str = try
-                tostr(b)
+            str = String(take!(b))
+            # only literal whitespace should be considered for finding the lcp, so we need to keep
+            # both an escaped an an unescaped version of the string around
+            u_str = try
+                _unescape_string(str)
             catch err
                 return mErrorToken(ps, ret, InvalidString)
             end
             if istrip
                 str = str[1:prevind(str, lastindex(str), 3)]
-                # only mark non-interpolated triple strings
+                u_str = u_str[1:prevind(u_str, lastindex(u_str), 3)]
+                # only mark non-interpolated triple u_strings
                 ex = EXPR(length(ret) == 0 ? :TRIPLESTRING : :STRING, lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str)
+                # find lcp for escaped string
                 adjust_lcp(ex, true)
+                # and then use the unescaped string from here on out
+                ex.val = u_str
+                # we only want to drop the leading new line if it's a literal newline, not if it's `\n`
+                if startswith(str, "\\n")
+                    shoulddropleadingnewline = false
+                end
             else
-                str = str[1:prevind(str, lastindex(str))]
+                str = u_str[1:prevind(u_str, lastindex(u_str))]
                 ex = EXPR(:STRING, lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str)
             end
             if isempty(str)
@@ -262,7 +274,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
         end
         # Drop leading newline
         if !isempty(ret.args) && isliteral(ret.args[1]) && headof(ret.args[1]) in single_string_T &&
-                !isempty(valof(ret.args[1])) && valof(ret.args[1])[1] == '\n'
+                !isempty(valof(ret.args[1])) && valof(ret.args[1])[1] == '\n' && shoulddropleadingnewline
             ret.args[1] = dropleadingnewline(ret.args[1])
         end
     end
