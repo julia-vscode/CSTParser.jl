@@ -229,7 +229,14 @@ function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR
         isfirst = true
     end
     if !isempty(args1)
-        insert!(args, insert_params_at, EXPR(:parameters, args1, trivia))
+        # this happens when multiple semi-colons are used
+        # Julia will error during lowering, so these shenanigans are just for matching
+        # kwarg order with Base's parser
+        if length(args) >= 1 && args[1] isa EXPR && args[1].head == :kw && usekw
+            insert!(args, max(insert_params_at - 1, 1), EXPR(:parameters, args1, trivia))
+        else
+            insert!(args, insert_params_at, EXPR(:parameters, args1, trivia))
+        end
     end
     return
 end

@@ -121,7 +121,7 @@ end
             @test "f(.-)" |> test_expr
             @test "f(.!)" |> test_expr
             @test "f(.¬)" |> test_expr
-            @test_broken "f(.~)" |> test_expr
+            @test_broken "f(.~)" |> test_expr_broken
             @test "f(.√)" |> test_expr
             @test "f(:(.=))" |> test_expr
             @test "f(:(.+))" |> test_expr
@@ -791,6 +791,16 @@ end""" |> test_expr
         @test valof(x.args[3].args[1]) == "a "
         @test valof(x.args[3].args[2]) == "b"
         @test valof(x.args[3].args[3]) == " c"
+    end
+
+    @testset "multiple ; in kwargs" begin
+        @test test_expr("f(a; b=1; c=2)")
+        @test test_expr("f(a; b=1; c=2) = 2")
+        @test test_expr("f( ; b=1; c=2)")
+        @test test_expr("f(a; b=1; c=2)")
+        @test test_expr("f(a; b=1, c=2; d=3)")
+        @test test_expr("f(a; b=1; c=2, d=3)")
+        @test test_expr("f(a; b=1; c=2; d=3)")
     end
 
     @testset "Broken things" begin
