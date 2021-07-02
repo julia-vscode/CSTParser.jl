@@ -128,8 +128,12 @@ end
             @test "f(:(.*))" |> test_expr
         end
 
-        @testset "fix comment parsing" begin
+        @testset "comment parsing" begin
             @test "[1#==#2#==#3]" |> test_expr
+        end
+
+        @testset "weird quote parsing" begin
+            @test ":(;;)" |> test_expr
         end
 
         @testset "where precedence" begin
