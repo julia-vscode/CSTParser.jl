@@ -153,6 +153,12 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                         seek(input, ps1.nt.startbyte + 1)
                     else
                         interp_val = @closer ps1 :paren parse_expression(ps1, true)
+                        # parse_string_or_cmd unwraps STRING expressions (see below),
+                        # but that's not supposed to happen in interpolations, so we rewrap them here:
+                        if interp_val.head === :STRING
+                            interp_val = EXPR(:string, [interp_val])
+                        end
+
                         push!(ret, interp_val)
                         pushtotrivia!(ret, op)
                         pushtotrivia!(ret, lparen)
@@ -226,11 +232,18 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
             end
         end
         if iscmd
-            str = istrip ? t_str[4:prevind(t_str, sizeof(t_str), 3)] : t_str[2:prevind(t_str, sizeof(t_str))]
+            str = istrip ?
+                t_str[nextind(t_str, 1, 3):prevind(t_str, sizeof(t_str), 3)] :
+                t_str[nextind(t_str, 1, 1):prevind(t_str, sizeof(t_str))]
+            # remove common prefix:
             str = replace(str, "\n$lcp" => "\n")
+            # the literal can have escaped '`'s, so let's remove those to get the actual content:
+            str = replace(str, "\\`" => "`")
+            # remove starting new line:
             if startswith(str, "\n")
                 str = str[2:end]
             end
+            # save original string into metadata
             ret.meta = str
         end
     end

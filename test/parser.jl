@@ -757,6 +757,17 @@ end""" |> test_expr
         @test CSTParser.headof(x[3]) === :errortoken
     end
 
+    @testset "string interpolation" begin
+        @test test_expr(raw""""$("asd")" """)
+        @test test_expr(raw""""$("asd")a" """)
+        @test test_expr(raw""""a$("asd")" """)
+        @test test_expr(raw""""a$("asd")a" """)
+        @test test_expr(raw"""`$("asd")` """)
+        @test test_expr(raw"""`$("asd")a` """)
+        @test test_expr(raw"""`a$("asd")` """)
+        @test test_expr(raw"""`a$("asd")a` """)
+    end
+
     @testset "cmd interpolation" begin
         @test test_expr("`a \$b c`")
         @test test_expr("`a b c`")
