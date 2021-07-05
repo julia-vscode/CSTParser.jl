@@ -903,6 +903,11 @@ end""" |> test_expr
         @test "@doc \"doc\"\nT" |> test_expr
         @test "@doc \"doc\n\n\n\"\nT" |> test_expr
         @test "begin\n@doc \"doc\"\n\nT\nend" |> test_expr
+        @test "begin\n@doc \"doc\"\nT\nend" |> test_expr
+        @test "begin\n@doc \"doc\" T\nend" |> test_expr
+        @test "if true\n@doc \"doc\"\n\nT\nend" |> test_expr
+        @test "if true\n@doc \"doc\"\nT\nend" |> test_expr
+        @test "if true\n@doc \"doc\" T\nend" |> test_expr
         @test "@doc \"I am a module\" ModuleMacroDoc" |> test_expr
     end
 

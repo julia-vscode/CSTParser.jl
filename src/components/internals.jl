@@ -301,7 +301,6 @@ function parse_macrocall(ps::ParseState)
         next(ps)
         return EXPR(:macrocall, EXPR[mname, EXPR(:NOTHING, 0, 0), @default ps parse_array(ps)], nothing)
     else
-        #TODO add special hndling for @doc
         args = EXPR[mname, EXPR(:NOTHING, 0, 0)]
         insquare = ps.closer.insquare
         prevpos = position(ps)
@@ -312,6 +311,13 @@ function parse_macrocall(ps::ParseState)
                 a = @closer ps :inmacro @closer ps :ws @closer ps :wsop parse_expression(ps)
             end
             push!(args, a)
+
+            if valof(mname) == "@doc" && ps.t.endpos[1] + 1 == ps.nt.startpos[1] && length(args) == 3
+                a = parse_expression(ps)
+                push!(args, a)
+                break
+            end
+
             if (insquare || ps.closer.paren || ps.closer.square) && kindof(ps.nt) === Tokens.FOR
                 break
             end
