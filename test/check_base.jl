@@ -8,13 +8,14 @@ function norm_ast(a::Any)
         end
         if a.head === :macrocall
             fa = a.args[1]
-            if fa === Symbol("@int128_str")
+            long_enough = length(a.args) >= 3
+            if fa === Symbol("@int128_str") && long_enough
                 return Base.parse(Int128, a.args[3])
-            elseif fa === Symbol("@uint128_str")
+            elseif fa === Symbol("@uint128_str") && long_enough
                 return Base.parse(UInt128, a.args[3])
-            elseif fa === Symbol("@bigint_str")
+            elseif fa === Symbol("@bigint_str") && long_enough
                 return  Base.parse(BigInt, a.args[3])
-            elseif fa == Symbol("@big_str")
+            elseif fa == Symbol("@big_str") && long_enough
                 s = a.args[3]
                 n = tryparse(BigInt, s)
                 if !(n === nothing)
@@ -67,6 +68,10 @@ function cst_parse_file(str)
         popfirst!(x.args)
     end
 
+    if !isempty(sp)
+        @error "CST spans inconsistent!"
+    end
+
     x0 = norm_ast(Expr(x))
     x0, CSTParser.has_error(ps) || !isempty(sp)
 end
@@ -85,9 +90,9 @@ end
             @test cst_err == meta_err
             if cst_err || meta_err
                 if cst_err && !meta_err
-                    @error "CSTParser.parse errored for $fpath, but Meta.parse didn't."
+                    @error "CSTParser.parse errored, but Meta.parse didn't." file=file
                 elseif !cst_err && meta_err
-                    @error "Meta.parse errored for $fpath, but CSTParser.parse didn't."
+                    @error "Meta.parse errored, but CSTParser.parse didn't." file=file
                 end
             else
                 if cst_expr == meta_expr
