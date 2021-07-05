@@ -237,7 +237,7 @@ function parse_unary_colon(ps::ParseState, op::EXPR)
         end
         ret = EXPR(:quotenode, EXPR[id], EXPR[op])
     elseif Tokens.begin_literal < kindof(ps.nt) < Tokens.CHAR ||
-        isoperator(kindof(ps.nt)) || isidentifier(ps.nt) || kindof(ps.nt) === Tokens.TRUE || kindof(ps.nt) === Tokens.FALSE
+            isoperator(kindof(ps.nt)) || isidentifier(ps.nt) || kindof(ps.nt) === Tokens.TRUE || kindof(ps.nt) === Tokens.FALSE
         ret = EXPR(:quotenode, EXPR[INSTANCE(next(ps))], EXPR[op])
     elseif closer(ps)
         ret = op
@@ -446,10 +446,14 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
         ret = EXPR(op, EXPR[ret], nothing)
     elseif is_prime(op)
         if isidentifier(ret) || isliteral(ret) ||
-            headof(ret) in (:call, :tuple, :brackets, :ref, :vect, :vcat, :hcat, :typed_vcat, :typed_hcat, :comprehension, :typed_comprehension, :curly, :braces, :braces_cat) ||
-            headof(ret) === :do ||
-            is_dot(headof(ret))
-            ret = EXPR(op, EXPR[ret], nothing)
+                headof(ret) in (:call, :tuple, :brackets, :ref, :vect, :vcat, :hcat, :typed_vcat, :typed_hcat, :comprehension, :typed_comprehension, :curly, :braces, :braces_cat) ||
+                headof(ret) === :do ||
+                is_dot(headof(ret))
+            if valof(op) == "'"
+                ret = EXPR(op, EXPR[ret], nothing)
+            else
+                ret = EXPR(:call, EXPR[op, ret], nothing)
+            end
         else
             ret = EXPR(:errortoken, EXPR[ret, op])
             ret.meta = UnexpectedToken
