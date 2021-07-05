@@ -994,6 +994,15 @@ end""" |> test_expr
             @test test_expr(s)
             @test CSTParser.ismacroname(CSTParser.parse(s).args[1])
         end
+
+        @testset "nonstandard identifier (var\"blah\") parsing" begin
+            @test """var"asd" """ |> test_expr
+            @test """var"#asd" """ |> test_expr
+            @test """var"#asd#" """ |> test_expr
+            @test """M.var"asd" """ |> test_expr
+            @test """M.var"#asd" """ |> test_expr
+            @test """M.var"#asd#" """ |> test_expr
+        end
     end
     @testset "bad uint" begin
         @test Expr(CSTParser.parse("0x.")) == Expr(:error)
