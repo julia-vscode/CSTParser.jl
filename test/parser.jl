@@ -133,7 +133,9 @@ end
         end
 
         @testset "weird quote parsing" begin
+            @test ":(;)" |> test_expr
             @test ":(;;)" |> test_expr
+            @test ":(;;;)" |> test_expr
         end
 
         @testset "where precedence" begin
