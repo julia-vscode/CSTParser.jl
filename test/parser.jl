@@ -21,6 +21,12 @@ function test_expr(str, show_data=true)
 
     x0 = Expr(x)
     x1 = remlineinfo!(Meta.parse(str))
+
+    @test x.args === nothing || all(x === parentof(a) for a in x.args)
+    @test x.trivia === nothing || all(x === parentof(a) for a in x.trivia)
+    @test isempty(check_span(x))
+    check_parents(x)
+
     if CSTParser.has_error(ps) || x0 != x1
         if show_data
             println("Mismatch between flisp and CSTParser when parsing string $str")

@@ -296,7 +296,7 @@ function adjustspan(x::EXPR)
     return x
 end
 
-dropleadingnewline(x::EXPR) = EXPR(headof(x), x.fullspan, x.span, valof(x)[2:end])
+dropleadingnewline(x::EXPR) = setparent!(EXPR(headof(x), x.fullspan, x.span, valof(x)[2:end]), parentof(x))
 
 wrapwithcmdmacro(x) = EXPR(:macrocall, EXPR[EXPR(:globalrefcmd, 0, 0), EXPR(:NOTHING, 0, 0), x])
 
