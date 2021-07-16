@@ -60,8 +60,11 @@ function parse_expression(ps::ParseState, esc_on_error = false)
                 ret = EXPR(:IDENTIFIER, ps)
             else
                 if ps.t.dotop && closer(ps) && !isassignmentop(ps.t)
+                    # Split dotted operator into dot-call
                     v = val(ps.t, ps)[2:end]
-                    ret = EXPR(:DOT, EXPR[EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte - 1, ps.t.endbyte - ps.t.startbyte - 1, v)], nothing, 1, ps.t.endbyte - ps.t.startbyte)
+                    dot = EXPR(:OPERATOR, 1, 1, ".")
+                    op = EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte - 1, ps.t.endbyte - ps.t.startbyte, v)
+                    ret = EXPR(dot, EXPR[op], nothing)
                 else
                     ret = INSTANCE(ps)
                 end
