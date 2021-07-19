@@ -37,7 +37,13 @@ function sized_uint_literal(s::AbstractString, b::Integer)
     l <= 32  && return Base.parse(UInt32,  s)
     l <= 64  && return Base.parse(UInt64,  s)
     # l <= 128 && return Base.parse(UInt128, s)
-    l <= 128 && return Expr(:macrocall, GlobalRef(Core, Symbol("@uint128_str")), nothing, s)
+    if l <= 128
+        @static if VERSION >= v"1.1"
+            return Expr(:macrocall, GlobalRef(Core, Symbol("@uint128_str")), nothing, s)
+        else
+            return Expr(:macrocall, Symbol("@uint128_str"), nothing, s)
+        end
+    end
     return Expr(:macrocall, GlobalRef(Core, Symbol("@big_str")), nothing, s)
 end
 
@@ -50,7 +56,13 @@ function sized_uint_oct_literal(s::AbstractString)
     (len < 24 || (len == 24 && s <= "0o1777777777777777777777")) && return Base.parse(UInt64, s)
     # (len < 45 || (len == 45 && s <= "0o3777777777777777777777777777777777777777777")) && return Base.parse(UInt128, s)
     # return Base.parse(BigInt, s)
-    (len < 45 || (len == 45 && s <= "0o3777777777777777777777777777777777777777777")) && return Expr(:macrocall, GlobalRef(Core, Symbol("@uint128_str")), nothing, s)
+    if (len < 45 || (len == 45 && s <= "0o3777777777777777777777777777777777777777777"))
+        @static if VERSION >= v"1.1"
+            return Expr(:macrocall, GlobalRef(Core, Symbol("@uint128_str")), nothing, s)
+        else
+            return Expr(:macrocall, Symbol("@uint128_str"), nothing, s)
+        end
+    end
     return Meta.parse(s)
 end
 
@@ -163,7 +175,7 @@ function Expr(x::EXPR)
     elseif x.head === :globalrefdoc
         GlobalRef(Core, Symbol("@doc"))
     elseif x.head === :globalrefcmd
-        if VERSION > v"1.1"
+        if VERSION >= v"1.1"
             GlobalRef(Core, Symbol("@cmd"))
         else
             Symbol("@cmd")

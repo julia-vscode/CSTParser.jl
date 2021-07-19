@@ -248,7 +248,9 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                 t_str[nextind(t_str, 1, 3):prevind(t_str, sizeof(t_str), 3)] :
                 t_str[nextind(t_str, 1, 1):prevind(t_str, sizeof(t_str))]
             # remove common prefix:
-            str = replace(str, "\n$lcp" => "\n")
+            if lcp !== nothing
+                str = replace(str, "\n$lcp" => "\n")
+            end
             # the literal can have escaped '`'s, so let's remove those to get the actual content:
             str = replace(str, "\\`" => "`")
             # remove starting new line:

@@ -72,7 +72,7 @@ is_wrapped_assignment(x::EXPR) = isassignment(x) || (isbracketed(x) && is_wrappe
 
 
 function is_func_call(x::EXPR)
-    if isoperator(x.head)
+    if isoperator(x.head) && !issplat(x)
         if length(x.args) == 2
             return is_decl(x.head) && is_func_call(x.args[1])
         elseif length(x.args) == 1

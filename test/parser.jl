@@ -86,8 +86,10 @@ end
         @testset "Unary Operator" begin
             @test "a=b..." |> test_expr
             @test "a-->b..." |> test_expr
-            @test "a<--b..." |> test_expr
-            @test "a<-->b..." |> test_expr
+            if VERSION >= v"1.6"
+                @test "a<--b..." |> test_expr
+                @test "a<-->b..." |> test_expr
+            end
             @test "a&&b..." |> test_expr
             @test "a||b..." |> test_expr
             @test "a<b..." |> test_expr
@@ -122,20 +124,23 @@ end
             @test "::(a,b)" |> test_expr
         end
 
-        @testset "dotted non-calls" begin
-            @test "f(.+)" |> test_expr
-            @test "f(.-)" |> test_expr
-            @test "f(.!)" |> test_expr
-            @test "f(.¬)" |> test_expr
-            @test_broken "f(.~)" |> test_expr_broken
-            @test "f(.√)" |> test_expr
-            @test "f(:(.=))" |> test_expr
-            @test "f(:(.+))" |> test_expr
-            @test "f(:(.*))" |> test_expr
+        if VERSION >= v"1.6"
+            @testset "dotted non-calls" begin
+                @test "f(.+)" |> test_expr
+                @test "f(.-)" |> test_expr
+                @test "f(.!)" |> test_expr
+                @test "f(.¬)" |> test_expr
+                @test_broken "f(.~)" |> test_expr_broken
+                @test "f(.√)" |> test_expr
+                @test "f(:(.=))" |> test_expr
+                @test "f(:(.+))" |> test_expr
+                @test "f(:(.*))" |> test_expr
+            end
         end
-
-        @testset "comment parsing" begin
-            @test "[1#==#2#==#3]" |> test_expr
+        if VERSION >= v"1.6"
+            @testset "comment parsing" begin
+                @test "[1#==#2#==#3]" |> test_expr
+            end
         end
 
         @testset "weird quote parsing" begin
@@ -150,12 +155,13 @@ end
             @test "b where c = d" |> test_expr
 
             @test "a ? b where c : d" |> test_expr
-
-            @test "a --> b where c --> d" |> test_expr
-            @test "a --> b where c" |> test_expr
-            @test "b where c --> d" |> test_expr
-            @test "b where c <-- d" |> test_expr
-            @test "b where c <--> d" |> test_expr
+            if VERSION >= v"1.6"
+                @test "a --> b where c --> d" |> test_expr
+                @test "a --> b where c" |> test_expr
+                @test "b where c --> d" |> test_expr
+                @test "b where c <-- d" |> test_expr
+                @test "b where c <--> d" |> test_expr
+            end
 
             @test "a || b where c || d" |> test_expr
             @test "a || b where c" |> test_expr
@@ -504,66 +510,87 @@ end
             @test "try; f(1); catch e; e; end" |> test_expr
             @test "try; f(1); catch e; e end" |> test_expr
             @test "try; f(1); catch e e; end" |> test_expr
+            @test """
+            try
+                f(1)
+            catch
+            end
+            """ |> test_expr
             @test """try
-            f(1)
-        catch
-        end""" |> test_expr
+                f(1)
+            catch
+                error(err)
+            end
+            """ |> test_expr
+            @test """
+            try
+                f(1)
+            catch err
+                error(err)
+            end
+            """ |> test_expr
+            @test """
+            try
+                f(1)
+            catch
+                error(err)
+            finally
+                stop(f)
+            end
+            """ |> test_expr
+            @test """
+            try
+                f(1)
+            catch err
+                error(err)
+            finally
+                stop(f)
+            end
+            """ |> test_expr
             @test """try
-            f(1)
-        catch
-            error(err)
-        end""" |> test_expr
-            @test """try
-            f(1)
-        catch err
-            error(err)
-        end""" |> test_expr
-            @test """try
-            f(1)
-        catch
-            error(err)
-        finally
-            stop(f)
-        end""" |> test_expr
-            @test """try
-            f(1)
-        catch err
-            error(err)
-        finally
-            stop(f)
-        end""" |> test_expr
-            @test """try
-            f(1)
-        finally
-            stop(f)
-        end""" |> test_expr
+                f(1)
+            finally
+                stop(f)
+            end
+            """ |> test_expr
         end
         @testset "For" begin
-            @test """for i = 1:10
-            f(i)
-        end""" |> test_expr
-            @test """for i = 1:10, j = 1:20
-            f(i)
-        end""" |> test_expr
+            @test """
+            for i = 1:10
+                f(i)
+            end""" |> test_expr
+            @test """
+            for i = 1:10, j = 1:20
+                f(i)
+            end
+            """ |> test_expr
 
             @testset "for outer parsing" begin
                 @test "for outer i in 1:3 end" |> test_expr
                 @test "for outer i = 1:3 end" |> test_expr
-                @test "for outer \$i = 1:3 end" |> test_expr
-                @test "for outer \$ i = 1:3 end" |> test_expr
+                if VERSION >= v"1.6"
+                    @test "for outer \$i = 1:3 end" |> test_expr
+                    @test "for outer \$ i = 1:3 end" |> test_expr
+                end
             end
         end
 
         @testset "Let" begin
-            @test """let x = 1
-            f(x)
-        end""" |> test_expr
-            @test """let x = 1, y = 2
-            f(x)
-        end""" |> test_expr
-            @test """let
-            x
-        end""" |> test_expr
+            @test """
+            let x = 1
+                f(x)
+            end
+            """ |> test_expr
+            @test """
+            let x = 1, y = 2
+                f(x)
+            end
+            """ |> test_expr
+            @test """
+            let
+                x
+            end
+            """ |> test_expr
         end
 
         @testset "Do" begin
@@ -704,7 +731,6 @@ end
         @test "[:-\n:+]" |> test_expr
         @test "::a::b" |> test_expr
         @test "-[1:nc]" |> test_expr
-        @test "f() where {a} = b" |> test_expr
         @test "@assert .!(isna(res[2]))" |> test_expr # v0.6
         @test "-((attr.rise / PANGO_SCALE)pt).value" |> test_expr
         @test "!(a = b)" |> test_expr
@@ -727,20 +753,27 @@ end
         "\\\\\$ch"
         """ |> test_expr
         @test "µs" |> test_expr # normalize unicode
-        @test """(x, o; p = 1) -> begin
-    return o, p
-    end""" |> test_expr # normalize unicode
-        @test """(x, o...; p...) -> begin
-    return o, p
-    end""" |> test_expr # normalize unicode
+        @test """
+        (x, o; p = 1) -> begin
+            return o, p
+        end
+        """ |> test_expr # normalize unicode
+        @test """
+        (x, o...; p...) -> begin
+            return o, p
+        end
+        """ |> test_expr # normalize unicode
         @test "function func() where {A where T} x + 1 end" |> test_expr # nested where
         @test "(;x)" |> test_expr # issue 39
-        @test """let f = ((; a = 1, b = 2) -> ()),
-    m = first(methods(f))
-    @test DSE.keywords(f, m) == [:a, :b]
-end""" |> test_expr
+        @test """
+        let f = ((; a = 1, b = 2) -> ()),
+            m = first(methods(f))
+            @test DSE.keywords(f, m) == [:a, :b]
+        end
+        """ |> test_expr
         @test "-1^a" |> test_expr
         @test "function(f, args...; kw...) end" |> test_expr
+        @test "function(f, args...=1; kw...) end" |> test_expr
         @test "2a * b" |> test_expr
         @test "(g1090(x::T)::T) where {T} = x+1.0" |> test_expr
         @test "(:) = Colon()" |> test_expr
@@ -763,7 +796,9 @@ end""" |> test_expr
         end
         @test "A[a~b]" |> test_expr
         @test "[a~b]" |> test_expr
-        @test "[a ~b]" |> test_expr
+        if VERSION >= v"1.6"
+            @test "[a ~b]" |> test_expr
+        end
         @test "[a ~ b]" |> test_expr
         @test "[a~ b]" |> test_expr
         @test "1 .< 2 .< 3" |> test_expr
@@ -783,25 +818,25 @@ end""" |> test_expr
         @test x.fullspan == 8
         @test CSTParser.headof(x[3]) === :errortoken
     end
-
-    @testset "string interpolation" begin
-        @test test_expr(raw""""$("asd")" """)
-        @test test_expr(raw""""$("asd")a" """)
-        @test test_expr(raw""""a$("asd")" """)
-        @test test_expr(raw""""a$("asd")a" """)
-        @test test_expr(raw"""`$("asd")` """)
-        @test test_expr(raw"""`$("asd")a` """)
-        @test test_expr(raw"""`a$("asd")` """)
-        @test test_expr(raw"""`a$("asd")a` """)
-    end
-
-    @testset "string whitespace handling" begin
-        @test test_expr("""\"\"\"\n\\t\"\"\" """)
-        @test test_expr("""\"\"\"\n\\t\n\"\"\" """)
-        @test test_expr("""\"\"\"\n\\t\\n\"\"\" """)
-        @test test_expr(raw"""\"\"\"\n\\t\"\"\" """)
-        @test test_expr(raw"""\"\"\"\n\\t\n\"\"\" """)
-        @test test_expr(raw"""\"\"\"\n\\t\\n\"\"\" """)
+    if VERSION >= v"1.6"
+        @testset "string interpolation" begin
+            @test test_expr(raw""""$("asd")" """)
+            @test test_expr(raw""""$("asd")a" """)
+            @test test_expr(raw""""a$("asd")" """)
+            @test test_expr(raw""""a$("asd")a" """)
+            @test test_expr(raw"""`$("asd")` """)
+            @test test_expr(raw"""`$("asd")a` """)
+            @test test_expr(raw"""`a$("asd")` """)
+            @test test_expr(raw"""`a$("asd")a` """)
+        end
+        @testset "string whitespace handling" begin
+            @test test_expr("""\"\"\"\n\\t\"\"\" """)
+            @test test_expr("""\"\"\"\n\\t\n\"\"\" """)
+            @test test_expr("""\"\"\"\n\\t\\n\"\"\" """)
+            @test test_expr(raw"""\"\"\"\n\\t\"\"\" """)
+            @test test_expr(raw"""\"\"\"\n\\t\n\"\"\" """)
+            @test test_expr(raw"""\"\"\"\n\\t\\n\"\"\" """)
+        end
     end
 
     @testset "cmd interpolation" begin
@@ -1051,8 +1086,10 @@ end""" |> test_expr
         @test !CSTParser.has_error(cst"'a''")
         @test test_expr("(a)'")
         @test test_expr("a.a'")
-        @test test_expr("a'ᵀ")
-        @test test_expr(":(a'ᵀ)")
+        if VERSION >= v"1.6"
+            @test test_expr("a'ᵀ")
+            @test test_expr(":(a'ᵀ)")
+        end
     end
 
     @testset "end as id juxt" begin
@@ -1117,10 +1154,12 @@ end""" |> test_expr
 
     @testset "string macros" begin
         @test test_expr(raw"""test"asd"asd""")
-        @test test_expr(raw"""test"asd"0x0""")
-        @test test_expr(raw"""test"asd"0o0""")
-        @test test_expr(raw"""test"asd"0""")
-        @test test_expr(raw"""test"asd"0.0""")
+        if VERSION >= v"1.6"
+            @test test_expr(raw"""test"asd"0""")
+            @test test_expr(raw"""test"asd"0o0""")
+            @test test_expr(raw"""test"asd"0x0""")
+            @test test_expr(raw"""test"asd"0.0""")
+        end
         @test test_expr(raw"""test"asd"true""")
         @test test_expr(raw"""test""true""")
     end
@@ -1135,7 +1174,9 @@ end""" |> test_expr
         @test test_expr("0b0000000000000000000000000000000000000000000000000000000000000000")
         @test test_expr("0b00000000000000000000000000000000000000000000000000000000000000000")
         @test test_expr("0b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
-        @test test_expr("0b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
+        if VERSION >= v"1.6"
+            @test test_expr("0b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
+        end
         @test test_expr("0b11111111")
         @test test_expr("0b111111111")
         @test test_expr("0b1111111111111111")
@@ -1145,7 +1186,9 @@ end""" |> test_expr
         @test test_expr("0b1111111111111111111111111111111111111111111111111111111111111111")
         @test test_expr("0b11111111111111111111111111111111111111111111111111111111111111111")
         @test test_expr("0b11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
-        @test test_expr("0b111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+        if VERSION >= v"1.6"
+            @test test_expr("0b111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+        end
 
         @test test_expr("0o0")
         @test test_expr("0o00")
@@ -1194,7 +1237,9 @@ end""" |> test_expr
         @test test_expr("0x0000000000000000")
         @test test_expr("0x00000000000000000")
         @test test_expr("0x00000000000000000000000000000000")
-        @test test_expr("0x000000000000000000000000000000000")
+        if VERSION >= v"1.6"
+            @test test_expr("0x000000000000000000000000000000000")
+        end
 
         @test test_expr("0x11")
         @test test_expr("0x111")
@@ -1205,6 +1250,8 @@ end""" |> test_expr
         @test test_expr("0x1111111111111111")
         @test test_expr("0x11111111111111111")
         @test test_expr("0x11111111111111111111111111111111")
-        @test test_expr("0x111111111111111111111111111111111")
+        if VERSION >= v"1.6"
+            @test test_expr("0x111111111111111111111111111111111")
+        end
     end
 end

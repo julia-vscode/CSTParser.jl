@@ -7,6 +7,8 @@ using CSTParser: parse, remlineinfo!, span, headof, kindof, valof
     include("interface.jl")
     include("display.jl")
     include("iterate.jl")
-    include("check_base.jl")
-    include("errparse.jl")
+    if VERSION >= v"1.5"
+        include("check_base.jl")
+        include("errparse.jl")
+    end
 end
