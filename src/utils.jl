@@ -314,11 +314,16 @@ end
 
 function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.parse(s1, true); inds = false)
     if sizeof(s0) !== x0.fullspan
-       error("minimal reparse - input text length doesn't match the full span of the provided CST.")
+       error("minimal reparse - original input text length doesn't match the full span of the provided CST.")
         # return inds ? (1:0, 1:length(x1.args), 1:0) : x1
     end
+
+    if has_error(x1)
+        return inds ? (1:0, 1:length(x1.args), 1:0) : x1 # Error while re-parsing, so lets return the whole expression instead of patching
+    end
+
     if sizeof(s1) !== x1.fullspan
-        error("minimal reparse - input text length doesn't match the full span of the provided CST.")
+        error("minimal reparse - new input text length doesn't match the full span of the provided CST.")
          # return inds ? (1:0, 1:length(x1.args), 1:0) : x1
     end
     isempty(x0.args) && return inds ? (1:0, 1:length(x1.args), 1:0) : x1 # Original CST was empty
