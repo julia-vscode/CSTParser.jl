@@ -1144,6 +1144,7 @@ end
         @test CSTParser.parse(raw"'\U222ää'").head == :errortoken
         @test CSTParser.parse(raw"'\U10000001'").head == :errortoken
         for c in rand(Char, 1000)
+            c == '\\' && continue
             @test test_expr(string("'", c, "'"))
         end
     end
