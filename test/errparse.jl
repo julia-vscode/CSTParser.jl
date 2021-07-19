@@ -99,9 +99,10 @@
             all(comp(x[i], y[i]) for i = 1:length(x))
     end
 
-    function check_reparse(s0, n = 1000)
+    function check_reparse(s0, n = length(s0)÷100)
         for _ in 1:n
             x0 = CSTParser.parse(s0, true)
+            CSTParser.has_error(x0) && return
             ts = collect(tokenize(s0))[1:end-1]
             length(ts) < 2 && return
             deleteat!(ts, rand(1:length(ts)))
