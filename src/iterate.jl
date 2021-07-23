@@ -438,6 +438,12 @@ function _dot(x, i)
                 x.trivia[div(i - ndots, 2)]
             end
         end
+    elseif length(x) == 2
+        if i == 1
+            x.head
+        elseif i == 2
+            x.args[1]
+        end
     else
         if i == 1
             x.args[1]

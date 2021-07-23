@@ -37,8 +37,14 @@ function sized_uint_literal(s::AbstractString, b::Integer)
     l <= 32  && return Base.parse(UInt32,  s)
     l <= 64  && return Base.parse(UInt64,  s)
     # l <= 128 && return Base.parse(UInt128, s)
-    l <= 128 && return Expr(:macrocall, GlobalRef(Core, Symbol("@uint128_str")), nothing, s)
-    return Base.parse(BigInt, s)
+    if l <= 128
+        @static if VERSION >= v"1.1"
+            return Expr(:macrocall, GlobalRef(Core, Symbol("@uint128_str")), nothing, s)
+        else
+            return Expr(:macrocall, Symbol("@uint128_str"), nothing, s)
+        end
+    end
+    return Expr(:macrocall, GlobalRef(Core, Symbol("@big_str")), nothing, s)
 end
 
 function sized_uint_oct_literal(s::AbstractString)
@@ -50,7 +56,13 @@ function sized_uint_oct_literal(s::AbstractString)
     (len < 24 || (len == 24 && s <= "0o1777777777777777777777")) && return Base.parse(UInt64, s)
     # (len < 45 || (len == 45 && s <= "0o3777777777777777777777777777777777777777777")) && return Base.parse(UInt128, s)
     # return Base.parse(BigInt, s)
-    (len < 45 || (len == 45 && s <= "0o3777777777777777777777777777777777777777777")) && return Expr(:macrocall, GlobalRef(Core, Symbol("@uint128_str")), nothing, s)
+    if (len < 45 || (len == 45 && s <= "0o3777777777777777777777777777777777777777777"))
+        @static if VERSION >= v"1.1"
+            return Expr(:macrocall, GlobalRef(Core, Symbol("@uint128_str")), nothing, s)
+        else
+            return Expr(:macrocall, Symbol("@uint128_str"), nothing, s)
+        end
+    end
     return Meta.parse(s)
 end
 
@@ -141,7 +153,13 @@ function Expr(x::EXPR)
         return Symbol(valof(x))
     elseif ispunctuation(x)
         if headof(x) === :DOT
-            return :(.)
+            if x.args === nothing
+                return :(.)
+            elseif length(x.args) == 1 && isoperator(x.args[1])
+                return Expr(:(.), Expr(x.args[1]))
+            else
+                Expr(:error)
+            end
         else
             # We only reach this if we have a malformed expression.
             Expr(:error)
@@ -157,7 +175,7 @@ function Expr(x::EXPR)
     elseif x.head === :globalrefdoc
         GlobalRef(Core, Symbol("@doc"))
     elseif x.head === :globalrefcmd
-        if VERSION > v"1.1"
+        if VERSION >= v"1.1"
             GlobalRef(Core, Symbol("@cmd"))
         else
             Symbol("@cmd")
@@ -171,7 +189,7 @@ function Expr(x::EXPR)
     elseif x.head === :macrocall && isidentifier(x.args[1]) && valof(x.args[1]) == "@."
         Expr(:macrocall, Symbol("@__dot__"), Expr.(x.args[2:end])...)
     elseif x.head === :macrocall && length(x.args) == 3 && x.args[1].head === :globalrefcmd && x.args[3].head == :string
-        Expr(:macrocall, Expr(x.args[1]), Expr(x.args[2]), join(valof.(x.args[3])))
+        Expr(:macrocall, Expr(x.args[1]), Expr(x.args[2]), x.args[3].meta)
     elseif x.head === :string && length(x.args) > 0 && (x.args[1].head === :STRING || x.args[1].head === :TRIPLESTRING) && isempty(valof(x.args[1]))
         # Special conversion needed - the initial text section is treated as empty for the represented string following lowest-common-prefix adjustments, but exists in the source.
         Expr(:string, Expr.(x.args[2:end])...)

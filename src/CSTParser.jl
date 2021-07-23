@@ -59,7 +59,15 @@ function parse_expression(ps::ParseState, esc_on_error = false)
             if both_symbol_and_op(ps.t)
                 ret = EXPR(:IDENTIFIER, ps)
             else
-                ret = INSTANCE(ps)
+                if ps.t.dotop && closer(ps) && !isassignmentop(ps.t)
+                    # Split dotted operator into dot-call
+                    v = val(ps.t, ps)[2:end]
+                    dot = EXPR(:OPERATOR, 1, 1, ".")
+                    op = EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte - 1, ps.t.endbyte - ps.t.startbyte, v)
+                    ret = EXPR(dot, EXPR[op], nothing)
+                else
+                    ret = INSTANCE(ps)
+                end
             end
             if is_colon(ret) && !(iscomma(ps.nt) || kindof(ps.ws) == SemiColonWS)
                 ret = parse_unary(ps, ret)
@@ -96,8 +104,13 @@ function parse_compound(ps::ParseState, ret::EXPR)
         end
         ret = parse_operator(ps, ret, EXPR(:OPERATOR, 0, 0, "*"))
     elseif issuffixableliteral(ps, ret)
-        arg = EXPR(:IDENTIFIER, next(ps))
-        push!(ret, EXPR(:STRING, arg.fullspan, arg.span, val(ps.t, ps)))
+        if isnumberliteral(ps.nt)
+            arg = mLITERAL(next(ps))
+            push!(ret, arg)
+        else
+            arg = EXPR(:IDENTIFIER, next(ps))
+            push!(ret, EXPR(:STRING, arg.fullspan, arg.span, val(ps.t, ps)))
+        end
     elseif (isidentifier(ret) || is_getfield(ret)) && isemptyws(ps.ws) && isprefixableliteral(ps.nt)
         ret = parse_prefixed_string_cmd(ps, ret)
     elseif kindof(ps.nt) === Tokens.LPAREN
