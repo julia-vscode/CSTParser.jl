@@ -124,19 +124,20 @@ end
             @test "::(a,b)" |> test_expr
         end
 
-        if VERSION >= v"1.6"
-            @testset "dotted non-calls" begin
-                @test "f(.+)" |> test_expr
-                @test "f(.-)" |> test_expr
-                @test "f(.!)" |> test_expr
-                @test "f(.¬)" |> test_expr
+        @testset "dotted non-calls" begin
+            @test "f(.+)" |> test_expr
+            @test "f(.-)" |> test_expr
+            @test "f(.!)" |> test_expr
+            @test "f(.¬)" |> test_expr
+            if VERSION >= v"1.6"
                 @test_broken "f(.~)" |> test_expr_broken
-                @test "f(.√)" |> test_expr
-                @test "f(:(.=))" |> test_expr
-                @test "f(:(.+))" |> test_expr
-                @test "f(:(.*))" |> test_expr
             end
+            @test "f(.√)" |> test_expr
+            @test "f(:(.=))" |> test_expr
+            @test "f(:(.+))" |> test_expr
+            @test "f(:(.*))" |> test_expr
         end
+
         if VERSION >= v"1.6"
             @testset "comment parsing" begin
                 @test "[1#==#2#==#3]" |> test_expr

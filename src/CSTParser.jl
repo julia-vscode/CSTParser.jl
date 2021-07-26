@@ -59,14 +59,19 @@ function parse_expression(ps::ParseState, esc_on_error = false)
             if both_symbol_and_op(ps.t)
                 ret = EXPR(:IDENTIFIER, ps)
             else
-                if ps.t.dotop && closer(ps) && !isassignmentop(ps.t)
-                    # Split dotted operator into dot-call
-                    v = val(ps.t, ps)[2:end]
-                    dot = EXPR(:OPERATOR, 1, 1, ".")
-                    op = EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte - 1, ps.t.endbyte - ps.t.startbyte, v)
-                    ret = EXPR(dot, EXPR[op], nothing)
-                else
+                @static if VERSION < v"1.6"
+                    # https://github.com/JuliaLang/julia/pull/37583
                     ret = INSTANCE(ps)
+                else
+                    if ps.t.dotop && closer(ps) && !isassignmentop(ps.t)
+                        # Split dotted operator into dot-call
+                        v = val(ps.t, ps)[2:end]
+                        dot = EXPR(:OPERATOR, 1, 1, ".")
+                        op = EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte - 1, ps.t.endbyte - ps.t.startbyte, v)
+                        ret = EXPR(dot, EXPR[op], nothing)
+                    else
+                        ret = INSTANCE(ps)
+                    end
                 end
             end
             if is_colon(ret) && !(iscomma(ps.nt) || kindof(ps.ws) == SemiColonWS)
