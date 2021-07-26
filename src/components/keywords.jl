@@ -107,6 +107,7 @@ function parse_local_global(ps::ParseState, islocal = true)
             push!(args, arg)
         elseif arg.head === :tuple
             append!(args, arg.args)
+            append!(trivia, arg.trivia)
         else
             push!(args, arg)
         end

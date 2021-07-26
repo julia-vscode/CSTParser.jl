@@ -1255,4 +1255,12 @@ end
             @test test_expr("0x111111111111111111111111111111111")
         end
     end
+
+    @testset "issue #293" begin
+        @test test_expr("global a,b,c")
+        x = CSTParser.parse("global a,b,c")
+        @test x[1] == x.trivia[1]
+        @test x[2] == x.args[1]
+    end
+
 end
