@@ -129,7 +129,9 @@ end
             @test "f(.-)" |> test_expr
             @test "f(.!)" |> test_expr
             @test "f(.¬)" |> test_expr
-            @test_broken "f(.~)" |> test_expr_broken
+            if VERSION >= v"1.6"
+                @test_broken "f(.~)" |> test_expr_broken
+            end
             @test "f(.√)" |> test_expr
             @test "f(:(.=))" |> test_expr
             @test "f(:(.+))" |> test_expr
