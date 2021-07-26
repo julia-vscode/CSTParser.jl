@@ -16,6 +16,18 @@ randop() = rand(["-->", "→",
 
 test_expr_broken(str) = test_expr(str, false)
 
+function traverse(x)
+    try
+        for a in x
+            @test traverse(a)
+        end
+        return true
+    catch err
+        @error "EXPR traversal failed." expr = x exception = err
+        return false
+    end
+end
+
 function test_expr(str, show_data=true)
     x, ps = CSTParser.parse(ParseState(str))
 
@@ -26,6 +38,7 @@ function test_expr(str, show_data=true)
     @test x.trivia === nothing || all(x === parentof(a) for a in x.trivia)
     @test isempty(check_span(x))
     check_parents(x)
+    @test traverse(x)
 
     if CSTParser.has_error(ps) || x0 != x1
         if show_data
