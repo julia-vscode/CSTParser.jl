@@ -85,9 +85,12 @@ end
 
             str = read(file, String)
 
+            cst = CSTParser.parse(str, true)
             cst_expr, cst_err = cst_parse_file(str)
             meta_expr, meta_err = meta_parse_file(str)
             @test cst_err == meta_err
+            @test cst.fullspan == sizeof(str)
+
             if cst_err || meta_err
                 if cst_err && !meta_err
                     @error "CSTParser.parse errored, but Meta.parse didn't." file=file

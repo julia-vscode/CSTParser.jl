@@ -39,6 +39,7 @@ function test_expr(str, show_data=true)
     @test isempty(check_span(x))
     check_parents(x)
     @test traverse(x)
+    @test x.fullspan == sizeof(str)
 
     if CSTParser.has_error(ps) || x0 != x1
         if show_data
