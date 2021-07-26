@@ -8,7 +8,7 @@ function Base.getindex(x::EXPR, i)
             error("indexing error for $(x.head) expression at $i")
         end
         return a
-    catch 
+    catch
         error("indexing error for $(x.head) expression at $i. args: $(x.args !== nothing ? headof.(x.args) : []) trivia: $(x.trivia !== nothing ? headof.(x.trivia) : [])")
     end
 end

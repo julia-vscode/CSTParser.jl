@@ -254,7 +254,7 @@ function parse_unary_colon(ps::ParseState, op::EXPR)
         if isoperator(unwrapped) || isidentifier(unwrapped) || isliteral(unwrapped)
             ret = EXPR(:quotenode, EXPR[arg], EXPR[op])
         elseif arg.head == :tuple && length(arg.args) == 1 && arg.args[1].head == :parameters && length(something(arg.args[1].args, [])) == 0 && arg.span > 3
-            ret = EXPR(:quote, EXPR[EXPR(:BLOCK, EXPR[], EXPR[])], EXPR[])
+            ret = EXPR(:quote, EXPR[EXPR(:BLOCK, EXPR[], EXPR[])], EXPR[op])
         else
             ret = EXPR(:quote, EXPR[arg], EXPR[op])
         end
