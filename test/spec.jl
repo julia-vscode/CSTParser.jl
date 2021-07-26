@@ -15,6 +15,17 @@ function check_parents(x::EXPR)
     end
 end
 
+function test_iter(ex)
+    total = 0
+    for x in ex
+        @test x isa EXPR
+        test_iter(x)
+        total += x.fullspan
+    end
+    if length(ex) > 0
+        @test total == ex.fullspan
+    end
+end
 
 function test_expr(s, head, n, endswithtrivia = false)
     x = CSTParser.parse(s)
@@ -25,6 +36,7 @@ function test_expr(s, head, n, endswithtrivia = false)
     @test Expr(x) == jl_parse(s)
     @test isempty(check_span(x))
     check_parents(x)
+    test_iter(x)
     @test endswithtrivia ? (x.fullspan-x.span) == (last(x.trivia).fullspan - last(x.trivia).span) : (x.fullspan-x.span) == (last(x.args).fullspan - last(x.args).span)
 end
 
@@ -35,7 +47,7 @@ end
 
 @testset ":global" begin
     test_expr("global a", :global, 2)
-    test_expr("global a, b", :global, 3)
+    test_expr("global a, b", :global, 4)
     test_expr("global a, b = 2", :global, 2)
     test_expr("global const a = 1", :const, 3)
     test_expr("global const a = 1, b", :const, 3)
