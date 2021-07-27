@@ -195,20 +195,20 @@ function Expr(x::EXPR)
         Expr(:string, Expr.(x.args[2:end])...)
     elseif x.args === nothing
         Expr(Symbol(lowercase(String(x.head))))
-    elseif x.head === :parameters
-        if length(x.args) > 1 && any(a -> a.head === :parameters, x.args)
-            ordered_args = EXPR[]
-            for arg in x.args
-                if arg.head === :parameters
-                    pushfirst!(ordered_args, arg)
-                else
-                    push!(ordered_args, arg)
-                end
-            end
-            Expr(:parameters, Expr.(ordered_args)...)
-        else
-            Expr(:parameters, Expr.(x.args)...)
-        end
+    # elseif x.head === :parameters
+    #     if length(x.args) > 1 && any(a -> a.head === :parameters, x.args)
+    #         ordered_args = EXPR[]
+    #         for arg in x.args
+    #             if arg.head === :parameters
+    #                 pushfirst!(ordered_args, arg)
+    #             else
+    #                 push!(ordered_args, arg)
+    #             end
+    #         end
+    #         Expr(:parameters, Expr.(ordered_args)...)
+    #     else
+    #         Expr(:parameters, Expr.(x.args)...)
+    #     end
     elseif x.head === :errortoken
         Expr(:error)
     else

@@ -73,7 +73,15 @@ function _getindex(x::EXPR, i)
     elseif headof(x) === :outer
         ta(x, i)
     elseif headof(x) === :parameters
-        if length(x.args) > 1 && headof(x.args[2]) === :parameters
+        if length(x.args) > 1 && headof(x.args[1]) === :parameters
+            if i == length(x)
+                x.args[1]
+            elseif iseven(i)
+                x.trivia[div(i, 2)]
+            else
+                x.args[div(i + 1, 2) + 1]
+            end
+        elseif length(x.args) > 1 && headof(x.args[2]) === :parameters
             if i == length(x)
                 x.args[2]
             elseif i == 1

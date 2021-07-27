@@ -226,7 +226,7 @@ function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR
             push!(trivia, EXPR(:errortoken, EXPR[EXPR(:COMMA, 0, 0)], nothing))
         end
         if kindof(ps.ws) == SemiColonWS
-            parse_parameters(ps, args1; usekw=usekw)
+            parse_parameters(ps, args1, EXPR[], 1; usekw=usekw)
         end
         prevpos = isfirst ? loop_check(ps, prevpos) : position(ps)
         isfirst = true
