@@ -18,7 +18,7 @@
         end
     end
 
-    function check_err_parse(s, n = length(s)÷100)
+    function check_err_parse(s, n = length(s)÷10)
         check_str(s) # parsing works?
         check_itr_order(s) # iteration produces same text?
 
@@ -99,7 +99,7 @@
             all(comp(x[i], y[i]) for i = 1:length(x))
     end
 
-    function check_reparse(s0, n = length(s0)÷100)
+    function check_reparse(s0, n = length(s0)÷10)
         for _ in 1:n
             x0 = CSTParser.parse(s0, true)
             CSTParser.has_error(x0) && return
