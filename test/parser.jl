@@ -1270,4 +1270,23 @@ end
             @test test_expr("0x111111111111111111111111111111111")
         end
     end
+
+    @testset "#302" begin
+        str = """
+        const _examples = PlotExample[
+        PlotExample( # 1
+            "Lines",
+            "A simple line plot of the columns.",
+            [:(
+                begin
+                    plot(Plots.fakedata(50, 5), w = 3)
+                end
+            )],
+        ),
+        ]
+        """
+        @test test_expr(str)
+        x, ps = CSTParser.parse(CSTParser.ParseState(str), true)
+        @test ps.errored == false
+    end
 end
