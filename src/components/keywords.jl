@@ -29,7 +29,7 @@ function parse_kw(ps::ParseState)
             end
         end
     elseif k === Tokens.QUOTE
-        return @default ps @closer ps :block parse_blockexpr(ps, :quote)
+        return @default ps @nocloser ps :inref @closer ps :block parse_blockexpr(ps, :quote)
     elseif k === Tokens.FOR
         return @default ps @closer ps :block parse_blockexpr(ps, :for)
     elseif k === Tokens.WHILE
