@@ -82,9 +82,8 @@ function is_func_call(x::EXPR)
         return true
     elseif x.head === :where || isbracketed(x)
         return is_func_call(x.args[1])
-    else
-        return false
     end
+    return false
 end
 
 
