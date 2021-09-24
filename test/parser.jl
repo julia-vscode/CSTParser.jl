@@ -1323,8 +1323,6 @@ end
     end
 
     @testset "#310" begin
-        @test test_expr("""import a.var"papa" """)
-        @test test_expr("""import var"papa" """)
         x, ps = CSTParser.parse(CSTParser.ParseState("""import a.notvar"papa" """), true)
         @test ps.errored == true
         x, ps = CSTParser.parse(CSTParser.ParseState("""import notvar"papa" """), true)
