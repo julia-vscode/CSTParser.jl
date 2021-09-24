@@ -369,8 +369,12 @@ function parse_importexport_item(ps, is_colon = false)
         next(ps)
         EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, val(ps.t, ps))
     elseif VERSION > v"1.3.0-" && isidentifier(ps.nt) && isemptyws(ps.nws) && (kindof(ps.nnt) === Tokens.STRING || kindof(ps.nnt) === Tokens.TRIPLE_STRING)
-        EXPR(:NONSTDIDENTIFIER, EXPR[INSTANCE(next(ps)), INSTANCE(next(ps))])
-        #TODO fix nonstdid handling
+        id = INSTANCE(next(ps))
+        if valof(id) == "var"
+            EXPR(:NONSTDIDENTIFIER, EXPR[id, INSTANCE(next(ps))])
+        else
+            mErrorToken(ps, EXPR(:NONSTDIDENTIFIER, EXPR[id, INSTANCE(next(ps))]), UnexpectedToken)
+        end
     else
         INSTANCE(next(ps))
     end
