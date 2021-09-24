@@ -148,9 +148,9 @@ function to_codeobject(x::EXPR)
         end
     elseif iskeyword(x)
         if headof(x) === :BREAK
-            return to_codeobject(:break)
+            return Expr(:break)
         elseif headof(x) === :CONTINUE
-            return to_codeobject(:continue)
+            return Expr(:continue)
         else
             return Symbol(lowercase(string(headof(x))))
         end
