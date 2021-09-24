@@ -46,7 +46,7 @@
             rethrow(e)
         end
         try
-            Expr(x)
+            to_expr(x)
         catch e
             @info "Couldn't convert:"
             @info s

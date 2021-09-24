@@ -5,7 +5,7 @@ function test_iter_spans(x)
     for i = 1:length(x)
         a  = x[i]
         if !(a isa EXPR)
-            @info i, headof(x), Expr(x)
+            @info i, headof(x), to_expr(x)
         end
         @test a isa EXPR
         test_iter_spans(a)
