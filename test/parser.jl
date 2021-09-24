@@ -1328,4 +1328,8 @@ end
         x, ps = CSTParser.parse(CSTParser.ParseState("""import notvar"papa" """), true)
         @test ps.errored == true
     end
+
+    @testset "#311" begin
+        @test test_expr(raw"import a.$b.c")
+    end
 end
