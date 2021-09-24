@@ -46,7 +46,7 @@
             rethrow(e)
         end
         try
-            to_expr(x)
+            to_codeobject(x)
         catch e
             @info "Couldn't convert:"
             @info s

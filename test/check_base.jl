@@ -72,7 +72,7 @@ function cst_parse_file(str)
         @error "CST spans inconsistent!"
     end
 
-    x0 = norm_ast(to_expr(x))
+    x0 = norm_ast(to_codeobject(x))
     x0, CSTParser.has_error(ps) || !isempty(sp)
 end
 
