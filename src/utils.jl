@@ -205,12 +205,13 @@ macro default(ps, body)
     end
 end
 
-
-isajuxtaposition(ps::ParseState, ret::EXPR) = ((isnumber(ret) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.LPAREN || kindof(ps.nt) === Tokens.CMD || kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)) ||
-        ((is_prime(ret.head) && isidentifier(ps.nt)) ||
-        ((kindof(ps.t) === Tokens.RPAREN || kindof(ps.t) === Tokens.RSQUARE) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.CMD)) ||
-        ((kindof(ps.t) === Tokens.STRING || kindof(ps.t) === Tokens.TRIPLE_STRING) && (kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)))) || ((kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT) || kindof(ps.t) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && isidentifier(ps.nt)) ||
-        (isnumber(ret) && ps.closer.inref && (ps.nt.kind === Tokens.END || ps.nt.kind === Tokens.BEGIN))
+isajuxtaposition(ps::ParseState, ret::EXPR) =
+    (isnumber(ret) && (isidentifier(ps.nt) || (kindof(ps.nt) === JuX.LPAREN || (kindof(ps.nt) === JuX.CMD || (kindof(ps.nt) === JuX.STRING || kindof(ps.nt) === JuX.TRIPLE_STRING))))) ||
+    (is_prime(ret.head) && isidentifier(ps.nt)) ||
+    ((kindof(ps.t) === JuX.RPAREN || kindof(ps.t) === JuX.RSQUARE) && (isidentifier(ps.nt) || kindof(ps.nt) === JuX.CMD)) ||
+    ((kindof(ps.t) === JuX.STRING || kindof(ps.t) === JuX.TRIPLE_STRING) && (kindof(ps.nt) === JuX.STRING || kindof(ps.nt) === JuX.TRIPLE_STRING)) ||
+    ((kindof(ps.t) in (JuX.INTEGER, JuX.FLOAT) || kindof(ps.t) in (JuX.RPAREN, JuX.RSQUARE, JuX.RBRACE)) && isidentifier(ps.nt)) ||
+    (isnumber(ret) && (ps.closer.inref && (ps.nt.kind === JuX.END || ps.nt.kind === JuX.BEGIN)))
 
 """
     has_error(ps::ParseState)
