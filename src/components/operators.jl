@@ -451,7 +451,8 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
         if isidentifier(ret) || isliteral(ret) ||
                 headof(ret) in (:call, :tuple, :brackets, :ref, :vect, :vcat, :hcat, :typed_vcat, :typed_hcat, :comprehension, :typed_comprehension, :curly, :braces, :braces_cat) ||
                 headof(ret) === :do ||
-                is_dot(headof(ret))
+                is_dot(headof(ret)) ||
+                is_prime(headof(ret))
             if valof(op) == "'"
                 ret = EXPR(op, EXPR[ret], nothing)
             else
