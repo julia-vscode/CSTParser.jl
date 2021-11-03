@@ -1105,6 +1105,9 @@ end
             @test test_expr("a'ᵀ")
             @test test_expr(":(a'ᵀ)")
         end
+        @test test_expr("a'")
+        @test test_expr("a''")
+        @test test_expr("a'''")
     end
 
     @testset "end as id juxt" begin
