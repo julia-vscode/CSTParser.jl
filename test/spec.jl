@@ -1,4 +1,4 @@
-using CSTParser: @cst_str, headof, parentof, check_span, EXPR
+using CSTParser: @cst_str, headof, parentof, check_span, EXPR, to_codeobject
 jl_parse(s) = CSTParser.remlineinfo!(Meta.parse(s))
 
 function check_parents(x::EXPR)
@@ -33,7 +33,7 @@ function test_expr(s, head, n, endswithtrivia = false)
     @test length(x) === n
     @test x.args === nothing || all(x === parentof(a) for a in x.args)
     @test x.trivia === nothing || all(x === parentof(a) for a in x.trivia)
-    @test Expr(x) == jl_parse(s)
+    @test to_codeobject(x) == jl_parse(s)
     @test isempty(check_span(x))
     check_parents(x)
     test_iter(x)
@@ -266,17 +266,17 @@ end
     let s = "``"
         x = CSTParser.parse(s)
         x1 = jl_parse(s)
-        @test x1 == Expr(x)
+        @test x1 == to_codeobject(x)
     end
     let s = "`a`"
         x = CSTParser.parse(s)
         x1 = jl_parse(s)
-        @test x1 == Expr(x)
+        @test x1 == to_codeobject(x)
     end
     let s = "`a \$a`"
         x = CSTParser.parse(s)
         x1 = jl_parse(s)
-        @test x1 == Expr(x)
+        @test x1 == to_codeobject(x)
     end
     test_expr("a``", nothing, 3, false)
     test_expr("a`a`", nothing, 3, false)

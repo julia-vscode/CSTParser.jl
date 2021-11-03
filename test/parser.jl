@@ -31,7 +31,7 @@ end
 function test_expr(str, show_data=true)
     x, ps = CSTParser.parse(ParseState(str))
 
-    x0 = Expr(x)
+    x0 = to_codeobject(x)
     x1 = remlineinfo!(Meta.parse(str))
 
     @test x.args === nothing || all(x === parentof(a) for a in x.args)
@@ -624,10 +624,10 @@ end
         @test valof(CSTParser.parse("\"\"\"a\"\"\"")) == "a"
         @test valof(CSTParser.parse("\"\"\"\"\"\"")) == ""
         @test valof(CSTParser.parse("\"\"\"\n\t \ta\n\n\t \tb\"\"\"")) == "a\n\nb"
-        @test Expr(CSTParser.parse("\"\"\"\ta\n\tb \$c\n\td\n\"\"\"")) == Expr(:string, "\ta\n\tb ", :c, "\n\td\n")
-        @test Expr(CSTParser.parse("\"\"\"\n\ta\n\tb \$c\n\td\n\"\"\"")) == Expr(:string, "\ta\n\tb ", :c, "\n\td\n")
-        @test Expr(CSTParser.parse("\"\"\"\n\ta\n\tb \$c\n\td\n\t\"\"\"")) == Expr(:string, "a\nb ", :c, "\nd\n")
-        @test Expr(CSTParser.parse("\"\"\"\n\t \ta\$(1+\n1)\n\t \tb\"\"\"")) == Expr(:string, "a", :(1 + 1), "\nb")
+        @test to_codeobject(CSTParser.parse("\"\"\"\ta\n\tb \$c\n\td\n\"\"\"")) == Expr(:string, "\ta\n\tb ", :c, "\n\td\n")
+        @test to_codeobject(CSTParser.parse("\"\"\"\n\ta\n\tb \$c\n\td\n\"\"\"")) == Expr(:string, "\ta\n\tb ", :c, "\n\td\n")
+        @test to_codeobject(CSTParser.parse("\"\"\"\n\ta\n\tb \$c\n\td\n\t\"\"\"")) == Expr(:string, "a\nb ", :c, "\nd\n")
+        @test to_codeobject(CSTParser.parse("\"\"\"\n\t \ta\$(1+\n1)\n\t \tb\"\"\"")) == Expr(:string, "a", :(1 + 1), "\nb")
         ws = "                         "
         "\"\"\"\n$ws%rv = atomicrmw \$rmw \$lt* %0, \$lt %1 acq_rel\n$(ws)ret \$lt %rv\n$ws\"\"\"" |> test_expr
         ws1 = "        "
@@ -1061,7 +1061,7 @@ end
         end
     end
     @testset "bad uint" begin
-        @test Expr(CSTParser.parse("0x.")) == Expr(:error)
+        @test to_codeobject(CSTParser.parse("0x.")) == Expr(:error)
     end
 
     @testset "endswithtrivia" begin

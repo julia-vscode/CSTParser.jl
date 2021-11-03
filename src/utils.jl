@@ -441,7 +441,7 @@ function str_value(x)
     elseif isidentifier(x)
         valof(x.args[2])
     elseif isoperator(x)
-        return string(Expr(x))
+        return string(to_codeobject(x))
     else
         return ""
     end

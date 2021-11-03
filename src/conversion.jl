@@ -1,5 +1,3 @@
-import Core: Expr
-
 # Terminals
 function julia_normalization_map(c::Int32, x::Ptr{Nothing})::Int32
     return c == 0x00B5 ? 0x03BC : # micro sign -> greek small letter mu
@@ -129,8 +127,15 @@ end
 
 
 # Expressions
+to_codeobject(args...) = Expr(args...)
 
-function Expr(x::EXPR)
+"""
+    to_codeobject(x::EXPR)
+
+Convert an `EXPR` into the object that `Meta.parse` would have produced from
+the original string, which could e.g. be an `Expr`, `Symbol`, or literal.
+"""
+function to_codeobject(x::EXPR)
     if isidentifier(x)
         if headof(x) === :NONSTDIDENTIFIER
             if startswith(valof(x.args[1]), "@")
@@ -156,7 +161,7 @@ function Expr(x::EXPR)
             if x.args === nothing
                 return :(.)
             elseif length(x.args) == 1 && isoperator(x.args[1])
-                return Expr(:(.), Expr(x.args[1]))
+                return Expr(:(.), to_codeobject(x.args[1]))
             else
                 Expr(:error)
             end
@@ -167,11 +172,11 @@ function Expr(x::EXPR)
     elseif isliteral(x)
         return _literal_expr(x)
     elseif isbracketed(x)
-        return Expr(x.args[1])
+        return to_codeobject(x.args[1])
     elseif x.head isa EXPR
-        Expr(Expr(x.head), Expr.(x.args)...)
+        Expr(to_codeobject(x.head), to_codeobject.(x.args)...)
     elseif x.head === :quotenode
-        QuoteNode(Expr(x.args[1]))
+        QuoteNode(to_codeobject(x.args[1]))
     elseif x.head === :globalrefdoc
         GlobalRef(Core, Symbol("@doc"))
     elseif x.head === :globalrefcmd
@@ -185,20 +190,20 @@ function Expr(x::EXPR)
         valofrhs = valof(x.args[1].args[2].args[1])
         valofrhs = valofrhs === nothing ? "" : valofrhs
         new_name = Expr(:., remove_at(x.args[1].args[1]), QuoteNode(Symbol("@", valofrhs)))
-        Expr(:macrocall, new_name, Expr.(x.args[2:end])...)
+        Expr(:macrocall, new_name, to_codeobject.(x.args[2:end])...)
     elseif x.head === :macrocall && isidentifier(x.args[1]) && valof(x.args[1]) == "@."
-        Expr(:macrocall, Symbol("@__dot__"), Expr.(x.args[2:end])...)
+        Expr(:macrocall, Symbol("@__dot__"), to_codeobject.(x.args[2:end])...)
     elseif x.head === :macrocall && length(x.args) == 3 && x.args[1].head === :globalrefcmd && x.args[3].head == :string
-        Expr(:macrocall, Expr(x.args[1]), Expr(x.args[2]), x.args[3].meta)
+        Expr(:macrocall, to_codeobject(x.args[1]), to_codeobject(x.args[2]), x.args[3].meta)
     elseif x.head === :string && length(x.args) > 0 && (x.args[1].head === :STRING || x.args[1].head === :TRIPLESTRING) && isempty(valof(x.args[1]))
         # Special conversion needed - the initial text section is treated as empty for the represented string following lowest-common-prefix adjustments, but exists in the source.
-        Expr(:string, Expr.(x.args[2:end])...)
+        Expr(:string, to_codeobject.(x.args[2:end])...)
     elseif x.args === nothing
         Expr(Symbol(lowercase(String(x.head))))
     elseif x.head === :errortoken
         Expr(:error)
     else
-        Expr(Symbol(lowercase(String(x.head))), Expr.(x.args)...)
+        Expr(Symbol(lowercase(String(x.head))), to_codeobject.(x.args)...)
     end
 end
 
@@ -208,7 +213,7 @@ function remove_at(x)
     elseif is_getfield_w_quotenode(x)
         Expr(:., remove_at(x.args[1]), QuoteNode(remove_at(x.args[2].args[1])))
     else
-        Expr(x)
+        to_codeobject(x)
     end
 end
 
