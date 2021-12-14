@@ -189,7 +189,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                     if kindof(ps1.t) === Tokens.WHITESPACE
                         error("Unexpected whitespace after \$ in String")
                     else
-                        t = INSTANCE(ps1)
+                        t = parse_kw(ps1)
                     end
                     # Attribute trailing whitespace to the string
                     t = adjustspan(t)
