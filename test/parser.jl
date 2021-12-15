@@ -1335,4 +1335,12 @@ end
     @testset "#311" begin
         @test test_expr(raw"import a.$b.c")
     end
+
+    @testset "kw interpolation" begin
+        @test test_expr(raw""""foo $bar" """)
+        @test test_expr(raw""""foo $type" """)
+        @test test_expr(raw""""foo $function" """)
+        @test test_expr(raw""""foo $begin" """)
+        @test test_expr(raw""""foo $quote" """)
+    end
 end
