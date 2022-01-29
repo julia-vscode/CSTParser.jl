@@ -488,7 +488,7 @@ comp_prec(op::String) = get(AllPrecs, op, 0) === ComparisonOp || (length(op) > 1
 # Which ops have different precend when dotted?
 # [op for op in Symbol.(keys(CSTParser.AllPrecs)) if Base.isoperator(op) && Base.isoperator(Symbol(".", op)) && Base.operator_precedence(op) !== Base.operator_precedence(Symbol(".", op))]
 
-get_prec(op) = AllPrecs[maybe_strip_suffix(op)]
+get_prec(op) = get(AllPrecs, maybe_strip_suffix(op), 0)
 
 function maybe_strip_suffix(op::String)
     for (i, c) in enumerate(op)
