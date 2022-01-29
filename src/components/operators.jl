@@ -61,7 +61,9 @@ isunaryop(op::EXPR) = isoperator(op) && ((valof(op) == "<:" ||
                                           valof(op) == "::" ||
                                           valof(op) == "\$" ||
                                           valof(op) == ":" ||
-                                          valof(op) == "⋆") ||
+                                          valof(op) == "⋆" ||
+                                          valof(op) == "±" ||
+                                          valof(op) == "∓") ||
                         (length(valof(op)) == 2 && valof(op)[1] == '.' && (valof(op)[2] == '+' ||
                                                                            valof(op)[2] == '-' ||
                                                                            valof(op)[2] == '!' ||
@@ -70,7 +72,9 @@ isunaryop(op::EXPR) = isoperator(op) && ((valof(op) == "<:" ||
                                                                            valof(op)[2] == '√' ||
                                                                            valof(op)[2] == '∛' ||
                                                                            valof(op)[2] == '∜' ||
-                                                                           valof(op)[2] == '⋆')))
+                                                                           valof(op)[2] == '⋆' ||
+                                                                           valof(op)[2] == '±' ||
+                                                                           valof(op)[2] == '∓')))
 isunaryop(t::AbstractToken) = isunaryop(kindof(t))
 @static if VERSION < v"1.2.0"
     isunaryop(kind::Tokens.Kind) = kind === Tokens.ISSUBTYPE ||
