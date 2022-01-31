@@ -223,12 +223,12 @@ function get_name(x::EXPR)
         end
         sig = rem_wheres(sig)
         sig = rem_decl(sig)
-        sig = rem_call(sig)
+sig = rem_call(sig)
         sig = rem_curly(sig)
         rem_invis(sig)
     end
 end
-
+    
 function get_arg_name(arg::EXPR)
     arg = rem_kw(arg)
     arg = rem_dddot(arg)

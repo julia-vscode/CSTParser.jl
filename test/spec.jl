@@ -27,7 +27,7 @@ function test_iter(ex)
     end
 end
 
-function test_expr(s, head, n, endswithtrivia = false)
+function test_expr(s, head, n, endswithtrivia=false)
     x = CSTParser.parse(s)
     head === nothing || @test headof(x) === head
     @test length(x) === n
@@ -37,7 +37,7 @@ function test_expr(s, head, n, endswithtrivia = false)
     @test isempty(check_span(x))
     check_parents(x)
     test_iter(x)
-    @test endswithtrivia ? (x.fullspan-x.span) == (last(x.trivia).fullspan - last(x.trivia).span) : (x.fullspan-x.span) == (last(x.args).fullspan - last(x.args).span)
+    @test endswithtrivia ? (x.fullspan - x.span) == (last(x.trivia).fullspan - last(x.trivia).span) : (x.fullspan - x.span) == (last(x.args).fullspan - last(x.args).span)
 end
 
 
@@ -78,7 +78,7 @@ end
 
 @testset ":brackets" begin
     test_expr("(a)", :brackets, 3, true)
-end
+    end
 
 @testset ":begin" begin
     test_expr("begin end", :block, 2, true)
@@ -159,7 +159,7 @@ end
     test_expr("f(a;b = 1)", nothing, 5, true)
 end
 
-@testset "lists" begin
+    @testset "lists" begin
     @testset ":vect" begin
         test_expr("[]", :vect, 2, true)
         test_expr("[a]", :vect, 3, true)
@@ -234,7 +234,7 @@ end
     test_expr("a\"txt\"b", :macrocall, 4, false)
 end
 
-
+    
 @testset ":string" begin
     test_expr("\"\$a\"", :string, 4, false)
     test_expr("\" \$a\"", :string, 4, false)
@@ -266,12 +266,12 @@ end
     let s = "``"
         x = CSTParser.parse(s)
         x1 = jl_parse(s)
-        @test x1 == to_codeobject(x)
+@test x1 == to_codeobject(x)
     end
     let s = "`a`"
         x = CSTParser.parse(s)
         x1 = jl_parse(s)
-        @test x1 == to_codeobject(x)
+    @test x1 == to_codeobject(x)
     end
     let s = "`a \$a`"
         x = CSTParser.parse(s)

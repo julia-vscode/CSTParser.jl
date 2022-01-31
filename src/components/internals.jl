@@ -31,7 +31,7 @@ Parses an iterator, allowing for the preceding keyword `outer`. Returns an
 error expression if an invalid expression is parsed (anything other than
 `=`, `in`, `∈`).
 """
-function parse_iterator(ps::ParseState, outer = parse_outer(ps))
+function parse_iterator(ps::ParseState, outer=parse_outer(ps))
     arg = @closer ps :range @closer ps :ws @nocloser ps :wsop parse_expression(ps)
     if !is_range(arg)
         arg = mErrorToken(ps, arg, InvalidIterator)
@@ -135,7 +135,7 @@ function parse_call(ps::ParseState, ret::EXPR, ismacro=false)
         end
         # args = ismacro ? EXPR[ret, EXPR(:NOTHING, 0, 0)] : EXPR[ret]
         trivia = EXPR[EXPR(next(ps))]
-        @closeparen ps @default ps parse_comma_sep(ps, args, trivia, !ismacro, insert_params_at = ismacro ? 3 : 2)
+        @closeparen ps @default ps parse_comma_sep(ps, args, trivia, !ismacro, insert_params_at=ismacro ? 3 : 2)
         accept_rparen(ps, trivia)
         ret = EXPR(ismacro ? :macrocall : syntaxcall ? ret : :call, args, trivia)
     end
@@ -146,7 +146,7 @@ end
 Parses a comma separated list, optionally allowing for conversion of
 assignment (`=`) expressions to `Kw`.
 """
-function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR}, kw = true, block = false, istuple = false; insert_params_at = 2)
+function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR}, kw=true, block=false, istuple=false; insert_params_at=2)
     prevpos = position(ps)
     @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma while !closer(ps)
         a = parse_expression(ps)
@@ -205,14 +205,14 @@ end
 
 Parses parameter arguments for a function call (e.g. following a semicolon).
 """
-function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR} = EXPR[], insert_params_at = 2; usekw = true)
+function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR}=EXPR[], insert_params_at=2; usekw=true)
     trivia = EXPR[]
     isfirst = isempty(args1)
     prevpos = position(ps)
     @nocloser ps :inwhere @nocloser ps :newline  @closer ps :comma while !isfirst || (@nocloser ps :semicolon !closer(ps))
         a = isfirst ? parse_expression(ps) : first(args1)
         if usekw && _do_kw_convert(ps, a)
-            a = _kw_convert(a)
+        a = _kw_convert(a)
         end
         if isfirst
             push!(args1, a)
@@ -236,7 +236,7 @@ function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR
     end
     return
 end
-
+    
 function parse_macroname(ps)
     at = EXPR(ps)
     if isidentifier(ps.nt) || isoperator(ps.nt) || iskeyword(ps.nt)
@@ -262,7 +262,7 @@ function parse_macroname(ps)
         end
     else
         mErrorToken(ps, at, MalformedMacroName)
-    end
+end
 end
 
 """
@@ -355,7 +355,7 @@ function get_appropriate_child_to_expand(x)
     end
 end
 
-function parse_importexport_item(ps, is_colon = false)
+function parse_importexport_item(ps, is_colon=false)
     if kindof(ps.nt) === Tokens.AT_SIGN
         parse_macroname(next(ps))
     elseif kindof(ps.nt) === Tokens.LPAREN
@@ -376,13 +376,13 @@ function parse_importexport_item(ps, is_colon = false)
             mErrorToken(ps, EXPR(:NONSTDIDENTIFIER, EXPR[id, INSTANCE(next(ps))]), UnexpectedToken)
         end
     else
-        INSTANCE(next(ps))
+INSTANCE(next(ps))
     end
 end
 """
 Helper function for parsing import/using statements.
 """
-function parse_dot_mod(ps::ParseState, is_colon = false, allow_as = false)
+function parse_dot_mod(ps::ParseState, is_colon=false, allow_as=false)
     ret = EXPR(EXPR(:OPERATOR, 0, 0, "."), EXPR[], EXPR[])
 
     prevpos = position(ps)
@@ -418,7 +418,7 @@ function parse_dot_mod(ps::ParseState, is_colon = false, allow_as = false)
                     as_val = parse_importexport_item(ps, is_colon)
                     ret = EXPR(:as, EXPR[ret, as_val], EXPR[as])
                 end
-            end
+    end
             break
         end
         prevpos = loop_check(ps, prevpos)

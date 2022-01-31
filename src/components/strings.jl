@@ -81,13 +81,13 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
     t_str = val(ps.t, ps)
     if istrip && length(t_str) == 6
         if iscmd
-            return wrapwithcmdmacro(EXPR(:TRIPLESTRING , sfullspan, sspan, ""))
+            return wrapwithcmdmacro(EXPR(:TRIPLESTRING, sfullspan, sspan, ""))
         else
             return EXPR(:TRIPLESTRING, sfullspan, sspan, "")
         end
     elseif length(t_str) == 2
         if iscmd
-            return wrapwithcmdmacro(EXPR(:STRING , sfullspan, sspan, ""))
+            return wrapwithcmdmacro(EXPR(:STRING, sfullspan, sspan, ""))
         else
             return EXPR(:STRING, sfullspan, sspan, "")
         end
@@ -261,7 +261,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
             ret.meta = str
         end
     end
-
+    
     single_string_T = (:STRING, :TRIPLESTRING, literalmap(kindof(ps.t)))
     if istrip
         if lcp !== nothing && !isempty(lcp)
@@ -289,7 +289,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
         ret = unwrapped
     end
     update_span!(ret)
-
+    
     return iscmd ? wrapwithcmdmacro(ret) : ret
 end
 
@@ -362,7 +362,7 @@ function unescape_prefixed(str)
         if start > -1
             # slashes preceding closing '"'
             n = div(length(start:length(str)), 2) - 1
-            str1 = string(str1[1:prevind(str1, start)], repeat("\\", n + 1))
+        str1 = string(str1[1:prevind(str1, start)], repeat("\\", n + 1))
         end
 
         for e in reverse(edits)

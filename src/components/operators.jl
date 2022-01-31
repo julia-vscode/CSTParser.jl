@@ -1,4 +1,4 @@
-import Tokenize.Tokens: isoperator
+import Tokenize.Tokens:isoperator
 precedence(op::Int) = op < Tokens.end_assignments ?  AssignmentOp :
                        op < Tokens.end_pairarrow ? 2 :
                        op < Tokens.end_conditional ? ConditionalOp :
@@ -40,7 +40,7 @@ precedence(kind::Tokens.Kind) = kind === Tokens.DDDOT ? DddotOp :
 
 precedence(x) = 0
 precedence(x::AbstractToken) = precedence(kindof(x))
-precedence(x::EXPR) = error()#precedence(kindof(x))
+precedence(x::EXPR) = error()# precedence(kindof(x))
 
 isoperator(x) = false
 isoperator(t::AbstractToken) = isoperator(kindof(t))
@@ -131,7 +131,7 @@ else
                             kind === Tokens.APPROX ||
                             kind === Tokens.DECLARATION ||
                             kind === Tokens.COLON ||
-                            kind === Tokens.STAR_OPERATOR
+    kind === Tokens.STAR_OPERATOR
 end
 
 isbinaryop(op) = false
@@ -257,7 +257,7 @@ function parse_unary_colon(ps::ParseState, op::EXPR)
         unwrapped = unwrapbracket(arg)
         if isoperator(unwrapped) || isidentifier(unwrapped) || isliteral(unwrapped)
             ret = EXPR(:quotenode, EXPR[arg], EXPR[op])
-        elseif arg.head == :tuple && length(arg.args) == 1 && arg.args[1].head == :parameters && arg.args[1].args !== nothing && length(arg.args[1].args) == 0 && arg.span > 3
+elseif arg.head == :tuple && length(arg.args) == 1 && arg.args[1].head == :parameters && arg.args[1].args !== nothing && length(arg.args[1].args) == 0 && arg.span > 3
             block = EXPR(:BLOCK, EXPR[], EXPR[])
             block.span = arg.span
             block.fullspan = arg.fullspan
@@ -285,7 +285,7 @@ end
 
 # Parse conditionals
 
-isconditional(x::EXPR) = headof(x) === :if && hastrivia(x) && isoperator(first(x.trivia))
+    isconditional(x::EXPR) = headof(x) === :if && hastrivia(x) && isoperator(first(x.trivia))
 function parse_operator_cond(ps::ParseState, ret::EXPR, op::EXPR)
     ret = requires_ws(ret, ps)
     op = requires_ws(op, ps)
@@ -300,13 +300,13 @@ function parse_operator_cond(ps::ParseState, ret::EXPR, op::EXPR)
 
     nextarg2 = @closer ps :comma @precedence ps 0 parse_expression(ps)
 
-    return EXPR(:if, EXPR[ret, nextarg, nextarg2], EXPR[op, op2])
+        return EXPR(:if, EXPR[ret, nextarg, nextarg2], EXPR[op, op2])
 end
 
 # Parse comparisons
 function parse_comp_operator(ps::ParseState, ret::EXPR, op::EXPR)
     nextarg = @precedence ps ComparisonOp - LtoR(ComparisonOp) parse_expression(ps)
-
+                
     if headof(ret) === :comparison
         push!(ret, op)
         push!(ret, nextarg)
@@ -334,7 +334,7 @@ function parse_operator_colon(ps::ParseState, ret::EXPR, op::EXPR)
     if isbinarycall(ret) && is_colon(ret.args[1])
         ret.trivia = EXPR[]
         pushtotrivia!(ret, op)
-        push!(ret, nextarg)
+    push!(ret, nextarg)
     else
         ret = EXPR(:call, EXPR[op, ret, nextarg], nothing)
     end
@@ -361,11 +361,11 @@ function parse_operator_where(ps::ParseState, ret::EXPR, op::EXPR, setscope=true
     if headof(nextarg) === :braces
         pushfirst!(nextarg.args, ret)
         pushfirst!(nextarg.trivia, op)
-        ret = EXPR(:where, nextarg.args,nextarg.trivia)
+        ret = EXPR(:where, nextarg.args, nextarg.trivia)
     else
         ret = EXPR(:where, EXPR[ret, nextarg], EXPR[op])
     end
-    return ret
+return ret
 end
 
 function parse_operator_dot(ps::ParseState, ret::EXPR, op::EXPR)

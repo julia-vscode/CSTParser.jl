@@ -93,17 +93,17 @@ end
 
             if cst_err || meta_err
                 if cst_err && !meta_err
-                    @error "CSTParser.parse errored, but Meta.parse didn't." file=file
+                    @error "CSTParser.parse errored, but Meta.parse didn't." file = file
                 elseif !cst_err && meta_err
-                    @error "Meta.parse errored, but CSTParser.parse didn't." file=file
+                    @error "Meta.parse errored, but CSTParser.parse didn't." file = file
                 end
             else
                 if cst_expr == meta_expr
                     @test true
                 else
-                    @error "parsing difference" file=file
+                    @error "parsing difference" file = file
                     c0, c1 = CSTParser.compare(cst_expr, meta_expr)
-                    printstyled(c0, bold = true, color = :light_red)
+                    printstyled(c0, bold=true, color=:light_red)
                     println()
                     printstyled(c1, bold=true, color=:light_green)
                     println()
