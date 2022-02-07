@@ -64,6 +64,7 @@ function Base.show(io::IO, ps::ParseState)
     println(io, "next    : ", kindof(ps.nt), " ($(ps.nt))", "    ($(wstype(ps.nws)))")
 end
 peekchar(ps::ParseState) = peekchar(ps.l)
+peekchar(io::Base.GenericIOBuffer) = peek(io, Char)
 wstype(t::AbstractToken) = kindof(t) == EmptyWS ? "empty" :
                     kindof(t) == NewLineWS ? "ws w/ newline" :
                     kindof(t) == SemiColonWS ? "ws w/ semicolon" : "ws"
