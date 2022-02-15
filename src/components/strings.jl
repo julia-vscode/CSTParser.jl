@@ -189,7 +189,9 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                     if kindof(ps1.t) === Tokens.WHITESPACE
                         error("Unexpected whitespace after \$ in String")
                     else
-                        t = INSTANCE(ps1)
+                        # foo in $foo is always parsed as an identifier by Julia,
+                        # no matter whether it actually is a keyword
+                        t = EXPR(:IDENTIFIER, ps1)
                     end
                     # Attribute trailing whitespace to the string
                     t = adjustspan(t)
