@@ -965,6 +965,9 @@ end
         @test "if true\n@doc \"doc\"\nT\nend" |> test_expr
         @test "if true\n@doc \"doc\" T\nend" |> test_expr
         @test "@doc \"I am a module\" ModuleMacroDoc" |> test_expr
+        @test """
+        @doc(foo)
+        """ |> test_expr
     end
 
     @testset "braces" begin
