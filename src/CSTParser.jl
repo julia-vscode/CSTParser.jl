@@ -291,6 +291,7 @@ function parse(ps::ParseState, cont=false)
 end
 
 function _continue_doc_parse(ps::ParseState, x::EXPR)
+    kindof(ps.nt) !== Tokens.ENDMARKER &&
     headof(x) === :macrocall &&
     valof(x.args[1]) == "@doc" &&
     length(x.args) < 4 &&
