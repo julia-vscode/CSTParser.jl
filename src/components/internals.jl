@@ -305,7 +305,7 @@ function parse_macrocall(ps::ParseState)
             end
             push!(args, a)
 
-            if valof(mname) == "@doc" && ps.t.endpos[1] + 1 == ps.nt.startpos[1] && length(args) == 3
+            if valof(mname) == "@doc" && ps.t.endpos[1] + 1 == ps.nt.startpos[1] && length(args) == 3 && kindof(ps.nt) !== Tokens.ENDMARKER
                 a = parse_expression(ps)
                 push!(args, a)
                 break

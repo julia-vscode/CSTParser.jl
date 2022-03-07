@@ -968,6 +968,9 @@ end
         @test """
         @doc(foo)
         """ |> test_expr
+        @test """
+        @doc foo
+        """ |> test_expr
     end
 
     @testset "braces" begin
