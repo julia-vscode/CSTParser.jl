@@ -44,6 +44,53 @@ const AnonFuncOp    = 14
     SignatureOfFunctionDefIsNotACall,
     MalformedMacroName)
 
+"""
+`EXPR` represents Julia expressions overlaying a span of bytes in the source
+text. The full span starts at the first syntactically significant token and
+includes any trailing whitespace/comments.
+
+Iterating or directly indexing `EXPR` results in a sequence of child `EXPR` in
+source order, including most syntax trivia but not including whitespace,
+comments and semicolons.
+
+The fields of `EXPR` are:
+
+* `head` represents the type of the expression
+  - For internal tree nodes it usually matches the associated `Expr`'s head
+    field. But not always because there's some additional heads, for example
+    `:brackets` for grouping parentheses, `:globalrefdoc`, `:quotenode`, etc
+  - For leaf nodes (ie, individual tokens), it's capitalized. Eg,
+    `:INTEGER` for integer tokens, `:END` for `end`, `:LPAREN` for `[`,
+    etc.
+  - For syntactic operators such as `=` and `<:` (which have the operator
+    itself as the expression head in normal `Expr`), the head is an `EXPR`.
+
+* `args` are the significant subexpressions, in the order used by `Base.Expr`.
+   For leaf nodes, this is `nothing`.
+
+* `trivia` are any nontrivial tokens which are trivial after parsing.
+  - This includes things like the parentheses in `(1 + 2)`, and the
+    keywords in `begin x end`
+  - Whitespace and comments are not included in `trivia`
+
+* `fullspan` is the total number of bytes of text covered by this expression,
+  including any trailing whitespace or comment trivia.
+
+* `span` is the number of bytes of text covered by the syntactically
+    relevant part of this expression (ie, not including trailing whitespace
+    or comment trivia).
+
+* `val` is the source text covered by `span`
+
+* `parent` is the parent node in the expression tree, or `Nothing` for the root.
+
+* `meta` contains metadata. This includes some ad-hoc information supplied by
+  the parser. (But can also be used downstream in linting or static analysis.)
+
+Whitespace, comments and semicolons are not represented explicitly. Rather,
+they're tacked onto the end of leaf tokens in `args` or `trivia`, in the last
+`fullspan-span` bytes of the token.
+"""
 mutable struct EXPR
     head::Union{Symbol,EXPR}
     args::Union{Nothing,Vector{EXPR}}
