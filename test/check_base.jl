@@ -78,7 +78,7 @@ end
 
 @testset "Parsing files in Base" begin
     dir = joinpath(Sys.BINDIR, Base.DATAROOTDIR)
-    for (root, _, files) in walkdir(dir)
+    for (root, _, files) in walkdir(dir; follow_symlinks=true)
         for fpath in files
             file = joinpath(root, fpath)
             endswith(file, ".jl") || continue
