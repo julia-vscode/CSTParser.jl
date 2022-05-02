@@ -775,7 +775,7 @@ function _try(x, i)
         elseif i == 7
             x.trivia[3]
         end
-    elseif length(x) == 8 # try expr catch e expr finally expr end
+    elseif length(x) == 8 # 'try expr catch e expr finally expr end' or 'else end'
         if i == 3
             x.trivia[2]
         elseif i == 4
@@ -788,6 +788,24 @@ function _try(x, i)
             x.args[4]
         elseif i == 8
             x.trivia[4]
+        end
+    elseif length(x) == 10 # try expr catch e expr else expr finally expr end
+        if i == 3
+            x.trivia[2]
+        elseif i == 4
+            x.args[2]
+        elseif i == 5
+            x.args[3]
+        elseif i == 6
+            x.trivia[4]
+        elseif i == 7
+            x.args[5]
+        elseif i == 8
+            x.trivia[3]
+        elseif i == 9
+            x.args[4]
+        elseif i == 10
+            x.trivia[5]
         end
     end
 end

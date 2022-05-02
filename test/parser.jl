@@ -586,6 +586,27 @@ end
                 stop(f)
             end
             """ |> test_expr
+
+            if VERSION > v"1.8-"
+                @test """try
+                    f(1)
+                catch
+                    x
+                else
+                    stop(f)
+                end
+                """ |> test_expr
+                @test """try
+                    f(1)
+                catch err
+                    x
+                else
+                    stop(f)
+                finally
+                    foo
+                end
+                """ |> test_expr
+            end
         end
         @testset "For" begin
             @test """

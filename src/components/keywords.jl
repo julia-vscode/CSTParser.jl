@@ -370,7 +370,7 @@ function parse_try(ps::ParseState)
     kw = EXPR(ps)
     args = EXPR[]
     trivia = EXPR[kw]
-    tryblockargs = parse_block(ps, EXPR[], (Tokens.END, Tokens.CATCH, Tokens.FINALLY))
+    tryblockargs = parse_block(ps, EXPR[], (Tokens.END, Tokens.CATCH, Tokens.ELSE, Tokens.FINALLY))
     push!(args, EXPR(:block, tryblockargs, nothing))
 
     #  catch block
@@ -387,7 +387,7 @@ function parse_try(ps::ParseState)
                 caught = @closer ps :ws parse_expression(ps)
             end
 
-            catchblockargs = parse_block(ps, EXPR[], (Tokens.END, Tokens.FINALLY))
+            catchblockargs = parse_block(ps, EXPR[], (Tokens.END, Tokens.FINALLY, Tokens.ELSE))
             if !(is_either_id_op_interp(caught) || headof(caught) === :FALSE)
                 pushfirst!(catchblockargs, caught)
                 caught = EXPR(:FALSE, 0, 0, "")
@@ -402,14 +402,33 @@ function parse_try(ps::ParseState)
     push!(args, caught)
     push!(args, catchblock)
 
-    # finally block
+    else_trivia = else_arg = nothing
+    # else block
+    if kindof(ps.nt) === Tokens.ELSE
+        if isempty(catchblock.args)
+            args[3] = EXPR(:FALSE, 0, 0, "")
+        end
+        else_trivia = EXPR(next(ps))
+        else_arg = EXPR(:block, parse_block(ps, EXPR[], (Tokens.FINALLY,Tokens.END)))
+    end
+
+    has_finally = false
     if kindof(ps.nt) === Tokens.FINALLY
+        has_finally = true
         if isempty(catchblock.args)
             args[3] = EXPR(:FALSE, 0, 0, "")
         end
         push!(trivia, EXPR(next(ps)))
-        finallyblockargs = parse_block(ps)
-        push!(args, EXPR(:block, finallyblockargs))
+        push!(args, EXPR(:block, parse_block(ps)))
+    end
+
+    if else_trivia !== nothing
+        if !has_finally
+            push!(trivia, EXPR(:FALSE, 0, 0, ""))
+            push!(args, EXPR(:FALSE, 0, 0, ""))
+        end
+        push!(trivia, else_trivia)
+        push!(args, else_arg)
     end
 
     push!(trivia, accept_end(ps))
