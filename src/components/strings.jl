@@ -216,8 +216,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
         else
             str = String(take!(b))
 
-            # only literal whitespace should be considered for finding the lcp, so we need to keep
-            # both an escaped an an unescaped version of the string around
+            # This is for error handling only.
             u_str = try
                 _unescape_string(str)
             catch err
@@ -288,9 +287,22 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
         end
         ret = unwrapped
     end
+    if !iscmd && prefixed == false
+        _unescape_string_expr(ret)
+    end
     update_span!(ret)
 
     return iscmd ? wrapwithcmdmacro(ret) : ret
+end
+
+function _unescape_string_expr(expr)
+    if headof(expr) === :STRING || headof(expr) === :TRIPLESTRING
+        expr.val = _unescape_string(replace(valof(expr), r"(?<!\\)\\\n[\s\n]*" => ""))
+    else
+        for a in expr
+            _unescape_string_expr(a)
+        end
+    end
 end
 
 function adjustspan(x::EXPR)

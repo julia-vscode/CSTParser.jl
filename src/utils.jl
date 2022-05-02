@@ -468,12 +468,14 @@ function _unescape_string(io, s::AbstractString)
                     # throw(ArgumentError("invalid $(m == 2 ? "hex (\\x)" :
                     #                         "unicode (\\u)") escape sequence used in $(repr(s))"))
                     # push error to ParseState?
-                    n = 0
-                end
-                if m == 2 # \x escape sequence
-                    write(io, UInt8(n))
+                    # This matches Meta.parse at least
+                    print(io, "\\x")
                 else
-                    print(io, Char(n))
+                    if m == 2 # \x escape sequence
+                        write(io, UInt8(n))
+                    else
+                        print(io, Char(n))
+                    end
                 end
             elseif '0' <= c <= '7'
                 k = 1
