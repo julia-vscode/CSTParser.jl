@@ -128,6 +128,10 @@ end
             @test "!(a,b)" |> test_expr
             @test "¬(a,b)" |> test_expr
             @test "~(a,b)" |> test_expr
+            if VERSION > v"1.7-"
+                @test "~(a)(foo...)" |> test_expr
+                @test "~(&)(foo...)" |> test_expr
+            end
             @test "<:(a,b)" |> test_expr
             @test "√(a,b)" |> test_expr
             @test "\$(a,b)" |> test_expr

@@ -109,7 +109,7 @@ end
 Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
 """
 function parse_call(ps::ParseState, ret::EXPR, ismacro=false)
-    if is_minus(ret) || is_not(ret)
+    if is_minus(ret) || is_not(ret) || is_approx(ret)
         arg = @closer ps :unary @closer ps :inwhere @precedence ps PowerOp parse_expression(ps)
         if istuple(arg)
             pushfirst!(arg.args, ret)
