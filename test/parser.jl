@@ -334,25 +334,39 @@ end
             @test "struct a; end" |> test_expr
             @test "struct a; b;end" |> test_expr
             @test """struct a
-            arg1
-        end""" |> test_expr
+                arg1
+            end""" |> test_expr
             @test """struct a <: T
-            arg1::Int
-            arg2::Int
-        end""" |> test_expr
+                arg1::Int
+                arg2::Int
+            end""" |> test_expr
             @test """struct a
-            arg1::T
-        end""" |> test_expr
+                arg1::T
+            end""" |> test_expr
             @test """struct a{T}
-            arg1::T
-            a(args) = new(args)
-        end""" |> test_expr
+                arg1::T
+                a(args) = new(args)
+            end""" |> test_expr
             @test """struct a <: Int
-            arg1::Vector{Int}
-        end""" |> test_expr
+                arg1::Vector{Int}
+            end""" |> test_expr
             @test """mutable struct a <: Int
-            arg1::Vector{Int}
-        end""" |> test_expr
+                arg1::Vector{Int}
+            end""" |> test_expr
+            if VERSION > v"1.8-"
+                @test """mutable struct A
+                    const arg1::Vector{Int}
+                    arg2
+                end""" |> test_expr
+                @test """mutable struct A
+                    const arg1
+                    arg2
+                end""" |> test_expr
+                @test CSTParser.has_error(CSTParser.parse("""struct A
+                    const arg1
+                    arg2
+                end"""))
+            end
         end
     end
 
