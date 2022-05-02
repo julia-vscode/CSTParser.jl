@@ -4,7 +4,7 @@ const term_c = (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE, Tokens.END, Tokens
 Continue parsing statements until an element of `closers` is hit (usually
 `end`). Statements are grouped in a `Block` EXPR.
 """
-function parse_block(ps::ParseState, ret::Vector{EXPR}=EXPR[], closers=(Tokens.END,), docable=false)
+function parse_block(ps::ParseState, ret::Vector{EXPR}=EXPR[], closers=(Tokens.END,), docable=false; allow_const_field = false)
     prevpos = position(ps)
     while kindof(ps.nt) ∉ closers # loop until an expected closer is hit
         if kindof(ps.nt) ∈ term_c # error handling if an unexpected closer is hit
@@ -17,7 +17,7 @@ function parse_block(ps::ParseState, ret::Vector{EXPR}=EXPR[], closers=(Tokens.E
             if docable
                 a = parse_doc(ps)
             else
-                a = parse_expression(ps)
+                a = parse_expression(ps; allow_const_field = allow_const_field)
             end
             push!(ret, a)
         end
