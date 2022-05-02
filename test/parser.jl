@@ -477,6 +477,25 @@ end
             @test "t[x y; z]" |> test_expr
             @test "t[x, y; z]" |> test_expr
         end
+        if VERSION > v"1.8-"
+            @testset "ncat" begin
+                @test "[;;]" |> test_expr
+                @test "[;;;;;;;]" |> test_expr
+                @test "[x;;;;;]" |> test_expr
+                @test "[x;;]" |> test_expr
+                @test "[x;; y;;    z]" |> test_expr
+                @test "[x;;; y;;;z]" |> test_expr
+            end
+
+            @testset "typed_ncat" begin
+                @test "t[;;]" |> test_expr
+                @test "t[;;;;;;;]" |> test_expr
+                @test "t[x;;;;;]" |> test_expr
+                @test "t[x;;]" |> test_expr
+                @test "t[x;; y;;    z]" |> test_expr
+                @test "t[x;;; y;;;z]" |> test_expr
+            end
+        end
 
         @testset "hcat" begin
             @test "[x y]" |> test_expr

@@ -199,7 +199,13 @@ function to_codeobject(x::EXPR)
         # Special conversion needed - the initial text section is treated as empty for the represented string following lowest-common-prefix adjustments, but exists in the source.
         Expr(:string, to_codeobject.(x.args[2:end])...)
     elseif x.args === nothing
-        Expr(Symbol(lowercase(String(x.head))))
+        # this is mostly useful for ncat
+        int = tryparse(Int, String(x.head))
+        if int === nothing
+            Expr(Symbol(lowercase(String(x.head))))
+        else
+            int
+        end
     elseif x.head === :errortoken
         Expr(:error)
     else

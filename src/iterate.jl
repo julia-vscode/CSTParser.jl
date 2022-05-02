@@ -9,6 +9,7 @@ function Base.getindex(x::EXPR, i)
         end
         return a
     catch
+        rethrow()
         error("indexing error for $(x.head) expression at $i. args: $(x.args !== nothing ? headof.(x.args) : []) trivia: $(x.trivia !== nothing ? headof.(x.trivia) : [])")
     end
 end
@@ -121,11 +122,11 @@ function _getindex(x::EXPR, i)
         _tuple(x, i)
     elseif headof(x) === :typed_comprehension
         odda_event(x, i)
-    elseif headof(x) === :typed_vcat || headof(x) === :typed_hcat
+    elseif headof(x) === :typed_vcat || headof(x) === :typed_hcat || headof(x) === :typed_ncat
         _typed_vcat(x, i)
     elseif headof(x) === :using || headof(x) === :import
         _using(x, i)
-    elseif headof(x) === :vcat || headof(x) === :hcat || headof(x) === :bracescat
+    elseif headof(x) === :vcat || headof(x) === :hcat || headof(x) === :ncat || headof(x) === :bracescat
         _vcat(x, i)
     elseif headof(x) === :vect
         _vect(x, i)
