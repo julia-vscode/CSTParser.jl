@@ -660,6 +660,15 @@ end
         @test raw"""re = r"(\\"[^\\"]*\\") ⋯ (\d+) bytes ⋯ (\\"[^\\"]*\\")" """ |> test_expr
     end
 
+    @testset "weird string edge cases" begin
+        @test """x = raw"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq" """ |> test_expr
+        @test """x = "a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq" """ |> test_expr
+        @test """x = raw\"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
+        @test """x = \"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
+        @test """x = @naah \"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
+        @test """\"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\"\nfoo""" |> test_expr
+    end
+
     @testset "No longer broken things" begin
         @test "[ V[j][i]::T for i=1:length(V[1]), j=1:length(V) ]" |> test_expr
         @test "all(d ≥ 0 for d in B.dims)" |> test_expr

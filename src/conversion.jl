@@ -80,7 +80,14 @@ function _literal_expr(x)
     elseif headof(x) === :MACRO
         return Symbol(valof(x))
     elseif headof(x) === :STRING || headof(x) === :TRIPLESTRING
-        return valof(x)
+        if x.parent !== nothing && (
+            headof(x.parent) === :macrocall && valof(x.parent.args[1]) !== nothing && endswith(valof(x.parent.args[1]), "_str") ||
+            is_getfield_w_quotenode(x.parent.args[1]) && ismacroname(x.parent.args[1].args[2].args[1]) && endswith(valof(x.parent.args[1].args[2].args[1]), "_str")
+        )
+            return valof(x)
+        else
+            return _unescape_string(replace(valof(x), r"(?<!\\)\\\n[\s\n]*" => ""))
+        end
     elseif headof(x) === :CMD
         return Expr_cmd(x)
     elseif headof(x) === :TRIPLECMD
