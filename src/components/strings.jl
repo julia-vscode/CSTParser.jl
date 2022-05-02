@@ -342,37 +342,5 @@ function parse_prefixed_string_cmd(ps::ParseState, ret::EXPR)
 end
 
 function unescape_prefixed(str)
-    edits = UnitRange{Int}[]
-    start = -1
-    for (i, c) in enumerate(str)
-        if start == -1 && c === '\\'
-            start = i
-        end
-        if start > -1
-            if c === '\\'
-            elseif c === '\"'
-                push!(edits, start:i)
-                start = -1
-            else
-                start = -1
-            end
-        end
-    end
-
-    if !isempty(edits) || start > -1
-        str1 = deepcopy(str)
-        if start > -1
-            # slashes preceding closing '"'
-            n = div(length(start:length(str)), 2) - 1
-            str1 = string(str1[1:prevind(str1, start)], repeat("\\", n + 1))
-        end
-
-        for e in reverse(edits)
-            n = div(length(e), 2) - 1
-            str1 = string(str1[1:prevind(str1, first(e))], string(repeat("\\", n), "\""), str1[nextind(str1, last(e)):lastindex(str1)])
-
-        end
-        return str1
-    end
-    return str
+    return replace(str, r"(\\)*(?=\"|$)" => s -> s[1:end÷2])
 end

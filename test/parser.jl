@@ -655,6 +655,11 @@ end
         @test "\"\"\"\n\t\"\"\"" |> test_expr # Change of behaviour from v1.5 -> v1.6
     end
 
+    @testset "raw strings with unicode" begin
+        @test raw"""re = r"(\\"[^\\"]*\\")  (\d+) bytes α (\\"[^\\"]*\\")\\\\" """ |> test_expr
+        @test raw"""re = r"(\\"[^\\"]*\\") ⋯ (\d+) bytes ⋯ (\\"[^\\"]*\\")" """ |> test_expr
+    end
+
     @testset "No longer broken things" begin
         @test "[ V[j][i]::T for i=1:length(V[1]), j=1:length(V) ]" |> test_expr
         @test "all(d ≥ 0 for d in B.dims)" |> test_expr
