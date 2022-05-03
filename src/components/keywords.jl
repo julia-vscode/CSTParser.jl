@@ -273,8 +273,15 @@ function parse_blockexpr_sig(ps::ParseState, head)
         end
         return EXPR(:tuple, args, trivia)
     elseif head === :module || head === :baremodule
-        return isidentifier(ps.nt) ? EXPR(:IDENTIFIER, next(ps)) :
+        return if isidentifier(ps.nt)
+            if is_nonstd_identifier(ps)
+                parse_nonstd_identifier(ps)
+            else
+                EXPR(:IDENTIFIER, next(ps))
+            end
+        else
             @precedence ps 15 @closer ps :ws parse_expression(ps)
+        end
     end
     return nothing
 end

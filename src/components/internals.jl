@@ -355,6 +355,17 @@ function get_appropriate_child_to_expand(x)
     end
 end
 
+is_nonstd_identifier(ps) = VERSION > v"1.3.0-" && isidentifier(ps.nt) && isemptyws(ps.nws) && (kindof(ps.nnt) === Tokens.STRING || kindof(ps.nnt) === Tokens.TRIPLE_STRING)
+
+function parse_nonstd_identifier(ps)
+    id = INSTANCE(next(ps))
+    if valof(id) == "var"
+        EXPR(:NONSTDIDENTIFIER, EXPR[id, INSTANCE(next(ps))])
+    else
+        mErrorToken(ps, EXPR(:NONSTDIDENTIFIER, EXPR[id, INSTANCE(next(ps))]), UnexpectedToken)
+    end
+end
+
 function parse_importexport_item(ps, is_colon = false)
     if kindof(ps.nt) === Tokens.AT_SIGN
         parse_macroname(next(ps))
@@ -368,13 +379,8 @@ function parse_importexport_item(ps, is_colon = false)
     elseif !is_colon && isoperator(ps.nt)
         next(ps)
         EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, val(ps.t, ps))
-    elseif VERSION > v"1.3.0-" && isidentifier(ps.nt) && isemptyws(ps.nws) && (kindof(ps.nnt) === Tokens.STRING || kindof(ps.nnt) === Tokens.TRIPLE_STRING)
-        id = INSTANCE(next(ps))
-        if valof(id) == "var"
-            EXPR(:NONSTDIDENTIFIER, EXPR[id, INSTANCE(next(ps))])
-        else
-            mErrorToken(ps, EXPR(:NONSTDIDENTIFIER, EXPR[id, INSTANCE(next(ps))]), UnexpectedToken)
-        end
+    elseif is_nonstd_identifier(ps)
+        parse_nonstd_identifier(ps)
     else
         INSTANCE(next(ps))
     end

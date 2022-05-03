@@ -839,6 +839,9 @@ end
         @test "\$(a)(b)" |> test_expr
         @test "if !(a) break end" |> test_expr
         @test "module a() end" |> test_expr
+        if VERSION > v"1.3-"
+            @test """module var"#43932#" end""" |> test_expr
+        end
         @test "M.r\"str\" " |> test_expr
         @test "f(a for a in A if cond)" |> test_expr
         @test "\"dimension \$d is not 1 ≤ \$d ≤ \$nd\" " |> test_expr
