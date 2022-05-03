@@ -45,7 +45,7 @@ function parse_tuple(ps::ParseState, ret::EXPR)
     return ret
 end
 
-# XXX: Urgh, shudder. Avert your eyes.
+# XXX: Avert thine eyes.
 function count_semicolons(ps)
     dims = 0
     old_pos = position(ps.l.io)
@@ -67,12 +67,14 @@ end
 Having hit '[' return either:
 + A vect
 + A vcat
++ A ncat
 + A comprehension
 + An array (vcat of hcats)
 """
 function parse_array(ps::ParseState, isref = false)
     args = EXPR[]
     trivia = EXPR[EXPR(ps)]
+    # [] or [;;;]
     if kindof(ps.nt) === Tokens.RSQUARE
         dims = 0
         if kindof(ps.ws) == SemiColonWS
@@ -124,7 +126,7 @@ function parse_array(ps::ParseState, isref = false)
             ps.closer.inref = false
             args1 = EXPR[first_arg]
             prevpos = position(ps)
-            dims = 0
+            ncatdims = 0
             while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
                 a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                 push!(args1, a)
@@ -132,7 +134,7 @@ function parse_array(ps::ParseState, isref = false)
                 prevpos = loop_check(ps, prevpos)
             end
             if kindof(ps.ws) === SemiColonWS
-                dims = count_semicolons(ps)
+                ncatdims = count_semicolons(ps)
             end
             if kindof(ps.nt) === Tokens.RSQUARE && kindof(ps.ws) != SemiColonWS
                 push!(trivia, accept_rsquare(ps))
@@ -150,6 +152,7 @@ function parse_array(ps::ParseState, isref = false)
                 push!(args, first_row)
                 prevpos = position(ps)
                 while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.nt) !== Tokens.ENDMARKER
+                    thisdims = 0
                     first_arg = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
                     args2 = EXPR[first_arg]
                     prevpos1 = position(ps)
@@ -159,17 +162,28 @@ function parse_array(ps::ParseState, isref = false)
                         push!(args2, a)
                         prevpos1 = loop_check(ps, prevpos1)
                     end
+                    if kindof(ps.ws) === SemiColonWS
+                        thisdims = count_semicolons(ps)
+                        if thisdims > ncatdims
+                            ncatdims = thisdims
+                        end
+                    end
                     # if only one entry dont use :row
                     if length(args2) == 1
                         push!(args, args2[1])
                     else
-                        push!(args, EXPR(:row, args2, nothing))
+                        if thisdims > 1
+                            pushfirst!(args2, EXPR(Symbol(thisdims), 0, 0, ""))
+                            push!(args, EXPR(:nrow, args2, nothing))
+                        else
+                            push!(args, EXPR(:row, args2, nothing))
+                        end
                     end
                     prevpos = loop_check(ps, prevpos)
                 end
                 push!(trivia, accept_rsquare(ps))
-                if dims > 1
-                    pushfirst!(args, EXPR(Symbol(dims), 0, 0, ""))
+                if ncatdims > 1
+                    pushfirst!(args, EXPR(Symbol(ncatdims), 0, 0, ""))
                     return EXPR(:ncat, args, trivia)
                 else
                     return EXPR(:vcat, args, trivia)

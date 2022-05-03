@@ -179,7 +179,9 @@ function issyntaxcall(op::EXPR)
     assign_prec(v) && !(v == "~" || v == ".~" || v == "=>") ||
     v == "-->" ||
     v == "||" ||
+    v == ".||" ||
     v == "&&" ||
+    v == ".&&" ||
     v == "<:" ||
     v == ">:" ||
     v == ":" ||
@@ -423,6 +425,11 @@ function parse_operator_anon_func(ps::ParseState, ret::EXPR, op::EXPR)
     return EXPR(op, EXPR[ret, arg], nothing)
 end
 
+function parse_operator_pair(ps::ParseState, ret::EXPR, op::EXPR)
+    arg = @closer ps :comma @precedence ps 0 parse_expression(ps)
+    return EXPR(:call, EXPR[op, ret, arg], nothing)
+end
+
 function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
     P = isdotted(op) ? get_prec(valof(op)[2:end]) : get_prec(valof(op))
     if op.val == "*" && op.fullspan == 0 # implicit multiplication has a very high precedence, but lower than ^
@@ -470,6 +477,8 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
         ret = parse_comp_operator(ps, ret, op)
     elseif P == PowerOp
         ret = parse_operator_power(ps, ret, op)
+    elseif P == 2
+        ret = parse_operator_pair(ps, ret, op)
     else
         ltor = valof(op) == "<|" ? true : LtoR(P)
         nextarg = @precedence ps P - ltor parse_expression(ps)

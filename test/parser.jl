@@ -1428,4 +1428,19 @@ end
         @test test_expr(raw""""foo $begin" """)
         @test test_expr(raw""""foo $quote" """)
     end
+
+    if VERSION > v"1.7-"
+        @testset "broadcasted && and ||" begin
+            @test test_expr(raw"""a .&& b""")
+            @test test_expr(raw"""a .< b .&& b .> a""")
+            @test test_expr(raw"""a .|| b""")
+            @test test_expr(raw"""a .< b .|| b .> a""")
+        end
+    end
+
+    @testset "pair tuple" begin
+        @test test_expr("a => b")
+        @test test_expr("a => b, c, d")
+        @test test_expr("a, a => b, c, d")
+    end
 end
