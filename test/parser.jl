@@ -704,18 +704,20 @@ end
         @test raw"""re = r"(\\"[^\\"]*\\") ⋯ (\d+) bytes ⋯ (\\"[^\\"]*\\")" """ |> test_expr
     end
 
-    @testset "weird string edge cases" begin
-        @test """x = raw"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq" """ |> test_expr
-        @test """x = "a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq" """ |> test_expr
-        @test """x = raw\"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
-        @test """x = \"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
-        @test """x = @naah \"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
-        @test """x = Foo.@naah \"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
-        @test """x = Foo.@naah_str \"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
-        @test """x = Foo.naah\"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
-        @test """\"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\"\nfoo""" |> test_expr
-        @test """throw(ArgumentError("invalid \$(m == 2 ? "hex (\\\\x)" :
-                 "unicode (\\\$u)") escape sequence"))""" |> test_expr
+    if VERSION > v"1.7-"
+        @testset "weird string edge cases" begin
+            @test """x = raw"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq" """ |> test_expr
+            @test """x = "a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq" """ |> test_expr
+            @test """x = raw\"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
+            @test """x = \"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
+            @test """x = @naah \"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
+            @test """x = Foo.@naah \"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
+            @test """x = Foo.@naah_str \"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
+            @test """x = Foo.naah\"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
+            @test """\"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\"\nfoo""" |> test_expr
+            @test """throw(ArgumentError("invalid \$(m == 2 ? "hex (\\\\x)" :
+                    "unicode (\\\$u)") escape sequence"))""" |> test_expr
+        end
     end
 
     @testset "No longer broken things" begin
