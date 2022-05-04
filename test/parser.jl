@@ -159,6 +159,17 @@ end
         if VERSION >= v"1.6"
             @testset "comment parsing" begin
                 @test "[1#==#2#==#3]" |> test_expr
+                @test """
+                begin
+                arraycopy_common(false, LLVM.Builder(B), orig, origops[1], gutils)#=fwd=#
+                return nothing
+                end
+                """ |> test_expr
+                @test CSTParser.has_error(CSTParser.parse("""
+                begin
+                arraycopy_common(false, LLVM.Builder(B), orig, origops[1], gutils)#=fwd=#return nothing
+                end
+                """))
             end
         end
 

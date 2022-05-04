@@ -136,6 +136,7 @@ function read_ws_comment(l, c::Char)
         elseif c == ';'
             semicolon = true
         else
+            newline |= c == '\n'
             newline, semicolon = read_ws(l, newline, semicolon)
         end
     end
