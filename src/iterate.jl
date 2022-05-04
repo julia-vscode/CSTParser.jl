@@ -183,7 +183,7 @@ function _getindex(x::EXPR, i)
             end
         end
     else
-        error("Indexing $(Expr(x)) at $i")
+        error("Indexing $x at $i")
     end
 end
 Base.iterate(x::EXPR) = length(x) == 0 ? nothing : (x[1], 1)

@@ -39,6 +39,20 @@ function norm_ast(a::Any)
     return a
 end
 
+function meta_parse_has_error(x::Expr)
+    if x.head == :incomplete
+        return true
+    else
+        for a in x.args
+            if meta_parse_has_error(a)
+                return true
+            end
+        end
+    end
+    return false
+end
+meta_parse_has_error(_) = false
+
 function meta_parse_file(str)
     pos = 1
     x1 = Expr(:file)
@@ -57,7 +71,16 @@ function meta_parse_file(str)
     end
     x1 = norm_ast(x1)
     CSTParser.remlineinfo!(x1)
-    return x1, false
+    return x1, meta_parse_has_error(x1)
+end
+
+find_error(x, offset = 0) = if CSTParser.headof(x) === :errortoken
+    @show offset
+  else
+    for a in x
+        find_error(a, offset)
+        offset += a.fullspan
+    end
 end
 
 function cst_parse_file(str)
@@ -73,7 +96,7 @@ function cst_parse_file(str)
     end
 
     x0 = norm_ast(to_codeobject(x))
-    x0, CSTParser.has_error(ps) || !isempty(sp)
+    x0, CSTParser.has_error(ps), isempty(sp)
 end
 
 @testset "Parsing files in Base" begin
@@ -86,9 +109,10 @@ end
             str = read(file, String)
 
             cst = CSTParser.parse(str, true)
-            cst_expr, cst_err = cst_parse_file(str)
+            cst_expr, cst_err, span_err = cst_parse_file(str)
             meta_expr, meta_err = meta_parse_file(str)
             @test cst_err == meta_err
+            @test span_err
             @test cst.fullspan == sizeof(str)
 
             if cst_err || meta_err

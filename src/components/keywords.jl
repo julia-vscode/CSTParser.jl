@@ -75,7 +75,7 @@ function parse_kw(ps::ParseState; allow_const_field = false)
     elseif k === Tokens.TYPE
         return EXPR(:IDENTIFIER, ps)
     elseif k === Tokens.STRUCT
-        return @default ps @closer ps :block parse_blockexpr(ps, :struct)
+        return @default ps @closer ps :block parse_blockexpr(ps, :struct, allow_const_field = true)
     elseif k === Tokens.MUTABLE
         return @default ps @closer ps :block parse_mutable(ps)
     elseif k === Tokens.OUTER

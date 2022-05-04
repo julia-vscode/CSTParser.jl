@@ -366,10 +366,14 @@ end
                     const arg1
                     arg2
                 end""" |> test_expr
-                @test CSTParser.has_error(CSTParser.parse("""struct A
+                @test """struct A
                     const arg1
                     arg2
-                end"""))
+                end""" |> test_expr
+                @test """@eval struct A
+                    const arg1
+                    arg2
+                end""" |> test_expr
             end
         end
     end
