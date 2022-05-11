@@ -829,6 +829,9 @@ end
         """ |> test_expr
         @test "function f() ::T end" |> test_expr # ws closer
         @test "import Base: +, -, .+, .-" |> test_expr
+        @test "import Base.:+" |> test_expr
+        @test "import Base.:⋅" |> test_expr
+        @test "import Base.:sin, Base.:-" |> test_expr
         @test "[a +   + l]" |> test_expr # ws closer
         @test "@inbounds C[i,j] = - α[i] * αjc" |> test_expr
         @test "@inbounds C[i,j] = - n * p[i] * pj" |> test_expr

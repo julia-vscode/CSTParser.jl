@@ -430,6 +430,6 @@ function tokenkindtoheadmap(k::Tokens.Kind)
     elseif k === Tokens.ENDMARKER
         return :errortoken
     else
-        error("")
+        error("Cannot convert token $k to Expr head")
     end
 end

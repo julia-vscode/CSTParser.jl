@@ -388,7 +388,7 @@ end
 """
 Helper function for parsing import/using statements.
 """
-function parse_dot_mod(ps::ParseState, is_colon = false, allow_as = false)
+function parse_dot_mod(ps::ParseState, is_colon=false, allow_as=false)
     ret = EXPR(EXPR(:OPERATOR, 0, 0, "."), EXPR[], EXPR[])
 
     prevpos = position(ps)
@@ -414,6 +414,11 @@ function parse_dot_mod(ps::ParseState, is_colon = false, allow_as = false)
 
         if kindof(ps.nt) === Tokens.DOT
             pushtotrivia!(ret, EXPR(next(ps)))
+            if kindof(ps.nt) === Tokens.COLON
+                next(ps)
+                push!(ret, INSTANCE(next(ps)))
+                return ret
+            end
         elseif isoperator(ps.nt) && (ps.nt.dotop || kindof(ps.nt) === Tokens.DOT)
             pushtotrivia!(ret, EXPR(:DOT, 1, 1))
             ps.nt = RawToken(kindof(ps.nt), ps.nt.startpos, ps.nt.endpos, ps.nt.startbyte + 1, ps.nt.endbyte, ps.nt.token_error, false, ps.nt.suffix)
