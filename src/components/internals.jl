@@ -415,8 +415,8 @@ function parse_dot_mod(ps::ParseState, is_colon=false, allow_as=false)
         if kindof(ps.nt) === Tokens.DOT
             pushtotrivia!(ret, EXPR(next(ps)))
             if kindof(ps.nt) === Tokens.COLON
-                next(ps)
-                push!(ret, INSTANCE(next(ps)))
+                u = parse_unary_colon(ps, EXPR(:IDENTIFIER, next(ps)))
+                push!(ret, u)
                 return ret
             end
         elseif isoperator(ps.nt) && (ps.nt.dotop || kindof(ps.nt) === Tokens.DOT)

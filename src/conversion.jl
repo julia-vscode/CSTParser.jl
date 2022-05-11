@@ -176,7 +176,15 @@ function to_codeobject(x::EXPR)
     elseif x.head isa EXPR
         Expr(to_codeobject(x.head), to_codeobject.(x.args)...)
     elseif x.head === :quotenode
-        QuoteNode(to_codeobject(x.args[1]))
+        # quote nodes in import/using are unwrapped by the Julia parser
+        if x.parent isa EXPR &&
+            x.parent.parent isa EXPR &&
+            is_dot(x.parent.head) &&
+            x.parent.parent.head in (:import, :using)
+            to_codeobject(x.args[1])
+        else
+            QuoteNode(to_codeobject(x.args[1]))
+        end
     elseif x.head === :globalrefdoc
         GlobalRef(Core, Symbol("@doc"))
     elseif x.head === :globalrefcmd
