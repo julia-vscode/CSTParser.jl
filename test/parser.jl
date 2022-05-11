@@ -1466,4 +1466,12 @@ end
         @test test_expr("a => b, c, d")
         @test test_expr("a, a => b, c, d")
     end
+
+    @testset "global" begin
+        @test test_expr("global a")
+        @test test_expr("global a = 1")
+        @test test_expr("global a = 1, b")
+        @test test_expr("global a, b")
+        @test test_expr("global a, b = 2")
+    end
 end
