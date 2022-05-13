@@ -736,7 +736,11 @@ end
             @test """x = Foo.naah\"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
             @test """\"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\"\nfoo""" |> test_expr
             @test """throw(ArgumentError("invalid \$(m == 2 ? "hex (\\\\x)" :
-                    "unicode (\\\$u)") escape sequence"))""" |> test_expr
+            "unicode (\\\$u)") escape sequence"))""" |> test_expr
+            @test "\"a\\\\\\\\\\\nb\"" |> test_expr
+            for c in 0:12
+                @test test_expr(string("\"a", '\\'^c, "\nb\""))
+            end
         end
     end
 

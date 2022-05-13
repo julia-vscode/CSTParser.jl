@@ -297,7 +297,7 @@ end
 
 function _unescape_string_expr(expr)
     if headof(expr) === :STRING || headof(expr) === :TRIPLESTRING
-        expr.val = _unescape_string(replace(valof(expr), r"(?<!\\)\\\n[\s\n]*" => ""))
+        expr.val = _unescape_string(replace(valof(expr), r"(?<!\\)((?:\\\\)*)\\\n[\s\n]*" => s"\1"))
     else
         for a in expr
             _unescape_string_expr(a)
