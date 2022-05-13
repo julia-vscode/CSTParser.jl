@@ -185,7 +185,7 @@ end
 
 function _process_inner_array(args_list, trivia_bp)
     if isempty(trivia_bp)
-        return only(args_list)
+        return first(args_list)
     end
     bp = minimum(trivia_bp)
     if all(==(bp), trivia_bp)
