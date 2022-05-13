@@ -98,7 +98,6 @@ function parse_array(ps::ParseState, isref = false)
         pushtotrivia!(ret, accept_rsquare(ps))
         return ret
     end
-    return ret
 end
 
 binding_power(ps) =
@@ -114,12 +113,12 @@ binding_power(ps) =
 
 function parse_array_outer(ps::ParseState, trivia, isref)
     args_list = EXPR[]
-    trivia_list = Any[]
     trivia_bp = Int[]
     min_bp = 0
     is_start = true
     while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.nt) !== Tokens.ENDMARKER
         a = @nocloser ps :newline @closesquare ps @closer ps :insquare @closer ps :ws @closer ps :wsop @closer ps :comma parse_expression(ps)
+
         if is_start
             args = EXPR[]
             if isref && _do_kw_convert(ps, a)
@@ -155,14 +154,16 @@ function parse_array_outer(ps::ParseState, trivia, isref)
             end
         end
         is_start = false
+
         push!(args_list, a)
-        push!(trivia_list, ps.ws)
+
         bp = binding_power(ps)
         bp < min_bp && (min_bp = bp)
         if bp <= 0
             push!(trivia_bp, bp)
         end
     end
+
     ret = _process_inner_array(args_list, trivia_bp)
     for t in trivia
         pushtotrivia!(ret, t)
@@ -277,9 +278,6 @@ function parse_ref(ps::ParseState, ret::EXPR)
     end
 end
 
-
-
-
 """
 parse_curly(ps, ret)
 
@@ -297,7 +295,6 @@ end
 function parse_braces(ps::ParseState)
     return @default ps @nocloser ps :inwhere parse_barray(ps)
 end
-
 
 function parse_barray(ps::ParseState)
     args = EXPR[]
