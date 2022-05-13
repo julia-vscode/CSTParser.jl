@@ -108,7 +108,7 @@ function _getindex(x::EXPR, i)
         _quotenode(x, i)
     elseif headof(x) === :ref
         _call(x, i)
-    elseif headof(x) === :row
+    elseif headof(x) === :row || headof(x) === :nrow
         x.args[i]
     elseif headof(x) === :string
         _string(x, i)

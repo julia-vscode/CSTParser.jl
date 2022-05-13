@@ -502,6 +502,11 @@ end
                 @test "[x;;; y;;;z]" |> test_expr
             end
 
+            @testset "ncat" begin
+                @test "[1 2; 3 4]" |> test_expr
+                @test "[1;2;;3;4;;5;6;;;;9]" |> test_expr
+            end
+
             @testset "typed_ncat" begin
                 @test "t[;;]" |> test_expr
                 @test "t[;;;;;;;]" |> test_expr
@@ -1216,6 +1221,9 @@ end
         @test test_expr("a'")
         @test test_expr("a''")
         @test test_expr("a'''")
+        # @test test_expr(":.'")
+        # @test test_expr(":?'")
+        # @test test_expr(":a'")
     end
 
     @testset "end as id juxt" begin

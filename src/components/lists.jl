@@ -82,124 +82,140 @@ function parse_array(ps::ParseState, isref = false)
         end
         push!(trivia, accept_rsquare(ps))
         if dims > 1
-            pushfirst!(args, EXPR(Symbol(dims), 0, 0, ""))
-            return EXPR(:ncat, args, trivia)
+            ret = EXPR(:ncat, args, trivia)
+            pushfirst!(ret, EXPR(Symbol(dims), 0, 0, ""))
+            return ret
         else
             return EXPR(:vect, args, trivia)
         end
     else
-        first_arg = @nocloser ps :newline @closesquare ps  @closer ps :insquare @closer ps :ws @closer ps :wsop @closer ps :comma parse_expression(ps)
-        if isref && _do_kw_convert(ps, first_arg)
-            first_arg = _kw_convert(first_arg)
-        end
+        ret = parse_array_outer(ps::ParseState, trivia, isref)
 
-        if kindof(ps.nt) === Tokens.RSQUARE
-            if headof(first_arg) === :generator || headof(first_arg) === :flatten
-                push!(trivia, accept_rsquare(ps))
-                if isbinarycall(first_arg.args[1]) && is_pairarrow(first_arg.args[1].args[2])
-                    return EXPR(:dict_comprehension, EXPR[first_arg], trivia)
-                else
-                    return EXPR(:comprehension, EXPR[first_arg], trivia)
-                end
-            elseif kindof(ps.ws) == SemiColonWS
-                dims = count_semicolons(ps)
-                push!(args, first_arg)
-                push!(trivia, accept_rsquare(ps))
-                if dims > 1
-                    pushfirst!(args, EXPR(Symbol(dims), 0, 0, ""))
-                    return EXPR(:ncat, args, trivia)
-                else
-                    return EXPR(:vcat, args, trivia)
-                end
-            else
-                push!(args, first_arg)
-                push!(trivia, accept_rsquare(ps))
-                ret = EXPR(:vect, args, trivia)
-            end
-        elseif iscomma(ps.nt)
-            push!(args, first_arg)
-            push!(trivia, accept_comma(ps))
-            @closesquare ps parse_comma_sep(ps, args, trivia, isref, insert_params_at = 1)
-            push!(trivia, accept_rsquare(ps))
-            return EXPR(:vect, args, trivia)
-        elseif kindof(ps.ws) == WS || kindof(ps.ws) == SemiColonWS || kindof(ps.ws) == NewLineWS
-            ps.closer.inref = false
-            args1 = EXPR[first_arg]
-            prevpos = position(ps)
-            ncatdims = 0
-            while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
-                a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
-                push!(args1, a)
-
-                prevpos = loop_check(ps, prevpos)
-            end
-            if kindof(ps.ws) === SemiColonWS
-                ncatdims = count_semicolons(ps)
-            end
-            if kindof(ps.nt) === Tokens.RSQUARE && kindof(ps.ws) != SemiColonWS
-                push!(trivia, accept_rsquare(ps))
-                if length(args1) == 1
-                    return EXPR(:vcat, args1, trivia)
-                else
-                    return EXPR(:hcat, args1, trivia)
-                end
-            else
-                if length(args1) == 1
-                    first_row = args1[1]
-                else
-                    first_row = EXPR(:row, args1, nothing)
-                end
-                push!(args, first_row)
-                prevpos = position(ps)
-                while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.nt) !== Tokens.ENDMARKER
-                    thisdims = 0
-                    first_arg = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
-                    args2 = EXPR[first_arg]
-                    prevpos1 = position(ps)
-                    while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
-                        a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
-
-                        push!(args2, a)
-                        prevpos1 = loop_check(ps, prevpos1)
-                    end
-                    if kindof(ps.ws) === SemiColonWS
-                        thisdims = count_semicolons(ps)
-                        if thisdims > ncatdims
-                            ncatdims = thisdims
-                        end
-                    end
-                    # if only one entry dont use :row
-                    if length(args2) == 1
-                        push!(args, args2[1])
-                    else
-                        if thisdims > 1
-                            pushfirst!(args2, EXPR(Symbol(thisdims), 0, 0, ""))
-                            push!(args, EXPR(:nrow, args2, nothing))
-                        else
-                            push!(args, EXPR(:row, args2, nothing))
-                        end
-                    end
-                    prevpos = loop_check(ps, prevpos)
-                end
-                push!(trivia, accept_rsquare(ps))
-                if ncatdims > 1
-                    pushfirst!(args, EXPR(Symbol(ncatdims), 0, 0, ""))
-                    return EXPR(:ncat, args, trivia)
-                else
-                    return EXPR(:vcat, args, trivia)
-                end
-            end
-        else
-            push!(args, first_arg)
-            push!(trivia, accept_rsquare(ps))
-            ret = EXPR(:vect, args, trivia)
-        end
+        pushtotrivia!(ret, accept_rsquare(ps))
+        return ret
     end
     return ret
 end
 
-function parse_array_row()
+binding_power(ps) =
+    if kindof(ps.ws) == Tokens.SEMICOLON_WS
+        -count_semicolons(ps)
+    elseif kindof(ps.ws) == Tokens.NEWLINE_WS
+        -1
+    elseif kindof(ps.ws) == Tokens.WS
+        0
+    else
+        1
+    end
 
+function parse_array_outer(ps::ParseState, trivia, isref)
+    args_list = EXPR[]
+    trivia_list = Any[]
+    trivia_bp = Int[]
+    min_bp = 0
+    is_start = true
+    while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.nt) !== Tokens.ENDMARKER
+        a = @nocloser ps :newline @closesquare ps @closer ps :insquare @closer ps :ws @closer ps :wsop @closer ps :comma parse_expression(ps)
+        if is_start
+            args = EXPR[]
+            if isref && _do_kw_convert(ps, a)
+                a = _kw_convert(a)
+            end
+            if kindof(ps.nt) === Tokens.RSQUARE
+                if headof(a) === :generator || headof(a) === :flatten
+                    if isbinarycall(a.args[1]) && is_pairarrow(a.args[1].args[2])
+                        return EXPR(:dict_comprehension, EXPR[a], trivia)
+                    else
+                        return EXPR(:comprehension, EXPR[a], trivia)
+                    end
+                elseif kindof(ps.ws) == SemiColonWS
+                    dims = count_semicolons(ps)
+                    push!(args, a)
+                    if dims > 1
+                        ret = EXPR(:ncat, args, trivia)
+                        pushfirst!(ret, EXPR(Symbol(dims), 0, 0, ""))
+                        return ret
+                    else
+                        return EXPR(:vcat, args, trivia)
+                    end
+                else
+                    push!(args, a)
+                    return EXPR(:vect, args, trivia)
+                end
+            elseif iscomma(ps.nt)
+                args = EXPR[]
+                push!(args, a)
+                push!(trivia, accept_comma(ps))
+                @closesquare ps parse_comma_sep(ps, args, trivia, isref, insert_params_at = 1)
+                return EXPR(:vect, args, trivia)
+            end
+        end
+        is_start = false
+        push!(args_list, a)
+        push!(trivia_list, ps.ws)
+        bp = binding_power(ps)
+        bp < min_bp && (min_bp = bp)
+        if bp <= 0
+            push!(trivia_bp, bp)
+        end
+    end
+    ret = _process_inner_array(args_list, trivia_bp)
+    for t in trivia
+        pushtotrivia!(ret, t)
+    end
+
+    if ret.head === :nrow
+        if min_bp == 0
+            popfirst!(ret.args)
+            ret.head = :hcat
+        elseif min_bp == -1
+            popfirst!(ret.args)
+            ret.head = :vcat
+        else
+            ret.head = :ncat
+        end
+    elseif min_bp == 0
+        ret.head = :hcat
+    elseif min_bp == -1
+        ret.head = :vcat
+    end
+
+    return ret
+end
+
+function _process_inner_array(args_list, trivia_bp)
+    if isempty(trivia_bp)
+        return only(args_list)
+    end
+    bp = minimum(trivia_bp)
+    if all(==(bp), trivia_bp)
+        if bp == 0
+            ret = EXPR(:row, EXPR[], EXPR[])
+        else
+            ret = EXPR(:nrow, copy(args_list), EXPR[])
+            pushfirst!(ret, EXPR(Symbol(-bp), 0, 0, ""))
+        end
+    end
+
+    i = 1
+    i0 = 1
+    if bp == 0
+        ret = EXPR(:row, EXPR[], EXPR[])
+    else
+        ret = EXPR(:nrow, EXPR[], EXPR[])
+        push!(ret, EXPR(Symbol(-bp), 0, 0, ""))
+    end
+    while true
+        i = findnext(==(bp), trivia_bp, i0)
+        i === nothing && (i = length(args_list))
+        inner_args = args_list[i0:i]
+        inner_trivia = trivia_bp[i0:(i-1)]
+        i0 = i + 1
+
+        push!(ret, _process_inner_array(inner_args, inner_trivia))
+        i >= length(args_list) && break
+    end
+    return ret
 end
 
 """
