@@ -46,7 +46,7 @@ function parse_tuple(ps::ParseState, ret::EXPR)
 end
 
 # XXX: Avert thine eyes.
-function count_semicolons(ps)
+function count_semicolons(ps, check_newline = true)
     dims = 0
     has_newline = false
     old_pos = position(ps.l.io)
@@ -55,7 +55,7 @@ function count_semicolons(ps)
         c = readchar(ps.l.io)
         if c == ';'
             dims += 1
-        elseif c == '\n'
+        elseif check_newline && c == '\n'
             # technically, only trailing newlines are allowed; we're a bit more lenient here
             has_newline = true
         else
@@ -82,7 +82,7 @@ function parse_array(ps::ParseState, isref = false)
     if kindof(ps.nt) === Tokens.RSQUARE
         dims = 0
         if kindof(ps.ws) == SemiColonWS
-            dims = count_semicolons(ps)
+            dims = count_semicolons(ps, false)
         end
         push!(trivia, accept_rsquare(ps))
         if dims > 0

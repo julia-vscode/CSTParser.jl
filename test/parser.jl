@@ -496,6 +496,8 @@ end
             @testset "ncat" begin
                 @test "[;]" |> test_expr
                 @test "[;;]" |> test_expr
+                @test "[;;\n]" |> test_expr
+                @test "[\n ;; \n]" |> test_expr
                 @test "[;;;;;;;]" |> test_expr
                 @test "[x;;;;;]" |> test_expr
                 @test "[x;;]" |> test_expr
