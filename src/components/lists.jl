@@ -85,7 +85,7 @@ function parse_array(ps::ParseState, isref = false)
             dims = count_semicolons(ps)
         end
         push!(trivia, accept_rsquare(ps))
-        if dims > 1
+        if dims > 0
             ret = EXPR(:ncat, args, trivia)
             pushfirst!(ret, EXPR(Symbol(dims), 0, 0, ""))
             return ret

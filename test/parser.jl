@@ -494,6 +494,7 @@ end
         end
         if VERSION > v"1.8-"
             @testset "ncat" begin
+                @test "[;]" |> test_expr
                 @test "[;;]" |> test_expr
                 @test "[;;;;;;;]" |> test_expr
                 @test "[x;;;;;]" |> test_expr
