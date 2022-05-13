@@ -129,6 +129,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                 elseif !isempty(str)
                     push!(ret, ex)
                 end
+                !iscmd && _rm_escaped_newlines(ex)
                 istrip && adjust_lcp(ex)
                 startbytes = 0
                 op = EXPR(:OPERATOR, 1, 1, "\$")
@@ -227,6 +228,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                 # only mark non-interpolated triple u_strings
                 ex = EXPR(length(ret) == 0 ? :TRIPLESTRING : :STRING, lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str)
                 # find lcp for escaped string
+                !iscmd && _rm_escaped_newlines(ex)
                 adjust_lcp(ex, true)
                 # we only want to drop the leading new line if it's a literal newline, not if it's `\n`
                 if startswith(str, "\\n")
@@ -288,6 +290,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
         ret = unwrapped
     end
     if !iscmd && prefixed == false
+        _rm_escaped_newlines(ret)
         _unescape_string_expr(ret)
     end
     update_span!(ret)
@@ -297,10 +300,20 @@ end
 
 function _unescape_string_expr(expr)
     if headof(expr) === :STRING || headof(expr) === :TRIPLESTRING
-        expr.val = _unescape_string(replace(valof(expr), r"(?<!\\)((?:\\\\)*)\\\n[\s\n]*" => s"\1"))
+        expr.val = _unescape_string(valof(expr))
     else
         for a in expr
             _unescape_string_expr(a)
+        end
+    end
+end
+
+function _rm_escaped_newlines(expr)
+    if headof(expr) === :STRING || headof(expr) === :TRIPLESTRING
+        expr.val = replace(valof(expr), r"(?<!\\)((?:\\\\)*)\\\n[\s\n]*" => s"\1")
+    else
+        for a in expr
+            _rm_escaped_newlines(a)
         end
     end
 end

@@ -738,9 +738,20 @@ end
             @test """throw(ArgumentError("invalid \$(m == 2 ? "hex (\\\\x)" :
             "unicode (\\\$u)") escape sequence"))""" |> test_expr
             @test "\"a\\\\\\\\\\\nb\"" |> test_expr
-            for c in 0:12
+            for c in 0:20
                 @test test_expr(string("\"a", '\\'^c, "\nb\""))
+                @test test_expr(string("\"\"\"a", '\\'^c, "\nb\"\"\""))
             end
+            for c in 0:20
+                @test test_expr(string("`a", '\\'^c, "\nb`"))
+                @test test_expr(string("```a", '\\'^c, "\nb```"))
+            end
+
+            @test "\"\"\"\n    a\\\n  b\"\"\"" |> test_expr
+            @test "\"\"\"\n        a\\\n  b\"\"\"" |> test_expr
+            @test "\"\"\"\na\\\n  b\"\"\"" |> test_expr
+            @test "\"\"\"\na\\\nb\"\"\"" |> test_expr
+            @test "\"\"\"\n   a\\\n       b\"\"\"" |> test_expr
         end
     end
 
@@ -1470,6 +1481,13 @@ end
             @test test_expr(raw"""a .< b .&& b .> a""")
             @test test_expr(raw"""a .|| b""")
             @test test_expr(raw"""a .< b .|| b .> a""")
+        end
+    end
+
+    if VERSION > v"1.7-"
+        @testset "normalized unicode ops" begin
+            @test "(·) == (·) == (⋅) == 5" |> test_expr
+            @test "(−) == (-) == 6" |> test_expr
         end
     end
 
