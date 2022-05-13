@@ -185,7 +185,11 @@ end
 
 function _process_inner_array(args_list, trivia_bp)
     if isempty(trivia_bp)
-        return first(args_list)
+        if length(args_list) == 1
+            return first(args_list)
+        else
+            return EXPR(:errortoken, EXPR[], EXPR[])
+        end
     end
     bp = minimum(trivia_bp)
     if all(==(bp), trivia_bp)
@@ -196,7 +200,6 @@ function _process_inner_array(args_list, trivia_bp)
             pushfirst!(ret, EXPR(Symbol(-bp), 0, 0, ""))
         end
     end
-
     i = 1
     i0 = 1
     if bp == 0
@@ -208,6 +211,15 @@ function _process_inner_array(args_list, trivia_bp)
     while true
         i = findnext(==(bp), trivia_bp, i0)
         i === nothing && (i = length(args_list))
+        if !checkbounds(Bool, args_list, i0:i) || !checkbounds(Bool, trivia_bp, i0:(i-1))
+            err = EXPR(:errortoken, EXPR[], EXPR[])
+
+            for a in args_list[i0:end]
+                push!(err, a)
+            end
+            push!(ret, err)
+            break
+        end
         inner_args = args_list[i0:i]
         inner_trivia = trivia_bp[i0:(i-1)]
         i0 = i + 1
