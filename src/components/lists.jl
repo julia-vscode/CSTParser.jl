@@ -48,18 +48,22 @@ end
 # XXX: Avert thine eyes.
 function count_semicolons(ps)
     dims = 0
+    has_newline = false
     old_pos = position(ps.l.io)
     seek(ps.l.io, ps.ws.startbyte)
     while true
         c = readchar(ps.l.io)
         if c == ';'
             dims += 1
+        elseif c == '\n'
+            # technically, only trailing newlines are allowed; we're a bit more lenient here
+            has_newline = true
         else
             dims == 0 || break
         end
     end
     seek(ps.l.io, old_pos)
-    dims
+    return dims == 2 && has_newline ? 0 : dims
 end
 
 """
@@ -98,11 +102,11 @@ function parse_array(ps::ParseState, isref = false)
 end
 
 binding_power(ps) =
-    if kindof(ps.ws) == Tokens.SEMICOLON_WS
+    if kindof(ps.ws) == SemiColonWS
         -count_semicolons(ps)
-    elseif kindof(ps.ws) == Tokens.NEWLINE_WS
+    elseif kindof(ps.ws) == NewLineWS
         -1
-    elseif kindof(ps.ws) == Tokens.WS
+    elseif kindof(ps.ws) == WS
         0
     else
         1
