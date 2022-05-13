@@ -147,7 +147,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                     ps1 = ParseState(input)
 
                     if kindof(ps1.nt) === Tokens.RPAREN
-                        push!(ret, EXPR(:ERRORTOKEN, EXPR[], nothing))
+                        push!(ret, EXPR(:errortoken, EXPR[], nothing))
                         pushtotrivia!(ret, op)
                         pushtotrivia!(ret, lparen)
                         pushtotrivia!(ret, rparen)
