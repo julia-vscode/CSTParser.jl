@@ -637,12 +637,26 @@ end
                 """ |> test_expr
                 @test """try
                     f(1)
+                catch
+                else
+                    stop(f)
+                end
+                """ |> test_expr
+                @test """try
+                    f(1)
                 catch err
                     x
                 else
                     stop(f)
                 finally
                     foo
+                end
+                """ |> test_expr
+                # the most useless try catch ever:
+                @test """try
+                catch
+                else
+                finally
                 end
                 """ |> test_expr
             end
