@@ -164,13 +164,11 @@ function parse_array_outer(ps::ParseState, trivia, isref)
         end
     end
 
-
     if length(trivia_bp) + 1 < length(args_list)
-        return EXPR(:errortoken, args_list, trivia)
-    else
-        ret = _process_inner_array(args_list, trivia_bp)
+        return EXPR(:hcat, EXPR[EXPR(:errortoken, args_list, nothing)], trivia)
     end
 
+    ret = _process_inner_array(args_list, trivia_bp)
     for t in trivia
         pushtotrivia!(ret, t)
     end
