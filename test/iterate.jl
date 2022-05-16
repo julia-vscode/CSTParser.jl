@@ -37,12 +37,12 @@ end
         end
         @testset "simple" begin
             x = cst"global const a = 1"
-            @test length(x) == 3
+            @test length(x) == 2
             @test x[1] === x.trivia[1]
-            @test x[2] === x.trivia[2]
-            @test x[3] === x.args[1]
-            @test length(x[3]) == 1
-            @test x[3][1] === x.args[1].args[1]
+            @test x[2] === x.args[1]
+            @test length(x[2]) == 2
+            @test x[2][1] === x.args[1].trivia[1]
+            @test x[2][2] === x.args[1].args[1]
         end
 
         @testset "return" begin
