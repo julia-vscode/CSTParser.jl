@@ -94,8 +94,8 @@ function parse_array(ps::ParseState, isref = false)
         end
     else
         ret = parse_array_outer(ps::ParseState, trivia, isref)
-
         pushtotrivia!(ret, accept_rsquare(ps))
+
         return ret
     end
 end
@@ -117,7 +117,7 @@ function parse_array_outer(ps::ParseState, trivia, isref)
     min_bp = 0
     is_start = true
     while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.nt) !== Tokens.ENDMARKER
-        a = @nocloser ps :newline @closesquare ps @closer ps :insquare @closer ps :ws @closer ps :wsop @closer ps :comma parse_expression(ps)
+        a = @nocloser ps :newline @nocloser ps :newline @closesquare ps @closer ps :insquare @closer ps :ws @closer ps :wsop @closer ps :comma parse_expression(ps)
 
         if is_start
             args = EXPR[]
@@ -164,7 +164,13 @@ function parse_array_outer(ps::ParseState, trivia, isref)
         end
     end
 
-    ret = _process_inner_array(args_list, trivia_bp)
+
+    if length(trivia_bp) + 1 < length(args_list)
+        return EXPR(:errortoken, args_list, trivia)
+    else
+        ret = _process_inner_array(args_list, trivia_bp)
+    end
+
     for t in trivia
         pushtotrivia!(ret, t)
     end
