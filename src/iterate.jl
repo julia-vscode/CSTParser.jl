@@ -9,6 +9,7 @@ function Base.getindex(x::EXPR, i)
         end
         return a
     catch
+        rethrow()
         error("indexing error for $(x.head) expression at $i. args: $(x.args !== nothing ? headof.(x.args) : []) trivia: $(x.trivia !== nothing ? headof.(x.trivia) : [])")
     end
 end
@@ -107,7 +108,7 @@ function _getindex(x::EXPR, i)
         _quotenode(x, i)
     elseif headof(x) === :ref
         _call(x, i)
-    elseif headof(x) === :row
+    elseif headof(x) === :row || headof(x) === :nrow
         x.args[i]
     elseif headof(x) === :string
         _string(x, i)
@@ -121,11 +122,11 @@ function _getindex(x::EXPR, i)
         _tuple(x, i)
     elseif headof(x) === :typed_comprehension
         odda_event(x, i)
-    elseif headof(x) === :typed_vcat || headof(x) === :typed_hcat
+    elseif headof(x) === :typed_vcat || headof(x) === :typed_hcat || headof(x) === :typed_ncat
         _typed_vcat(x, i)
     elseif headof(x) === :using || headof(x) === :import
         _using(x, i)
-    elseif headof(x) === :vcat || headof(x) === :hcat || headof(x) === :bracescat
+    elseif headof(x) === :vcat || headof(x) === :hcat || headof(x) === :ncat || headof(x) === :bracescat
         _vcat(x, i)
     elseif headof(x) === :vect
         _vect(x, i)
@@ -182,7 +183,7 @@ function _getindex(x::EXPR, i)
             end
         end
     else
-        error("Indexing $(Expr(x)) at $i")
+        error("Indexing $x at $i")
     end
 end
 Base.iterate(x::EXPR) = length(x) == 0 ? nothing : (x[1], 1)
@@ -775,7 +776,7 @@ function _try(x, i)
         elseif i == 7
             x.trivia[3]
         end
-    elseif length(x) == 8 # try expr catch e expr finally expr end
+    elseif length(x) == 8 # 'try expr catch e expr finally expr end' or 'else end'
         if i == 3
             x.trivia[2]
         elseif i == 4
@@ -788,6 +789,24 @@ function _try(x, i)
             x.args[4]
         elseif i == 8
             x.trivia[4]
+        end
+    elseif length(x) == 10 # try expr catch e expr else expr finally expr end
+        if i == 3
+            x.trivia[2]
+        elseif i == 4
+            x.args[2]
+        elseif i == 5
+            x.args[3]
+        elseif i == 6
+            x.trivia[4]
+        elseif i == 7
+            x.args[5]
+        elseif i == 8
+            x.trivia[3]
+        elseif i == 9
+            x.args[4]
+        elseif i == 10
+            x.trivia[5]
         end
     end
 end

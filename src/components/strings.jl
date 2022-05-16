@@ -121,7 +121,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
             elseif c == '$'
                 isinterpolated = true
                 lspan = position(b)
-                str = tostr(b)
+                str = String(take!(b))
                 ex = EXPR(:STRING, lspan + startbytes, lspan + startbytes, str)
                 if position(input) == (istrip ? 3 : 1) + 1
                     # Need to add empty :STRING at start to account for \"
@@ -129,6 +129,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                 elseif !isempty(str)
                     push!(ret, ex)
                 end
+                !iscmd && _rm_escaped_newlines(ex)
                 istrip && adjust_lcp(ex)
                 startbytes = 0
                 op = EXPR(:OPERATOR, 1, 1, "\$")
@@ -147,7 +148,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                     ps1 = ParseState(input)
 
                     if kindof(ps1.nt) === Tokens.RPAREN
-                        push!(ret, EXPR(:ERRORTOKEN, EXPR[], nothing))
+                        push!(ret, EXPR(:errortoken, EXPR[], nothing))
                         pushtotrivia!(ret, op)
                         pushtotrivia!(ret, lparen)
                         pushtotrivia!(ret, rparen)
@@ -215,8 +216,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
             push!(ret, ex)
         else
             str = String(take!(b))
-            # only literal whitespace should be considered for finding the lcp, so we need to keep
-            # both an escaped an an unescaped version of the string around
+
+            # This is for error handling only.
             u_str = try
                 _unescape_string(str)
             catch err
@@ -224,19 +225,17 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
             end
             if istrip
                 str = str[1:prevind(str, lastindex(str), 3)]
-                u_str = u_str[1:prevind(u_str, lastindex(u_str), 3)]
                 # only mark non-interpolated triple u_strings
                 ex = EXPR(length(ret) == 0 ? :TRIPLESTRING : :STRING, lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str)
                 # find lcp for escaped string
+                !iscmd && _rm_escaped_newlines(ex)
                 adjust_lcp(ex, true)
-                # and then use the unescaped string from here on out
-                ex.val = u_str
                 # we only want to drop the leading new line if it's a literal newline, not if it's `\n`
                 if startswith(str, "\\n")
                     shoulddropleadingnewline = false
                 end
             else
-                str = u_str[1:prevind(u_str, lastindex(u_str))]
+                str = str[1:prevind(str, lastindex(str))]
                 ex = EXPR(:STRING, lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str)
             end
             if isempty(str)
@@ -290,9 +289,33 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
         end
         ret = unwrapped
     end
+    if !iscmd && prefixed == false
+        _rm_escaped_newlines(ret)
+        _unescape_string_expr(ret)
+    end
     update_span!(ret)
 
     return iscmd ? wrapwithcmdmacro(ret) : ret
+end
+
+function _unescape_string_expr(expr)
+    if headof(expr) === :STRING || headof(expr) === :TRIPLESTRING
+        expr.val = _unescape_string(valof(expr))
+    else
+        for a in expr
+            _unescape_string_expr(a)
+        end
+    end
+end
+
+function _rm_escaped_newlines(expr)
+    if headof(expr) === :STRING || headof(expr) === :TRIPLESTRING
+        expr.val = replace(valof(expr), r"(?<!\\)((?:\\\\)*)\\\n[\s\n]*" => s"\1")
+    else
+        for a in expr
+            _rm_escaped_newlines(a)
+        end
+    end
 end
 
 function adjustspan(x::EXPR)
@@ -342,37 +365,5 @@ function parse_prefixed_string_cmd(ps::ParseState, ret::EXPR)
 end
 
 function unescape_prefixed(str)
-    edits = UnitRange{Int}[]
-    start = -1
-    for (i, c) in enumerate(str)
-        if start == -1 && c === '\\'
-            start = i
-        end
-        if start > -1
-            if c === '\\'
-            elseif c === '\"'
-                push!(edits, start:i)
-                start = -1
-            else
-                start = -1
-            end
-        end
-    end
-
-    if !isempty(edits) || start > -1
-        str1 = deepcopy(str)
-        if start > -1
-            # slashes preceding closing '"'
-            n = div(length(start:length(str)), 2) - 1
-            str1 = string(str1[1:prevind(str1, start)], repeat("\\", n + 1))
-        end
-
-        for e in reverse(edits)
-            n = div(length(e), 2) - 1
-            str1 = string(str1[1:prevind(str1, first(e))], string(repeat("\\", n), "\""), str1[nextind(str1, last(e)):lastindex(str1)])
-
-        end
-        return str1
-    end
-    return str
+    return replace(str, r"(\\)*(?=\"|$)" => s -> s[1:end÷2])
 end

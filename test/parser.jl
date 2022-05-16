@@ -128,6 +128,10 @@ end
             @test "!(a,b)" |> test_expr
             @test "¬(a,b)" |> test_expr
             @test "~(a,b)" |> test_expr
+            if VERSION > v"1.7-"
+                @test "~(a)(foo...)" |> test_expr
+                @test "~(&)(foo...)" |> test_expr
+            end
             @test "<:(a,b)" |> test_expr
             @test "√(a,b)" |> test_expr
             @test "\$(a,b)" |> test_expr
@@ -155,6 +159,17 @@ end
         if VERSION >= v"1.6"
             @testset "comment parsing" begin
                 @test "[1#==#2#==#3]" |> test_expr
+                @test """
+                begin
+                arraycopy_common(false, LLVM.Builder(B), orig, origops[1], gutils)#=fwd=#
+                return nothing
+                end
+                """ |> test_expr
+                @test CSTParser.has_error(CSTParser.parse("""
+                begin
+                arraycopy_common(false, LLVM.Builder(B), orig, origops[1], gutils)#=fwd=#return nothing
+                end
+                """))
             end
         end
 
@@ -362,10 +377,14 @@ end
                     const arg1
                     arg2
                 end""" |> test_expr
-                @test CSTParser.has_error(CSTParser.parse("""struct A
+                @test """struct A
                     const arg1
                     arg2
-                end"""))
+                end""" |> test_expr
+                @test """@eval struct A
+                    const arg1
+                    arg2
+                end""" |> test_expr
             end
         end
     end
@@ -435,6 +454,11 @@ end
         @test "@sprintf(\"%08d\", id)" |> test_expr
         @test "[@m @n a for a in A]" |> test_expr # ensure closer.insquare propogates
         @test CSTParser.parse("@__DIR__\n\nx", true)[1].span == 8
+
+        if VERSION >= v"1.8.0-"
+            @test "M43018.@test43018() do; end" |> test_expr
+            @test "@M43018.test43018() do; end" |> test_expr
+        end
     end
 
     @testset "Square " begin
@@ -472,6 +496,33 @@ end
             @test "t[x;y]" |> test_expr
             @test "t[x y; z]" |> test_expr
             @test "t[x, y; z]" |> test_expr
+        end
+        if VERSION > v"1.8-"
+            @testset "ncat" begin
+                @test "[;]" |> test_expr
+                @test "[;;]" |> test_expr
+                @test "[;;\n]" |> test_expr
+                @test "[\n ;; \n]" |> test_expr
+                @test "[;;;;;;;]" |> test_expr
+                @test "[x;;;;;]" |> test_expr
+                @test "[x;;]" |> test_expr
+                @test "[x;; y;;    z]" |> test_expr
+                @test "[x;;; y;;;z]" |> test_expr
+            end
+
+            @testset "ncat" begin
+                @test "[1 2; 3 4]" |> test_expr
+                @test "[1;2;;3;4;;5;6;;;;9]" |> test_expr
+            end
+
+            @testset "typed_ncat" begin
+                @test "t[;;]" |> test_expr
+                @test "t[;;;;;;;]" |> test_expr
+                @test "t[x;;;;;]" |> test_expr
+                @test "t[x;;]" |> test_expr
+                @test "t[x;; y;;    z]" |> test_expr
+                @test "t[x;;; y;;;z]" |> test_expr
+            end
         end
 
         @testset "hcat" begin
@@ -582,6 +633,41 @@ end
                 stop(f)
             end
             """ |> test_expr
+
+            if VERSION > v"1.8-"
+                @test """try
+                    f(1)
+                catch
+                    x
+                else
+                    stop(f)
+                end
+                """ |> test_expr
+                @test """try
+                    f(1)
+                catch
+                else
+                    stop(f)
+                end
+                """ |> test_expr
+                @test """try
+                    f(1)
+                catch err
+                    x
+                else
+                    stop(f)
+                finally
+                    foo
+                end
+                """ |> test_expr
+                # the most useless try catch ever:
+                @test """try
+                catch
+                else
+                finally
+                end
+                """ |> test_expr
+            end
         end
         @testset "For" begin
             @test """
@@ -653,6 +739,42 @@ end
         @test headof(CSTParser.parse("\"\"\"abc\$(de)fg\"\"\"").args[3]) == :STRING
         @test headof(CSTParser.parse("\"\"\"abc(de)fg\"\"\"")) == :TRIPLESTRING
         @test "\"\"\"\n\t\"\"\"" |> test_expr # Change of behaviour from v1.5 -> v1.6
+    end
+
+    @testset "raw strings with unicode" begin
+        @test raw"""re = r"(\\"[^\\"]*\\")  (\d+) bytes α (\\"[^\\"]*\\")\\\\" """ |> test_expr
+        @test raw"""re = r"(\\"[^\\"]*\\") ⋯ (\d+) bytes ⋯ (\\"[^\\"]*\\")" """ |> test_expr
+    end
+
+    if VERSION > v"1.7-"
+        @testset "weird string edge cases" begin
+            @test """x = raw"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq" """ |> test_expr
+            @test """x = "a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq" """ |> test_expr
+            @test """x = raw\"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
+            @test """x = \"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
+            @test """x = @naah \"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
+            @test """x = Foo.@naah \"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
+            @test """x = Foo.@naah_str \"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
+            @test """x = Foo.naah\"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\" """ |> test_expr
+            @test """\"\"\"a \$(asd)  sd\\\n  bsf\\\\leq\n\\\\leq\"\"\"\nfoo""" |> test_expr
+            @test """throw(ArgumentError("invalid \$(m == 2 ? "hex (\\\\x)" :
+            "unicode (\\\$u)") escape sequence"))""" |> test_expr
+            @test "\"a\\\\\\\\\\\nb\"" |> test_expr
+            for c in 0:20
+                @test test_expr(string("\"a", '\\'^c, "\nb\""))
+                @test test_expr(string("\"\"\"a", '\\'^c, "\nb\"\"\""))
+            end
+            for c in 0:20
+                @test test_expr(string("`a", '\\'^c, "\nb`"))
+                @test test_expr(string("```a", '\\'^c, "\nb```"))
+            end
+
+            @test "\"\"\"\n    a\\\n  b\"\"\"" |> test_expr
+            @test "\"\"\"\n        a\\\n  b\"\"\"" |> test_expr
+            @test "\"\"\"\na\\\n  b\"\"\"" |> test_expr
+            @test "\"\"\"\na\\\nb\"\"\"" |> test_expr
+            @test "\"\"\"\n   a\\\n       b\"\"\"" |> test_expr
+        end
     end
 
     @testset "No longer broken things" begin
@@ -749,6 +871,11 @@ end
         """ |> test_expr
         @test "function f() ::T end" |> test_expr # ws closer
         @test "import Base: +, -, .+, .-" |> test_expr
+        if VERSION > v"1.6-"
+            @test "import Base.:+" |> test_expr
+            @test "import Base.:⋅" |> test_expr
+            @test "import Base.:sin, Base.:-" |> test_expr
+        end
         @test "[a +   + l]" |> test_expr # ws closer
         @test "@inbounds C[i,j] = - α[i] * αjc" |> test_expr
         @test "@inbounds C[i,j] = - n * p[i] * pj" |> test_expr
@@ -774,6 +901,9 @@ end
         @test "\$(a)(b)" |> test_expr
         @test "if !(a) break end" |> test_expr
         @test "module a() end" |> test_expr
+        if VERSION > v"1.3-"
+            @test """module var"#43932#" end""" |> test_expr
+        end
         @test "M.r\"str\" " |> test_expr
         @test "f(a for a in A if cond)" |> test_expr
         @test "\"dimension \$d is not 1 ≤ \$d ≤ \$nd\" " |> test_expr
@@ -1128,6 +1258,9 @@ end
         @test test_expr("a'")
         @test test_expr("a''")
         @test test_expr("a'''")
+        # @test test_expr(":.'")
+        # @test test_expr(":?'")
+        # @test test_expr(":a'")
     end
 
     @testset "end as id juxt" begin
@@ -1362,5 +1495,35 @@ end
         @test test_expr(raw""""foo $function" """)
         @test test_expr(raw""""foo $begin" """)
         @test test_expr(raw""""foo $quote" """)
+    end
+
+    if VERSION > v"1.7-"
+        @testset "broadcasted && and ||" begin
+            @test test_expr(raw"""a .&& b""")
+            @test test_expr(raw"""a .< b .&& b .> a""")
+            @test test_expr(raw"""a .|| b""")
+            @test test_expr(raw"""a .< b .|| b .> a""")
+        end
+    end
+
+    if VERSION > v"1.7-"
+        @testset "normalized unicode ops" begin
+            @test "(·) == (·) == (⋅) == 5" |> test_expr
+            @test "(−) == (-) == 6" |> test_expr
+        end
+    end
+
+    @testset "pair tuple" begin
+        @test test_expr("a => b")
+        @test test_expr("a => b, c, d")
+        @test test_expr("a, a => b, c, d")
+    end
+
+    @testset "global" begin
+        @test test_expr("global a")
+        @test test_expr("global a = 1")
+        @test test_expr("global a = 1, b")
+        @test test_expr("global a, b")
+        @test test_expr("global a, b = 2")
     end
 end

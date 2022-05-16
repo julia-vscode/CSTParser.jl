@@ -21,10 +21,9 @@ function _precompile()
     precompile(EXPR, (Symbol, Vector{EXPR}, Int, Int))
     precompile(EXPR, (Symbol, Vector{EXPR}))
 
-    
+
     precompile(INSTANCE, (ParseState,))
 
-    precompile(tostr, (IOBuffer,))
     precompile(str_value, (EXPR,))
 
     precompile(CSTParser.parse_expression, (ParseState,))

@@ -45,106 +45,192 @@ function parse_tuple(ps::ParseState, ret::EXPR)
     return ret
 end
 
+# XXX: Avert thine eyes.
+function count_semicolons(ps, check_newline = true)
+    dims = 0
+    has_newline = false
+    old_pos = position(ps.l.io)
+    seek(ps.l.io, ps.ws.startbyte)
+    while true
+        c = readchar(ps.l.io)
+        if c == ';'
+            dims += 1
+        elseif check_newline && c == '\n'
+            # technically, only trailing newlines are allowed; we're a bit more lenient here
+            has_newline = true
+        else
+            dims == 0 || break
+        end
+    end
+    seek(ps.l.io, old_pos)
+    return dims == 2 && has_newline ? 0 : dims
+end
+
 """
     parse_array(ps)
 Having hit '[' return either:
 + A vect
 + A vcat
++ A ncat
 + A comprehension
 + An array (vcat of hcats)
 """
 function parse_array(ps::ParseState, isref = false)
     args = EXPR[]
     trivia = EXPR[EXPR(ps)]
+    # [] or [;;;]
     if kindof(ps.nt) === Tokens.RSQUARE
-        push!(trivia, accept_rsquare(ps))
-        ret = EXPR(:vect, args, trivia)
-    else
-        first_arg = @nocloser ps :newline @closesquare ps  @closer ps :insquare @closer ps :ws @closer ps :wsop @closer ps :comma parse_expression(ps)
-        if isref && _do_kw_convert(ps, first_arg)
-            first_arg = _kw_convert(first_arg)
+        dims = 0
+        if kindof(ps.ws) == SemiColonWS
+            dims = count_semicolons(ps, false)
         end
-
-        if kindof(ps.nt) === Tokens.RSQUARE
-            if headof(first_arg) === :generator || headof(first_arg) === :flatten
-                push!(trivia, accept_rsquare(ps))
-                if isbinarycall(first_arg.args[1]) && is_pairarrow(first_arg.args[1].args[2])
-                    return EXPR(:dict_comprehension, EXPR[first_arg], trivia)
-                else
-                    return EXPR(:comprehension, EXPR[first_arg], trivia)
-                end
-            elseif kindof(ps.ws) == SemiColonWS
-                push!(args, first_arg)
-                push!(trivia, accept_rsquare(ps))
-                return EXPR(:vcat, args, trivia)
-            else
-                push!(args, first_arg)
-                push!(trivia, accept_rsquare(ps))
-                ret = EXPR(:vect, args, trivia)
-            end
-        elseif iscomma(ps.nt)
-            push!(args, first_arg)
-            push!(trivia, accept_comma(ps))
-            @closesquare ps parse_comma_sep(ps, args, trivia, isref, insert_params_at = 1)
-            push!(trivia, accept_rsquare(ps))
-            return EXPR(:vect, args, trivia)
-        elseif kindof(ps.ws) == WS || kindof(ps.ws) == SemiColonWS || kindof(ps.ws) == NewLineWS
-            ps.closer.inref = false
-            args1 = EXPR[first_arg]
-            prevpos = position(ps)
-            while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
-                a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
-                push!(args1, a)
-        
-                prevpos = loop_check(ps, prevpos)
-            end
-            if kindof(ps.nt) === Tokens.RSQUARE && kindof(ps.ws) != SemiColonWS
-                push!(trivia, accept_rsquare(ps))
-                if length(args1) == 1
-                    return EXPR(:vcat, args1, trivia)
-                else
-                    return EXPR(:hcat, args1, trivia)
-                end
-            else
-                if length(args1) == 1
-                    first_row = args1[1]
-                else
-                    first_row = EXPR(:row, args1, nothing)
-                end
-                push!(args, first_row)
-                prevpos = position(ps)
-                while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.nt) !== Tokens.ENDMARKER
-                    first_arg = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
-                    args2 = EXPR[first_arg]
-                    prevpos1 = position(ps)
-                    while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.ws) !== NewLineWS && kindof(ps.ws) !== SemiColonWS && kindof(ps.nt) !== Tokens.ENDMARKER
-                        a = @closesquare ps @closer ps :ws @closer ps :wsop parse_expression(ps)
-                        
-                        push!(args2, a)
-                        prevpos1 = loop_check(ps, prevpos1)
-                    end
-                    # if only one entry dont use :row
-                    if length(args2) == 1
-                        push!(args, args2[1])
-                    else
-                        push!(args, EXPR(:row, args2, nothing))
-                    end
-                    prevpos = loop_check(ps, prevpos)
-                end
-                push!(trivia, accept_rsquare(ps))
-                return EXPR(:vcat, args, trivia)
-            end
+        push!(trivia, accept_rsquare(ps))
+        if dims > 0
+            ret = EXPR(:ncat, args, trivia)
+            pushfirst!(ret, EXPR(Symbol(dims), 0, 0, ""))
+            return ret
         else
-            push!(args, first_arg)
-            push!(trivia, accept_rsquare(ps))
-            ret = EXPR(:vect, args, trivia)
+            return EXPR(:vect, args, trivia)
+        end
+    else
+        ret = parse_array_outer(ps::ParseState, trivia, isref)
+        pushtotrivia!(ret, accept_rsquare(ps))
+
+        return ret
+    end
+end
+
+binding_power(ps) =
+    if kindof(ps.ws) == SemiColonWS
+        -count_semicolons(ps)
+    elseif kindof(ps.ws) == NewLineWS
+        -1
+    elseif kindof(ps.ws) == WS
+        0
+    else
+        1
+    end
+
+function parse_array_outer(ps::ParseState, trivia, isref)
+    args_list = EXPR[]
+    trivia_bp = Int[]
+    min_bp = 0
+    is_start = true
+    while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.nt) !== Tokens.ENDMARKER
+        a = @nocloser ps :newline @nocloser ps :newline @closesquare ps @closer ps :insquare @closer ps :ws @closer ps :wsop @closer ps :comma parse_expression(ps)
+
+        if is_start
+            args = EXPR[]
+            if isref && _do_kw_convert(ps, a)
+                a = _kw_convert(a)
+            end
+            if kindof(ps.nt) === Tokens.RSQUARE
+                if headof(a) === :generator || headof(a) === :flatten
+                    if isbinarycall(a.args[1]) && is_pairarrow(a.args[1].args[2])
+                        return EXPR(:dict_comprehension, EXPR[a], trivia)
+                    else
+                        return EXPR(:comprehension, EXPR[a], trivia)
+                    end
+                elseif kindof(ps.ws) == SemiColonWS
+                    dims = count_semicolons(ps)
+                    push!(args, a)
+                    if dims > 1
+                        ret = EXPR(:ncat, args, trivia)
+                        pushfirst!(ret, EXPR(Symbol(dims), 0, 0, ""))
+                        return ret
+                    else
+                        return EXPR(:vcat, args, trivia)
+                    end
+                else
+                    push!(args, a)
+                    return EXPR(:vect, args, trivia)
+                end
+            elseif iscomma(ps.nt)
+                args = EXPR[]
+                push!(args, a)
+                push!(trivia, accept_comma(ps))
+                @closesquare ps parse_comma_sep(ps, args, trivia, isref, insert_params_at = 1)
+                return EXPR(:vect, args, trivia)
+            end
+        end
+        is_start = false
+
+        push!(args_list, a)
+
+        bp = binding_power(ps)
+        bp < min_bp && (min_bp = bp)
+        if bp <= 0
+            push!(trivia_bp, bp)
         end
     end
+
+    if length(trivia_bp) + 1 < length(args_list)
+        return EXPR(:hcat, EXPR[EXPR(:errortoken, args_list, nothing)], trivia)
+    end
+
+    ret = _process_inner_array(args_list, trivia_bp)
+    for t in trivia
+        pushtotrivia!(ret, t)
+    end
+
+    if ret.head === :nrow
+        if min_bp == 0
+            popfirst!(ret.args)
+            ret.head = :hcat
+        elseif min_bp == -1
+            popfirst!(ret.args)
+            ret.head = :vcat
+        else
+            ret.head = :ncat
+        end
+    elseif min_bp == 0
+        ret.head = :hcat
+    elseif min_bp == -1
+        ret.head = :vcat
+    end
+
     return ret
 end
 
-function parse_array_row()
-    
+function _process_inner_array(args_list, trivia_bp)
+    if isempty(trivia_bp)
+        if length(args_list) == 1
+            return first(args_list)
+        else
+            return EXPR(:errortoken, EXPR[], EXPR[])
+        end
+    end
+    bp = minimum(trivia_bp)
+    if all(==(bp), trivia_bp)
+        if bp == 0
+            ret = EXPR(:row, EXPR[], EXPR[])
+        else
+            ret = EXPR(:nrow, copy(args_list), EXPR[])
+            pushfirst!(ret, EXPR(Symbol(-bp), 0, 0, ""))
+        end
+    end
+    i = 1
+    i0 = 1
+    if bp == 0
+        ret = EXPR(:row, EXPR[], EXPR[])
+    else
+        ret = EXPR(:nrow, EXPR[], EXPR[])
+        push!(ret, EXPR(Symbol(-bp), 0, 0, ""))
+    end
+    while true
+        i = findnext(==(bp), trivia_bp, i0)
+        i === nothing && (i = length(args_list))
+        if !checkbounds(Bool, args_list, i0:i) || !checkbounds(Bool, trivia_bp, i0:(i-1))
+            return EXPR(:errortoken, args_list, EXPR[])
+        end
+        inner_args = args_list[i0:i]
+        inner_trivia = trivia_bp[i0:(i-1)]
+        i0 = i + 1
+
+        push!(ret, _process_inner_array(inner_args, inner_trivia))
+        i >= length(args_list) && break
+    end
+    return ret
 end
 
 """
@@ -175,6 +261,12 @@ function parse_ref(ps::ParseState, ret::EXPR)
             push!(args, a)
         end
         return EXPR(:typed_vcat, args, ref.trivia)
+    elseif headof(ref) === :ncat
+        args = EXPR[ret]
+        for a in ref.args
+            push!(args, a)
+        end
+        return EXPR(:typed_ncat, args, ref.trivia)
     else
         args = EXPR[ret]
         for a in ref.args
@@ -183,9 +275,6 @@ function parse_ref(ps::ParseState, ret::EXPR)
         return EXPR(:typed_comprehension, args, ref.trivia)
     end
 end
-
-
-
 
 """
 parse_curly(ps, ret)
@@ -204,7 +293,6 @@ end
 function parse_braces(ps::ParseState)
     return @default ps @nocloser ps :inwhere parse_barray(ps)
 end
-
 
 function parse_barray(ps::ParseState)
     args = EXPR[]

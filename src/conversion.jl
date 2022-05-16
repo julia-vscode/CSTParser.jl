@@ -2,6 +2,9 @@
 function julia_normalization_map(c::Int32, x::Ptr{Nothing})::Int32
     return c == 0x00B5 ? 0x03BC : # micro sign -> greek small letter mu
            c == 0x025B ? 0x03B5 : # latin small letter open e -> greek small letter
+           c == 0x00B7 ? 0x22C5 :
+           c == 0x0387 ? 0x22C5 :
+           c == 0x2212 ? 0x002D :
            c
 end
 
@@ -155,7 +158,7 @@ function to_codeobject(x::EXPR)
             return Symbol(lowercase(string(headof(x))))
         end
     elseif isoperator(x)
-        return Symbol(valof(x))
+        return Symbol(normalize_julia_identifier(valof(x)))
     elseif ispunctuation(x)
         if headof(x) === :DOT
             if x.args === nothing
@@ -176,7 +179,15 @@ function to_codeobject(x::EXPR)
     elseif x.head isa EXPR
         Expr(to_codeobject(x.head), to_codeobject.(x.args)...)
     elseif x.head === :quotenode
-        QuoteNode(to_codeobject(x.args[1]))
+        # quote nodes in import/using are unwrapped by the Julia parser
+        if x.parent isa EXPR &&
+            x.parent.parent isa EXPR &&
+            is_dot(x.parent.head) &&
+            x.parent.parent.head in (:import, :using)
+            to_codeobject(x.args[1])
+        else
+            QuoteNode(to_codeobject(x.args[1]))
+        end
     elseif x.head === :globalrefdoc
         GlobalRef(Core, Symbol("@doc"))
     elseif x.head === :globalrefcmd
@@ -199,6 +210,10 @@ function to_codeobject(x::EXPR)
         # Special conversion needed - the initial text section is treated as empty for the represented string following lowest-common-prefix adjustments, but exists in the source.
         Expr(:string, to_codeobject.(x.args[2:end])...)
     elseif x.args === nothing
+        # for ncat/nrow etc
+        int = tryparse(Int, String(x.head))
+        int !== nothing && return int
+
         Expr(Symbol(lowercase(String(x.head))))
     elseif x.head === :errortoken
         Expr(:error)

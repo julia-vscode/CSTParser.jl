@@ -75,7 +75,7 @@ function parse_kw(ps::ParseState; allow_const_field = false)
     elseif k === Tokens.TYPE
         return EXPR(:IDENTIFIER, ps)
     elseif k === Tokens.STRUCT
-        return @default ps @closer ps :block parse_blockexpr(ps, :struct)
+        return @default ps @closer ps :block parse_blockexpr(ps, :struct, allow_const_field = true)
     elseif k === Tokens.MUTABLE
         return @default ps @closer ps :block parse_mutable(ps)
     elseif k === Tokens.OUTER
@@ -246,7 +246,7 @@ function parse_blockexpr_sig(ps::ParseState, head)
         if isendoflinews(ps.ws)
             return EXPR(:block, EXPR[], nothing)
         else
-            arg = @closer ps :comma @closer ps :ws  parse_expression(ps)
+            arg = @closer ps :comma @closer ps :ws parse_expression(ps)
             if iscomma(ps.nt) || !(is_wrapped_assignment(arg) || isidentifier(arg))
                 arg = EXPR(:block, EXPR[arg])
                 prevpos = position(ps)
@@ -273,8 +273,15 @@ function parse_blockexpr_sig(ps::ParseState, head)
         end
         return EXPR(:tuple, args, trivia)
     elseif head === :module || head === :baremodule
-        return isidentifier(ps.nt) ? EXPR(:IDENTIFIER, next(ps)) :
+        return if isidentifier(ps.nt)
+            if is_nonstd_identifier(ps)
+                parse_nonstd_identifier(ps)
+            else
+                EXPR(:IDENTIFIER, next(ps))
+            end
+        else
             @precedence ps 15 @closer ps :ws parse_expression(ps)
+        end
     end
     return nothing
 end
@@ -282,6 +289,7 @@ end
 function parse_do(ps::ParseState, pre::EXPR)
     args, trivia = EXPR[pre], EXPR[EXPR(next(ps))]
     args1, trivia1 = EXPR[], EXPR[]
+
     @closer ps :comma @closer ps :block while !closer(ps)
         push!(args1, @closer ps :ws a = parse_expression(ps))
         if kindof(ps.nt) === Tokens.COMMA
@@ -370,7 +378,7 @@ function parse_try(ps::ParseState)
     kw = EXPR(ps)
     args = EXPR[]
     trivia = EXPR[kw]
-    tryblockargs = parse_block(ps, EXPR[], (Tokens.END, Tokens.CATCH, Tokens.FINALLY))
+    tryblockargs = parse_block(ps, EXPR[], (Tokens.END, Tokens.CATCH, Tokens.ELSE, Tokens.FINALLY))
     push!(args, EXPR(:block, tryblockargs, nothing))
 
     #  catch block
@@ -387,7 +395,7 @@ function parse_try(ps::ParseState)
                 caught = @closer ps :ws parse_expression(ps)
             end
 
-            catchblockargs = parse_block(ps, EXPR[], (Tokens.END, Tokens.FINALLY))
+            catchblockargs = parse_block(ps, EXPR[], (Tokens.END, Tokens.FINALLY, Tokens.ELSE))
             if !(is_either_id_op_interp(caught) || headof(caught) === :FALSE)
                 pushfirst!(catchblockargs, caught)
                 caught = EXPR(:FALSE, 0, 0, "")
@@ -402,14 +410,33 @@ function parse_try(ps::ParseState)
     push!(args, caught)
     push!(args, catchblock)
 
-    # finally block
-    if kindof(ps.nt) === Tokens.FINALLY
+    else_trivia = else_arg = nothing
+    # else block
+    if kindof(ps.nt) === Tokens.ELSE
         if isempty(catchblock.args)
+            args[3] = EXPR(:block, 0, 0, "")
+        end
+        else_trivia = EXPR(next(ps))
+        else_arg = EXPR(:block, parse_block(ps, EXPR[], (Tokens.FINALLY,Tokens.END)))
+    end
+
+    has_finally = false
+    if kindof(ps.nt) === Tokens.FINALLY
+        has_finally = true
+        if isempty(catchblock.args) && else_trivia === nothing
             args[3] = EXPR(:FALSE, 0, 0, "")
         end
         push!(trivia, EXPR(next(ps)))
-        finallyblockargs = parse_block(ps)
-        push!(args, EXPR(:block, finallyblockargs))
+        push!(args, EXPR(:block, parse_block(ps)))
+    end
+
+    if else_trivia !== nothing
+        if !has_finally
+            push!(trivia, EXPR(:FALSE, 0, 0, ""))
+            push!(args, EXPR(:FALSE, 0, 0, ""))
+        end
+        push!(trivia, else_trivia)
+        push!(args, else_arg)
     end
 
     push!(trivia, accept_end(ps))

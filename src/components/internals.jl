@@ -109,7 +109,7 @@ end
 Parses a function call. Expects to start before the opening parentheses and is passed the expression declaring the function name, `ret`.
 """
 function parse_call(ps::ParseState, ret::EXPR, ismacro=false)
-    if is_minus(ret) || is_not(ret)
+    if is_minus(ret) || is_not(ret) || is_approx(ret)
         arg = @closer ps :unary @closer ps :inwhere @precedence ps PowerOp parse_expression(ps)
         if istuple(arg)
             pushfirst!(arg.args, ret)
@@ -355,6 +355,17 @@ function get_appropriate_child_to_expand(x)
     end
 end
 
+is_nonstd_identifier(ps) = VERSION > v"1.3.0-" && isidentifier(ps.nt) && isemptyws(ps.nws) && (kindof(ps.nnt) === Tokens.STRING || kindof(ps.nnt) === Tokens.TRIPLE_STRING)
+
+function parse_nonstd_identifier(ps)
+    id = INSTANCE(next(ps))
+    if valof(id) == "var"
+        EXPR(:NONSTDIDENTIFIER, EXPR[id, INSTANCE(next(ps))])
+    else
+        mErrorToken(ps, EXPR(:NONSTDIDENTIFIER, EXPR[id, INSTANCE(next(ps))]), UnexpectedToken)
+    end
+end
+
 function parse_importexport_item(ps, is_colon = false)
     if kindof(ps.nt) === Tokens.AT_SIGN
         parse_macroname(next(ps))
@@ -368,13 +379,8 @@ function parse_importexport_item(ps, is_colon = false)
     elseif !is_colon && isoperator(ps.nt)
         next(ps)
         EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, val(ps.t, ps))
-    elseif VERSION > v"1.3.0-" && isidentifier(ps.nt) && isemptyws(ps.nws) && (kindof(ps.nnt) === Tokens.STRING || kindof(ps.nnt) === Tokens.TRIPLE_STRING)
-        id = INSTANCE(next(ps))
-        if valof(id) == "var"
-            EXPR(:NONSTDIDENTIFIER, EXPR[id, INSTANCE(next(ps))])
-        else
-            mErrorToken(ps, EXPR(:NONSTDIDENTIFIER, EXPR[id, INSTANCE(next(ps))]), UnexpectedToken)
-        end
+    elseif is_nonstd_identifier(ps)
+        parse_nonstd_identifier(ps)
     else
         INSTANCE(next(ps))
     end
@@ -382,7 +388,7 @@ end
 """
 Helper function for parsing import/using statements.
 """
-function parse_dot_mod(ps::ParseState, is_colon = false, allow_as = false)
+function parse_dot_mod(ps::ParseState, is_colon=false, allow_as=false)
     ret = EXPR(EXPR(:OPERATOR, 0, 0, "."), EXPR[], EXPR[])
 
     prevpos = position(ps)
@@ -408,6 +414,11 @@ function parse_dot_mod(ps::ParseState, is_colon = false, allow_as = false)
 
         if kindof(ps.nt) === Tokens.DOT
             pushtotrivia!(ret, EXPR(next(ps)))
+            if kindof(ps.nt) === Tokens.COLON
+                u = parse_unary_colon(ps, EXPR(:IDENTIFIER, next(ps)))
+                push!(ret, u)
+                return ret
+            end
         elseif isoperator(ps.nt) && (ps.nt.dotop || kindof(ps.nt) === Tokens.DOT)
             pushtotrivia!(ret, EXPR(:DOT, 1, 1))
             ps.nt = RawToken(kindof(ps.nt), ps.nt.startpos, ps.nt.endpos, ps.nt.startbyte + 1, ps.nt.endbyte, ps.nt.token_error, false, ps.nt.suffix)
