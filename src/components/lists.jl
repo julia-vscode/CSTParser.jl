@@ -217,13 +217,7 @@ function _process_inner_array(args_list, trivia_bp)
         i = findnext(==(bp), trivia_bp, i0)
         i === nothing && (i = length(args_list))
         if !checkbounds(Bool, args_list, i0:i) || !checkbounds(Bool, trivia_bp, i0:(i-1))
-            err = EXPR(:errortoken, EXPR[], EXPR[])
-
-            for a in args_list[i0:end]
-                push!(err, a)
-            end
-            push!(ret, err)
-            break
+            return EXPR(:errortoken, args_list, EXPR[])
         end
         inner_args = args_list[i0:i]
         inner_trivia = trivia_bp[i0:(i-1)]
