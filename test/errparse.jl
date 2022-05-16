@@ -54,7 +54,9 @@
         end
         if sizeof(s) != x.fullspan
             @info "sizeof(s) != x.fullspan for :"
-            @info s
+            println(">>>>>>>>>>>>>>>>>>")
+            println(s)
+            println("<<<<<<<<<<<<<<<<<<")
         end
         check_itr_order(s, x)
     end
@@ -84,7 +86,9 @@
             end
         else
             @info "check_itr_order failed: "
-            @info s
+            println(">>>>>>>>>>>>>>>>>>")
+            println(s)
+            println("<<<<<<<<<<<<<<<<<<")
             error()
         end
     end

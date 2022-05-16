@@ -99,6 +99,30 @@ function cst_parse_file(str)
     x0, CSTParser.has_error(ps), isempty(sp)
 end
 
+_compare(x, y) = x == y
+
+function _compare(x::Expr, y::Expr)
+    if x == y
+        return true
+    else
+        if x.head != y.head || length(x.args) != length(y.args)
+            printstyled(x, bold = true, color = :light_red)
+            println()
+            printstyled(y, bold=true, color=:light_green)
+            println()
+        end
+        for i = 1:min(length(x.args), length(y.args))
+            if !_compare(x.args[i], y.args[i])
+                printstyled(x.args[i], bold = true, color = :light_red)
+                println()
+                printstyled(y.args[i], bold=true, color=:light_green)
+                println()
+            end
+        end
+        return false
+    end
+end
+
 @testset "Parsing files in Base" begin
     dir = joinpath(Sys.BINDIR, Base.DATAROOTDIR)
     for (root, _, files) in walkdir(dir; follow_symlinks=true)
@@ -126,11 +150,7 @@ end
                     @test true
                 else
                     @error "parsing difference" file=file
-                    c0, c1 = CSTParser.compare(cst_expr, meta_expr)
-                    printstyled(c0, bold = true, color = :light_red)
-                    println()
-                    printstyled(c1, bold=true, color=:light_green)
-                    println()
+                    _compare(cst_expr, meta_expr)
                     @test false
                 end
             end
