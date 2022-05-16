@@ -370,6 +370,15 @@ function parse_operator_where(ps::ParseState, ret::EXPR, op::EXPR, setscope=true
     return ret
 end
 
+function rewrite_macrocall_quotenode(op, ret, nextarg)
+    mname = EXPR(op, EXPR[ret, EXPR(:quotenode, EXPR[nextarg.args[1]], nothing)], nothing)
+    ret = EXPR(:macrocall, EXPR[mname], nextarg.trivia)
+    for i = 2:length(nextarg.args)
+        push!(ret, nextarg.args[i])
+    end
+    return ret
+end
+
 function parse_operator_dot(ps::ParseState, ret::EXPR, op::EXPR)
     if kindof(ps.nt) === Tokens.LPAREN
         @static if VERSION > v"1.1-"
@@ -405,9 +414,11 @@ function parse_operator_dot(ps::ParseState, ret::EXPR, op::EXPR)
     elseif headof(nextarg) === :vect || headof(nextarg) === :braces
         ret = EXPR(op, EXPR[ret, EXPR(:quote, EXPR[nextarg], nothing)], nothing)
     elseif headof(nextarg) === :macrocall
-        # TODO : ?
-        mname = EXPR(op, EXPR[ret, EXPR(:quotenode, EXPR[nextarg.args[1]], nothing)], nothing)
-        ret = EXPR(:macrocall, EXPR[mname], nextarg.trivia)
+        ret = rewrite_macrocall_quotenode(op, ret, nextarg)
+    elseif VERSION >= v"1.8.0-" && headof(nextarg) === :do && headof(nextarg.args[1]) === :macrocall
+        mcall = rewrite_macrocall_quotenode(op, ret, nextarg.args[1])
+
+        ret = EXPR(:do, EXPR[mcall], nextarg.trivia)
         for i = 2:length(nextarg.args)
             push!(ret, nextarg.args[i])
         end

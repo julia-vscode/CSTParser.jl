@@ -246,7 +246,7 @@ function parse_blockexpr_sig(ps::ParseState, head)
         if isendoflinews(ps.ws)
             return EXPR(:block, EXPR[], nothing)
         else
-            arg = @closer ps :comma @closer ps :ws  parse_expression(ps)
+            arg = @closer ps :comma @closer ps :ws parse_expression(ps)
             if iscomma(ps.nt) || !(is_wrapped_assignment(arg) || isidentifier(arg))
                 arg = EXPR(:block, EXPR[arg])
                 prevpos = position(ps)
@@ -289,6 +289,7 @@ end
 function parse_do(ps::ParseState, pre::EXPR)
     args, trivia = EXPR[pre], EXPR[EXPR(next(ps))]
     args1, trivia1 = EXPR[], EXPR[]
+
     @closer ps :comma @closer ps :block while !closer(ps)
         push!(args1, @closer ps :ws a = parse_expression(ps))
         if kindof(ps.nt) === Tokens.COMMA

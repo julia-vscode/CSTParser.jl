@@ -454,6 +454,11 @@ end
         @test "@sprintf(\"%08d\", id)" |> test_expr
         @test "[@m @n a for a in A]" |> test_expr # ensure closer.insquare propogates
         @test CSTParser.parse("@__DIR__\n\nx", true)[1].span == 8
+
+        if VERSION >= v"1.8.0-"
+            @test "M43018.@test43018() do; end" |> test_expr
+            @test "@M43018.test43018() do; end" |> test_expr
+        end
     end
 
     @testset "Square " begin
