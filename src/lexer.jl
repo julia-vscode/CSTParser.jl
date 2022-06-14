@@ -24,9 +24,10 @@ mutable struct Closer
     ws::Bool
     wsop::Bool
     unary::Bool
+    for_generator::Bool
     precedence::Int
 end
-Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1)
+Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1)
 
 mutable struct ParseState
     l::Lexer{Base.GenericIOBuffer{Array{UInt8,1}},RawToken}
