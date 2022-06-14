@@ -195,7 +195,10 @@ end
 function _process_inner_array(args_list, trivia_bp)
     if isempty(trivia_bp)
         if length(args_list) == 1
-            return first(args_list)
+            arg = first(args_list)
+            arg.args = something(arg.args, EXPR[])
+            arg.trivia = something(arg.trivia, EXPR[])
+            return arg
         else
             return EXPR(:errortoken, EXPR[], EXPR[])
         end
