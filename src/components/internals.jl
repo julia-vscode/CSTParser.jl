@@ -310,8 +310,7 @@ function parse_macrocall(ps::ParseState)
                 push!(args, a)
                 break
             end
-
-            if (insquare || ps.closer.paren || ps.closer.square) && kindof(ps.nt) === Tokens.FOR
+            if ps.closer.for_generator && kindof(ps.nt) === Tokens.FOR
                 break
             end
             prevpos = loop_check(ps, prevpos)

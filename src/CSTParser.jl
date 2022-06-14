@@ -52,7 +52,7 @@ function parse_expression(ps::ParseState, esc_on_error = false; allow_const_fiel
         elseif kindof(ps.t) === Tokens.LPAREN
             ret = parse_paren(ps)
         elseif kindof(ps.t) === Tokens.LSQUARE
-            ret = @default ps parse_array(ps)
+            ret = @closer ps :for_generator @default ps parse_array(ps)
         elseif kindof(ps.t) === Tokens.LBRACE
             ret = @default ps @closebrace ps parse_braces(ps)
         elseif isinstance(ps.t) || isoperator(ps.t)
@@ -120,7 +120,7 @@ function parse_compound(ps::ParseState, ret::EXPR)
         ret = parse_prefixed_string_cmd(ps, ret)
     elseif kindof(ps.nt) === Tokens.LPAREN
         no_ws = !isemptyws(ps.ws)
-        ret = @closeparen ps parse_call(ps, ret)
+        ret = @closer ps :for_generator @closeparen ps parse_call(ps, ret)
         if no_ws && !isunarycall(ret)
             ret = mErrorToken(ps, ret, UnexpectedWhiteSpace)
         end
@@ -131,7 +131,7 @@ function parse_compound(ps::ParseState, ret::EXPR)
             ret = mErrorToken(ps, (@default ps @nocloser ps :inwhere @closebrace ps parse_curly(ps, ret)), UnexpectedWhiteSpace)
         end
     elseif kindof(ps.nt) === Tokens.LSQUARE && isemptyws(ps.ws) && !isoperator(ret)
-        ret = @default ps @nocloser ps :block parse_ref(ps, ret)
+        ret = @closer ps :for_generator @default ps @nocloser ps :block parse_ref(ps, ret)
     elseif iscomma(ps.nt)
         ret = parse_tuple(ps, ret)
     elseif isunaryop(ret) && kindof(ps.nt) != Tokens.EQ

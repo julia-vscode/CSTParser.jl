@@ -452,7 +452,10 @@ end
         @test "@inline get_chunks_id(i::Integer) = _div64(Int(i)-1)+1, _mod64(Int(i) -1)" |> test_expr
         @test "@inline f() = (), ()" |> test_expr
         @test "@sprintf(\"%08d\", id)" |> test_expr
-        @test "[@m @n a for a in A]" |> test_expr # ensure closer.insquare propogates
+        @test "[@m @n a for a in A]" |> test_expr
+        @test ":(@foo bar baz bat)" |> test_expr
+        @test ":(@foo bar for i in j end)" |> test_expr
+        @test "(@foo bar for i in j end)" |> test_expr
         @test CSTParser.parse("@__DIR__\n\nx", true)[1].span == 8
 
         if VERSION >= v"1.8.0-"
