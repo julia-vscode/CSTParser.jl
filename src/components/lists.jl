@@ -100,7 +100,7 @@ function parse_array(ps::ParseState, isref = false)
     end
 end
 
-binding_power(ps, nl) =
+binding_power(ps, nl = true) =
     if kindof(ps.ws) == SemiColonWS
         -count_semicolons(ps, nl)
     elseif kindof(ps.ws) == NewLineWS
