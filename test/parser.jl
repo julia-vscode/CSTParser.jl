@@ -525,6 +525,8 @@ end
                 @test "t[x;;]" |> test_expr
                 @test "t[x;; y;;    z]" |> test_expr
                 @test "t[x;;; y;;;z]" |> test_expr
+                @test "t[x;;\ny]" |> test_expr
+                @test "t[x y;;\nz a]" |> test_expr
             end
         end
 

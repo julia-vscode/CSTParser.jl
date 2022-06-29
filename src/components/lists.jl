@@ -100,9 +100,9 @@ function parse_array(ps::ParseState, isref = false)
     end
 end
 
-binding_power(ps) =
+binding_power(ps, nl) =
     if kindof(ps.ws) == SemiColonWS
-        -count_semicolons(ps)
+        -count_semicolons(ps, nl)
     elseif kindof(ps.ws) == NewLineWS
         -1
     elseif kindof(ps.ws) == WS
@@ -115,6 +115,7 @@ function parse_array_outer(ps::ParseState, trivia, isref)
     args_list = EXPR[]
     trivia_bp = Int[]
     min_bp = 0
+    max_bp = -typemax(Int)
     is_start = true
     while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.nt) !== Tokens.ENDMARKER
         a = @nocloser ps :newline @nocloser ps :newline @closesquare ps @closer ps :insquare @closer ps :ws @closer ps :wsop @closer ps :comma parse_expression(ps)
@@ -157,8 +158,9 @@ function parse_array_outer(ps::ParseState, trivia, isref)
 
         push!(args_list, a)
 
-        bp = binding_power(ps)
+        bp = binding_power(ps, max_bp == 0)
         bp < min_bp && (min_bp = bp)
+        bp > max_bp && (max_bp = bp)
         if bp <= 0
             push!(trivia_bp, bp)
         end
