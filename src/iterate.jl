@@ -80,7 +80,7 @@ function _getindex(x::EXPR, i)
             elseif iseven(i)
                 x.trivia[div(i, 2)]
             else
-                x.args[div(i + 1, 2) + 1]
+                x.args[div(i + 1, 2)+1]
             end
         elseif length(x.args) > 1 && headof(x.args[2]) === :parameters
             if i == length(x)
@@ -88,7 +88,7 @@ function _getindex(x::EXPR, i)
             elseif i == 1
                 x.args[1]
             elseif isodd(i)
-                x.args[div(i + 1, 2) + 1]
+                x.args[div(i + 1, 2)+1]
             else
                 x.trivia[div(i, 2)]
             end
@@ -155,7 +155,7 @@ function _getindex(x::EXPR, i)
             else
                 x.args[2]
             end
-        elseif length(x) == 2 && (valof(headof(x)) == "\$" || valof(headof(x)) == "::" || valof(headof(x)) == "<:" || valof(headof(x)) == ">:"  || valof(headof(x)) == "&")
+        elseif length(x) == 2 && (valof(headof(x)) == "\$" || valof(headof(x)) == "::" || valof(headof(x)) == "<:" || valof(headof(x)) == ">:" || valof(headof(x)) == "&")
             if i == 1
                 x.head
             else
@@ -177,7 +177,7 @@ function _getindex(x::EXPR, i)
             elseif i == length(x)
                 last(x.trivia)
             elseif isodd(i)
-                x.args[div(i+1, 2) - 1]
+                x.args[div(i + 1, 2)-1]
             else
                 x.trivia[div(i, 2)]
             end
@@ -187,7 +187,7 @@ function _getindex(x::EXPR, i)
     end
 end
 Base.iterate(x::EXPR) = length(x) == 0 ? nothing : (x[1], 1)
-Base.iterate(x::EXPR, s) = s < length(x) ? (x[s + 1], s + 1) : nothing
+Base.iterate(x::EXPR, s) = s < length(x) ? (x[s+1], s + 1) : nothing
 Base.firstindex(x::EXPR) = 1
 Base.lastindex(x::EXPR) = x.args === nothing ? 0 : length(x)
 
@@ -291,7 +291,7 @@ function _struct(x, i)
         if i == 1
             x.trivia[1]
         elseif 1 < i < 5
-            x.args[i - 1]
+            x.args[i-1]
         elseif i == 5
             x.trivia[2]
         end
@@ -299,7 +299,7 @@ function _struct(x, i)
         if i < 3
             x.trivia[i]
         elseif 2 < i < 6
-            x.args[i - 2]
+            x.args[i-2]
         elseif i == 6
             x.trivia[3]
         end
@@ -312,7 +312,7 @@ function _block(x, i)
             if i == 1
                 x.trivia[1]
             elseif 1 < i < length(x)
-                x.args[i - 1]
+                x.args[i-1]
             elseif i == length(x)
                 x.trivia[2]
             end
@@ -355,7 +355,8 @@ end
 function _function(x, i)
     if length(x.args) == 1
         tat(x, i)
-    else length(x.args) == 2
+    else
+        length(x.args) == 2
         taat(x, i)
     end
 end
@@ -369,7 +370,7 @@ function _braces(x, i)
         elseif i == length(x) - 1
             x.args[1]
         elseif iseven(i)
-            x.args[div(i, 2) + 1]
+            x.args[div(i, 2)+1]
         else
             x.trivia[div(i + 1, 2)]
         end
@@ -391,7 +392,7 @@ function _curly(x, i)
         if i == length(x) - 1
             x.args[2]
         elseif isodd(i)
-            x.args[div(i + 1, 2) + 1]
+            x.args[div(i + 1, 2)+1]
         else
             x.trivia[div(i, 2)]
         end
@@ -416,7 +417,7 @@ function _colon_in_using(x, i)
     elseif isodd(i)
         x.args[div(i + 1, 2)]
     else
-        x.trivia[div(i, 2) - 1]
+        x.trivia[div(i, 2)-1]
     end
 end
 
@@ -436,13 +437,13 @@ function _dot(x, i)
             x.args[i]
         elseif iseven(ndots)
             if isodd(i)
-                x.args[ndots + div(i - ndots + 1, 2)]
+                x.args[ndots+div(i - ndots + 1, 2)]
             else
                 x.trivia[div(i - ndots, 2)]
             end
         else
             if iseven(i)
-                x.args[ndots + div(i - ndots + 1, 2)]
+                x.args[ndots+div(i - ndots + 1, 2)]
             else
                 x.trivia[div(i - ndots, 2)]
             end
@@ -489,7 +490,7 @@ function _call(x, i)
                 if iseven(i)
                     x.trivia[div(i - 2, 2)]
                 else
-                    x.args[div(i - 3, 2) + 3]
+                    x.args[div(i - 3, 2)+3]
                 end
             end
         end
@@ -522,7 +523,7 @@ function _tuple(x, i)
         elseif isodd(i)
             x.trivia[div(i + 1, 2)]
         else
-            x.args[div(i, 2) + 1]
+            x.args[div(i, 2)+1]
         end
     else
         if isempty(x.args)
@@ -564,17 +565,17 @@ function _if(x, i)
     if length(x) == 4 # if c expr end
         taat(x, i)
     elseif length(x) == 5 # if c expr elseif... end
-    if i == 1
-        x.trivia[1]
-    elseif i == 2
-        x.args[1]
-    elseif i == 3
-        x.args[2]
-    elseif i == 4
-        x.args[3]
-    elseif i == 5
-        x.trivia[2]
-    end
+        if i == 1
+            x.trivia[1]
+        elseif i == 2
+            x.args[1]
+        elseif i == 3
+            x.args[2]
+        elseif i == 4
+            x.args[3]
+        elseif i == 5
+            x.trivia[2]
+        end
     elseif length(x) == 6 # if c expr else expr end
         if i == 1
             x.trivia[1]
@@ -609,14 +610,14 @@ function _elseif(x, i)
         if i == 1
             x.trivia[1]
         else
-            x.args[i - 1]
+            x.args[i-1]
         end
     end
 end
 
 function _string(x, i)
     # TODO: this is mega slow
-    ai, ti = 1,1
+    ai, ti = 1, 1
     arg = isstringliteral(x.args[1])# && sizeof(valof(x.args[1])) !== x.args[1].fullspan
     isinterpolant = !arg
     bracket = false
@@ -650,7 +651,7 @@ function _string(x, i)
             end
         else
             if is_exor(x.trivia[ti]) || (x.trivia[ti].head === :errortoken && x.trivia[ti].args[1].head === :OPERATOR && valof(x.trivia[ti].args[1]) == "\$")
-                if ti < length(x.trivia) && is_lparen(x.trivia[ti + 1])
+                if ti < length(x.trivia) && is_lparen(x.trivia[ti+1])
                     #
                 else
                     isinterpolant = true
@@ -686,13 +687,13 @@ function _macrocall(x, i)
             elseif isodd(i)
                 x.trivia[div(i, 2)]
             else
-                x.args[div(i + 1, 2) + 2]
+                x.args[div(i + 1, 2)+2]
             end
         else
             if isodd(i)
                 x.trivia[div(i, 2)]
             else
-                x.args[div(i + 1, 2) + 1]
+                x.args[div(i + 1, 2)+1]
             end
         end
     end
@@ -708,7 +709,7 @@ function _vcat(x, i)
     elseif i == length(x)
         x.trivia[2]
     else
-        x.args[i - 1]
+        x.args[i-1]
     end
 end
 
@@ -720,7 +721,7 @@ function _typed_vcat(x, i)
     elseif i == length(x)
         x.trivia[2]
     else
-        x.args[i - 1]
+        x.args[i-1]
     end
 
 end
@@ -745,7 +746,7 @@ function _filter(x, i)
     elseif iseven(i)
         x.trivia[div(i, 2)]
     else
-        x.args[div(i + 1, 2) + 1]
+        x.args[div(i + 1, 2)+1]
     end
 end
 
@@ -826,7 +827,7 @@ function _where(x, i)
         elseif isodd(i)
             x.trivia[div(i + 1, 2)]
         else
-            x.args[div(i, 2) + 1]
+            x.args[div(i, 2)+1]
         end
     else
         oddt_evena(x, i)
@@ -839,7 +840,7 @@ function _flatten(x, i)
     lhs[i]
 end
 
-function _flatten_lhs(x, ret = [])
+function _flatten_lhs(x, ret=[])
     if x.args[1].head === :generator || x.args[1].head === :flatten
         if headof(x) !== :flatten
             for i = 2:length(x)

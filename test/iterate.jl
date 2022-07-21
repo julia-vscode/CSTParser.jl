@@ -3,7 +3,7 @@ using CSTParser: @cst_str, headof, valof
 function test_iter_spans(x)
     n = 0
     for i = 1:length(x)
-        a  = x[i]
+        a = x[i]
         if !(a isa EXPR)
             @info i, headof(x), to_codeobject(x)
         end

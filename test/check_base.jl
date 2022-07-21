@@ -14,7 +14,7 @@ function norm_ast(a::Any)
             elseif fa === Symbol("@uint128_str") && long_enough
                 return Base.parse(UInt128, a.args[3])
             elseif fa === Symbol("@bigint_str") && long_enough
-                return  Base.parse(BigInt, a.args[3])
+                return Base.parse(BigInt, a.args[3])
             elseif fa == Symbol("@big_str") && long_enough
                 s = a.args[3]
                 n = tryparse(BigInt, s)
@@ -66,7 +66,7 @@ function meta_parse_file(str)
 
         return x1, true
     end
-    if length(x1.args) > 0  && x1.args[end] === nothing
+    if length(x1.args) > 0 && x1.args[end] === nothing
         pop!(x1.args)
     end
     x1 = norm_ast(x1)
@@ -74,14 +74,15 @@ function meta_parse_file(str)
     return x1, meta_parse_has_error(x1)
 end
 
-find_error(x, offset = 0) = if CSTParser.headof(x) === :errortoken
-    @show offset
-  else
-    for a in x
-        find_error(a, offset)
-        offset += a.fullspan
+find_error(x, offset=0) =
+    if CSTParser.headof(x) === :errortoken
+        @show offset
+    else
+        for a in x
+            find_error(a, offset)
+            offset += a.fullspan
+        end
     end
-end
 
 function cst_parse_file(str)
     x, ps = CSTParser.parse(CSTParser.ParseState(str), true)
@@ -106,14 +107,14 @@ function _compare(x::Expr, y::Expr)
         return true
     else
         if x.head != y.head || length(x.args) != length(y.args)
-            printstyled(x, bold = true, color = :light_red)
+            printstyled(x, bold=true, color=:light_red)
             println()
             printstyled(y, bold=true, color=:light_green)
             println()
         end
         for i = 1:min(length(x.args), length(y.args))
             if !_compare(x.args[i], y.args[i])
-                printstyled(x.args[i], bold = true, color = :light_red)
+                printstyled(x.args[i], bold=true, color=:light_red)
                 println()
                 printstyled(y.args[i], bold=true, color=:light_green)
                 println()
@@ -141,15 +142,15 @@ end
 
             if cst_err || meta_err
                 if cst_err && !meta_err
-                    @error "CSTParser.parse errored, but Meta.parse didn't." file=file
+                    @error "CSTParser.parse errored, but Meta.parse didn't." file = file
                 elseif !cst_err && meta_err
-                    @error "Meta.parse errored, but CSTParser.parse didn't." file=file
+                    @error "Meta.parse errored, but CSTParser.parse didn't." file = file
                 end
             else
                 if cst_expr == meta_expr
                     @test true
                 else
-                    @error "parsing difference" file=file
+                    @error "parsing difference" file = file
                     _compare(cst_expr, meta_expr)
                     @test false
                 end

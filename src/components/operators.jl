@@ -1,42 +1,42 @@
 import Tokenize.Tokens: isoperator
-precedence(op::Int) = op < Tokens.end_assignments ?  AssignmentOp :
-                       op < Tokens.end_pairarrow ? 2 :
-                       op < Tokens.end_conditional ? ConditionalOp :
-                       op < Tokens.end_arrow ?       ArrowOp :
-                       op < Tokens.end_lazyor ?      LazyOrOp :
-                       op < Tokens.end_lazyand ?     LazyAndOp :
-                       op < Tokens.end_comparison ?  ComparisonOp :
-                       op < Tokens.end_pipe ?        PipeOp :
-                       op < Tokens.end_colon ?       ColonOp :
-                       op < Tokens.end_plus ?        PlusOp :
-                       op < Tokens.end_bitshifts ?   BitShiftOp :
-                       op < Tokens.end_times ?       TimesOp :
-                       op < Tokens.end_rational ?    RationalOp :
-                       op < Tokens.end_power ?       PowerOp :
-                       op < Tokens.end_decl ?        DeclarationOp :
-                       op < Tokens.end_where ?       WhereOp : DotOp
+precedence(op::Int) = op < Tokens.end_assignments ? AssignmentOp :
+                      op < Tokens.end_pairarrow ? 2 :
+                      op < Tokens.end_conditional ? ConditionalOp :
+                      op < Tokens.end_arrow ? ArrowOp :
+                      op < Tokens.end_lazyor ? LazyOrOp :
+                      op < Tokens.end_lazyand ? LazyAndOp :
+                      op < Tokens.end_comparison ? ComparisonOp :
+                      op < Tokens.end_pipe ? PipeOp :
+                      op < Tokens.end_colon ? ColonOp :
+                      op < Tokens.end_plus ? PlusOp :
+                      op < Tokens.end_bitshifts ? BitShiftOp :
+                      op < Tokens.end_times ? TimesOp :
+                      op < Tokens.end_rational ? RationalOp :
+                      op < Tokens.end_power ? PowerOp :
+                      op < Tokens.end_decl ? DeclarationOp :
+                      op < Tokens.end_where ? WhereOp : DotOp
 
 precedence(kind::Tokens.Kind) = kind === Tokens.DDDOT ? DddotOp :
-                        kind < Tokens.begin_assignments ? 0 :
-                        kind < Tokens.end_assignments ?   AssignmentOp :
-                        kind < Tokens.end_pairarrow ?   2 :
-                       kind < Tokens.end_conditional ?    ConditionalOp :
-                       kind < Tokens.end_arrow ?          ArrowOp :
-                       kind < Tokens.end_lazyor ?         LazyOrOp :
-                       kind < Tokens.end_lazyand ?        LazyAndOp :
-                       kind < Tokens.end_comparison ?     ComparisonOp :
-                       kind < Tokens.end_pipe ?           PipeOp :
-                       kind < Tokens.end_colon ?          ColonOp :
-                       kind < Tokens.end_plus ?           PlusOp :
-                       kind < Tokens.end_bitshifts ?      BitShiftOp :
-                       kind < Tokens.end_times ?          TimesOp :
-                       kind < Tokens.end_rational ?       RationalOp :
-                       kind < Tokens.end_power ?          PowerOp :
-                       kind < Tokens.end_decl ?           DeclarationOp :
-                       kind < Tokens.end_where ?          WhereOp :
-                       kind < Tokens.end_dot ?            DotOp :
-                       kind === Tokens.ANON_FUNC ? AnonFuncOp :
-                       kind === Tokens.PRIME ?             PrimeOp : 20
+                                kind < Tokens.begin_assignments ? 0 :
+                                kind < Tokens.end_assignments ? AssignmentOp :
+                                kind < Tokens.end_pairarrow ? 2 :
+                                kind < Tokens.end_conditional ? ConditionalOp :
+                                kind < Tokens.end_arrow ? ArrowOp :
+                                kind < Tokens.end_lazyor ? LazyOrOp :
+                                kind < Tokens.end_lazyand ? LazyAndOp :
+                                kind < Tokens.end_comparison ? ComparisonOp :
+                                kind < Tokens.end_pipe ? PipeOp :
+                                kind < Tokens.end_colon ? ColonOp :
+                                kind < Tokens.end_plus ? PlusOp :
+                                kind < Tokens.end_bitshifts ? BitShiftOp :
+                                kind < Tokens.end_times ? TimesOp :
+                                kind < Tokens.end_rational ? RationalOp :
+                                kind < Tokens.end_power ? PowerOp :
+                                kind < Tokens.end_decl ? DeclarationOp :
+                                kind < Tokens.end_where ? WhereOp :
+                                kind < Tokens.end_dot ? DotOp :
+                                kind === Tokens.ANON_FUNC ? AnonFuncOp :
+                                kind === Tokens.PRIME ? PrimeOp : 20
 
 precedence(x) = 0
 precedence(x::AbstractToken) = precedence(kindof(x))
@@ -56,97 +56,97 @@ isunaryop(op::EXPR) = isoperator(op) && ((valof(op) == "<:" ||
                                           valof(op) == "¬" ||
                                           valof(op) == "&" ||
                                           valof(op) == "√" ||
-                                          valof(op) == "∛"  ||
-                                          valof(op) == "∜"  ||
+                                          valof(op) == "∛" ||
+                                          valof(op) == "∜" ||
                                           valof(op) == "::" ||
                                           valof(op) == "\$" ||
                                           valof(op) == ":" ||
                                           valof(op) == "⋆" ||
                                           valof(op) == "±" ||
                                           valof(op) == "∓") ||
-                        (length(valof(op)) == 2 && valof(op)[1] == '.' && (valof(op)[2] == '+' ||
-                                                                           valof(op)[2] == '-' ||
-                                                                           valof(op)[2] == '!' ||
-                                                                           valof(op)[2] == '~' ||
-                                                                           valof(op)[2] == '¬' ||
-                                                                           valof(op)[2] == '√' ||
-                                                                           valof(op)[2] == '∛' ||
-                                                                           valof(op)[2] == '∜' ||
-                                                                           valof(op)[2] == '⋆' ||
-                                                                           valof(op)[2] == '±' ||
-                                                                           valof(op)[2] == '∓')))
+                                         (length(valof(op)) == 2 && valof(op)[1] == '.' && (valof(op)[2] == '+' ||
+                                                                                            valof(op)[2] == '-' ||
+                                                                                            valof(op)[2] == '!' ||
+                                                                                            valof(op)[2] == '~' ||
+                                                                                            valof(op)[2] == '¬' ||
+                                                                                            valof(op)[2] == '√' ||
+                                                                                            valof(op)[2] == '∛' ||
+                                                                                            valof(op)[2] == '∜' ||
+                                                                                            valof(op)[2] == '⋆' ||
+                                                                                            valof(op)[2] == '±' ||
+                                                                                            valof(op)[2] == '∓')))
 isunaryop(t::AbstractToken) = isunaryop(kindof(t))
 @static if VERSION < v"1.2.0"
     isunaryop(kind::Tokens.Kind) = kind === Tokens.ISSUBTYPE ||
-                    kind === Tokens.ISSUPERTYPE ||
-                    kind === Tokens.PLUS ||
-                    kind === Tokens.MINUS ||
-                    kind === Tokens.NOT ||
-                    kind === Tokens.APPROX ||
-                    kind === Tokens.NOT_SIGN ||
-                    kind === Tokens.AND ||
-                    kind === Tokens.SQUARE_ROOT ||
-                    kind === Tokens.CUBE_ROOT ||
-                    kind === Tokens.QUAD_ROOT ||
-                    kind === Tokens.DECLARATION ||
-                    kind === Tokens.EX_OR ||
-                    kind === Tokens.COLON
+                                   kind === Tokens.ISSUPERTYPE ||
+                                   kind === Tokens.PLUS ||
+                                   kind === Tokens.MINUS ||
+                                   kind === Tokens.NOT ||
+                                   kind === Tokens.APPROX ||
+                                   kind === Tokens.NOT_SIGN ||
+                                   kind === Tokens.AND ||
+                                   kind === Tokens.SQUARE_ROOT ||
+                                   kind === Tokens.CUBE_ROOT ||
+                                   kind === Tokens.QUAD_ROOT ||
+                                   kind === Tokens.DECLARATION ||
+                                   kind === Tokens.EX_OR ||
+                                   kind === Tokens.COLON
 else
     isunaryop(kind::Tokens.Kind) = kind === Tokens.ISSUBTYPE ||
-                    kind === Tokens.ISSUPERTYPE ||
-                    kind === Tokens.PLUS ||
-                    kind === Tokens.MINUS ||
-                    kind === Tokens.NOT ||
-                    kind === Tokens.APPROX ||
-                    kind === Tokens.NOT_SIGN ||
-                    kind === Tokens.AND ||
-                    kind === Tokens.SQUARE_ROOT ||
-                    kind === Tokens.CUBE_ROOT ||
-                    kind === Tokens.QUAD_ROOT ||
-                    kind === Tokens.DECLARATION ||
-                    kind === Tokens.EX_OR ||
-                    kind === Tokens.COLON ||
-                    kind === Tokens.STAR_OPERATOR
+                                   kind === Tokens.ISSUPERTYPE ||
+                                   kind === Tokens.PLUS ||
+                                   kind === Tokens.MINUS ||
+                                   kind === Tokens.NOT ||
+                                   kind === Tokens.APPROX ||
+                                   kind === Tokens.NOT_SIGN ||
+                                   kind === Tokens.AND ||
+                                   kind === Tokens.SQUARE_ROOT ||
+                                   kind === Tokens.CUBE_ROOT ||
+                                   kind === Tokens.QUAD_ROOT ||
+                                   kind === Tokens.DECLARATION ||
+                                   kind === Tokens.EX_OR ||
+                                   kind === Tokens.COLON ||
+                                   kind === Tokens.STAR_OPERATOR
 end
 
 isunaryandbinaryop(t) = false
 isunaryandbinaryop(t::AbstractToken) = isunaryandbinaryop(kindof(t))
 @static if VERSION < v"1.2.0"
     isunaryandbinaryop(kind::Tokens.Kind) = kind === Tokens.PLUS ||
-                            kind === Tokens.MINUS ||
-                            kind === Tokens.EX_OR ||
-                            kind === Tokens.ISSUBTYPE ||
-                            kind === Tokens.ISSUPERTYPE ||
-                            kind === Tokens.AND ||
-                            kind === Tokens.APPROX ||
-                            kind === Tokens.DECLARATION ||
-                            kind === Tokens.COLON
+                                            kind === Tokens.MINUS ||
+                                            kind === Tokens.EX_OR ||
+                                            kind === Tokens.ISSUBTYPE ||
+                                            kind === Tokens.ISSUPERTYPE ||
+                                            kind === Tokens.AND ||
+                                            kind === Tokens.APPROX ||
+                                            kind === Tokens.DECLARATION ||
+                                            kind === Tokens.COLON
 else
     isunaryandbinaryop(kind::Tokens.Kind) = kind === Tokens.PLUS ||
-                            kind === Tokens.MINUS ||
-                            kind === Tokens.EX_OR ||
-                            kind === Tokens.ISSUBTYPE ||
-                            kind === Tokens.ISSUPERTYPE ||
-                            kind === Tokens.AND ||
-                            kind === Tokens.APPROX ||
-                            kind === Tokens.DECLARATION ||
-                            kind === Tokens.COLON ||
-                            kind === Tokens.STAR_OPERATOR
+                                            kind === Tokens.MINUS ||
+                                            kind === Tokens.EX_OR ||
+                                            kind === Tokens.ISSUBTYPE ||
+                                            kind === Tokens.ISSUPERTYPE ||
+                                            kind === Tokens.AND ||
+                                            kind === Tokens.APPROX ||
+                                            kind === Tokens.DECLARATION ||
+                                            kind === Tokens.COLON ||
+                                            kind === Tokens.STAR_OPERATOR
 end
 
 isbinaryop(op) = false
 isbinaryop(op::EXPR) = isoperator(op) && !(valof(op) == "√" ||
-    valof(op) == "∛" ||
-    valof(op) == "∜" ||
-    valof(op) == "!" ||
-    valof(op) == "¬")
+                                           valof(op) == "∛" ||
+                                           valof(op) == "∜" ||
+                                           valof(op) == "!" ||
+                                           valof(op) == "¬")
 isbinaryop(t::AbstractToken) = isbinaryop(kindof(t))
 isbinaryop(kind::Tokens.Kind) = isoperator(kind) &&
-                    !(kind === Tokens.SQUARE_ROOT ||
-                    kind === Tokens.CUBE_ROOT ||
-                    kind === Tokens.QUAD_ROOT ||
-                    kind === Tokens.NOT ||
-                    kind === Tokens.NOT_SIGN)
+                                !(kind === Tokens.SQUARE_ROOT ||
+                                  kind === Tokens.CUBE_ROOT ||
+                                  kind === Tokens.QUAD_ROOT ||
+                                  kind === Tokens.NOT ||
+                                  kind === Tokens.NOT_SIGN)
 
 function non_dotted_op(t::AbstractToken)
     k = kindof(t)
@@ -177,20 +177,20 @@ function issyntaxcall(op::EXPR)
         return true
     end
     assign_prec(v) && !(v == "~" || v == ".~" || v == "=>") ||
-    v == "-->" ||
-    v == "||" ||
-    v == ".||" ||
-    v == "&&" ||
-    v == ".&&" ||
-    v == "<:" ||
-    v == ">:" ||
-    v == ":" ||
-    v == "::" ||
-    v == "." ||
-    v == "..." ||
-    v == "'" ||
-    v == "where" ||
-    v == "->"
+        v == "-->" ||
+        v == "||" ||
+        v == ".||" ||
+        v == "&&" ||
+        v == ".&&" ||
+        v == "<:" ||
+        v == ">:" ||
+        v == ":" ||
+        v == "::" ||
+        v == "." ||
+        v == "..." ||
+        v == "'" ||
+        v == "where" ||
+        v == "->"
 end
 
 
@@ -218,8 +218,8 @@ function parse_unary(ps::ParseState, op::EXPR)
         ret = EXPR(literalmap(kindof(ps.t)), op.fullspan + arg.fullspan, (op.fullspan + arg.span), string(is_plus(op) ? "+" : "-", val(ps.t, ps)))
     else
         prec = valof(op) == "::" ? DeclarationOp :
-                valof(op) == "&" ? DeclarationOp :
-                valof(op) == "\$" ? 20 : PowerOp
+               valof(op) == "&" ? DeclarationOp :
+               valof(op) == "\$" ? 20 : PowerOp
         arg = @closer ps :unary @precedence ps prec parse_expression(ps)
         if issyntaxunarycall(op)
             ret = EXPR(op, EXPR[arg], nothing)
@@ -243,7 +243,7 @@ function parse_unary_colon(ps::ParseState, op::EXPR)
         end
         ret = EXPR(:quotenode, EXPR[id], EXPR[op])
     elseif Tokens.begin_literal < kindof(ps.nt) < Tokens.CHAR ||
-            isoperator(kindof(ps.nt)) || isidentifier(ps.nt) || kindof(ps.nt) === Tokens.TRUE || kindof(ps.nt) === Tokens.FALSE
+           isoperator(kindof(ps.nt)) || isidentifier(ps.nt) || kindof(ps.nt) === Tokens.TRUE || kindof(ps.nt) === Tokens.FALSE
         ret = EXPR(:quotenode, EXPR[INSTANCE(next(ps))], EXPR[op])
     elseif closer(ps)
         ret = op
@@ -363,7 +363,7 @@ function parse_operator_where(ps::ParseState, ret::EXPR, op::EXPR, setscope=true
     if headof(nextarg) === :braces
         pushfirst!(nextarg.args, ret)
         pushfirst!(nextarg.trivia, op)
-        ret = EXPR(:where, nextarg.args,nextarg.trivia)
+        ret = EXPR(:where, nextarg.args, nextarg.trivia)
     else
         ret = EXPR(:where, EXPR[ret, nextarg], EXPR[op])
     end
@@ -447,8 +447,8 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
         P = RationalOp
     end
     if headof(ret) === :call && (is_plus(ret.args[1]) || is_star(ret.args[1])) &&
-          valof(ret.args[1]) == valof(op) && ret.args[1].span > 0 &&
-          !(hastrivia(ret) && headof(ret[end]) === :RPAREN)
+       valof(ret.args[1]) == valof(op) && ret.args[1].span > 0 &&
+       !(hastrivia(ret) && headof(ret[end]) === :RPAREN)
         # a + b -> a + b + c
         nextarg = @precedence ps P - LtoR(P) parse_expression(ps)
         !hastrivia(ret) && (ret.trivia = EXPR[])
@@ -471,10 +471,10 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
         ret = EXPR(op, EXPR[ret], nothing)
     elseif is_prime(op)
         if isidentifier(ret) || isliteral(ret) ||
-                headof(ret) in (:call, :tuple, :brackets, :ref, :vect, :vcat, :hcat, :typed_vcat, :typed_hcat, :comprehension, :typed_comprehension, :curly, :braces, :braces_cat) ||
-                headof(ret) === :do ||
-                is_dot(headof(ret)) ||
-                is_prime(headof(ret))
+           headof(ret) in (:call, :tuple, :brackets, :ref, :vect, :vcat, :hcat, :typed_vcat, :typed_hcat, :comprehension, :typed_comprehension, :curly, :braces, :braces_cat) ||
+           headof(ret) === :do ||
+           is_dot(headof(ret)) ||
+           is_prime(headof(ret))
             if valof(op) == "'"
                 ret = EXPR(op, EXPR[ret], nothing)
             else

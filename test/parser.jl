@@ -1,18 +1,18 @@
 using Test
 
 randop() = rand(["-->", "→",
-                 "||",
-                 "&&",
-                 "<", "==", "<:", ">:",
-                 "<|", "|>",
-                 ":",
-                 "+", "-",
-                 ">>", "<<",
-                 "*", "/",
-                 "//",
-                 "^", "↑",
-                 "::",
-                 ".", "->"])
+    "||",
+    "&&",
+    "<", "==", "<:", ">:",
+    "<|", "|>",
+    ":",
+    "+", "-",
+    ">>", "<<",
+    "*", "/",
+    "//",
+    "^", "↑",
+    "::",
+    ".", "->"])
 
 test_expr_broken(str) = test_expr(str, false)
 
@@ -57,14 +57,14 @@ end
 @testset "All tests" begin
     @test Meta.parse("(1,)") == Expr(:tuple, 1)
     @testset "Operators" begin
-    # @testset "Binary Operators" begin
-    #     for iter = 1:25
-    #         println(iter)
-    #         str = join([["x$(randop())" for i = 1:19];"x"])
+        # @testset "Binary Operators" begin
+        #     for iter = 1:25
+        #         println(iter)
+        #         str = join([["x$(randop())" for i = 1:19];"x"])
 
-    #         @test test_expr(str)
-    #     end
-    # end
+        #         @test test_expr(str)
+        #     end
+        # end
         @testset "Conditional Operator" begin
             @test test_expr("a ? b : c")
             @test test_expr("a ? b : c : d")
@@ -74,12 +74,12 @@ end
 
 
         @testset "Dot Operator" begin
-            @test "a.b"  |> test_expr
-            @test "a.b.c"  |> test_expr
-            @test "(a(b)).c"  |> test_expr
-            @test "(a).(b).(c)"  |> test_expr
-            @test "(a).b.(c)"  |> test_expr
-            @test "(a).b.(c+d)"  |> test_expr
+            @test "a.b" |> test_expr
+            @test "a.b.c" |> test_expr
+            @test "(a(b)).c" |> test_expr
+            @test "(a).(b).(c)" |> test_expr
+            @test "(a).b.(c)" |> test_expr
+            @test "(a).b.(c+d)" |> test_expr
         end
 
         @testset "Unary Operator" begin
@@ -88,7 +88,7 @@ end
             @test "!" |> test_expr
             @test "~" |> test_expr
             @test "&" |> test_expr
-        # @test "::" |> test_expr
+            # @test "::" |> test_expr
             @test "<:" |> test_expr
             @test ">:" |> test_expr
             @test "¬" |> test_expr
@@ -589,9 +589,9 @@ end
 
 
         @testset "Try" begin
-        # @test "try f(1) end" |> test_expr
-        # @test "try; f(1) end" |> test_expr
-        # @test "try; f(1); end" |> test_expr
+            # @test "try f(1) end" |> test_expr
+            # @test "try; f(1) end" |> test_expr
+            # @test "try; f(1); end" |> test_expr
             @test "try; f(1); catch e; e; end" |> test_expr
             @test "try; f(1); catch e; e end" |> test_expr
             @test "try; f(1); catch e e; end" |> test_expr
@@ -968,8 +968,8 @@ end
         @test "1 .< 2 .< 3" |> test_expr
         @test "(;)" |> test_expr
         if VERSION > v"1.5"
-        @test "@M{a}-b" |> test_expr
-        @test "@M{a,b}-b" |> test_expr
+            @test "@M{a}-b" |> test_expr
+            @test "@M{a,b}-b" |> test_expr
         end
         @test "@M[a]-b" |> test_expr
     end
@@ -1029,29 +1029,29 @@ end
         @test_broken "\$(a) * -\$(b)" |> test_expr_broken
     end
 
-# test_fsig_decl(str) = (x->x.id).(CSTParser._get_fsig(CSTParser.parse(str)).defs)
-# @testset "func-sig variable declarations" begin
-#     @test test_fsig_decl("f(x) = x") == [:x]
-#     @test test_fsig_decl("""function f(x)
-#         x
-#     end""") == [:x]
+    # test_fsig_decl(str) = (x->x.id).(CSTParser._get_fsig(CSTParser.parse(str)).defs)
+    # @testset "func-sig variable declarations" begin
+    #     @test test_fsig_decl("f(x) = x") == [:x]
+    #     @test test_fsig_decl("""function f(x)
+    #         x
+    #     end""") == [:x]
 
-#     @test test_fsig_decl("f{T}(x::T) = x") == [:T, :x]
-#     @test test_fsig_decl("""function f{T}(x::T)
-#         x
-#     end""") == [:T, :x]
+    #     @test test_fsig_decl("f{T}(x::T) = x") == [:T, :x]
+    #     @test test_fsig_decl("""function f{T}(x::T)
+    #         x
+    #     end""") == [:T, :x]
 
-#     @test test_fsig_decl("f(x::T) where T = x") == [:T, :x]
-#     @test test_fsig_decl("""function f(x::T) where T
-#         x
-#     end""") == [:T, :x]
+    #     @test test_fsig_decl("f(x::T) where T = x") == [:T, :x]
+    #     @test test_fsig_decl("""function f(x::T) where T
+    #         x
+    #     end""") == [:T, :x]
 
 
-#     @test test_fsig_decl("f(x::T{S}) where T where S = x") == [:T, :S, :x]
-#     @test test_fsig_decl("""function f(x::T{S}) where T where S
-#         x
-#     end""") == [:T, :S, :x]
-# end
+    #     @test test_fsig_decl("f(x::T{S}) where T where S = x") == [:T, :S, :x]
+    #     @test test_fsig_decl("""function f(x::T{S}) where T where S
+    #         x
+    #     end""") == [:T, :S, :x]
+    # end
 
     @testset "Spans" begin
         CSTParser.parse(raw"""

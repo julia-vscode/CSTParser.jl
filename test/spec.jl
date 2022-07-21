@@ -27,7 +27,7 @@ function test_iter(ex)
     end
 end
 
-function test_expr(s, head, n, endswithtrivia = false)
+function test_expr(s, head, n, endswithtrivia=false)
     x = CSTParser.parse(s)
     head === nothing || @test headof(x) === head
     @test length(x) === n
@@ -37,7 +37,7 @@ function test_expr(s, head, n, endswithtrivia = false)
     @test isempty(check_span(x))
     check_parents(x)
     test_iter(x)
-    @test endswithtrivia ? (x.fullspan-x.span) == (last(x.trivia).fullspan - last(x.trivia).span) : (x.fullspan-x.span) == (last(x.args).fullspan - last(x.args).span)
+    @test endswithtrivia ? (x.fullspan - x.span) == (last(x.trivia).fullspan - last(x.trivia).span) : (x.fullspan - x.span) == (last(x.args).fullspan - last(x.args).span)
 end
 
 
@@ -146,7 +146,9 @@ end
     test_expr("a where {b }", :where, 5, true)
     test_expr("a where {b,c }  ", :where, 7, true)
     test_expr("a...", nothing, 2, false)
-    @test let x = cst"a... "; x.fullspan - x.span == 1 end
+    @test let x = cst"a... "
+        x.fullspan - x.span == 1
+    end
     test_expr("a <: b", nothing, 3, false)
 
     # https://github.com/julia-vscode/CSTParser.jl/issues/278

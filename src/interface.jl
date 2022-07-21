@@ -3,8 +3,8 @@ isidentifier(x::EXPR) = headof(x) === :IDENTIFIER || headof(x) === :NONSTDIDENTI
 isoperator(x::EXPR) = headof(x) === :OPERATOR
 isnonstdid(x::EXPR) = headof(x) === :NONSTDIDENTIFIER
 iskeyword(x::EXPR) = headof(x) in (:ABSTRACT, :BAREMODULE, :BEGIN, :BREAK, :CATCH, :CONST, :CONTINUE, :DO, :ELSE, :ELSEIF, :END, :EXPORT, :FINALLY, :FOR, :FUNCTION, :GLOBAL, :IF, :IMPORT, :importall, :LET, :LOCAL, :MACRO, :MODULE, :MUTABLE, :NEW, :OUTER, :PRIMITIVE, :QUOTE, :RETURN, :STRUCT, :TRY, :TYPE, :USING, :WHILE)
-isliteral(x::EXPR) = isstringliteral(x) || iscmd(x) || ischar(x) || headof(x) in (:INTEGER, :BININT, :HEXINT, :OCTINT, :FLOAT,  :NOTHING, :TRUE, :FALSE)
-ispunctuation(x::EXPR) = is_comma(x) || is_lparen(x) || is_rparen(x) || is_lsquare(x) || is_rsquare(x) || is_lbrace(x) || is_rbrace(x) || headof(x) === :ATSIGN  || headof(x) === :DOT
+isliteral(x::EXPR) = isstringliteral(x) || iscmd(x) || ischar(x) || headof(x) in (:INTEGER, :BININT, :HEXINT, :OCTINT, :FLOAT, :NOTHING, :TRUE, :FALSE)
+ispunctuation(x::EXPR) = is_comma(x) || is_lparen(x) || is_rparen(x) || is_lsquare(x) || is_rsquare(x) || is_lbrace(x) || is_rbrace(x) || headof(x) === :ATSIGN || headof(x) === :DOT
 isstringliteral(x) = headof(x) === :STRING || headof(x) === :TRIPLESTRING
 isstring(x) = headof(x) === :string || isstringliteral(x)
 iscmd(x) = headof(x) === :CMD || headof(x) === :TRIPLECMD
@@ -19,10 +19,10 @@ is_id_or_macroname(x::EXPR) = isidentifier(x) || ismacroname(x)
 # expressions
 iscall(x::EXPR) = headof(x) === :call
 isunarycall(x::EXPR) = (headof(x) === :call && length(x) == 2 && (isoperator(x.args[1]) || isoperator(x.args[2])))
-isunarysyntax(x::EXPR) =  (isoperator(x.head) && length(x.args) == 1)
+isunarysyntax(x::EXPR) = (isoperator(x.head) && length(x.args) == 1)
 isbinarycall(x::EXPR) = headof(x) === :call && length(x) == 3 && isoperator(x.args[1])
 isbinarycall(x::EXPR, op) = headof(x) === :call && length(x) == 3 && isoperator(x.args[1]) && valof(x.args[1]) == op
-isbinarysyntax(x::EXPR) =  (isoperator(x.head) && length(x.args) == 2)
+isbinarysyntax(x::EXPR) = (isoperator(x.head) && length(x.args) == 2)
 ischainedcall(x::EXPR) = headof(x) === :call && isoperator(x.args[1]) && (valof(x.args[1]) == "+" || valof(x.args[1]) == "*") && hastrivia(x) && isoperator(first(x.trivia))
 iswhere(x::EXPR) = headof(x) === :where
 istuple(x::EXPR) = headof(x) === :tuple
