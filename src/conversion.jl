@@ -215,6 +215,11 @@ function to_codeobject(x::EXPR)
         int !== nothing && return int
 
         Expr(Symbol(lowercase(String(x.head))))
+    elseif VERSION < v"1.7.0-DEV.1129" && x.head === :ncat
+        dim = tryparse(Int, String(x.args[1].head))
+        dim == nothing && return Expr(:error)
+        head = dim == 1 ? :hcat : :vcat
+        Expr(head, to_codeobject.(x.args[2:end])...)
     elseif x.head === :errortoken
         Expr(:error)
     else
