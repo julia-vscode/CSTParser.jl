@@ -5,7 +5,6 @@
 [![Run CI on master](https://github.com/julia-vscode/CSTParser.jl/actions/workflows/jlpkgbutler-ci-master-workflow.yml/badge.svg)](https://github.com/julia-vscode/CSTParser.jl/actions/workflows/jlpkgbutler-ci-master-workflow.yml)
 [![codecov](https://codecov.io/gh/julia-vscode/CSTParser.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/julia-vscode/CSTParser.jl)
 
-
 A parser for Julia using [Tokenize](https://github.com/JuliaLang/Tokenize.jl/) that aims to extend the built-in parser by providing additional meta information along with the resultant AST.
 
 ## Installation and Usage
