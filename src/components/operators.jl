@@ -471,7 +471,11 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
         ret = EXPR(op, EXPR[ret], nothing)
     elseif is_prime(op)
         if isidentifier(ret) || isliteral(ret) ||
-                headof(ret) in (:call, :tuple, :brackets, :ref, :vect, :vcat, :hcat, :typed_vcat, :typed_hcat, :comprehension, :typed_comprehension, :curly, :braces, :braces_cat) ||
+                headof(ret) in (
+                    :call, :tuple, :brackets, :ref, :vect, :vcat, :hcat, :ncat, :typed_vcat,
+                    :typed_hcat, :typed_ncat, :comprehension, :typed_comprehension, :curly,
+                    :braces, :braces_cat
+                ) ||
                 headof(ret) === :do ||
                 is_dot(headof(ret)) ||
                 is_prime(headof(ret))

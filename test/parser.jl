@@ -511,9 +511,7 @@ end
                 @test "[x;;]" |> test_expr
                 @test "[x;; y;;    z]" |> test_expr
                 @test "[x;;; y;;;z]" |> test_expr
-            end
-
-            @testset "ncat" begin
+                @test "[x;;; y;;;z]'" |> test_expr
                 @test "[1 2; 3 4]" |> test_expr
                 @test "[1;2;;3;4;;5;6;;;;9]" |> test_expr
             end
@@ -527,6 +525,7 @@ end
                 @test "t[x;;; y;;;z]" |> test_expr
                 @test "t[x;;\ny]" |> test_expr
                 @test "t[x y;;\nz a]" |> test_expr
+                @test "t[x y;;\nz a]'" |> test_expr
             end
         end
 
