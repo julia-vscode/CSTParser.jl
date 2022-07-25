@@ -3,7 +3,7 @@
 
 Dispatch function for when the parser has reached a keyword.
 """
-function parse_kw(ps::ParseState; allow_const_field = false)
+function parse_kw(ps::ParseState; allow_no_assignment = false)
     k = kindof(ps.t)
     if ps.closer.precedence == 20 && ps.lt.kind === Tokens.EX_OR && k !== Tokens.END
         return EXPR(:IDENTIFIER, ps)
@@ -52,7 +52,7 @@ function parse_kw(ps::ParseState; allow_const_field = false)
     elseif k === Tokens.BAREMODULE
         return @default ps @closer ps :block parse_blockexpr(ps, :baremodule)
     elseif k === Tokens.CONST
-        return @default ps parse_const(ps; allow_const_field = allow_const_field)
+        return @default ps parse_const(ps; allow_no_assignment = allow_no_assignment)
     elseif k === Tokens.GLOBAL
         return @default ps parse_local_global(ps, false)
     elseif k === Tokens.LOCAL
@@ -75,7 +75,7 @@ function parse_kw(ps::ParseState; allow_const_field = false)
     elseif k === Tokens.TYPE
         return EXPR(:IDENTIFIER, ps)
     elseif k === Tokens.STRUCT
-        return @default ps @closer ps :block parse_blockexpr(ps, :struct, allow_const_field = true)
+        return @default ps @closer ps :block parse_blockexpr(ps, :struct, allow_no_assignment = true)
     elseif k === Tokens.MUTABLE
         return @default ps @closer ps :block parse_mutable(ps)
     elseif k === Tokens.OUTER
@@ -85,10 +85,10 @@ function parse_kw(ps::ParseState; allow_const_field = false)
     end
 end
 
-function parse_const(ps::ParseState; allow_const_field = false)
+function parse_const(ps::ParseState; allow_no_assignment = false)
     kw = EXPR(ps)
     arg = parse_expression(ps)
-    if !allow_const_field && !(isassignment(unwrapbracket(arg)) || (headof(arg) === :global && length(arg.args) > 0 && isassignment(unwrapbracket(arg.args[1]))))
+    if !allow_no_assignment && !(isassignment(unwrapbracket(arg)) || (headof(arg) === :global && length(arg.args) > 0 && isassignment(unwrapbracket(arg.args[1]))))
         arg = mErrorToken(ps, arg, ExpectedAssignment)
     end
     ret = EXPR(:const, EXPR[arg], EXPR[kw])
@@ -154,7 +154,7 @@ function parse_mutable(ps::ParseState)
     if kindof(ps.nt) === Tokens.STRUCT
         kw = EXPR(ps)
         next(ps)
-        ret = parse_blockexpr(ps, :mutable, allow_const_field = true)
+        ret = parse_blockexpr(ps, :mutable, allow_no_assignment = true)
         pushfirst!(ret.trivia, setparent!(kw, ret))
         update_span!(ret)
     else
@@ -308,15 +308,15 @@ function parse_do(ps::ParseState, pre::EXPR)
 end
 
 """
-    parse_blockexpr(ps::ParseState, head; allow_const_field = false)
+    parse_blockexpr(ps::ParseState, head; allow_no_assignment = false)
 
 General function for parsing block expressions comprised of a series of statements
 terminated by an `end`.
 """
-function parse_blockexpr(ps::ParseState, head; allow_const_field = false)
+function parse_blockexpr(ps::ParseState, head; allow_no_assignment = false)
     kw = EXPR(ps)
     sig = parse_blockexpr_sig(ps, head)
-    blockargs = parse_block(ps, EXPR[], (Tokens.END,), docable(head); allow_const_field = allow_const_field)
+    blockargs = parse_block(ps, EXPR[], (Tokens.END,), docable(head); allow_no_assignment = allow_no_assignment)
     if head === :begin
         EXPR(:block, blockargs, EXPR[kw, accept_end(ps)])
     elseif sig === nothing
