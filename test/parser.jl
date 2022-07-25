@@ -179,6 +179,14 @@ end
             @test ":(;;;)" |> test_expr
         end
 
+        # this errors during *lowering*, not parsing.
+        @testset "parse const without assignment in quote" begin
+            @test ":(global const x)" |> test_expr
+            @test ":(global const x::Int)" |> test_expr
+            @test ":(const global x)" |> test_expr
+            @test ":(const global x::Int)" |> test_expr
+        end
+
         @testset "where precedence" begin
             @test "a = b where c = d" |> test_expr
             @test "a = b where c" |> test_expr

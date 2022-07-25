@@ -249,7 +249,9 @@ function parse_unary_colon(ps::ParseState, op::EXPR)
         ret = op
     else
         prev_errored = ps.errored
+        enable!(ps, ParserFlags.InQuote)
         arg = @precedence ps 20 @nocloser ps :inref parse_expression(ps)
+        disable!(ps, ParserFlags.InQuote)
         if isbracketed(arg) && headof(arg.args[1]) === :errortoken && errorof(arg.args[1]) === UnexpectedAssignmentOp
             ps.errored = prev_errored
             arg.args[1] = arg.args[1].args[1]

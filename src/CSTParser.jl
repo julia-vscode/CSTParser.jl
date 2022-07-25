@@ -38,7 +38,7 @@ Acceptable starting tokens are:
 + An `@`.
 
 """
-function parse_expression(ps::ParseState, esc_on_error = false; allow_no_assignment = false)
+function parse_expression(ps::ParseState, esc_on_error = false)
     if kindof(ps.nt) === Tokens.ENDMARKER
         ret = mErrorToken(ps, UnexpectedToken)
     elseif (esc_on_error && ps.nt.kind == Tokens.ERROR)
@@ -48,7 +48,7 @@ function parse_expression(ps::ParseState, esc_on_error = false; allow_no_assignm
     else
         next(ps)
         if iskeyword(kindof(ps.t)) && kindof(ps.t) != Tokens.DO
-            ret = parse_kw(ps; allow_no_assignment = allow_no_assignment)
+            ret = parse_kw(ps)
         elseif kindof(ps.t) === Tokens.LPAREN
             ret = parse_paren(ps)
         elseif kindof(ps.t) === Tokens.LSQUARE
