@@ -29,6 +29,18 @@ end
             @test x[1] === x.trivia[1]
             @test x[2] === x.args[1]
         end
+
+        @testset "global tuple" begin
+            x = cst"global (a = 1,b = 2)"
+            @test length(x) == 6
+            @test x[1] === x.trivia[1]
+            @test x[2] === x.trivia[2]
+            @test x[3] === x.args[1]
+            @test x[4] === x.trivia[3]
+            @test x[5] === x.args[2]
+            @test x[6] === x.trivia[4]
+        end
+
         @testset "const" begin
             x = cst"const a = 1"
             @test length(x) == 2

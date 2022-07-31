@@ -257,10 +257,20 @@ function _const(x, i)
 end
 
 function _global(x, i)
-    if hastrivia(x) && (headof(first(x.trivia)) === :GLOBAL || headof(first(x.trivia)) === :LOCAL)
-        oddt_evena(x, i)
+    if length(x.trivia) > length(x.args) # probably :tuple
+        if i <= 2
+            x.trivia[i]
+        elseif isodd(i)
+            x.args[div(i - 1, 2)]
+        else
+            x.trivia[div(i - 2, 2) + 2]
+        end
     else
-        odda_event(x, i)
+        if hastrivia(x) && (headof(first(x.trivia)) === :GLOBAL || headof(first(x.trivia)) === :LOCAL)
+            oddt_evena(x, i)
+        else
+            odda_event(x, i)
+        end
     end
 end
 
