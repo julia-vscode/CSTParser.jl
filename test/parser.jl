@@ -522,8 +522,10 @@ end
                 @test "[x;;; y;;;z]'" |> test_expr
                 @test "[1 2; 3 4]" |> test_expr
                 @test "[1;2;;3;4;;5;6;;;;9]" |> test_expr
-                @test "[let; x; end;; y]" |> test_expr
-                @test "[let; x; end;;;; y]" |> test_expr
+                if VERSION > v"1.7-"
+                    @test "[let; x; end;; y]" |> test_expr
+                    @test "[let; x; end;;;; y]" |> test_expr
+                end
             end
 
             @testset "typed_ncat" begin
@@ -556,14 +558,19 @@ end
         @testset "Comprehension" begin
             @test "[i for i = 1:10]" |> test_expr
             @test "Int[i for i = 1:10]" |> test_expr
-            @test """[
-                [
-                    let l = min((d-k),k);
-                        binomial(d-l,l);
-                    end; for k in 1:d-1
-                ] for d in 2:9
-            ]
-            """ |> test_expr
+            @test "[let;x;end for x in x]" |> test_expr
+            @test "[let; x; end for x in x]" |> test_expr
+            @test "[let x=x; x+x; end for x in x]" |> test_expr
+            if VERSION > v"1.7-"
+                @test """[
+                    [
+                        let l = min((d-k),k);
+                            binomial(d-l,l);
+                        end; for k in 1:d-1
+                    ] for d in 2:9
+                ]
+                """ |> test_expr
+            end
         end
     end
 
