@@ -42,9 +42,10 @@ mutable struct ParseState
     nnws::RawToken
     closer::Closer
     errored::Bool
+    flags::UInt64
 end
 function ParseState(str::Union{IOBuffer,String})
-    ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), Closer(), false)
+    ps = ParseState(tokenize(str, RawToken), false, RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), RawToken(), Closer(), false, 0)
     return next(next(ps))
 end
 
@@ -58,6 +59,15 @@ function ParseState(str::Union{IOBuffer,String}, loc::Int)
     return ps
 end
 
+module ParserFlags
+    const AllowConstWithoutAssignment = 0x1
+    const InQuote = 0x2
+end
+
+enable!(ps::ParseState, flag::Integer) = ps.flags |= flag
+disable!(ps::ParseState, flag::Integer) = ps.flags &= ~flag
+has_flag(ps::ParseState, flag::Integer) = ps.flags & flag > 0
+
 function Base.show(io::IO, ps::ParseState)
     println(io, "ParseState at $(position(ps.l.io))")
     println(io, "last    : ", kindof(ps.lt), " ($(ps.lt))", "    ($(wstype(ps.lws)))")
@@ -66,20 +76,17 @@ function Base.show(io::IO, ps::ParseState)
 end
 peekchar(ps::ParseState) = peekchar(ps.l)
 if !applicable(Base.peek, Tuple{IOBuffer, Char})
-function _peek(s::IO, ::Type{T}) where T
-    mark(s)
-    try read(s, T)::T
-    finally
-        reset(s)
+    function _peek(s::IO, ::Type{T}) where T
+        mark(s)
+        try read(s, T)::T
+        finally
+            reset(s)
+        end
     end
-end
-peekchar(io) = _peek(io, Char)
+    peekchar(io) = _peek(io, Char)
 else
-peekchar(io) = peek(io, Char)
+    peekchar(io) = peek(io, Char)
 end
-
-
-
 
 wstype(t::AbstractToken) = kindof(t) == EmptyWS ? "empty" :
                     kindof(t) == NewLineWS ? "ws w/ newline" :

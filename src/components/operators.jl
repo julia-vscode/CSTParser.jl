@@ -249,7 +249,9 @@ function parse_unary_colon(ps::ParseState, op::EXPR)
         ret = op
     else
         prev_errored = ps.errored
+        enable!(ps, ParserFlags.InQuote)
         arg = @precedence ps 20 @nocloser ps :inref parse_expression(ps)
+        disable!(ps, ParserFlags.InQuote)
         if isbracketed(arg) && headof(arg.args[1]) === :errortoken && errorof(arg.args[1]) === UnexpectedAssignmentOp
             ps.errored = prev_errored
             arg.args[1] = arg.args[1].args[1]
@@ -471,7 +473,11 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
         ret = EXPR(op, EXPR[ret], nothing)
     elseif is_prime(op)
         if isidentifier(ret) || isliteral(ret) ||
-                headof(ret) in (:call, :tuple, :brackets, :ref, :vect, :vcat, :hcat, :typed_vcat, :typed_hcat, :comprehension, :typed_comprehension, :curly, :braces, :braces_cat) ||
+                headof(ret) in (
+                    :call, :tuple, :brackets, :ref, :vect, :vcat, :hcat, :ncat, :typed_vcat,
+                    :typed_hcat, :typed_ncat, :comprehension, :typed_comprehension, :curly,
+                    :braces, :braces_cat
+                ) ||
                 headof(ret) === :do ||
                 is_dot(headof(ret)) ||
                 is_prime(headof(ret))

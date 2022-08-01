@@ -179,6 +179,14 @@ end
             @test ":(;;;)" |> test_expr
         end
 
+        # this errors during *lowering*, not parsing.
+        @testset "parse const without assignment in quote" begin
+            @test ":(global const x)" |> test_expr
+            @test ":(global const x::Int)" |> test_expr
+            @test ":(const global x)" |> test_expr
+            @test ":(const global x::Int)" |> test_expr
+        end
+
         @testset "where precedence" begin
             @test "a = b where c = d" |> test_expr
             @test "a = b where c" |> test_expr
@@ -511,11 +519,13 @@ end
                 @test "[x;;]" |> test_expr
                 @test "[x;; y;;    z]" |> test_expr
                 @test "[x;;; y;;;z]" |> test_expr
-            end
-
-            @testset "ncat" begin
+                @test "[x;;; y;;;z]'" |> test_expr
                 @test "[1 2; 3 4]" |> test_expr
                 @test "[1;2;;3;4;;5;6;;;;9]" |> test_expr
+                if VERSION > v"1.7-"
+                    @test "[let; x; end;; y]" |> test_expr
+                    @test "[let; x; end;;;; y]" |> test_expr
+                end
             end
 
             @testset "typed_ncat" begin
@@ -527,20 +537,40 @@ end
                 @test "t[x;;; y;;;z]" |> test_expr
                 @test "t[x;;\ny]" |> test_expr
                 @test "t[x y;;\nz a]" |> test_expr
+                @test "t[x y;;\nz a]'" |> test_expr
+                @test "t[let; x; end;; y]" |> test_expr
+                @test "t[let; x; end;;;; y]" |> test_expr
             end
         end
 
         @testset "hcat" begin
             @test "[x y]" |> test_expr
+            @test "[let; x; end y]" |> test_expr
+            @test "[let; x; end; y]" |> test_expr
         end
 
         @testset "typed_hcat" begin
             @test "t[x y]" |> test_expr
+            @test "t[let; x; end y]" |> test_expr
+            @test "t[let; x; end; y]" |> test_expr
         end
 
         @testset "Comprehension" begin
             @test "[i for i = 1:10]" |> test_expr
             @test "Int[i for i = 1:10]" |> test_expr
+            @test "[let;x;end for x in x]" |> test_expr
+            @test "[let; x; end for x in x]" |> test_expr
+            @test "[let x=x; x+x; end for x in x]" |> test_expr
+            if VERSION > v"1.7-"
+                @test """[
+                    [
+                        let l = min((d-k),k);
+                            binomial(d-l,l);
+                        end; for k in 1:d-1
+                    ] for d in 2:9
+                ]
+                """ |> test_expr
+            end
         end
     end
 

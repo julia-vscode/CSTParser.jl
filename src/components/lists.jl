@@ -118,8 +118,7 @@ function parse_array_outer(ps::ParseState, trivia, isref)
     max_bp = -typemax(Int)
     is_start = true
     while kindof(ps.nt) !== Tokens.RSQUARE && kindof(ps.nt) !== Tokens.ENDMARKER
-        a = @nocloser ps :newline @nocloser ps :newline @closesquare ps @closer ps :insquare @closer ps :ws @closer ps :wsop @closer ps :comma parse_expression(ps)
-
+        a = @nocloser ps :semicolon @nocloser ps :newline @closesquare ps @closer ps :insquare @closer ps :ws @closer ps :wsop @closer ps :comma parse_expression(ps)
         if is_start
             args = EXPR[]
             if isref && _do_kw_convert(ps, a)
