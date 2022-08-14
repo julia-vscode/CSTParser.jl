@@ -717,6 +717,9 @@ function _vcat(x, i)
         x.trivia[1]
     elseif i == length(x)
         x.trivia[2]
+    elseif (i-1) > length(x.args)
+        # TODO Remove once we have figured out what is causing this bug
+        error("Illegal indexing into CSTParser. x.head: '$(x.head)', x.trivia: '$(x.trivia)', x.args: '$(x.args)'.")
     else
         x.args[i - 1]
     end
