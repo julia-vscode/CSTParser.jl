@@ -44,7 +44,11 @@ function parse_expression(ps::ParseState, esc_on_error = false)
     elseif (esc_on_error && ps.nt.kind == Tokens.ERROR)
         ret = EXPR(:errortoken, 0, 0)
     elseif kindof(ps.nt) ∈ term_c && !(kindof(ps.nt) === Tokens.END && ps.closer.square)
-        ret = mErrorToken(ps, EXPR(next(ps)), UnexpectedToken)
+        if ps.closer.square && kindof(ps.nt) === Tokens.RSQUARE
+            ret = mErrorToken(ps, UnexpectedToken)
+        else
+            ret = mErrorToken(ps, EXPR(next(ps)), UnexpectedToken)
+        end
     else
         next(ps)
         if iskeyword(kindof(ps.t)) && kindof(ps.t) != Tokens.DO
