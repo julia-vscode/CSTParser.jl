@@ -478,6 +478,8 @@ end
             @test "[(1,2)]" |> test_expr
             @test "[x...]" |> test_expr
             @test "[1,2,3,4,5]" |> test_expr
+            # this is nonsensical, but iteration should still work
+            @test traverse(CSTParser.parse(raw"""[[:alpha:]a←-]"""))
         end
 
         @testset "ref" begin
