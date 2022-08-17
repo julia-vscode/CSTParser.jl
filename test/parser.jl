@@ -480,6 +480,13 @@ end
             @test "[1,2,3,4,5]" |> test_expr
             # this is nonsensical, but iteration should still work
             @test traverse(CSTParser.parse(raw"""[[:alpha:]a←-]"""))
+            # unterminated expressions may cause issues
+            @test traverse(CSTParser.parse("bind_artifact!(\"../Artifacts.toml\",\"example\",hash,download_info=[(\"file://c:/juliaWork/tarballs/example.tar.gz\"\",tarball_hash)],force=true)\n2+2\n"))
+            @test traverse(CSTParser.parse("[2+3+4"))
+            @test traverse(CSTParser.parse("[2+3+4+"))
+            @test traverse(CSTParser.parse("[\"hi\"\""))
+            @test traverse(CSTParser.parse("[\"hi\"\"\n"))
+            @test traverse(CSTParser.parse("[(1,2,3])"))
         end
 
         @testset "ref" begin

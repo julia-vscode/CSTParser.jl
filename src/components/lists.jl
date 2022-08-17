@@ -151,6 +151,9 @@ function parse_array_outer(ps::ParseState, trivia, isref)
                 push!(trivia, accept_comma(ps))
                 @closesquare ps parse_comma_sep(ps, args, trivia, isref, insert_params_at = 1)
                 return EXPR(:vect, args, trivia)
+            elseif kindof(ps.nt) === Tokens.ENDMARKER
+                push!(args, a)
+                return EXPR(:vect, args, trivia)
             end
         end
         is_start = false
