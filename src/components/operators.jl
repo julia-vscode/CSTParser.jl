@@ -1,4 +1,3 @@
-import Tokenize.Tokens: isoperator
 precedence(op::Int) = op < Tokens.end_assignments ?  AssignmentOp :
                        op < Tokens.end_pairarrow ? 2 :
                        op < Tokens.end_conditional ? ConditionalOp :
