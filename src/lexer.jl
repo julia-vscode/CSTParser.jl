@@ -1,5 +1,3 @@
-import Tokenize.Lexers: peekchar, readchar, iswhitespace, emit, emit_error,  accept_batch, eof
-
 const EmptyWS = Tokens.EMPTY_WS
 const SemiColonWS = Tokens.SEMICOLON_WS
 const NewLineWS = Tokens.NEWLINE_WS
