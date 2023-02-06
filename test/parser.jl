@@ -464,6 +464,8 @@ end
         @test ":(@foo bar baz bat)" |> test_expr
         @test ":(@foo bar for i in j end)" |> test_expr
         @test "(@foo bar for i in j end)" |> test_expr
+        @test "foo(@foo bar for i in j)" |> test_expr
+        @test "foo.(@foo bar for i in j)" |> test_expr
         @test CSTParser.parse("@__DIR__\n\nx", true)[1].span == 8
 
         if VERSION >= v"1.8.0-"

@@ -384,13 +384,13 @@ function parse_operator_dot(ps::ParseState, ret::EXPR, op::EXPR)
     if kindof(ps.nt) === Tokens.LPAREN
         @static if VERSION > v"1.1-"
             iserred = kindof(ps.ws) != Tokens.EMPTY_WS
-            sig = @default ps parse_call(ps, ret)
+            sig = @default ps @closer ps :for_generator parse_call(ps, ret)
             nextarg = EXPR(:tuple, sig.args[2:end], sig.trivia)
             if iserred
                 nextarg = mErrorToken(ps, nextarg, UnexpectedWhiteSpace)
             end
         else
-            sig = @default ps parse_call(ps, ret)
+            sig = @default ps @closer ps :for_generator parse_call(ps, ret)
             nextarg = EXPR(:tuple, sig.args[2:end], sig.trivia)
         end
     elseif iskeyword(ps.nt) || both_symbol_and_op(ps.nt)
