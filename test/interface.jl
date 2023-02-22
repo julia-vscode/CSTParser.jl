@@ -52,10 +52,12 @@ end
     @test valof(CSTParser.get_name(CSTParser.parse("function f()::T end"))) == "f"
     @test valof(CSTParser.get_name(CSTParser.parse("function f(x::T) where T end"))) == "f"
     @test valof(CSTParser.get_name(CSTParser.parse("function f{T}() end"))) == "f"
+    @test valof(CSTParser.get_name(CSTParser.parse("function (f()) end"))) == "f"
 
     # Operators
     @test CSTParser.str_value(CSTParser.get_name(CSTParser.parse("function +() end"))) == "+"
     @test CSTParser.str_value(CSTParser.get_name(CSTParser.parse("function (+)() end"))) == "+"
+    @test CSTParser.str_value(CSTParser.get_name(CSTParser.parse("function (a + b) end"))) == "+"
     @test CSTParser.str_value(CSTParser.get_name(CSTParser.parse("+(x,y) = x"))) == "+"
     @test CSTParser.str_value(CSTParser.get_name(CSTParser.parse("+(x,y)::T = x"))) == "+"
     @test CSTParser.str_value(CSTParser.get_name(CSTParser.parse("!(x)::T = x"))) == "!"
