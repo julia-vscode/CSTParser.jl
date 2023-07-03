@@ -575,7 +575,7 @@ _kw_convert(x::EXPR) = EXPR(:kw, EXPR[x.args[1], x.args[2]], EXPR[x.head], x.ful
 
 When parsing a function or macro signature, should it be converted to a tuple?
 """
-convertsigtotuple(sig::EXPR) = isbracketed(sig) && !(istuple(sig.args[1]) || (headof(sig.args[1]) === :block) || issplat(sig.args[1]))
+convertsigtotuple(sig::EXPR) = isbracketed(sig) && !(istuple(sig.args[1]) || iscall(sig.args[1]) || (headof(sig.args[1]) === :block) || issplat(sig.args[1]))
 
 """
     docable(head)
