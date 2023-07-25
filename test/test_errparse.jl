@@ -2,6 +2,10 @@
 # and that iteration functions are still correctly ordered.
 
 @testitem "invalid jl file parsing" begin
+    using CSTParser: to_codeobject
+    using Tokenize: tokenize
+    import Tokenize.Tokens: untokenize
+    
     function trav(x, f=x -> nothing)
         f(x)
         for a in x
