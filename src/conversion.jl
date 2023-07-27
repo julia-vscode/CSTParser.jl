@@ -121,9 +121,11 @@ function Expr_float(x)
 end
 function Expr_char(x)
     val = _unescape_string(valof(x)[2:prevind(valof(x), lastindex(valof(x)))])
-    # one byte e.g. '\xff' maybe not valid UTF-8
-    # but we want to use the raw value as a codepoint in this case
-    sizeof(val) == 1 && return Char(codeunit(val, 1))
+    if VERSION < v"1.9-"
+        # one byte e.g. '\xff' maybe not valid UTF-8
+        # but we want to use the raw value as a codepoint in this case
+        sizeof(val) == 1 && return Char(codeunit(val, 1))
+    end
     length(val) == 1 || error("Invalid character literal: $(Vector{UInt8}(valof(x)))")
     val[1]
 end

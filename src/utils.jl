@@ -506,41 +506,83 @@ function _unescape_string(io, s::AbstractString)
         end
     end
 end
-
-function valid_escaped_seq(s::AbstractString)
-    l = length(s)
-    l == 0 && return false # zero length chars are always invalid
-    l == 1 && return true # length-one chars are always valid to Julia's parser
-    a = Iterators.Stateful(s)
-    if popfirst!(a) == '\\'
-        c = popfirst!(a)
-        if c === 'x' || c === 'u' || c === 'U'
-            maxiter = c === 'x' ? 2 : c === 'u' ? 4 : 8
-            0 < length(a) <= maxiter || return false
-            n = 0
-            while !isempty(a)
-                nc = popfirst!(a)
-                n = '0' <= nc <= '9' ? n << 4 + (nc - '0') :
-                    'a' <= nc <= 'f' ? n << 4 + (nc - 'a' + 10) :
-                    'A' <= nc <= 'F' ? n << 4 + (nc - 'A' + 10) : return false
+@static if VERSION < v"1.9-"
+    function valid_escaped_seq(s::AbstractString)
+        l = length(s)
+        l == 0 && return false # zero length chars are always invalid
+        l == 1 && return true # length-one chars are always valid to Julia's parser
+        a = Iterators.Stateful(s)
+        if popfirst!(a) == '\\'
+            c = popfirst!(a)
+            if c === 'x' || c === 'u' || c === 'U'
+                maxiter = c === 'x' ? 2 : c === 'u' ? 4 : 8
+                0 < length(a) <= maxiter || return false
+                n = 0
+                while !isempty(a)
+                    nc = popfirst!(a)
+                    n = '0' <= nc <= '9' ? n << 4 + (nc - '0') :
+                        'a' <= nc <= 'f' ? n << 4 + (nc - 'a' + 10) :
+                        'A' <= nc <= 'F' ? n << 4 + (nc - 'A' + 10) : return false
+                end
+                return n <= 0x10ffff
+            elseif '0' <= c <= '7'
+                length(a) <= 3 || return false
+                n = c - '0'
+                while !isempty(a)
+                    nc = popfirst!(a)
+                    n = ('0' <= c <= '7') ? n << 3 + nc - '0' : return false
+                end
+                return n < 128
+            else
+                @static if VERSION < v"1.1.0"
+                    c = string(c)
+                end
+                return ncodeunits(c) == 1 && isempty(a)
             end
-            return n <= 0x10ffff
-        elseif '0' <= c <= '7'
-            length(a) <= 3 || return false
-            n = c - '0'
-            while !isempty(a)
-                nc = popfirst!(a)
-                n = ('0' <= c <= '7') ? n << 3 + nc - '0' : return false
-            end
-            return n < 128
-        else
-            @static if VERSION < v"1.1.0"
-                c = string(c)
-            end
-            return ncodeunits(c) == 1 && isempty(a)
         end
+        return false
     end
-    return false
+else
+    function valid_escaped_seq(s::AbstractString)
+        l = length(s)
+        l == 0 && return false # zero length chars are always invalid
+        l == 1 && return true # length-one chars are always valid to Julia's parser
+        a = Iterators.Stateful(s)
+        ok = false
+        while !isempty(a)
+            if popfirst!(a) == '\\'
+                c = popfirst!(a)
+                if c === 'x' || c === 'u' || c === 'U'
+                    maxiter = c === 'x' ? 2 : c === 'u' ? 4 : 8
+                    n = 0
+                    for _ in 1:min(length(a), maxiter)
+                        nc = popfirst!(a)
+                        n = '0' <= nc <= '9' ? n << 4 + (nc - '0') :
+                            'a' <= nc <= 'f' ? n << 4 + (nc - 'a' + 10) :
+                            'A' <= nc <= 'F' ? n << 4 + (nc - 'A' + 10) : return false
+                    end
+                    ok = n <= 0x10ffff
+                elseif '0' <= c <= '7'
+                    n = c - '0'
+                    for _ in 1:min(length(a), 3)
+                        nc = popfirst!(a)
+                        n = ('0' <= c <= '7') ? n << 3 + nc - '0' : return false
+                    end
+                    ok = n < 128
+                else
+                    @static if VERSION < v"1.1.0"
+                        c = string(c)
+                    end
+                    ok = ncodeunits(c) == 1 && isempty(a)
+                end
+            else
+                return false
+            end
+
+            !ok && return false
+        end
+        return ok
+    end
 end
 
 """

@@ -23,25 +23,25 @@ end
 
 @testitem ":return" begin
     include("shared.jl")
-    
+
     test_expr("return a", :return, 2)
 end
 
 @testitem ":abstract" begin
     include("shared.jl")
-    
+
     test_expr("abstract type sig end", :abstract, 4, true)
 end
 
 @testitem ":primitive" begin
     include("shared.jl")
-    
+
     test_expr("primitive type sig spec end", :primitive, 5, true)
 end
 
 @testitem ":call" begin
     include("shared.jl")
-    
+
     test_expr("f()", :call, 3, true)
     test_expr("f(a, b)", :call, 6, true)
     test_expr("a + b", :call, 3, false)
@@ -49,13 +49,13 @@ end
 
 @testitem ":brackets" begin
     include("shared.jl")
-    
+
     test_expr("(a)", :brackets, 3, true)
 end
 
 @testitem ":begin" begin
     include("shared.jl")
-    
+
     test_expr("begin end", :block, 2, true)
     test_expr("begin a end", :block, 3, true)
     test_expr("quote end", :quote, 3, true)
@@ -70,14 +70,14 @@ end
 
 @testitem ":export" begin
     include("shared.jl")
-    
+
     test_expr("export a", :export, 2, false)
     test_expr("export a, b", :export, 4, false)
 end
 
 @testitem ":import" begin
     include("shared.jl")
-    
+
     test_expr("import a", :import, 2, false)
     test_expr("import a, b", :import, 4, false)
     test_expr("import a.b", :import, 2, false)
@@ -89,13 +89,13 @@ end
 
 @testitem ":kw" begin
     include("shared.jl")
-    
+
     test_expr("f(a=1)", :call, 4, false)
 end
 
 @testitem ":tuple" begin
     include("shared.jl")
-    
+
     test_expr("a,b ", :tuple, 3, false)
     test_expr("(a,b) ", :tuple, 5, true)
     test_expr("a,b,c ", :tuple, 5, false)
@@ -104,14 +104,14 @@ end
 
 @testitem ":curly" begin
     include("shared.jl")
-    
+
     test_expr("x{a}", :curly, 4, true)
     test_expr("x{a,b}", :curly, 6, true)
 end
 
 @testitem "operators" begin
     include("shared.jl")
-    
+
     test_expr("!a", :call, 2, false)
     test_expr("&a", nothing, 2, false)
     test_expr(":a", :quotenode, 2, false)
@@ -144,13 +144,13 @@ end
 
 @testitem ":parameters" begin
     include("shared.jl")
-    
+
     test_expr("f(a;b = 1)", nothing, 5, true)
 end
 
 @testitem "lists :vect" begin
     include("shared.jl")
-    
+
     test_expr("[]", :vect, 2, true)
     test_expr("[a]", :vect, 3, true)
     test_expr("[a, b]", :vect, 5, true)
@@ -159,7 +159,7 @@ end
 
 @testitem "lists :vcat" begin
     include("shared.jl")
-    
+
     test_expr("[a\nb]", :vcat, 4, true)
     test_expr("[a;b]", :vcat, 4, true)
     test_expr("[a b\nc d]", :vcat, 4, true)
@@ -169,32 +169,32 @@ end
 
 @testitem "lists :hcat" begin
     include("shared.jl")
-    
+
     test_expr("[a b]", :hcat, 4, true)
 end
 
 @testitem "lists :ref" begin
     include("shared.jl")
-    
+
     test_expr("T[a]", :ref, 4, true)
     test_expr("T[a,b]", :ref, 6, true)
 end
 
 @testitem "lists :typed_hcat" begin
     include("shared.jl")
-    
+
     test_expr("T[a b]", :typed_hcat, 5, true)
 end
 
 @testitem "lists :typed_vcat" begin
     include("shared.jl")
-    
+
     test_expr("T[a;b]", :typed_vcat, 5, true)
 end
 
 @testitem ":let" begin
     include("shared.jl")
-    
+
     test_expr("let\n end", :let, 4, true)
     test_expr("let x = 1 end", :let, 4, true)
     test_expr("let x = 1, y =1  end", :let, 4, true)
@@ -202,7 +202,7 @@ end
 
 @testitem ":try" begin
     include("shared.jl")
-    
+
     test_expr("try catch end", :try, 6, true)
     test_expr("try a catch end", :try, 6, true)
     test_expr("try catch e end", :try, 6, true)
@@ -216,7 +216,7 @@ end
 
 @testitem ":macrocall" begin
     include("shared.jl")
-    
+
     test_expr("@m", :macrocall, 2, false)
     test_expr("@m a", :macrocall, 3, false)
     test_expr("@m a b", :macrocall, 4, false)
@@ -224,7 +224,7 @@ end
 
 @testitem ":if" begin
     include("shared.jl")
-    
+
     test_expr("if c end", :if, 4, true)
     test_expr("if c a end", :if, 4, true)
     test_expr("if c a else end", :if, 6, true)
@@ -236,14 +236,14 @@ end
 
 @testitem ":do" begin
     include("shared.jl")
-    
+
     test_expr("f() do x end", :do, 4, true)
     test_expr("f() do x,y end", :do, 4, true)
 end
 
 @testitem "strings" begin
     include("shared.jl")
-    
+
     test_expr("a\"txt\"", :macrocall, 3, false)
     test_expr("a\"txt\"b", :macrocall, 4, false)
 end
@@ -251,7 +251,7 @@ end
 
 @testitem ":string" begin
     include("shared.jl")
-    
+
     test_expr("\"\$a\"", :string, 4, false)
     test_expr("\" \$a\"", :string, 4, false)
     test_expr("\" \$a \"", :string, 4, false)
@@ -259,7 +259,7 @@ end
 
 @testitem ":for" begin
     include("shared.jl")
-    
+
     test_expr("for i = I end", :for, 4, true)
     test_expr("for i in I end", :for, 4, true)
     test_expr("for i ∈ I end", :for, 4, true)
@@ -268,13 +268,13 @@ end
 
 @testitem "docs" begin
     include("shared.jl")
-    
+
     test_expr("\"doc\"\nT", :macrocall, 4, false)
 end
 
 @testitem ":generator" begin
     include("shared.jl")
-    
+
     test_expr("(arg for x in X)", :brackets, 3, true)
     test_expr("(arg for x in X if x)", :brackets, 3, true)
     test_expr("(arg for x in X, y in Y)", :brackets, 3, true)
@@ -286,7 +286,7 @@ end
 
 @testitem ":cmd" begin
     include("shared.jl")
-    
+
     let s = "``"
         x = CSTParser.parse(s)
         x1 = jl_parse(s)
@@ -308,7 +308,7 @@ end
 
 @testitem "macrocall" begin
     include("shared.jl")
-    
+
     test_expr("@m", :macrocall, 2, false)
     test_expr("@m a", :macrocall, 3, false)
     test_expr("@m(a)", :macrocall, 5, false)
@@ -317,7 +317,7 @@ end
 
 @testitem "_str" begin
     include("shared.jl")
-    
+
     test_expr("a\"txt\"", :macrocall, 3, false)
     test_expr("a.b\"txt\"", :macrocall, 3, false)
 end
