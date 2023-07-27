@@ -144,8 +144,6 @@ end
     end
 end
 
-
-
 span(x::EXPR) = x.span
 
 function update_span!(x::EXPR)

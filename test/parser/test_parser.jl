@@ -476,7 +476,7 @@ end
 @testitem "Spans" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     CSTParser.parse(raw"""
     "ABC$(T)"
     """).fullspan >= 9
@@ -491,7 +491,7 @@ end
 @testitem "Command or string with unicode" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test "```αhelloworldω```" |> test_expr
     @test "\"αhelloworldω\"" |> test_expr
 end
@@ -499,14 +499,14 @@ end
 @testitem "conversion of floats with underscore" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test "30.424_876_125_859_513" |> test_expr
 end
 
 @testitem "errors" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test headof(CSTParser.parse("1? b : c ").args[1]) === :errortoken
     @test headof(CSTParser.parse("1 ?b : c ").trivia[1]) === :errortoken
     @test headof(CSTParser.parse("1 ? b :c ").trivia[2]) === :errortoken
@@ -521,7 +521,7 @@ end
 @testitem "colons" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr("(if true I elseif false J else : end for i in 1:5)")
     @test test_expr("if true; : end")
     @test test_expr("a + :")
@@ -530,7 +530,7 @@ end
 @testitem "tuple params" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test "1,2,3" |> test_expr
     @test "1;2,3" |> test_expr
     @test "1,2;3" |> test_expr
@@ -543,7 +543,7 @@ end
 @testitem "docs" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test "\"doc\"\nT" |> test_expr
     @test "@doc \"doc\" T" |> test_expr
     @test "@doc \"doc\"\nT" |> test_expr
@@ -566,7 +566,7 @@ end
 @testitem "braces" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test "{a}" |> test_expr
     @test "{a, b}" |> test_expr
     @test "{a, b; c}" |> test_expr
@@ -579,7 +579,7 @@ end
 @testitem "import preceding dot whitespace" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test "using . M" |> test_expr
     @test "using .. M" |> test_expr
     @test "using ... M" |> test_expr
@@ -588,7 +588,7 @@ end
 @testitem "issue #116" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test """
     function foo() where {A <:B}
     body
@@ -603,7 +603,7 @@ end
 @testitem "issue #165" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     x = CSTParser.parse("""
     a ? b
     function f end""")
@@ -614,7 +614,7 @@ end
 @testitem "issue #182" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     x = CSTParser.parse("""
     quote
         \"\"\"
@@ -628,7 +628,7 @@ end
 @testitem "issue #198" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     if VERSION > v"1.3.0-"
         @test test_expr(":var\"id\"")
     end
@@ -636,21 +636,21 @@ end
 @testitem "vscode issue #1632" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr("\"\$( a)\"")
     @test test_expr("\"\$(#=comment=# a)\"")
 end
 @testitem "issue #210" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr("function f(a; where = false) end")
 end
 
 @testitem "suffixed ops" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr("a +₊ b *₊ c")
     @test test_expr("a *₊ b +₊ c")
 end
@@ -659,7 +659,7 @@ end
 @testitem "import .. as .. syntax" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @static if VERSION > v"1.6-"
         @test test_expr("import a as b")
         @test test_expr("import a as b, c")
@@ -673,7 +673,7 @@ end
 @testitem "exor #201" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr(raw"$return(x)")
 end
 
@@ -682,7 +682,7 @@ end
 @testitem "@var #236" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     if VERSION > v"1.3.0-"
         s = raw"""@var" " a"""
         @test test_expr(s)
@@ -693,7 +693,7 @@ end
 @testitem "nonstandard identifier (var\"blah\") parsing" begin
 using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     if VERSION > v"1.3.0-"
         @test """var"asd" """ |> test_expr
         @test """var"#asd" """ |> test_expr
@@ -706,14 +706,14 @@ end
 @testitem "bad uint" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test to_codeobject(CSTParser.parse("0x.")) == Expr(:error)
 end
 
 @testitem "endswithtrivia" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     x = CSTParser.parse("\"some long title \$label1 \$label2\" \na")
     @test x[3].span < x[3].fullspan
     @test CSTParser.lastchildistrivia(x[3])
@@ -722,7 +722,7 @@ end
 @testitem "bad interp with following newline" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     s = "\"\"\"\$()\n\"\"\""
     x = CSTParser.parse(s)
     @test sizeof(s) == x.fullspan
@@ -731,7 +731,7 @@ end
 @testitem "minimal_reparse" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     s0 = """
     testsettravx=nothing;
         ) fx;ifxend)
@@ -749,7 +749,7 @@ end
 @testitem "primes" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr("""
     f() do x
         end'
@@ -774,7 +774,7 @@ end
 @testitem "end as id juxt" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr("a[1end]")
     if VERSION >= v"1.4"
         @test test_expr("a[2begin:1end]")
@@ -784,28 +784,28 @@ end
 @testitem "last child is trivia for :string" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test !CSTParser.lastchildistrivia(cst"""("a $(A) a"  )"""[2])
 end
 
 @testitem "toplevel strings" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr(""""a" in b && c""")
 end
 
 @testitem "@doc cont" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr("module a\n@doc doc\"\"\"doc\"\"\"\nx\nend")
 end
 
 @testitem "char escape" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr(raw"'\$'")
     @test test_expr(raw"'\a'")
     @test test_expr(raw"'\3'")
@@ -821,6 +821,10 @@ end
     @test test_expr(raw"'\U2222'")
     @test test_expr(raw"'\U22222'")
     @test test_expr(raw"'\U00000001'")
+    if VERSION > v"1.9-"
+        @test test_expr(raw"'\xff'")
+        @test test_expr(raw"'\xc0\x80'")
+    end
 
     @test CSTParser.parse(raw"'\200'").head == :errortoken
     @test CSTParser.parse(raw"'\300'").head == :errortoken
@@ -846,14 +850,14 @@ end
 @testitem "invalid char in string" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test CSTParser.parse(raw"\"\U222222222\"").head == :errortoken
 end
 
 @testitem "string macros" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr(raw"""test"asd"asd""")
     if VERSION >= v"1.6"
         @test test_expr(raw"""test"asd"0""")
@@ -868,7 +872,7 @@ end
 @testitem "number parsing" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr("0b00000000")
     @test test_expr("0b000000000")
     @test test_expr("0b0000000000000000")
@@ -962,7 +966,7 @@ end
 @testitem "#302" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     str = """
     const _examples = PlotExample[
     PlotExample( # 1
@@ -984,7 +988,7 @@ end
 @testitem "#304" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     str = """
     const _examples = PlotExample[
         PlotExample( # 40
@@ -1019,7 +1023,7 @@ end
 @testitem "#310" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     x, ps = CSTParser.parse(CSTParser.ParseState("""import a.notvar"papa" """), true)
     @test ps.errored == true
     x, ps = CSTParser.parse(CSTParser.ParseState("""import notvar"papa" """), true)
@@ -1029,14 +1033,14 @@ end
 @testitem "#311" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr(raw"import a.$b.c")
 end
 
 @testitem "kw interpolation" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr(raw""""foo $bar" """)
     @test test_expr(raw""""foo $type" """)
     @test test_expr(raw""""foo $function" """)
@@ -1047,7 +1051,7 @@ end
 @testitem "broadcasted && and ||" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     if VERSION > v"1.7-"
         @test test_expr(raw"""a .&& b""")
         @test test_expr(raw"""a .< b .&& b .> a""")
@@ -1060,7 +1064,7 @@ end
 @testitem "normalized unicode ops" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     if VERSION > v"1.7-"
         @test "(·) == (·) == (⋅) == 5" |> test_expr
         @test "(−) == (-) == 6" |> test_expr
@@ -1070,7 +1074,7 @@ end
 @testitem "pair tuple" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr("a => b")
     @test test_expr("a => b, c, d")
     @test test_expr("a, a => b, c, d")
@@ -1079,7 +1083,7 @@ end
 @testitem "global" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr("global a")
     @test test_expr("global a = 1")
     @test test_expr("global a = 1, b")
