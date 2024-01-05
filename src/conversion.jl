@@ -1,10 +1,11 @@
 # Terminals
 function julia_normalization_map(c::Int32, x::Ptr{Nothing})::Int32
-    return c == 0x00B5 ? 0x03BC : # micro sign -> greek small letter mu
-           c == 0x025B ? 0x03B5 : # latin small letter open e -> greek small letter
-           c == 0x00B7 ? 0x22C5 :
-           c == 0x0387 ? 0x22C5 :
-           c == 0x2212 ? 0x002D :
+    return c == 0x025B ? 0x03B5 : # latin small letter open e -> greek small letter epsilon
+           c == 0x00B5 ? 0x03BC : # micro sign -> greek small letter mu
+           c == 0x00B7 ? 0x22C5 : # middot char -> dot operator (#25098)
+           c == 0x0387 ? 0x22C5 : # Greek interpunct -> dot operator (#25098)
+           c == 0x2212 ? 0x002D : # minus -> hyphen-minus (#26193)
+           c == 0x210F ? 0x0127 : # hbar -> small letter h with stroke (#48870)
            c
 end
 
@@ -219,7 +220,7 @@ function to_codeobject(x::EXPR)
         Expr(Symbol(lowercase(String(x.head))))
     elseif VERSION < v"1.7.0-DEV.1129" && x.head === :ncat
         dim = tryparse(Int, String(x.args[1].head))
-        dim == nothing && return Expr(:error)
+        dim === nothing && return Expr(:error)
         head = dim == 1 ? :hcat : :vcat
         Expr(head, to_codeobject.(x.args[2:end])...)
     elseif x.head === :errortoken

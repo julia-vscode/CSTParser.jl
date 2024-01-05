@@ -272,7 +272,12 @@ end
     end
     """ |> test_expr
     @test "function f() ::T end" |> test_expr # ws closer
-    @test "import Base: +, -, .+, .-" |> test_expr
+    if VERSION > v"1.10-"
+        # import Base: .+ is no longer valid with Julia 1.10
+        @test "import Base: +, -" |> test_expr
+    else
+        @test "import Base: +, -, .+, .-" |> test_expr
+    end
     if VERSION > v"1.6-"
         @test "import Base.:+" |> test_expr
         @test "import Base.:⋅" |> test_expr
@@ -314,6 +319,9 @@ end
     "\\\\\$ch"
     """ |> test_expr
     @test "µs" |> test_expr # normalize unicode
+    if VERSION >= v"1.10-"
+        @test "ℏħ" |> test_expr # normalize unicode
+    end
     @test """
     (x, o; p = 1) -> begin
         return o, p
@@ -865,8 +873,11 @@ end
         @test test_expr(raw"""test"asd"0x0""")
         @test test_expr(raw"""test"asd"0.0""")
     end
-    @test test_expr(raw"""test"asd"true""")
-    @test test_expr(raw"""test""true""")
+    # this regressed in JuliaSyntax: https://github.com/JuliaLang/JuliaSyntax.jl/issues/401
+    if VERSION <= v"1.10-"
+        @test test_expr(raw"""test"asd"true""")
+        @test test_expr(raw"""test""true""")
+    end
 end
 
 @testitem "number parsing" begin

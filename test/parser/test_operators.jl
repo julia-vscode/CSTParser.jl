@@ -1,7 +1,7 @@
 # @testitem "Binary Operators" begin
     # using CSTParser: remlineinfo!
     # include("../shared.jl")
-    
+
 #     for iter = 1:25
 #         println(iter)
 #         str = join([["x$(randop())" for i = 1:19];"x"])
@@ -13,7 +13,7 @@
 @testitem "Conditional Operator" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test test_expr("a ? b : c")
     @test test_expr("a ? b : c : d")
     @test test_expr("a ? b : c : d : e")
@@ -24,7 +24,7 @@ end
 @testitem "Dot Operator" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test "a.b" |> test_expr
     @test "a.b.c" |> test_expr
     @test "(a(b)).c" |> test_expr
@@ -36,7 +36,7 @@ end
 @testitem "Unary Operator" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test "+" |> test_expr
     @test "-" |> test_expr
     @test "!" |> test_expr
@@ -49,7 +49,7 @@ end
     @test "√" |> test_expr
     @test "∛" |> test_expr
     @test "∜" |> test_expr
-    
+
     @test "a=b..." |> test_expr
     @test "a-->b..." |> test_expr
     if VERSION >= v"1.6"
@@ -77,7 +77,7 @@ end
 @testitem "unary op calls" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test "+(a,b)" |> test_expr
     @test "-(a,b)" |> test_expr
     @test "!(a,b)" |> test_expr
@@ -100,7 +100,7 @@ end
 @testitem "dotted non-calls" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test "f(.+)" |> test_expr
     @test "f(.-)" |> test_expr
     @test "f(.!)" |> test_expr
@@ -118,7 +118,7 @@ end
 @testitem "comment parsing" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     if VERSION >= v"1.6"
         @test "[1#==#2#==#3]" |> test_expr
         @test """
@@ -138,27 +138,29 @@ end
 @testitem "weird quote parsing" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test ":(;)" |> test_expr
     @test ":(;;)" |> test_expr
     @test ":(;;;)" |> test_expr
 end
 
-# this errors during *lowering*, not parsing.
-@testitem "parse const without assignment in quote" begin
-    using CSTParser: remlineinfo!
-    include("../shared.jl")
-    
-    @test ":(global const x)" |> test_expr
-    @test ":(global const x::Int)" |> test_expr
-    @test ":(const global x)" |> test_expr
-    @test ":(const global x::Int)" |> test_expr
+# In previous Julia versions, this errored during lowering. With JuliaSyntax, this is a parser error
+if VERSION < v"1.10-"
+    @testitem "parse const without assignment in quote" begin
+        using CSTParser: remlineinfo!
+        include("../shared.jl")
+
+        @test ":(global const x)" |> test_expr
+        @test ":(global const x::Int)" |> test_expr
+        @test ":(const global x)" |> test_expr
+        @test ":(const global x::Int)" |> test_expr
+    end
 end
 
 @testitem "where precedence" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test "a = b where c = d" |> test_expr
     @test "a = b where c" |> test_expr
     @test "b where c = d" |> test_expr

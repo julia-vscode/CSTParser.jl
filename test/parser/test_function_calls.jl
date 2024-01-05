@@ -53,6 +53,31 @@ end
     @test "x->y" |> test_expr
     @test "(x,y)->x*y" |> test_expr
     @test """function ()
-    return
-end""" |> test_expr
+        return
+    end""" |> test_expr
+    @test """
+    function (a,b)
+        a+b
+    end
+    """ |> test_expr
+    @test """
+    function (a,b;c=2)
+        a+b
+    end
+    """ |> test_expr
+    @test """
+    function (a,b;c)
+        a+b
+    end
+    """ |> test_expr
+    @test """
+    function (;a,b=2)
+        a+b
+    end
+    """ |> test_expr
+    @test """
+    function (b=2)
+        a+b
+    end
+    """ |> test_expr
 end
