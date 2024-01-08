@@ -479,7 +479,8 @@ function parse_operator(ps::ParseState, ret::EXPR, op::EXPR)
                 ) ||
                 headof(ret) === :do ||
                 is_dot(headof(ret)) ||
-                is_prime(headof(ret))
+                is_prime(headof(ret)) ||
+                isinterpolant(ret)
             if valof(op) == "'"
                 ret = EXPR(op, EXPR[ret], nothing)
             else
