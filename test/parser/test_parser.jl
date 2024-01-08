@@ -867,6 +867,7 @@ end
     include("../shared.jl")
 
     @test test_expr(raw"""test"asd"asd""")
+    @test test_expr(raw"""Mod.test"asd"asd""")
     if VERSION >= v"1.6"
         @test test_expr(raw"""test"asd"0""")
         @test test_expr(raw"""test"asd"0o0""")
