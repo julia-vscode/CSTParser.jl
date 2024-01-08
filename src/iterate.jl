@@ -261,7 +261,12 @@ function _global(x, i)
         if i <= 2
             x.trivia[i]
         elseif isodd(i)
-            x.args[div(i - 1, 2)]
+            ai = div(i - 1, 2)
+            if ai > length(x.args) # trailing comma
+                x.trivia[div(i - 1, 2) + 2]
+            else
+                x.args[ai]
+            end
         else
             x.trivia[div(i - 2, 2) + 2]
         end
