@@ -197,7 +197,7 @@ end
     @test "m!=m" |> test_expr
     @test "+(x...)" |> test_expr
     @test "+(promote(x,y)...)" |> test_expr
-    @test "\$(x...)" |> test_expr #
+    @test "\$(x...)" |> test_expr
     @test "ccall(:gethostname, stdcall, Int32, ())" |> test_expr
     @test "@inbounds @ncall a b c" |> test_expr
     @test "(a+b)``" |> test_expr
@@ -1100,4 +1100,14 @@ end
     @test test_expr("global a = 1, b")
     @test test_expr("global a, b")
     @test test_expr("global a, b = 2")
+end
+
+@testitem "dollar quote with prime" begin
+    using CSTParser: remlineinfo!
+    include("../shared.jl")
+
+    @test raw":($a'+2')" |> test_expr
+    @test raw":($(a)'+2')" |> test_expr
+    @test raw":($a')" |> test_expr
+    @test raw":($(a)')" |> test_expr
 end
