@@ -49,13 +49,14 @@ end
 function adjust_iter(x::EXPR)
     # Assumes x is a valid iterator
     if x.head === :call # isoperator(x.args[1]) && x.args[1].val in ("in", "∈")
-        EXPR(EXPR(:OPERATOR, 0, 0, "="), EXPR[x.args[2], x.args[3]], EXPR[x.args[1]])
-    elseif isassignment(x) && length(x.args) == 2 && x.args[1].head == :call && x.args[2].head == :block && length(x.args[2].args) == 1
+        if VERSION > v"1.10-" && x.args[2] isa EXPR && x.args[2].head === :call
+            x.args[3] = EXPR(:block, EXPR[x.args[3]])
+        end
+        return EXPR(EXPR(:OPERATOR, 0, 0, "="), EXPR[x.args[2], x.args[3]], EXPR[x.args[1]])
+    elseif VERSION < v"1.10-" && isassignment(x) && length(x.args) == 2 && x.args[1].head == :call && x.args[2].head == :block && length(x.args[2].args) == 1
         x.args[2] = setparent!(x.args[2].args[1], x)
-        x
-    else
-        x
     end
+    return x
 end
 
 """
