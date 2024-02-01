@@ -555,7 +555,8 @@ else
                 if c === 'x' || c === 'u' || c === 'U'
                     maxiter = c === 'x' ? 2 : c === 'u' ? 4 : 8
                     n = 0
-                    for _ in 1:min(length(a), maxiter)
+                    for _ in 1:maxiter
+                        isempty(a) && break
                         nc = popfirst!(a)
                         n = '0' <= nc <= '9' ? n << 4 + (nc - '0') :
                             'a' <= nc <= 'f' ? n << 4 + (nc - 'a' + 10) :
@@ -564,7 +565,8 @@ else
                     ok = n <= 0x10ffff
                 elseif '0' <= c <= '7'
                     n = c - '0'
-                    for _ in 1:min(length(a), 3)
+                    for _ in 1:3
+                        isempty(a) && break
                         nc = popfirst!(a)
                         n = ('0' <= c <= '7') ? n << 3 + nc - '0' : return false
                     end
