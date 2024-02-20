@@ -360,11 +360,13 @@ end
 
 # parse where
 function parse_operator_where(ps::ParseState, ret::EXPR, op::EXPR, setscope=true)
-    nextarg = @precedence ps LazyAndOp @closer ps :inwhere parse_expression(ps)
+    # https://github.com/JuliaLang/JuliaSyntax.jl/issues/395
+    prec = VERSION > v"1.10-" && kindof(ps.nt) == Tokens.LBRACE ? WhereOp : LazyAndOp
+    nextarg = @precedence ps prec @closer ps :inwhere parse_expression(ps)
     if headof(nextarg) === :braces
         pushfirst!(nextarg.args, ret)
         pushfirst!(nextarg.trivia, op)
-        ret = EXPR(:where, nextarg.args,nextarg.trivia)
+        ret = EXPR(:where, nextarg.args, nextarg.trivia)
     else
         ret = EXPR(:where, EXPR[ret, nextarg], EXPR[op])
     end
