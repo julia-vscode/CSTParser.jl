@@ -27,8 +27,10 @@ mutable struct Closer
 end
 Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1)
 
+const ParseStateBufferMem = VERSION >= v"1.11" ? Memory{UInt8} : Vector{UInt8}
+
 mutable struct ParseState
-    l::Lexer{Base.GenericIOBuffer{Array{UInt8,1}},RawToken}
+    l::Lexer{Base.GenericIOBuffer{ParseStateBufferMem},RawToken}
     done::Bool # Remove this
     lt::RawToken
     t::RawToken
