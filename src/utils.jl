@@ -6,49 +6,49 @@ stop.
 """
 function closer(ps::ParseState)
     kindof(ps.nt) === Tokens.ENDMARKER ||
-    (ps.closer.newline && kindof(ps.ws) == NewLineWS && !iscomma(ps.t)) ||
-    (ps.closer.semicolon && kindof(ps.ws) == SemiColonWS) ||
-    (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence) ||
-    (kindof(ps.nt) === Tokens.WHERE && ps.closer.precedence == LazyAndOp) ||
-    (ps.closer.inwhere && kindof(ps.nt) === Tokens.WHERE) ||
-    (ps.closer.inwhere && ps.closer.ws && kindof(ps.t) === Tokens.RPAREN && isoperator(ps.nt) && precedence(ps.nt) < DeclarationOp) ||
-    (ps.closer.precedence > WhereOp && (
-        (kindof(ps.nt) === Tokens.LPAREN && !(kindof(ps.t) === Tokens.EX_OR)) ||
-        kindof(ps.nt) === Tokens.LBRACE ||
-        kindof(ps.nt) === Tokens.LSQUARE ||
-        (kindof(ps.nt) === Tokens.STRING && isemptyws(ps.ws)) ||
-        ((kindof(ps.nt) === Tokens.RPAREN || kindof(ps.nt) === Tokens.RSQUARE) && isidentifier(ps.nt))
-    )) ||
-    (iscomma(ps.nt) && ps.closer.precedence > AssignmentOp) ||
-    kindof(ps.nt) === Tokens.ENDMARKER ||
-    (ps.closer.comma && iscomma(ps.nt)) ||
-    (ps.closer.tuple && (iscomma(ps.nt) || isassignmentop(ps.nt))) ||
-    (kindof(ps.nt) === Tokens.FOR && ps.closer.precedence > -1) ||
-    (ps.closer.block && kindof(ps.nt) === Tokens.END) ||
-    (ps.closer.paren && kindof(ps.nt) === Tokens.RPAREN) ||
-    (ps.closer.brace && kindof(ps.nt) === Tokens.RBRACE) ||
-    (ps.closer.square && kindof(ps.nt) === Tokens.RSQUARE) ||
-    # tilde parsing in vect exprs needs to be special cased because `~` has assignment precedence
-    (@static VERSION < v"1.4" ?
-        false :
-        ((ps.closer.insquare || ps.closer.inmacro) && kindof(ps.nt) === Tokens.APPROX && !isemptyws(ps.ws) && isemptyws(ps.nws))
-    ) ||
-    kindof(ps.nt) === Tokens.ELSEIF ||
-    kindof(ps.nt) === Tokens.ELSE ||
-    kindof(ps.nt) === Tokens.CATCH ||
-    kindof(ps.nt) === Tokens.FINALLY ||
-    (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt) <= 0 || kindof(ps.nt) === Tokens.COLON)) ||
-    (ps.closer.range && (kindof(ps.nt) === Tokens.FOR || iscomma(ps.nt) || kindof(ps.nt) === Tokens.IF)) ||
-    (ps.closer.ws && !isemptyws(ps.ws) &&
-        !iscomma(ps.nt) &&
-        !iscomma(ps.t) &&
-        !(!ps.closer.inmacro && kindof(ps.nt) === Tokens.FOR) &&
-        !(kindof(ps.nt) === Tokens.DO) &&
-        !(
-            (isbinaryop(ps.nt) && !(ps.closer.wsop && isemptyws(ps.nws) && isunaryop(ps.nt) && precedence(ps.nt) > 7)) ||
-            (isunaryop(ps.t) && kindof(ps.ws) == WS && kindof(ps.lt) !== CSTParser.Tokens.COLON)
+        (ps.closer.newline && kindof(ps.ws) == NewLineWS && !iscomma(ps.t)) ||
+        (ps.closer.semicolon && kindof(ps.ws) == SemiColonWS) ||
+        (isoperator(ps.nt) && precedence(ps.nt) <= ps.closer.precedence) ||
+        (kindof(ps.nt) === Tokens.WHERE && ps.closer.precedence == LazyAndOp) ||
+        (ps.closer.inwhere && kindof(ps.nt) === Tokens.WHERE) ||
+        (ps.closer.inwhere && ps.closer.ws && kindof(ps.t) === Tokens.RPAREN && isoperator(ps.nt) && precedence(ps.nt) < DeclarationOp) ||
+        (ps.closer.precedence > WhereOp && (
+            (kindof(ps.nt) === Tokens.LPAREN && !(kindof(ps.t) === Tokens.EX_OR)) ||
+            kindof(ps.nt) === Tokens.LBRACE ||
+            kindof(ps.nt) === Tokens.LSQUARE ||
+            (kindof(ps.nt) === Tokens.STRING && isemptyws(ps.ws)) ||
+            ((kindof(ps.nt) === Tokens.RPAREN || kindof(ps.nt) === Tokens.RSQUARE) && isidentifier(ps.nt))
         )) ||
-    (ps.closer.unary && (kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE) && isidentifier(ps.nt)))
+        (iscomma(ps.nt) && ps.closer.precedence > AssignmentOp) ||
+        kindof(ps.nt) === Tokens.ENDMARKER ||
+        (ps.closer.comma && iscomma(ps.nt)) ||
+        (ps.closer.tuple && (iscomma(ps.nt) || isassignmentop(ps.nt))) ||
+        (kindof(ps.nt) === Tokens.FOR && ps.closer.precedence > -1) ||
+        (ps.closer.block && kindof(ps.nt) === Tokens.END) ||
+        (ps.closer.paren && kindof(ps.nt) === Tokens.RPAREN) ||
+        (ps.closer.brace && kindof(ps.nt) === Tokens.RBRACE) ||
+        (ps.closer.square && kindof(ps.nt) === Tokens.RSQUARE) ||
+        # tilde parsing in vect exprs needs to be special cased because `~` has assignment precedence
+        (@static VERSION < v"1.4" ?
+                 false :
+                 ((ps.closer.insquare || ps.closer.inmacro) && kindof(ps.nt) === Tokens.APPROX && !isemptyws(ps.ws) && isemptyws(ps.nws))
+        ) ||
+        kindof(ps.nt) === Tokens.ELSEIF ||
+        kindof(ps.nt) === Tokens.ELSE ||
+        kindof(ps.nt) === Tokens.CATCH ||
+        kindof(ps.nt) === Tokens.FINALLY ||
+        (ps.closer.ifop && isoperator(ps.nt) && (precedence(ps.nt) <= 0 || kindof(ps.nt) === Tokens.COLON)) ||
+        (ps.closer.range && (kindof(ps.nt) === Tokens.FOR || iscomma(ps.nt) || kindof(ps.nt) === Tokens.IF)) ||
+        (ps.closer.ws && !isemptyws(ps.ws) &&
+         !iscomma(ps.nt) &&
+         !iscomma(ps.t) &&
+         !(!ps.closer.inmacro && kindof(ps.nt) === Tokens.FOR) &&
+         !(kindof(ps.nt) === Tokens.DO) &&
+         !(
+             (isbinaryop(ps.nt) && !(ps.closer.wsop && isemptyws(ps.nws) && isunaryop(ps.nt) && precedence(ps.nt) > 7)) ||
+             (isunaryop(ps.t) && kindof(ps.ws) == WS && kindof(ps.lt) !== CSTParser.Tokens.COLON)
+         )) ||
+        (ps.closer.unary && (kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT, Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE) && isidentifier(ps.nt)))
 end
 
 """
@@ -207,10 +207,10 @@ end
 
 
 isajuxtaposition(ps::ParseState, ret::EXPR) = ((isnumber(ret) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.LPAREN || kindof(ps.nt) === Tokens.CMD || kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)) ||
-        ((is_prime(ret.head) && isidentifier(ps.nt)) ||
-        ((kindof(ps.t) === Tokens.RPAREN || kindof(ps.t) === Tokens.RSQUARE) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.CMD)) ||
-        ((kindof(ps.t) === Tokens.STRING || kindof(ps.t) === Tokens.TRIPLE_STRING) && (kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)))) || ((kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT) || kindof(ps.t) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && isidentifier(ps.nt)) ||
-        (isnumber(ret) && ps.closer.inref && (ps.nt.kind === Tokens.END || ps.nt.kind === Tokens.BEGIN))
+                                               ((is_prime(ret.head) && isidentifier(ps.nt)) ||
+                                                ((kindof(ps.t) === Tokens.RPAREN || kindof(ps.t) === Tokens.RSQUARE) && (isidentifier(ps.nt) || kindof(ps.nt) === Tokens.CMD)) ||
+                                                ((kindof(ps.t) === Tokens.STRING || kindof(ps.t) === Tokens.TRIPLE_STRING) && (kindof(ps.nt) === Tokens.STRING || kindof(ps.nt) === Tokens.TRIPLE_STRING)))) || ((kindof(ps.t) in (Tokens.INTEGER, Tokens.FLOAT) || kindof(ps.t) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)) && isidentifier(ps.nt)) ||
+                                              (isnumber(ret) && ps.closer.inref && (ps.nt.kind === Tokens.END || ps.nt.kind === Tokens.BEGIN))
 
 """
     has_error(ps::ParseState)
@@ -277,8 +277,8 @@ Reversed version of firstdiff but returns two indices, one for each string.
 """
 function revfirstdiff(s0::AbstractString, s1::AbstractString)
     minlength = min(sizeof(s0), sizeof(s1))
-    @inbounds for i in 0:minlength - 1
-        if codeunits(s0)[end - i] !== codeunits(s1)[end - i]
+    @inbounds for i in 0:minlength-1
+        if codeunits(s0)[end-i] !== codeunits(s1)[end-i]
             return sizeof(s0) - i, sizeof(s1) - i# This could return a non-commencing byte of a multi-byte unicode sequence.
         end
     end
@@ -305,20 +305,20 @@ end
 comp(x, y) = x == y
 function comp(x::CSTParser.EXPR, y::CSTParser.EXPR)
     comp(x.head, y.head) &&
-    x.span == y.span &&
-    x.fullspan == y.fullspan &&
-    x.val == y.val &&
-    length(x) == length(y) &&
-    all(comp(x[i], y[i]) for i = 1:length(x))
+        x.span == y.span &&
+        x.fullspan == y.fullspan &&
+        x.val == y.val &&
+        length(x) == length(y) &&
+        all(comp(x[i], y[i]) for i = 1:length(x))
 end
 
-function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.parse(s1, true); inds = false)
+function minimal_reparse(s0, s1, x0=CSTParser.parse(s0, true), x1=CSTParser.parse(s1, true); inds=false)
     if has_error(x0)
         return inds ? (1:0, 1:length(x1.args), 1:0) : x1 # Error while re-parsing, so lets return the whole expression instead of patching
     end
 
     if sizeof(s0) !== x0.fullspan
-       error("minimal reparse - original input text length doesn't match the full span of the provided CST.")
+        error("minimal reparse - original input text length doesn't match the full span of the provided CST.")
         # return inds ? (1:0, 1:length(x1.args), 1:0) : x1
     end
 
@@ -328,7 +328,7 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
 
     if sizeof(s1) !== x1.fullspan
         error("minimal reparse - new input text length doesn't match the full span of the provided CST.")
-         # return inds ? (1:0, 1:length(x1.args), 1:0) : x1
+        # return inds ? (1:0, 1:length(x1.args), 1:0) : x1
     end
     isempty(x0.args) && return inds ? (1:0, 1:length(x1.args), 1:0) : x1 # Original CST was empty
     x1.fullspan == 0 && return inds ? (1:0, 1:0, 1:0) : x1 # New CST is empty
@@ -351,30 +351,30 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
     # we can re-use x0.args[r1]
 
     # assume we'll just use x1.args from here on
-    r2 = (last(r1) + 1):length(x1.args)
+    r2 = (last(r1)+1):length(x1.args)
     r3 = 0:-1
 
     # though we now check whether there is a sequence at the end of x0.args and
     # x1.args that match
     offset = sizeof(s1)
-    for i = 0:min(length(x0.args) - last(r1), length(x0.args), length(x1.args)) - 1
-        if !quick_comp(x0.args[end - i], x1.args[end - i]) ||
-            offset <= i1 ||
-            length(x0.args) - i == last(r1) + 1 ||
-            offset - x1.args[end-i].fullspan <= i2 <= offset
+    for i = 0:min(length(x0.args) - last(r1), length(x0.args), length(x1.args))-1
+        if !quick_comp(x0.args[end-i], x1.args[end-i]) ||
+           offset <= i1 ||
+           length(x0.args) - i == last(r1) + 1 ||
+           offset - x1.args[end-i].fullspan <= i2 <= offset
 
-            r2 = first(r2):length(x1.args) - i
-            r3 = length(x0.args) .+ ((-i + 1):0)
+            r2 = first(r2):length(x1.args)-i
+            r3 = length(x0.args) .+ ((-i+1):0)
             break
         end
-        offset -= x1.args[end - i].fullspan
+        offset -= x1.args[end-i].fullspan
     end
     inds && return r1, r2, r3
     x2 = CSTParser.EXPR(x0.head, CSTParser.EXPR[
-        x0.args[r1]
-        x1.args[r2]
-        x0.args[r3]
-    ], nothing)
+            x0.args[r1]
+            x1.args[r2]
+            x0.args[r3]
+        ], nothing)
     return x2
 end
 
@@ -397,7 +397,7 @@ check_span(x, neq = [])
 Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
-function check_span(x::EXPR, neq = [])
+function check_span(x::EXPR, neq=[])
     (ispunctuation(x) || isidentifier(x) || iskeyword(x) || isoperator(x) || isliteral(x) || headof(x) == :string) && return neq
 
     s = 0
@@ -425,8 +425,8 @@ end
 function speed_test()
     dir = dirname(Base.find_source_file("essentials.jl"))
     println("speed test : ", @timed(for i = 1:5
-        parse(read(joinpath(dir, "essentials.jl"), String), true);
-        parse(read(joinpath(dir, "abstractarray.jl"), String), true);
+        parse(read(joinpath(dir, "essentials.jl"), String), true)
+        parse(read(joinpath(dir, "abstractarray.jl"), String), true)
     end)[2])
 end
 
@@ -481,7 +481,7 @@ function _unescape_string(io, s::AbstractString)
                 k = 1
                 n = c - '0'
                 while (k += 1) <= 3 && !isempty(a)
-                    c  = Base.peek(a)
+                    c = Base.peek(a)
                     n = ('0' <= c <= '7') ? n << 3 + c - '0' : break
                     popfirst!(a)
                 end
@@ -620,11 +620,11 @@ _kw_convert(x::EXPR) = EXPR(:kw, EXPR[x.args[1], x.args[2]], EXPR[x.head], x.ful
 When parsing a function or macro signature, should it be converted to a tuple?
 """
 convertsigtotuple(sig::EXPR) = isbracketed(sig) && !(
-        istuple(sig.args[1]) ||
-        iscall(sig.args[1]) ||
-        headof(sig.args[1]) === :block ||
-        issplat(sig.args[1])
-    )
+    istuple(sig.args[1]) ||
+    iscall(sig.args[1]) ||
+    headof(sig.args[1]) === :block ||
+    issplat(sig.args[1])
+)
 
 """
     docable(head)
@@ -662,22 +662,22 @@ end
 function issuffixableliteral(ps::ParseState, x::EXPR)
     # prefixed string/cmd macros can be suffixed by identifiers or numeric literals
     return (
-            isidentifier(ps.nt) ||
-            isnumberliteral(ps.nt) ||
-            isbool(ps.nt)
-        ) &&
-        isemptyws(ps.ws) &&
-        ismacrocall(x) &&
-        (
-            (
-            valof(x.args[1]) isa String &&
-            (endswith(valof(x.args[1]), "_str") || endswith(valof(x.args[1]), "_cmd"))
-            ) ||
-            (
-                is_getfield(x.args[1]) && x.args[1].args[2] isa EXPR && x.args[1].args[2].head in (:quote, :quotenode) &&
-                (endswith(valof(x.args[1].args[2].args[1]), "_str") || endswith(valof(x.args[1].args[2].args[1]), "_cmd"))
-            )
-        )
+               isidentifier(ps.nt) ||
+               isnumberliteral(ps.nt) ||
+               isbool(ps.nt)
+           ) &&
+           isemptyws(ps.ws) &&
+           ismacrocall(x) &&
+           (
+               (
+                   valof(x.args[1]) isa String &&
+                   (endswith(valof(x.args[1]), "_str") || endswith(valof(x.args[1]), "_cmd"))
+               ) ||
+               (
+                   is_getfield(x.args[1]) && x.args[1].args[2] isa EXPR && x.args[1].args[2].head in (:quote, :quotenode) &&
+                   (endswith(valof(x.args[1].args[2].args[1]), "_str") || endswith(valof(x.args[1].args[2].args[1]), "_cmd"))
+               )
+           )
 end
 
 function loop_check(ps, prevpos)

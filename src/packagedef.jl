@@ -33,7 +33,7 @@ Acceptable starting tokens are:
 + An `@`.
 
 """
-function parse_expression(ps::ParseState, esc_on_error = false)
+function parse_expression(ps::ParseState, esc_on_error=false)
     if kindof(ps.nt) === Tokens.ENDMARKER
         ret = mErrorToken(ps, UnexpectedToken)
     elseif (esc_on_error && ps.nt.kind == Tokens.ERROR)
@@ -142,9 +142,9 @@ function parse_compound(ps::ParseState, ret::EXPR)
         # prime operator followed by an identifier has an implicit multiplication
         nextarg = @precedence ps TimesOp parse_expression(ps)
         ret = EXPR(:call, EXPR[EXPR(:OPERATOR, 0, 0, "*"), ret, nextarg], nothing)
-# ###############################################################################
-# Everything below here is an error
-# ###############################################################################
+        # ###############################################################################
+        # Everything below here is an error
+        # ###############################################################################
     else
         ps.errored = true
         if kindof(ps.nt) in (Tokens.RPAREN, Tokens.RSQUARE, Tokens.RBRACE)
@@ -172,7 +172,7 @@ Parses an expression starting with a `(`.
 function parse_paren(ps::ParseState)
     args = EXPR[]
     trivia = EXPR[EXPR(ps)]
-    @closeparen ps @default ps @nocloser ps :inwhere parse_comma_sep(ps, args, trivia, false, true, true, insert_params_at = 1)
+    @closeparen ps @default ps @nocloser ps :inwhere parse_comma_sep(ps, args, trivia, false, true, true, insert_params_at=1)
     if length(args) == 1 && length(trivia) == 1 && ((kindof(ps.ws) !== SemiColonWS || headof(args[1]) === :block) && headof(args[1]) !== :parameters)
         accept_rparen(ps, trivia)
         ret = EXPR(:brackets, args, trivia)
@@ -291,10 +291,10 @@ end
 
 function _continue_doc_parse(ps::ParseState, x::EXPR)
     kindof(ps.nt) !== Tokens.ENDMARKER &&
-    headof(x) === :macrocall &&
-    valof(x.args[1]) == "@doc" &&
-    length(x.args) < 4 &&
-    ps.t.endpos[1] + 1 == ps.nt.startpos[1]
+        headof(x) === :macrocall &&
+        valof(x.args[1]) == "@doc" &&
+        length(x.args) < 4 &&
+        ps.t.endpos[1] + 1 == ps.nt.startpos[1]
 end
 
 include("precompile.jl")

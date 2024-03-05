@@ -81,13 +81,13 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
     t_str = val(ps.t, ps)
     if istrip && length(t_str) == 6
         if iscmd
-            return wrapwithcmdmacro(EXPR(:TRIPLESTRING , sfullspan, sspan, ""))
+            return wrapwithcmdmacro(EXPR(:TRIPLESTRING, sfullspan, sspan, ""))
         else
             return EXPR(:TRIPLESTRING, sfullspan, sspan, "")
         end
     elseif length(t_str) == 2
         if iscmd
-            return wrapwithcmdmacro(EXPR(:STRING , sfullspan, sspan, ""))
+            return wrapwithcmdmacro(EXPR(:STRING, sfullspan, sspan, ""))
         else
             return EXPR(:STRING, sfullspan, sspan, "")
         end
@@ -246,8 +246,8 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
         end
         if iscmd
             str = istrip ?
-                t_str[nextind(t_str, 1, 3):prevind(t_str, sizeof(t_str), 3)] :
-                t_str[nextind(t_str, 1, 1):prevind(t_str, sizeof(t_str))]
+                  t_str[nextind(t_str, 1, 3):prevind(t_str, sizeof(t_str), 3)] :
+                  t_str[nextind(t_str, 1, 1):prevind(t_str, sizeof(t_str))]
             # remove common prefix:
             if lcp !== nothing
                 str = replace(str, "\n$lcp" => "\n")
@@ -277,7 +277,7 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
         end
         # Drop leading newline
         if !isempty(ret.args) && isliteral(ret.args[1]) && headof(ret.args[1]) in single_string_T &&
-                !isempty(valof(ret.args[1])) && valof(ret.args[1])[1] == '\n' && shoulddropleadingnewline
+           !isempty(valof(ret.args[1])) && valof(ret.args[1])[1] == '\n' && shoulddropleadingnewline
             ret.args[1] = dropleadingnewline(ret.args[1])
         end
     end

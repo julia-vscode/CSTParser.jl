@@ -133,7 +133,9 @@ end
     test_expr("a where {b }", :where, 5, true)
     test_expr("a where {b,c }  ", :where, 7, true)
     test_expr("a...", nothing, 2, false)
-    @test let x = cst"a... "; x.fullspan - x.span == 1 end
+    @test let x = cst"a... "
+        x.fullspan - x.span == 1
+    end
     test_expr("a <: b", nothing, 3, false)
 
     # https://github.com/julia-vscode/CSTParser.jl/issues/278
