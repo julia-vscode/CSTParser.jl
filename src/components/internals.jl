@@ -31,7 +31,7 @@ Parses an iterator, allowing for the preceding keyword `outer`. Returns an
 error expression if an invalid expression is parsed (anything other than
 `=`, `in`, `∈`).
 """
-function parse_iterator(ps::ParseState, outer = parse_outer(ps))
+function parse_iterator(ps::ParseState, outer=parse_outer(ps))
     arg = @closer ps :range @closer ps :ws @nocloser ps :wsop parse_expression(ps)
     if !is_range(arg)
         arg = mErrorToken(ps, arg, InvalidIterator)
@@ -136,7 +136,7 @@ function parse_call(ps::ParseState, ret::EXPR, ismacro=false)
         end
         # args = ismacro ? EXPR[ret, EXPR(:NOTHING, 0, 0)] : EXPR[ret]
         trivia = EXPR[EXPR(next(ps))]
-        @closeparen ps @default ps parse_comma_sep(ps, args, trivia, !ismacro, insert_params_at = ismacro ? 3 : 2)
+        @closeparen ps @default ps parse_comma_sep(ps, args, trivia, !ismacro, insert_params_at=ismacro ? 3 : 2)
         accept_rparen(ps, trivia)
         ret = EXPR(ismacro ? :macrocall : syntaxcall ? ret : :call, args, trivia)
     end
@@ -147,7 +147,7 @@ end
 Parses a comma separated list, optionally allowing for conversion of
 assignment (`=`) expressions to `Kw`.
 """
-function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR}, kw = true, block = false, istuple = false; insert_params_at = 2)
+function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR}, kw=true, block=false, istuple=false; insert_params_at=2)
     prevpos = position(ps)
     @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma while !closer(ps)
         a = parse_expression(ps)
@@ -206,11 +206,11 @@ end
 
 Parses parameter arguments for a function call (e.g. following a semicolon).
 """
-function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR} = EXPR[], insert_params_at = 2; usekw = true)
+function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR}=EXPR[], insert_params_at=2; usekw=true)
     trivia = EXPR[]
     isfirst = isempty(args1)
     prevpos = position(ps)
-    @nocloser ps :inwhere @nocloser ps :newline  @closer ps :comma while !isfirst || (@nocloser ps :semicolon !closer(ps))
+    @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma while !isfirst || (@nocloser ps :semicolon !closer(ps))
         a = isfirst ? parse_expression(ps) : first(args1)
         if usekw && _do_kw_convert(ps, a)
             a = _kw_convert(a)
@@ -348,7 +348,7 @@ end
 function get_appropriate_child_to_expand(x)
     if headof(x) === :generator && !(headof(x.args[1]) in (:generator, :flatten))
         return x, x.args[1]
-    elseif headof(x) === :flatten &&  headof(x.args[1]) === :generator && headof(x.args[1].args[1]) === :generator
+    elseif headof(x) === :flatten && headof(x.args[1]) === :generator && headof(x.args[1].args[1]) === :generator
         x.args[1], x.args[1].args[1]
     else
         get_appropriate_child_to_expand(x.args[1])
@@ -366,7 +366,7 @@ function parse_nonstd_identifier(ps)
     end
 end
 
-function parse_importexport_item(ps, is_colon = false)
+function parse_importexport_item(ps, is_colon=false)
     if kindof(ps.nt) === Tokens.AT_SIGN
         parse_macroname(next(ps))
     elseif kindof(ps.nt) === Tokens.LPAREN
@@ -378,7 +378,7 @@ function parse_importexport_item(ps, is_colon = false)
         parse_unary(ps, INSTANCE(next(ps)))
     elseif !is_colon && isoperator(ps.nt)
         next(ps)
-        EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, val(ps.t, ps))
+        EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte, 1 + ps.t.endbyte - ps.t.startbyte, val(ps.t, ps))
     elseif is_nonstd_identifier(ps)
         parse_nonstd_identifier(ps)
     else
