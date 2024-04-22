@@ -91,6 +91,13 @@ end
     include("shared.jl")
 
     test_expr("f(a=1)", :call, 4, false)
+    test_expr("f(::typeof(a)=1)", :call, 4, false)
+    test_expr("f(a::typeof(a)=1)", :call, 4, false)
+    test_expr("f(::a=1)", :call, 4, false)
+    test_expr("f(a::a=1)", :call, 4, false)
+
+    test_expr("f(; a::typeof(a)=1)", :call, 4, false)
+    test_expr("f(; a::a=1)", :call, 4, false)
 end
 
 @testitem ":tuple" begin

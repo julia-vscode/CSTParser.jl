@@ -152,8 +152,10 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR
     @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma while !closer(ps)
         a = parse_expression(ps)
         if kw && _do_kw_convert(ps, a)
-            a = _kw_convert(a)
+            b = _do_block_convert(a)
+            a = _kw_convert(a, b)
         end
+
         push!(args, a)
         if iscomma(ps.nt)
             if istuple
