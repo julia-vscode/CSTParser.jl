@@ -195,10 +195,17 @@ if VERSION > v"1.11-"
         using CSTParser: remlineinfo!
         include("../shared.jl")
 
-        @test """public foo""" |> test_expr
-        @test """public foo, bar""" |> test_expr
-        @test """public foo,
+        @test "public foo" |> test_expr
+        @test "public foo, bar" |> test_expr
+        @test """
+        public foo,
         bar
+        """ |> test_expr
+        @test "f() = public" |> test_expr
+        @test """
+        let
+            public
+        end
         """ |> test_expr
     end
 end
