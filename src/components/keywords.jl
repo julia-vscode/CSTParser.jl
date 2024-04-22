@@ -72,6 +72,8 @@ function parse_kw(ps::ParseState)
         return @default ps parse_abstract(ps)
     elseif k === Tokens.PRIMITIVE
         return @default ps parse_primitive(ps)
+    elseif k === Tokens.PUBLIC
+        return @default ps parse_public(ps)
     elseif k === Tokens.TYPE
         return EXPR(:IDENTIFIER, ps)
     elseif k === Tokens.STRUCT
@@ -155,6 +157,23 @@ function parse_primitive(ps::ParseState)
         ret = EXPR(:IDENTIFIER, ps)
     end
     return ret
+end
+
+function parse_public(ps::ParseState)
+    args = EXPR[]
+    trivia = EXPR[EXPR(ps)]
+
+    push!(args, parse_importexport_item(ps))
+
+    prevpos = position(ps)
+    while iscomma(ps.nt)
+        push!(trivia, EXPR(next(ps)))
+        arg = parse_importexport_item(ps)
+        push!(args, arg)
+        prevpos = loop_check(ps, prevpos)
+    end
+
+    return EXPR(:public, args, trivia)
 end
 
 function parse_mutable(ps::ParseState)

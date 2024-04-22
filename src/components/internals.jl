@@ -366,6 +366,21 @@ function parse_nonstd_identifier(ps)
     end
 end
 
+function parse_public_item(ps::ParseState)
+    if kindof(ps.nt) === Tokens.AT_SIGN
+        parse_macroname(next(ps))
+    elseif kindof(ps.nt) === Tokens.EX_OR
+        parse_unary(ps, INSTANCE(next(ps)))
+    elseif isoperator(ps.nt)
+        next(ps)
+        EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, val(ps.t, ps))
+    elseif is_nonstd_identifier(ps)
+        parse_nonstd_identifier(ps)
+    else
+        INSTANCE(next(ps))
+    end
+end
+
 function parse_importexport_item(ps, is_colon = false)
     if kindof(ps.nt) === Tokens.AT_SIGN
         parse_macroname(next(ps))

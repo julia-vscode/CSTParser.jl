@@ -2,7 +2,7 @@
 isidentifier(x::EXPR) = headof(x) === :IDENTIFIER || headof(x) === :NONSTDIDENTIFIER
 isoperator(x::EXPR) = headof(x) === :OPERATOR
 isnonstdid(x::EXPR) = headof(x) === :NONSTDIDENTIFIER
-iskeyword(x::EXPR) = headof(x) in (:ABSTRACT, :BAREMODULE, :BEGIN, :BREAK, :CATCH, :CONST, :CONTINUE, :DO, :ELSE, :ELSEIF, :END, :EXPORT, :FINALLY, :FOR, :FUNCTION, :GLOBAL, :IF, :IMPORT, :importall, :LET, :LOCAL, :MACRO, :MODULE, :MUTABLE, :NEW, :OUTER, :PRIMITIVE, :QUOTE, :RETURN, :STRUCT, :TRY, :TYPE, :USING, :WHILE)
+iskeyword(x::EXPR) = headof(x) in (:ABSTRACT, :BAREMODULE, :BEGIN, :BREAK, :CATCH, :CONST, :CONTINUE, :DO, :ELSE, :ELSEIF, :END, :EXPORT, :FINALLY, :FOR, :FUNCTION, :GLOBAL, :IF, :IMPORT, :importall, :LET, :LOCAL, :MACRO, :MODULE, :MUTABLE, :NEW, :OUTER, :PRIMITIVE, :PUBLIC, :QUOTE, :RETURN, :STRUCT, :TRY, :TYPE, :USING, :WHILE)
 isliteral(x::EXPR) = isstringliteral(x) || iscmd(x) || ischar(x) || headof(x) in (:INTEGER, :BININT, :HEXINT, :OCTINT, :FLOAT,  :NOTHING, :TRUE, :FALSE)
 ispunctuation(x::EXPR) = is_comma(x) || is_lparen(x) || is_rparen(x) || is_lsquare(x) || is_rsquare(x) || is_lbrace(x) || is_rbrace(x) || headof(x) === :ATSIGN  || headof(x) === :DOT
 isstringliteral(x) = headof(x) === :STRING || headof(x) === :TRIPLESTRING

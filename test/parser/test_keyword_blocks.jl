@@ -189,3 +189,16 @@ end""" |> test_expr
 end""" |> test_expr
     @test "f() do x body end" |> test_expr
 end
+
+if VERSION > v"1.11-"
+    @testitem "public" begin
+        using CSTParser: remlineinfo!
+        include("../shared.jl")
+
+        @test """public foo""" |> test_expr
+        @test """public foo, bar""" |> test_expr
+        @test """public foo,
+        bar
+        """ |> test_expr
+    end
+end
