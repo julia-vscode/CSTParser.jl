@@ -1,7 +1,7 @@
 name = "CSTParser"
 uuid = "00ebfdb7-1f24-5e51-bd34-a7502290713f"
 authors = ["Zac Nugent <zac.nugent@gmail.com>"]
-version = "3.4.2"
+version = "3.4.3"
 
 [deps]
 Tokenize = "0796e94c-ce3b-5d07-9a54-7f471281c624"
@@ -12,7 +12,7 @@ TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
 
 [compat]
 julia = "1"
-Tokenize = "0.5.28"
+Tokenize = "0.5.29"
 
 [targets]
 test = ["Test", "TestItemRunner"]
