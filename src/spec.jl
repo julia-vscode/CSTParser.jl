@@ -387,6 +387,8 @@ function tokenkindtoheadmap(k::Tokens.Kind)
         return :OUTER
     elseif k === Tokens.PRIMITIVE
         return :PRIMITIVE
+    elseif k === Tokens.PUBLIC
+        return :PUBLIC
     elseif k === Tokens.QUOTE
         return :QUOTE
     elseif k === Tokens.RETURN

@@ -3,7 +3,7 @@
 
 Dispatch function for when the parser has reached a keyword.
 """
-function parse_kw(ps::ParseState)
+function parse_kw(ps::ParseState; is_toplevel = false)
     k = kindof(ps.t)
     if ps.closer.precedence == 20 && ps.lt.kind === Tokens.EX_OR && k !== Tokens.END
         return EXPR(:IDENTIFIER, ps)
@@ -72,6 +72,12 @@ function parse_kw(ps::ParseState)
         return @default ps parse_abstract(ps)
     elseif k === Tokens.PRIMITIVE
         return @default ps parse_primitive(ps)
+    elseif k === Tokens.PUBLIC
+        if is_toplevel
+            return @default ps parse_public(ps)
+        else
+            return EXPR(:IDENTIFIER, ps)
+        end
     elseif k === Tokens.TYPE
         return EXPR(:IDENTIFIER, ps)
     elseif k === Tokens.STRUCT
@@ -155,6 +161,23 @@ function parse_primitive(ps::ParseState)
         ret = EXPR(:IDENTIFIER, ps)
     end
     return ret
+end
+
+function parse_public(ps::ParseState)
+    args = EXPR[]
+    trivia = EXPR[EXPR(ps)]
+
+    push!(args, parse_importexport_item(ps))
+
+    prevpos = position(ps)
+    while iscomma(ps.nt)
+        push!(trivia, EXPR(next(ps)))
+        arg = parse_importexport_item(ps)
+        push!(args, arg)
+        prevpos = loop_check(ps, prevpos)
+    end
+
+    return EXPR(:public, args, trivia)
 end
 
 function parse_mutable(ps::ParseState)

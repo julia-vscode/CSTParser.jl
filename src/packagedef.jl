@@ -33,7 +33,7 @@ Acceptable starting tokens are:
 + An `@`.
 
 """
-function parse_expression(ps::ParseState, esc_on_error = false)
+function parse_expression(ps::ParseState, esc_on_error = false; is_toplevel = false)
     if kindof(ps.nt) === Tokens.ENDMARKER
         ret = mErrorToken(ps, UnexpectedToken)
     elseif (esc_on_error && ps.nt.kind == Tokens.ERROR)
@@ -47,7 +47,7 @@ function parse_expression(ps::ParseState, esc_on_error = false)
     else
         next(ps)
         if iskeyword(kindof(ps.t)) && kindof(ps.t) != Tokens.DO
-            ret = parse_kw(ps)
+            ret = parse_kw(ps; is_toplevel=is_toplevel)
         elseif kindof(ps.t) === Tokens.LPAREN
             ret = parse_paren(ps)
         elseif kindof(ps.t) === Tokens.LSQUARE
@@ -212,14 +212,14 @@ function parse_doc(ps::ParseState)
         elseif isbinaryop(ps.nt) && !closer(ps)
             ret = parse_compound_recur(ps, doc)
         else
-            ret = parse_expression(ps)
+            ret = parse_expression(ps; is_toplevel = true)
             ret = EXPR(:macrocall, EXPR[EXPR(:globalrefdoc, 0, 0), EXPR(:NOTHING, 0, 0), doc, ret], nothing)
         end
     else
-        ret = parse_expression(ps)
+        ret = parse_expression(ps; is_toplevel = true)
     end
     if _continue_doc_parse(ps, ret)
-        push!(ret, parse_expression(ps))
+        push!(ret, parse_expression(ps; is_toplevel = true))
     end
     return ret
 end

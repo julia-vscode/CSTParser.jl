@@ -607,12 +607,24 @@ Should `a` be converted to a keyword-argument expression?
 """
 _do_kw_convert(ps::ParseState, a::EXPR) = !ps.closer.brace && isassignment(a)
 
+_do_block_convert(a::EXPR) =
+    a.args[1] !== nothing && isoperator(a.args[1].head) && a.args[1].args !== nothing && a.args[1].args[1].head === :call
+
 """
-    _kw_convert(ps::ParseState, a::EXPR)
+    _kw_convert(a::EXPR, blockwrap = false)
 
 Converted an assignment expression to a keyword-argument expression.
 """
-_kw_convert(x::EXPR) = EXPR(:kw, EXPR[x.args[1], x.args[2]], EXPR[x.head], x.fullspan, x.span)
+_kw_convert(x::EXPR, blockwrap = false) = EXPR(
+    :kw,
+    EXPR[
+        x.args[1],
+        # in some specific cases, the reference parser wraps the RHS of kwargs in an extra block
+        blockwrap ?
+            EXPR(:block, EXPR[x.args[2]], EXPR[], x.args[2].fullspan, x.args[2].span) :
+            x.args[2]
+    ],
+    EXPR[x.head], x.fullspan, x.span)
 
 """
     convertsigtotuple(sig::EXPR)

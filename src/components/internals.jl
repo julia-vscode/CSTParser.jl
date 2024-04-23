@@ -152,8 +152,10 @@ function parse_comma_sep(ps::ParseState, args::Vector{EXPR}, trivia::Vector{EXPR
     @nocloser ps :inwhere @nocloser ps :newline @closer ps :comma while !closer(ps)
         a = parse_expression(ps)
         if kw && _do_kw_convert(ps, a)
-            a = _kw_convert(a)
+            b = _do_block_convert(a)
+            a = _kw_convert(a, b)
         end
+
         push!(args, a)
         if iscomma(ps.nt)
             if istuple
@@ -363,6 +365,21 @@ function parse_nonstd_identifier(ps)
         EXPR(:NONSTDIDENTIFIER, EXPR[id, INSTANCE(next(ps))])
     else
         mErrorToken(ps, EXPR(:NONSTDIDENTIFIER, EXPR[id, INSTANCE(next(ps))]), UnexpectedToken)
+    end
+end
+
+function parse_public_item(ps::ParseState)
+    if kindof(ps.nt) === Tokens.AT_SIGN
+        parse_macroname(next(ps))
+    elseif kindof(ps.nt) === Tokens.EX_OR
+        parse_unary(ps, INSTANCE(next(ps)))
+    elseif isoperator(ps.nt)
+        next(ps)
+        EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, val(ps.t, ps))
+    elseif is_nonstd_identifier(ps)
+        parse_nonstd_identifier(ps)
+    else
+        INSTANCE(next(ps))
     end
 end
 
