@@ -5,7 +5,7 @@
     using CSTParser: to_codeobject
     using Tokenize: tokenize
     import Tokenize.Tokens: untokenize
-    
+
     function trav(x, f=x -> nothing)
         f(x)
         for a in x
