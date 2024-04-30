@@ -135,7 +135,15 @@
                 file = joinpath(root, fpath)
                 endswith(file, ".jl") || continue
 
+                # filter out irrelevant files, like e.g. ._julia-config.jl in the macos tarballs
+                startswith(file, ".") && continue
+                startswith(file, "_") && continue
+
                 str = read(file, String)
+
+                isvalid(str) || continue
+
+                @info "parsing $file"
 
                 cst = CSTParser.parse(str, true)
                 cst_expr, cst_err, span_err = cst_parse_file(str)
