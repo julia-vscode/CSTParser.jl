@@ -202,6 +202,8 @@ if VERSION > v"1.11-"
         bar
         """ |> test_expr
         @test "f() = public" |> test_expr
+        @test "public(x) = 1" |> test_expr
+        @test "public(x)" |> test_expr
         @test """
         let
             public
