@@ -73,7 +73,7 @@ function parse_kw(ps::ParseState; is_toplevel = false)
     elseif k === Tokens.PRIMITIVE
         return @default ps parse_primitive(ps)
     elseif k === Tokens.PUBLIC
-        if is_toplevel && ps.nt.kind !== Tokens.LPAREN && VERSION > v"1.11-"
+        if is_toplevel && !isemptyws(ps.ws) && VERSION > v"1.11-"
             return @default ps parse_public(ps)
         else
             return EXPR(:IDENTIFIER, ps)
