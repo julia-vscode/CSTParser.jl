@@ -13,11 +13,11 @@ end
 function utf8proc_map_custom(str::String, options)
     norm_func = @cfunction julia_normalization_map Int32 (Int32, Ptr{Nothing})
     nwords = ccall(:utf8proc_decompose_custom, Int, (Ptr{UInt8}, Int, Ptr{UInt8}, Int, Cint, Ptr{Nothing}, Ptr{Nothing}),
-                   str, sizeof(str), C_NULL, 0, options, norm_func, C_NULL)
+        str, sizeof(str), C_NULL, 0, options, norm_func, C_NULL)
     nwords < 0 && Base.Unicode.utf8proc_error(nwords)
     buffer = Base.StringVector(nwords * 4)
     nwords = ccall(:utf8proc_decompose_custom, Int, (Ptr{UInt8}, Int, Ptr{UInt8}, Int, Cint, Ptr{Nothing}, Ptr{Nothing}),
-                   str, sizeof(str), buffer, nwords, options, norm_func, C_NULL)
+        str, sizeof(str), buffer, nwords, options, norm_func, C_NULL)
     nwords < 0 && Base.Unicode.utf8proc_error(nwords)
     nbytes = ccall(:utf8proc_reencode, Int, (Ptr{UInt8}, Int, Cint), buffer, nwords, options)
     nbytes < 0 && Base.Unicode.utf8proc_error(nbytes)
@@ -34,10 +34,10 @@ function sized_uint_literal(s::AbstractString, b::Integer)
     # We know integers are all ASCII, so we can use sizeof to compute
     # the length of ths string more quickly
     l = (sizeof(s) - 2) * b
-    l <= 8   && return Base.parse(UInt8,   s)
-    l <= 16  && return Base.parse(UInt16,  s)
-    l <= 32  && return Base.parse(UInt32,  s)
-    l <= 64  && return Base.parse(UInt64,  s)
+    l <= 8 && return Base.parse(UInt8, s)
+    l <= 16 && return Base.parse(UInt16, s)
+    l <= 32 && return Base.parse(UInt32, s)
+    l <= 64 && return Base.parse(UInt64, s)
     # l <= 128 && return Base.parse(UInt128, s)
     if l <= 128
         @static if VERSION >= v"1.1"
@@ -52,8 +52,8 @@ end
 function sized_uint_oct_literal(s::AbstractString)
     s[3] == 0 && return sized_uint_literal(s, 3)
     len = sizeof(s)
-    (len < 5  || (len == 5  && s <= "0o377")) && return Base.parse(UInt8, s)
-    (len < 8  || (len == 8  && s <= "0o177777")) && return Base.parse(UInt16, s)
+    (len < 5 || (len == 5 && s <= "0o377")) && return Base.parse(UInt8, s)
+    (len < 8 || (len == 8 && s <= "0o177777")) && return Base.parse(UInt16, s)
     (len < 13 || (len == 13 && s <= "0o37777777777")) && return Base.parse(UInt32, s)
     (len < 24 || (len == 24 && s <= "0o1777777777777777777777")) && return Base.parse(UInt64, s)
     # (len < 45 || (len == 45 && s <= "0o3777777777777777777777777777777777777777777")) && return Base.parse(UInt128, s)
@@ -184,9 +184,9 @@ function to_codeobject(x::EXPR)
     elseif x.head === :quotenode
         # quote nodes in import/using are unwrapped by the Julia parser
         if x.parent isa EXPR &&
-            x.parent.parent isa EXPR &&
-            is_dot(x.parent.head) &&
-            x.parent.parent.head in (:import, :using)
+           x.parent.parent isa EXPR &&
+           is_dot(x.parent.head) &&
+           x.parent.parent.head in (:import, :using)
             to_codeobject(x.args[1])
         else
             QuoteNode(to_codeobject(x.args[1]))

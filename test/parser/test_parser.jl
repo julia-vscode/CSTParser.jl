@@ -699,7 +699,7 @@ end
 end
 
 @testitem "nonstandard identifier (var\"blah\") parsing" begin
-using CSTParser: remlineinfo!
+    using CSTParser: remlineinfo!
     include("../shared.jl")
 
     if VERSION > v"1.3.0-"
