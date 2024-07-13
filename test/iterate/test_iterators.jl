@@ -744,6 +744,21 @@ end
     @test x[6] === x.args[3]
 end
 
+if VERSION > v"1.11-"
+    @testitem ":public" begin
+        using CSTParser: @cst_str, headof, valof
+
+        x = cst"public a, b, c"
+        @test length(x) == 6
+        @test x[1] === x.trivia[1]
+        @test x[2] === x.args[1]
+        @test x[3] === x.trivia[2]
+        @test x[4] === x.args[2]
+        @test x[5] === x.trivia[3]
+        @test x[6] === x.args[3]
+    end
+end
+
 @testitem ":parameters" begin
     using CSTParser: @cst_str, headof, valof
 

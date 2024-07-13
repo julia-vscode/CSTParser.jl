@@ -43,6 +43,8 @@ function _getindex(x::EXPR, i)
         x.args[i]
     elseif headof(x) === :export
         oddt_evena(x, i)
+    elseif headof(x) === :public
+        oddt_evena(x, i)
     elseif headof(x) === :filter
         _filter(x, i)
     elseif headof(x) === :flatten
