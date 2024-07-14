@@ -3,7 +3,7 @@
 
 Dispatch function for when the parser has reached a keyword.
 """
-function parse_kw(ps::ParseState; is_toplevel = false)
+function parse_kw(ps::ParseState; is_toplevel=false)
     k = kindof(ps.t)
     if ps.closer.precedence == 20 && ps.lt.kind === Tokens.EX_OR && k !== Tokens.END
         return EXPR(:IDENTIFIER, ps)
@@ -100,7 +100,7 @@ function parse_const(ps::ParseState)
     nt = ps.nt
     arg = parse_expression(ps)
     allow_no_assignment = has_flag(ps, ParserFlags.AllowConstWithoutAssignment) ||
-        has_flag(ps, ParserFlags.InQuote) && (kindof(nt) === Tokens.GLOBAL || kindof(lt) === Tokens.GLOBAL)
+                          has_flag(ps, ParserFlags.InQuote) && (kindof(nt) === Tokens.GLOBAL || kindof(lt) === Tokens.GLOBAL)
     if !allow_no_assignment && !(isassignment(unwrapbracket(arg)) || (headof(arg) === :global && length(arg.args) > 0 && isassignment(unwrapbracket(arg.args[1]))))
         arg = mErrorToken(ps, arg, ExpectedAssignment)
     end
@@ -108,7 +108,7 @@ function parse_const(ps::ParseState)
     return ret
 end
 
-function parse_local_global(ps::ParseState, islocal = true)
+function parse_local_global(ps::ParseState, islocal=true)
     kw = EXPR(ps)
     if ps.nt.kind === Tokens.CONST
         arg1 = parse_const(next(ps))
@@ -381,7 +381,7 @@ end
 
 Parse an `if` block.
 """
-function parse_if(ps::ParseState, nested = false)
+function parse_if(ps::ParseState, nested=false)
     args = EXPR[]
     trivia = EXPR[EXPR(ps)]
 
@@ -451,7 +451,7 @@ function parse_try(ps::ParseState)
             args[3] = EXPR(:block, 0, 0, "")
         end
         else_trivia = EXPR(next(ps))
-        else_arg = EXPR(:block, parse_block(ps, EXPR[], (Tokens.FINALLY,Tokens.END)))
+        else_arg = EXPR(:block, parse_block(ps, EXPR[], (Tokens.FINALLY, Tokens.END)))
     end
 
     has_finally = false

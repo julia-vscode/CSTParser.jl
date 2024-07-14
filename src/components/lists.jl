@@ -46,7 +46,7 @@ function parse_tuple(ps::ParseState, ret::EXPR)
 end
 
 # XXX: Avert thine eyes.
-function count_semicolons(ps, check_newline = true)
+function count_semicolons(ps, check_newline=true)
     dims = 0
     has_newline = false
     old_pos = position(ps.l.io)
@@ -75,7 +75,7 @@ Having hit '[' return either:
 + A comprehension
 + An array (vcat of hcats)
 """
-function parse_array(ps::ParseState, isref = false)
+function parse_array(ps::ParseState, isref=false)
     args = EXPR[]
     trivia = EXPR[EXPR(ps)]
     # [] or [;;;]
@@ -100,7 +100,7 @@ function parse_array(ps::ParseState, isref = false)
     end
 end
 
-binding_power(ps, nl = true) =
+binding_power(ps, nl=true) =
     if kindof(ps.ws) == SemiColonWS
         -count_semicolons(ps, nl)
     elseif kindof(ps.ws) == NewLineWS
@@ -149,7 +149,7 @@ function parse_array_outer(ps::ParseState, trivia, isref)
                 args = EXPR[]
                 push!(args, a)
                 push!(trivia, accept_comma(ps))
-                @closesquare ps parse_comma_sep(ps, args, trivia, isref, insert_params_at = 1)
+                @closesquare ps parse_comma_sep(ps, args, trivia, isref, insert_params_at=1)
                 return EXPR(:vect, args, trivia)
             elseif kindof(ps.nt) === Tokens.ENDMARKER
                 push!(args, a)
@@ -309,7 +309,7 @@ function parse_barray(ps::ParseState)
         accept_rbrace(ps, trivia)
         ret = EXPR(:braces, args, trivia)
     else
-        first_arg = @nocloser ps :newline @closebrace ps  @closer ps :ws @closer ps :wsop @closer ps :comma parse_expression(ps)
+        first_arg = @nocloser ps :newline @closebrace ps @closer ps :ws @closer ps :wsop @closer ps :comma parse_expression(ps)
         if kindof(ps.nt) === Tokens.RBRACE
             push!(args, first_arg)
             if kindof(ps.ws) == SemiColonWS
@@ -320,7 +320,7 @@ function parse_barray(ps::ParseState)
         elseif iscomma(ps.nt)
             push!(args, first_arg)
             accept_comma(ps, trivia)
-            @closebrace ps parse_comma_sep(ps, args, trivia, true, insert_params_at = 1)
+            @closebrace ps parse_comma_sep(ps, args, trivia, true, insert_params_at=1)
             accept_rbrace(ps, trivia)
             return EXPR(:braces, args, trivia)
         elseif kindof(ps.ws) == NewLineWS
@@ -328,7 +328,7 @@ function parse_barray(ps::ParseState)
             push!(ret, first_arg)
             prevpos = position(ps)
             while kindof(ps.nt) != Tokens.RBRACE && kindof(ps.nt) !== Tokens.ENDMARKER
-                a = @closebrace ps  parse_expression(ps)
+                a = @closebrace ps parse_expression(ps)
                 push!(ret, a)
                 prevpos = loop_check(ps, prevpos)
             end
