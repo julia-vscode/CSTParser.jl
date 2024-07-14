@@ -59,8 +59,8 @@ function ParseState(str::Union{IOBuffer,String}, loc::Int)
 end
 
 module ParserFlags
-    const AllowConstWithoutAssignment = 0x1
-    const InQuote = 0x2
+const AllowConstWithoutAssignment = 0x1
+const InQuote = 0x2
 end
 
 enable!(ps::ParseState, flag::Integer) = ps.flags |= flag
@@ -74,10 +74,11 @@ function Base.show(io::IO, ps::ParseState)
     println(io, "next    : ", kindof(ps.nt), " ($(ps.nt))", "    ($(wstype(ps.nws)))")
 end
 peekchar(ps::ParseState) = peekchar(ps.l)
-if !applicable(Base.peek, Tuple{IOBuffer, Char})
+if !applicable(Base.peek, Tuple{IOBuffer,Char})
     function _peek(s::IO, ::Type{T}) where T
         mark(s)
-        try read(s, T)::T
+        try
+            read(s, T)::T
         finally
             reset(s)
         end
@@ -88,8 +89,8 @@ else
 end
 
 wstype(t::AbstractToken) = kindof(t) == EmptyWS ? "empty" :
-                    kindof(t) == NewLineWS ? "ws w/ newline" :
-                    kindof(t) == SemiColonWS ? "ws w/ semicolon" : "ws"
+                           kindof(t) == NewLineWS ? "ws w/ newline" :
+                           kindof(t) == SemiColonWS ? "ws w/ semicolon" : "ws"
 
 function next(ps::ParseState)
     #  shift old tokens
@@ -200,16 +201,16 @@ end
 isemptyws(t::AbstractToken) = kindof(t) == EmptyWS
 isnewlinews(t::AbstractToken) = kindof(t) === NewLineWS
 isendoflinews(t::AbstractToken) = kindof(t) == SemiColonWS || kindof(t) == NewLineWS
-@inline val(token::AbstractToken, ps::ParseState) = String(ps.l.io.data[token.startbyte + 1:token.endbyte + 1])
+@inline val(token::AbstractToken, ps::ParseState) = String(ps.l.io.data[token.startbyte+1:token.endbyte+1])
 both_symbol_and_op(t::AbstractToken) = kindof(t) === Tokens.WHERE || kindof(t) === Tokens.IN || kindof(t) === Tokens.ISA
 isprefixableliteral(t::AbstractToken) = (kindof(t) === Tokens.STRING || kindof(t) === Tokens.TRIPLE_STRING || kindof(t) === Tokens.CMD || kindof(t) === Tokens.TRIPLE_CMD)
 isassignmentop(t::AbstractToken) = Tokens.begin_assignments < kindof(t) < Tokens.end_assignments
 
 isidentifier(t::AbstractToken) = kindof(t) === Tokens.IDENTIFIER
 isliteral(t::AbstractToken) = Tokens.begin_literal < kindof(t) < Tokens.end_literal
-isbool(t::AbstractToken) =  Tokens.TRUE ≤ kindof(t) ≤ Tokens.FALSE
-iscomma(t::AbstractToken) =  kindof(t) === Tokens.COMMA
-iscolon(t::AbstractToken) =  kindof(t) === Tokens.COLON
+isbool(t::AbstractToken) = Tokens.TRUE ≤ kindof(t) ≤ Tokens.FALSE
+iscomma(t::AbstractToken) = kindof(t) === Tokens.COMMA
+iscolon(t::AbstractToken) = kindof(t) === Tokens.COLON
 iskeyword(t::AbstractToken) = Tokens.iskeyword(kindof(t))
 isinstance(t::AbstractToken) = isidentifier(t) || isliteral(t) || isbool(t) || iskeyword(t)
 ispunctuation(t::AbstractToken) = iscomma(t) || kindof(t) === Tokens.END || Tokens.LSQUARE ≤ kindof(t) ≤ Tokens.RPAREN || kindof(t) === Tokens.AT_SIGN

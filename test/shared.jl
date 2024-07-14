@@ -28,7 +28,7 @@ function test_iter(ex)
     end
 end
 
-function test_expr(s, head, n, endswithtrivia = false)
+function test_expr(s, head, n, endswithtrivia=false)
     x = CSTParser.parse(s)
     head === nothing || @test headof(x) === head
     @test length(x) === n
@@ -38,22 +38,22 @@ function test_expr(s, head, n, endswithtrivia = false)
     @test isempty(check_span(x))
     check_parents(x)
     test_iter(x)
-    @test endswithtrivia ? (x.fullspan-x.span) == (last(x.trivia).fullspan - last(x.trivia).span) : (x.fullspan-x.span) == (last(x.args).fullspan - last(x.args).span)
+    @test endswithtrivia ? (x.fullspan - x.span) == (last(x.trivia).fullspan - last(x.trivia).span) : (x.fullspan - x.span) == (last(x.args).fullspan - last(x.args).span)
 end
 
 randop() = rand(["-->", "→",
-                 "||",
-                 "&&",
-                 "<", "==", "<:", ">:",
-                 "<|", "|>",
-                 ":",
-                 "+", "-",
-                 ">>", "<<",
-                 "*", "/",
-                 "//",
-                 "^", "↑",
-                 "::",
-                 ".", "->"])
+    "||",
+    "&&",
+    "<", "==", "<:", ">:",
+    "<|", "|>",
+    ":",
+    "+", "-",
+    ">>", "<<",
+    "*", "/",
+    "//",
+    "^", "↑",
+    "::",
+    ".", "->"])
 
 test_expr_broken(str) = test_expr(str, false)
 
@@ -98,7 +98,7 @@ end
 function test_iter_spans(x)
     n = 0
     for i = 1:length(x)
-        a  = x[i]
+        a = x[i]
         if !(a isa EXPR)
             @info i, headof(x), to_codeobject(x)
         end
