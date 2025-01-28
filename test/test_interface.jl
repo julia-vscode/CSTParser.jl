@@ -28,7 +28,7 @@ end
 
 @testitem "get_name" begin
     using CSTParser: valof
-    
+
     @test valof(CSTParser.get_name(CSTParser.parse("struct T end"))) == "T"
     @test valof(CSTParser.get_name(CSTParser.parse("struct T{T} end"))) == "T"
     @test valof(CSTParser.get_name(CSTParser.parse("struct T <: T end"))) == "T"

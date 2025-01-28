@@ -53,8 +53,8 @@ end
 
 function requires_no_ws(x, ps)
     if !(kindof(ps.nt) === Tokens.RPAREN ||
-        kindof(ps.nt) === Tokens.RBRACE ||
-        kindof(ps.nt) === Tokens.RSQUARE || kindof(ps.nt) === Tokens.END) && x.span != x.fullspan
+         kindof(ps.nt) === Tokens.RBRACE ||
+         kindof(ps.nt) === Tokens.RSQUARE || kindof(ps.nt) === Tokens.END) && x.span != x.fullspan
         return mErrorToken(ps, x, UnexpectedWhiteSpace)
     else
         return x

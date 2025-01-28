@@ -1,7 +1,7 @@
 @testitem "Abstract" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test "abstract type t end" |> test_expr
     @test "abstract type t{T} end" |> test_expr
     @test "abstract type t <: S end" |> test_expr
@@ -11,7 +11,7 @@ end
 @testitem "primitive" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test "primitive type Int 64 end" |> test_expr
     @test "primitive type Int 4*16 end" |> test_expr
 end
@@ -19,7 +19,7 @@ end
 @testitem "Structs" begin
     using CSTParser: remlineinfo!
     include("../shared.jl")
-    
+
     @test "struct a end" |> test_expr
     @test "struct a; end" |> test_expr
     @test "struct a; b;end" |> test_expr

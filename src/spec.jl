@@ -1,29 +1,29 @@
 # Operator hierarchy
-const AssignmentOp  = 1
+const AssignmentOp = 1
 const ConditionalOp = 2
-const ArrowOp       = 3
-const LazyOrOp      = 4
-const LazyAndOp     = 5
-const ComparisonOp  = 6
-const PipeOp        = 7
-const ColonOp       = 8
-const PlusOp        = 9
+const ArrowOp = 3
+const LazyOrOp = 4
+const LazyAndOp = 5
+const ComparisonOp = 6
+const PipeOp = 7
+const ColonOp = 8
+const PlusOp = 9
 @static if Base.operator_precedence(:<<) == 12
-    const BitShiftOp    = 10
-    const TimesOp       = 11
-    const RationalOp    = 12
+    const BitShiftOp = 10
+    const TimesOp = 11
+    const RationalOp = 12
 else
-    const TimesOp       = 10
-    const RationalOp    = 11
-    const BitShiftOp    = 12
+    const TimesOp = 10
+    const RationalOp = 11
+    const BitShiftOp = 12
 end
-const PowerOp       = 13
+const PowerOp = 13
 const DeclarationOp = 14
-const WhereOp       = 15
-const DotOp         = 16
-const PrimeOp       = 16
-const DddotOp       = 7
-const AnonFuncOp    = 14
+const WhereOp = 15
+const DotOp = 16
+const PrimeOp = 16
+const DddotOp = 7
+const AnonFuncOp = 14
 
 @enum(ErrorKind,
     UnexpectedToken,
@@ -118,20 +118,20 @@ function EXPR(head::Union{Symbol,EXPR}, args::Vector{EXPR}, trivia::Union{Vector
     ex
 end
 
-function EXPR(head::Union{Symbol,EXPR}, args::Vector{EXPR}, trivia::Union{Vector{EXPR},Nothing} = EXPR[])
+function EXPR(head::Union{Symbol,EXPR}, args::Vector{EXPR}, trivia::Union{Vector{EXPR},Nothing}=EXPR[])
     ret = EXPR(head, args, trivia, 0, 0)
     update_span!(ret)
     ret
 end
 
 # These methods are for terminal/childless expressions.
-@noinline EXPR(head::Union{Symbol,EXPR}, fullspan::Int, span::Int, val = nothing) = EXPR(head, nothing, nothing, fullspan, span, val, nothing, nothing)
+@noinline EXPR(head::Union{Symbol,EXPR}, fullspan::Int, span::Int, val=nothing) = EXPR(head, nothing, nothing, fullspan, span, val, nothing, nothing)
 @noinline EXPR(head::Union{Symbol,EXPR}, ps::ParseState) = EXPR(head, ps.nt.startbyte - ps.t.startbyte, ps.t.endbyte - ps.t.startbyte + 1, val(ps.t, ps))
 @noinline EXPR(ps::ParseState) = EXPR(tokenkindtoheadmap(kindof(ps.t)), ps)
 
 @noinline function mLITERAL(ps::ParseState)
     if kindof(ps.t) === Tokens.STRING || kindof(ps.t) === Tokens.TRIPLE_STRING ||
-        kindof(ps.t) === Tokens.CMD || kindof(ps.t) === Tokens.TRIPLE_CMD
+       kindof(ps.t) === Tokens.CMD || kindof(ps.t) === Tokens.TRIPLE_CMD
         return parse_string_or_cmd(ps)
     else
         v = val(ps.t, ps)
@@ -163,7 +163,7 @@ function update_span!(x::EXPR)
     end
     if x.head isa EXPR && isoperator(x.head) && (is_dddot(x.head) || is_prime(x.head))
         # trailing unary operator
-        x.span  = x.fullspan - x.head.fullspan + x.head.span
+        x.span = x.fullspan - x.head.fullspan + x.head.span
     elseif hastrivia(x) && lastchildistrivia(x)
         x.span = x.fullspan - last(x.trivia).fullspan + last(x.trivia).span
     elseif !isempty(x.args)
