@@ -85,6 +85,14 @@ end
     try
         f(1)
     catch err
+    finally
+        stop(f)
+    end
+    """ |> test_expr
+    @test """
+    try
+        f(1)
+    catch err
         error(err)
     finally
         stop(f)
