@@ -866,6 +866,17 @@ end
     @test headof(x[7]) === :block
     @test headof(x[8]) === :END
 
+    x = cst"try expr catch err finally expr3 end"
+    @test length(x) == 8
+    @test headof(x[1]) === :TRY
+    @test headof(x[2]) === :block
+    @test headof(x[3]) === :CATCH
+    @test valof(x[4]) == "err"
+    @test headof(x[5]) === :block
+    @test headof(x[6]) === :FINALLY
+    @test headof(x[7]) === :block
+    @test headof(x[8]) === :END
+
     x = cst"try expr catch err expr2 finally expr3 end"
     @test length(x) == 8
     @test headof(x[1]) === :TRY

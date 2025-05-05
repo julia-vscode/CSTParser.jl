@@ -457,7 +457,8 @@ function parse_try(ps::ParseState)
     has_finally = false
     if kindof(ps.nt) === Tokens.FINALLY
         has_finally = true
-        if isempty(catchblock.args) && else_trivia === nothing
+
+        if isempty(catchblock.args) && else_trivia === nothing && caught.head === :FALSE
             args[3] = EXPR(:FALSE, 0, 0, "")
         end
         push!(trivia, EXPR(next(ps)))
