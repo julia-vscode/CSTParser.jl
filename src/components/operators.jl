@@ -414,8 +414,14 @@ function parse_operator_dot(ps::ParseState, ret::EXPR, op::EXPR)
 
     if isidentifier(nextarg) || isinterpolant(nextarg)
         ret = EXPR(op, EXPR[ret, EXPR(:quotenode, EXPR[nextarg], nothing)], nothing)
-    elseif headof(nextarg) === :vect || headof(nextarg) === :braces
+    elseif headof(nextarg) === :vect
         ret = EXPR(op, EXPR[ret, EXPR(:quote, EXPR[nextarg], nothing)], nothing)
+    elseif headof(nextarg) === :braces
+        @static if VERSION >= v"1.12-"
+            ret = EXPR(op, EXPR[ret, EXPR(:quotenode, EXPR[nextarg], nothing)], nothing)
+        else
+            ret = EXPR(op, EXPR[ret, EXPR(:quote, EXPR[nextarg], nothing)], nothing)
+        end
     elseif headof(nextarg) === :macrocall
         ret = rewrite_macrocall_quotenode(op, ret, nextarg)
     elseif VERSION >= v"1.8.0-" && headof(nextarg) === :do && headof(nextarg.args[1]) === :macrocall

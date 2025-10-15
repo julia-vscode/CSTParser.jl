@@ -69,6 +69,8 @@ end
     @test "3//a^b" |> test_expr
     @test "3^b//a^b" |> test_expr
     @test "3^b//a" |> test_expr
+    @test_broken "@a b ^ -c(d)^e" |> test_expr
+    @test_broken "[a b ^ -c(d)^e f]" |> test_expr
     @test "a::b..." |> test_expr
     @test "a where b..." |> test_expr
     @test "a.b..." |> test_expr

@@ -27,6 +27,14 @@ mutable struct Closer
 end
 Closer() = Closer(true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, -1)
 
+function Base.show(io::IO, c::Closer)
+    println(io, "Closer(")
+    for f in fieldnames(Closer)
+        println(io, "  ", f, " = ", getfield(c, f), ",")
+    end
+    print(io, ")")
+end
+
 const IOT = typeof(IOBuffer().data)
 mutable struct ParseState
     l::Lexer{Base.GenericIOBuffer{IOT},RawToken}

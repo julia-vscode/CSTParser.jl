@@ -91,7 +91,11 @@ end
     include("shared.jl")
 
     test_expr("f(a=1)", :call, 4, false)
-    test_expr("f(::typeof(a)=1)", :call, 4, false)
+    if VERSION <= v"1.12-"
+        # currently broken due to JuliaSyntax inserting a begin-end block
+        # on the RHS of the kwarg
+        test_expr("f(::typeof(a)=1)", :call, 4, false)
+    end
     test_expr("f(a::typeof(a)=1)", :call, 4, false)
     test_expr("f(::a=1)", :call, 4, false)
     test_expr("f(a::a=1)", :call, 4, false)

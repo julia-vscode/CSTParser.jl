@@ -392,7 +392,7 @@ function parse_importexport_item(ps, is_colon = false)
         pushtotrivia!(a, accept_rparen(ps))
         a
     elseif kindof(ps.nt) === Tokens.EX_OR
-        parse_unary(ps, INSTANCE(next(ps)))
+        @closer ps :ws parse_unary(ps, INSTANCE(next(ps)))
     elseif !is_colon && isoperator(ps.nt)
         next(ps)
         EXPR(:OPERATOR, ps.nt.startbyte - ps.t.startbyte,  1 + ps.t.endbyte - ps.t.startbyte, val(ps.t, ps))

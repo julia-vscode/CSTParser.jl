@@ -676,6 +676,7 @@ end
         @test CSTParser.parse("using a as b")[2].head === :errortoken
         @test test_expr("using M: a as b")
         @test test_expr("using M: a as b, c")
+        @test test_expr(raw":(import $foo as $bar)")
     end
 end
 @testitem "exor #201" begin
