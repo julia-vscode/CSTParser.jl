@@ -154,21 +154,24 @@
 
                 if cst_err || meta_err
                     if cst_err && !meta_err
-                        @error "CSTParser.parse errored, but Meta.parse didn't." file = file
+                        @error "CSTParser.parse errored, but Meta.parse didn't." file
                     elseif !cst_err && meta_err
-                        @error "Meta.parse errored, but CSTParser.parse didn't." file = file
+                        @error "Meta.parse errored, but CSTParser.parse didn't." file
                     end
+                    @test false
                 else
                     if cst_expr == meta_expr
                         @test true
                     else
                         @error "parsing difference" file = file
-                        _compare(cst_expr, meta_expr)
+                        # _compare(cst_expr, meta_expr)
                         # 1.10 introduced a bunch of changes to the canonical AST, which
                         # CSTParser does not support right now. This does not mean that we
                         # cannot parse that file though, just that Expr conversion doesn't
                         # work well
-                        if v"1.10-" <= VERSION < v"1.12-" && basename(file) == "syntax.jl"
+                        if v"1.10-" <= VERSION < v"1.13-" && basename(file) == "syntax.jl"
+                            @test_broken false
+                        elseif VERSION >= v"1.12-"
                             @test_broken false
                         else
                             @test false

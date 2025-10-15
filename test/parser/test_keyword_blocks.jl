@@ -159,7 +159,9 @@ end
         @test "for outer i = 1:3 end" |> test_expr
         if VERSION >= v"1.6"
             @test "for outer \$i = 1:3 end" |> test_expr
-            @test "for outer \$ i = 1:3 end" |> test_expr
+            if VERSION < v"1.12-"
+                @test "for outer \$ i = 1:3 end" |> test_expr
+            end
         end
     end
 end

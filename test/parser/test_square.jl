@@ -15,6 +15,8 @@
     @test traverse(CSTParser.parse("[\"hi\"\""))
     @test traverse(CSTParser.parse("[\"hi\"\"\n"))
     @test traverse(CSTParser.parse("[(1,2,3])"))
+
+    @test "[2.0^53 2.0^53+2]" |> test_expr
 end
 
 @testitem "ref" begin
