@@ -343,6 +343,9 @@ end
     @test "-1^a" |> test_expr
     @test "function(f, args...; kw...) end" |> test_expr
     @test "function(f, args...=1; kw...) end" |> test_expr
+    @test "function (f; args...) end" |> test_expr
+    @test "function (; args...) end" |> test_expr
+    @test "function (args...) end" |> test_expr
     @test "2a * b" |> test_expr
     @test "(g1090(x::T)::T) where {T} = x+1.0" |> test_expr
     @test "(:) = Colon()" |> test_expr
