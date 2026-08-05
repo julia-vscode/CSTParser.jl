@@ -2,7 +2,7 @@
 
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://www.julia-vscode.org/CSTParser.jl/dev)
 [![Project Status: Active - The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
-[![Run CI on master](https://github.com/julia-vscode/CSTParser.jl/actions/workflows/jlpkgbutler-ci-master-workflow.yml/badge.svg)](https://github.com/julia-vscode/CSTParser.jl/actions/workflows/jlpkgbutler-ci-master-workflow.yml)
+[![Run CI on master](https://github.com/julia-vscode/CSTParser.jl/actions/workflows/juliaci.yml/badge.svg)](https://github.com/julia-vscode/CSTParser.jl/actions/workflows/juliaci.yml)
 [![codecov](https://codecov.io/gh/julia-vscode/CSTParser.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/julia-vscode/CSTParser.jl)
 
 A parser for Julia using [Tokenize](https://github.com/JuliaLang/Tokenize.jl/) that aims to extend the built-in parser by providing additional meta information along with the resultant AST.
