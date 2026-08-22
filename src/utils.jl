@@ -695,11 +695,20 @@ macro cst_str(x)
 end
 
 function issuffixableliteral(ps::ParseState, x::EXPR)
-    # prefixed string/cmd macros can be suffixed by identifiers or numeric literals
+    # Prefixed string/cmd macros can be suffixed by identifiers or numeric literals.
+    #
+    # Julia treats *any* word directly following the literal as the suffix, keywords and
+    # operator-words included: `r"x"ims`, but equally `r"x"isa`, `r"x"in` and `r"x"end`.
+    # Tokenize hands those last ones back as operator or keyword tokens rather than
+    # identifiers, so they have to be admitted explicitly. Base relies on this — 1.13's
+    # `binaryplatforms.jl` has `r"^(.*?)(?:-((?:[\.\d]+)*))?\.dll$"isa`, which we
+    # otherwise fail to parse.
     return (
             isidentifier(ps.nt) ||
             isnumberliteral(ps.nt) ||
-            isbool(ps.nt)
+            isbool(ps.nt) ||
+            both_symbol_and_op(ps.nt) ||
+            iskeyword(ps.nt)
         ) &&
         isemptyws(ps.ws) &&
         ismacrocall(x) &&
