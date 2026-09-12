@@ -1,4 +1,4 @@
-version = "3.5.1"
+version = "3.5.2-DEV"
 name = "CSTParser"
 authors = ["Zac Nugent <zac.nugent@gmail.com>"]
 uuid = "00ebfdb7-1f24-5e51-bd34-a7502290713f"
