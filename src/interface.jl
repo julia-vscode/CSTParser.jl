@@ -93,7 +93,7 @@ hasparent(x::EXPR) = parentof(x) isa EXPR
 # OPERATOR
 is_approx(x::EXPR) = isoperator(x) && valof(x) == "~"
 is_exor(x) = isoperator(x) && valof(x) == "\$"
-is_decl(x) = isoperator(x) && valof(x) == "::"
+is_decl(x) = isoperator(x) && valof(x) == ":"
 is_issubt(x) = isoperator(x) && valof(x) == "<:"
 is_issupt(x) = isoperator(x) && valof(x) == ">:"
 is_and(x) = isoperator(x) && valof(x) == "&"
