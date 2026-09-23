@@ -244,7 +244,11 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                 str = str[1:prevind(str, lastindex(str))]
                 ex = EXPR(:STRING, lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str)
             end
-            if isempty(str)
+            # Without interpolation this is the only section, so it has to stay in `args` to be
+            # unwrapped into a single literal below, even when it is empty. For triple-quoted
+            # strings `str` is the value after escaped newlines were removed (`adjust_lcp`
+            # assigns it), so `"""\<newline>"""` ends up here with an empty `str`.
+            if isempty(str) && isinterpolated
                 pushtotrivia!(ret, ex)
             else
                 push!(ret, ex)

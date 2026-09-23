@@ -173,6 +173,12 @@ end
         @test "\"\"\"\na\\\n  b\"\"\"" |> test_expr
         @test "\"\"\"\na\\\nb\"\"\"" |> test_expr
         @test "\"\"\"\n   a\\\n       b\"\"\"" |> test_expr
+
+        # Triple-quoted strings that are empty once escaped newlines are removed
+        @test "\"\"\"\\\n\"\"\"" |> test_expr
+        @test "\"\"\"\\\n    \"\"\"" |> test_expr
+        @test "\"\"\"\\\n\\\n\"\"\"" |> test_expr
+        @test "x = \"\"\"\\\n\"\"\"" |> test_expr
     end
 end
 
