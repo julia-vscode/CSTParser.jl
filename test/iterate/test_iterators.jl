@@ -606,8 +606,38 @@ end
     @test x[5] === x.trivia[4]
     @test x[6] === x.trivia[5]
 
-    x = EXPR(:string, EXPR[cst"\" \"", EXPR(:errortoken, 0, 0), EXPR(:errortoken, 0, 0)], EXPR[cst"$"])
-    @test x[4] == x.args[3]
+    # The token after `$` swallows the closing quote, leaving an empty final
+    # section. That section is empty trivia, not an `:errortoken` in `args`.
+    x = cst"\" $`\""
+    @test length(x) == 4
+    @test x[1] === x.args[1]
+    @test x[2] === x.trivia[1]
+    @test x[3] === x.args[2]
+    @test x[4] === x.trivia[2]
+
+    x = EXPR(:string, EXPR[cst"\" \"", EXPR(:errortoken, 0, 0)], EXPR[cst"$", EXPR(:STRING, 0, 0, "")])
+    @test x[3] === x.args[2]
+    @test x[4] === x.trivia[2]
+
+    # An `:errortoken` in `args` is an interpolated value
+    x = cst"\"I$x$()\""
+    @test length(x) == 8
+    @test x[1] === x.args[1]
+    @test x[2] === x.trivia[1]
+    @test x[3] === x.args[2]
+    @test x[4] === x.trivia[2]
+    @test x[5] === x.trivia[3]
+    @test x[6] === x.args[3]
+    @test x[7] === x.trivia[4]
+    @test x[8] === x.trivia[5]
+
+    x = cst"\"$I$()$\""
+    @test length(x) == 10
+    @test x[6] === x.args[2]
+    @test x[7] === x.trivia[5]
+    @test x[8] === x.trivia[6]
+    @test x[9] === x.args[3]
+    @test x[10] === x.trivia[7]
 end
 
 @testitem ":macrocall" begin

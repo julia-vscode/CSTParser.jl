@@ -212,8 +212,14 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
             ex = EXPR(istrip ? :TRIPLESTRING : :STRING, (istrip ? 3 : 1) + (ps.nt.startbyte - ps.t.endbyte - 1), istrip ? 3 : 1, "")
             pushtotrivia!(ret, ex)
         elseif b.size == 0
-            ex = mErrorToken(ps, Unknown)
-            push!(ret, ex)
+            # The closing delimiter was consumed by an interpolation, e.g. by the token after
+            # a bare `$` in `"$`"`, which lexes as an unterminated command literal. Record the
+            # empty final section in trivia (like an empty section below), not as an
+            # `:errortoken` in `args`: iteration reads an `:errortoken` in `args` as an
+            # interpolated value, never as a string section.
+            ps.errored = true
+            ex = EXPR(:STRING, ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, startbytes, "")
+            pushtotrivia!(ret, ex)
         else
             str = String(take!(b))
 
@@ -238,7 +244,11 @@ function parse_string_or_cmd(ps::ParseState, prefixed=false)
                 str = str[1:prevind(str, lastindex(str))]
                 ex = EXPR(:STRING, lspan + ps.nt.startbyte - ps.t.endbyte - 1 + startbytes, lspan + startbytes, str)
             end
-            if isempty(str)
+            # Without interpolation this is the only section, so it has to stay in `args` to be
+            # unwrapped into a single literal below, even when it is empty. For triple-quoted
+            # strings `str` is the value after escaped newlines were removed (`adjust_lcp`
+            # assigns it), so `"""\<newline>"""` ends up here with an empty `str`.
+            if isempty(str) && isinterpolated
                 pushtotrivia!(ret, ex)
             else
                 push!(ret, ex)

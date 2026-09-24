@@ -173,6 +173,12 @@ end
         @test "\"\"\"\na\\\n  b\"\"\"" |> test_expr
         @test "\"\"\"\na\\\nb\"\"\"" |> test_expr
         @test "\"\"\"\n   a\\\n       b\"\"\"" |> test_expr
+
+        # Triple-quoted strings that are empty once escaped newlines are removed
+        @test "\"\"\"\\\n\"\"\"" |> test_expr
+        @test "\"\"\"\\\n    \"\"\"" |> test_expr
+        @test "\"\"\"\\\n\\\n\"\"\"" |> test_expr
+        @test "x = \"\"\"\\\n\"\"\"" |> test_expr
     end
 end
 
@@ -389,6 +395,70 @@ end
     x = CSTParser.parse("\"a \$# b\"")
     @test x.fullspan == 8
     @test CSTParser.headof(x[3]) === :errortoken
+end
+
+@testitem "interpolation errors iterate in source order" begin
+    using CSTParser: EXPR, headof, valof
+
+    # Iterating a node yields each of its args and trivia exactly once and
+    # covers its full span; the same holds for every node below it.
+    function check_iteration(x::EXPR)
+        children = EXPR[a for a in x]
+        @test length(children) == length(x)
+        if headof(x) === :string
+            parts = vcat(something(x.args, EXPR[]), something(x.trivia, EXPR[]))
+            @test length(children) == length(parts)
+            @test all(p -> count(c -> c === p, children) == 1, parts)
+        end
+        if !isempty(children)
+            @test sum(c.fullspan for c in children) == x.fullspan
+        end
+        foreach(check_iteration, children)
+    end
+
+    # (source, heads of the string node's children in iteration order)
+    cases = [
+        # `$(` with the `)` that paren auto-close inserts
+        ("\"I\$x\$()\"", [:STRING, :OPERATOR, :IDENTIFIER, :OPERATOR, :LPAREN, :errortoken, :RPAREN, :STRING]),
+        ("\"\$x\$()\"", [:STRING, :OPERATOR, :IDENTIFIER, :OPERATOR, :LPAREN, :errortoken, :RPAREN, :STRING]),
+        ("\"I\$x\$( )\"", [:STRING, :OPERATOR, :IDENTIFIER, :OPERATOR, :LPAREN, :errortoken, :RPAREN, :STRING]),
+        ("\"\$I\$()\$\"", [:STRING, :OPERATOR, :IDENTIFIER, :OPERATOR, :LPAREN, :errortoken, :RPAREN, :OPERATOR, :errortoken, :STRING]),
+        ("\"\"\"\$x\$()\"\"\"", [:STRING, :OPERATOR, :IDENTIFIER, :OPERATOR, :LPAREN, :errortoken, :RPAREN, :STRING]),
+        # bare `$` followed by whitespace
+        ("\"I\$x\$ \"", [:STRING, :OPERATOR, :IDENTIFIER, :OPERATOR, :errortoken, :STRING]),
+        # bare `$` at the end of the string
+        ("\"a\$b\$\"", [:STRING, :OPERATOR, :IDENTIFIER, :OPERATOR, :errortoken, :STRING]),
+        # the token after `$` swallows the closing quote
+        ("\" \$`\"", [:STRING, :OPERATOR, :IDENTIFIER, :STRING]),
+        # well-formed strings
+        ("\"a\$(b)c\"", [:STRING, :OPERATOR, :LPAREN, :IDENTIFIER, :RPAREN, :STRING]),
+        ("\"\$a\$b\"", [:STRING, :OPERATOR, :IDENTIFIER, :OPERATOR, :IDENTIFIER, :STRING]),
+        ("\"\"\"a\$(b)\\\n  c\$d\"\"\"", [:STRING, :OPERATOR, :LPAREN, :IDENTIFIER, :RPAREN, :STRING, :OPERATOR, :IDENTIFIER, :STRING]),
+    ]
+    for (s, heads) in cases
+        x = CSTParser.parse(s)
+        @test headof(x) === :string
+        @test x.fullspan == sizeof(s)
+        @test [headof(a) for a in x] == heads
+        check_iteration(x)
+    end
+
+    # The interpolated error sits between `$` and what follows it
+    x = CSTParser.parse("\"I\$x\$ \"")
+    @test x[4] === x.trivia[2]
+    @test x[5] === x.args[3]
+    @test x[6] === x.args[4]
+    @test valof(x[6]) == " "
+
+    x = CSTParser.parse("\"I\$x\$()\"")
+    @test x[6] === x.args[3]
+    @test x[7] === x.trivia[4]
+    @test x[8] === x.trivia[5]
+
+    # Inside a larger expression
+    x = CSTParser.parse("println(\"I\$x\$()\")")
+    check_iteration(x)
+    @test CSTParser.has_error(x)
 end
 
 
